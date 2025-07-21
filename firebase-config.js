@@ -1,14 +1,20 @@
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-import { getStorage } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
+import { initializeApp, getApps, getApp } from 'firebase/app';
+import { getStorage } from 'firebase/storage';
+import { getAuth } from 'firebase/auth';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAJHUN9Dv1T9hE-wCg9yb16w9vAVqFvFIw",
-  authDomain: "steel-connect-f6013.firebaseapp.com",
-  projectId: "steel-connect-f6013", 
-  storageBucket: "steel-connect-f6013.firebasestorage.app",
-  messagingSenderId: "345092477343",
-  appId: "1:345092477343:web:a83c2b515449658f1dadaa"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 };
 
-const app = initializeApp(firebaseConfig);
-export const storage = getStorage(app);
+// Initialize Firebase only once
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+
+const storage = getStorage(app);
+const auth = getAuth(app);
+
+export { app, storage, auth };
