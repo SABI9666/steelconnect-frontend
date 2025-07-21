@@ -1,7 +1,8 @@
-// components/FileUpload.js
+'use client'; // This directive is necessary for React hooks and event handlers.
+
 import { useState } from 'react';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { storage } from '../lib/firebase';
+import { storage } from '../lib/firebase-config'; // Correct path to your config
 
 const FileUpload = () => {
   const [file, setFile] = useState(null);
@@ -10,8 +11,8 @@ const FileUpload = () => {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleFileSelect = (e) => {
-    const selectedFile = e.target.files[0];
+  const handleFileChange = (e) => {
+    const selectedFile = e.target.files?.[0];
     if (selectedFile) {
       setFile(selectedFile);
       setError('');
@@ -20,159 +21,100 @@ const FileUpload = () => {
     }
   };
 
-  const uploadFile = async () => {
+  const handleUpload = async () => {
     if (!file) {
-      setError('Please select a file first');
+      setError('Please select a file to upload.');
       return;
     }
 
     setUploading(true);
     setError('');
+    
+    // Create a unique file reference
+    const storageRef = ref(storage, `uploads/${Date.now()}-${file.name}`);
+    const uploadTask = uploadBytesResumable(storageRef, file);
 
-    try {
-      // Create a storage reference
-      const timestamp = Date.now();
-      const fileName = `${timestamp}_${file.name}`;
-      const storageRef = ref(storage, `uploads/${fileName}`);
-
-      // Upload file
-      const uploadTask = uploadBytesResumable(storageRef, file);
-
-      // Monitor upload progress
-      uploadTask.on(
-        'state_changed',
-        (snapshot) => {
-          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          setUploadProgress(Math.round(progress));
-          console.log('Upload is ' + progress + '% done');
-        },
-        (error) => {
-          console.error('Upload error:', error);
-          setError(`Upload failed: ${error.message}`);
+    uploadTask.on(
+      'state_changed',
+      (snapshot) => {
+        const progress = Math.round(
+          (snapshot.bytesTransferred / snapshot.totalBytes) * 100
+        );
+        setUploadProgress(progress);
+      },
+      (err) => {
+        setError(`Upload failed: ${err.message}`);
+        setUploading(false);
+      },
+      () => {
+        getDownloadURL(uploadTask.snapshot.ref).then((url) => {
+          setDownloadURL(url);
           setUploading(false);
-        },
-        async () => {
-          // Upload completed successfully
-          try {
-            const url = await getDownloadURL(uploadTask.snapshot.ref);
-            setDownloadURL(url);
-            setUploading(false);
-            setUploadProgress(100);
-            console.log('File available at:', url);
-          } catch (error) {
-            console.error('Error getting download URL:', error);
-            setError('Failed to get download URL');
-            setUploading(false);
-          }
-        }
-      );
-    } catch (error) {
-      console.error('Error uploading file:', error);
-      setError(`Upload error: ${error.message}`);
-      setUploading(false);
-    }
-  };
-
-  const resetUpload = () => {
-    setFile(null);
-    setUploadProgress(0);
-    setDownloadURL('');
-    setUploading(false);
-    setError('');
+          setFile(null); // Reset file input
+        });
+      }
+    );
   };
 
   return (
-    <div style={{ padding: '20px', maxWidth: '500px', margin: '0 auto' }}>
-      <h2>Firebase File Upload</h2>
-      
-      <div style={{ marginBottom: '20px' }}>
-        <input
-          type="file"
-          onChange={handleFileSelect}
-          disabled={uploading}
-          style={{ marginBottom: '10px' }}
-        />
-        
-        {file && (
-          <div>
-            <p>Selected: {file.name}</p>
-            <p>Size: {(file.size / 1024 / 1024).toFixed(2)} MB</p>
+    <section className="content-section active" style={{ maxWidth: '700px', margin: '40px auto' }}>
+      <div className="section-header">
+        <h2 className="section-title">⬆️ File Upload</h2>
+      </div>
+
+      <div className="form-grid">
+        <div className="form-group">
+          <label htmlFor="file-upload" className="form-label">Project Document</label>
+          <input 
+            id="file-upload"
+            type="file" 
+            className="form-input"
+            onChange={handleFileChange} 
+            disabled={uploading} 
+          />
+          {file && <p style={{ marginTop: '10px', color: 'var(--text-gray)' }}>Selected: {file.name}</p>}
+        </div>
+
+        {uploading && (
+          <div className="form-group">
+            <label className="form-label">Upload Progress</label>
+            <div style={{ width: '100%', backgroundColor: 'var(--border-color)', borderRadius: '8px' }}>
+              <div 
+                style={{
+                  width: `${uploadProgress}%`, 
+                  height: '24px', 
+                  backgroundColor: 'var(--primary-color)', 
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                  fontSize: '12px',
+                  transition: 'width 0.4s ease'
+                }}
+              >
+                {uploadProgress}%
+              </div>
+            </div>
           </div>
         )}
-      </div>
 
-      <div style={{ marginBottom: '20px' }}>
-        <button
-          onClick={uploadFile}
-          disabled={!file || uploading}
-          style={{
-            padding: '10px 20px',
-            backgroundColor: uploading ? '#ccc' : '#007bff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '5px',
-            cursor: uploading ? 'not-allowed' : 'pointer',
-            marginRight: '10px'
-          }}
-        >
-          {uploading ? 'Uploading...' : 'Upload File'}
-        </button>
-
-        <button
-          onClick={resetUpload}
-          disabled={uploading}
-          style={{
-            padding: '10px 20px',
-            backgroundColor: '#6c757d',
-            color: 'white',
-            border: 'none',
-            borderRadius: '5px',
-            cursor: 'pointer'
-          }}
-        >
-          Reset
-        </button>
-      </div>
-
-      {uploading && (
-        <div style={{ marginBottom: '20px' }}>
-          <div
-            style={{
-              width: '100%',
-              backgroundColor: '#e9ecef',
-              borderRadius: '5px',
-              overflow: 'hidden'
-            }}
-          >
-            <div
-              style={{
-                width: `${uploadProgress}%`,
-                height: '20px',
-                backgroundColor: '#28a745',
-                transition: 'width 0.3s ease'
-              }}
-            />
+        {error && <div className="alert alert-error">{error}</div>}
+        
+        {downloadURL && (
+          <div className="alert alert-success">
+            <strong>Upload Complete!</strong>
+            <p style={{ marginTop: '8px', wordBreak: 'break-all' }}>
+              File URL: <a href={downloadURL} target="_blank" rel="noopener noreferrer">{downloadURL}</a>
+            </p>
           </div>
-          <p>{uploadProgress}% uploaded</p>
-        </div>
-      )}
+        )}
 
-      {error && (
-        <div style={{ color: 'red', marginBottom: '20px' }}>
-          {error}
-        </div>
-      )}
-
-      {downloadURL && (
-        <div style={{ marginTop: '20px' }}>
-          <h3>Upload Successful!</h3>
-          <p>File URL:</p>
-          <a href={downloadURL} target="_blank" rel="noopener noreferrer">
-            {downloadURL}
-          </a>
-        </div>
-      )}
-    </div>
+        <button className="btn btn-primary" onClick={handleUpload} disabled={!file || uploading}>
+          {uploading ? <span className="spinner"></span> : 'Upload to Firebase'}
+        </button>
+      </div>
+    </section>
   );
 };
 
