@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SteelConnect - Professional Steel & Rebar Design Marketplace</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-container">
+            <a href="#" class="logo" onclick="showSection('jobs'); return false;">
+                <div class="logo-icon">SC</div>
+                SteelConnect
+            </a>
+            <nav class="nav-menu">
+                <button class="nav-link active" onclick="showSection('jobs')">Find Jobs</button>
+                <button class="nav-link" onclick="showSection('post-job')">Post Job</button>
+                <button class="nav-link" onclick="showSection('quotes')">My Quotes</button>
+            </nav>
+            <div class="auth-buttons">
+                <button class="btn btn-outline" onclick="showSection('login')">Sign In</button>
+                <button class="btn btn-primary" onclick="showSection('register')">Join Now</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main>
+        <section id="hero-section" class="hero">
+            <div class="hero-content">
+                <h1>Connect with Steel & Rebar Design Professionals</h1>
+                <p>Find expert designers and contractors for your structural steel and rebar projects.</p>
+            </div>
+        </section>
+
+        <div class="main-container">
+            <div id="user-profile" class="user-profile" style="display: none;">
+                <div class="user-avatar" id="userAvatar"></div>
+                <div class="user-info">
+                    <h3 id="userName"></h3>
+                    <p id="userType"></p>
+                </div>
+                <div style="margin-left: auto;">
+                    <button class="btn btn-secondary" onclick="logout()">Sign Out</button>
+                </div>
+            </div>
+
+            <div id="alerts"></div>
+
+            <section id="jobs-section" class="content-section active">
+                <div class="section-header">
+                    <h2 class="section-title">Available Jobs</h2>
+                </div>
+                <div id="jobs-list" class="jobs-grid">
+                    <!-- Job cards will be loaded here by script.js -->
+                </div>
+            </section>
+
+            <section id="post-job-section" class="content-section">
+                <div class="section-header">
+                    <h2 class="section-title">Post a New Job</h2>
+                </div>
+                <form id="post-job-form" class="form-grid">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Job Title</label>
+                            <input type="text" class="form-input" id="jobTitle" required placeholder="e.g., Steel Frame Design for Office Building">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Job Type</label>
+                            <select class="form-select" id="jobType" required>
+                                <option value="">Select job type</option>
+                                <option value="structural">Structural Design</option>
+                                <option value="rebar">Rebar Detailing</option>
+                                <option value="connection">Connection Design</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Budget Range ($)</label>
+                            <input type="text" class="form-input" id="jobBudget" required placeholder="e.g., 5000-10000">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Deadline</label>
+                            <input type="date" class="form-input" id="jobDeadline" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Project Description</label>
+                        <textarea class="form-textarea" id="jobDescription" required placeholder="Provide detailed description of your project requirements..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Required Skills</label>
+                        <input type="text" class="form-input" id="jobSkills" placeholder="e.g., AISC, AutoCAD (separate with commas)">
+                    </div>
+                    <!-- Attachment Section for Job Posting -->
+                    <div id="attachment-section" style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 20px;">
+                        <h3 class="section-title" style="font-size: 20px; margin-bottom: 20px;">Add Project Files & Links</h3>
+                        <div class="form-group">
+                            <label class="form-label">Upload Document (PDF, Word)</label>
+                            <input type="file" class="form-input" id="documentUpload" accept=".pdf,.doc,.docx">
+                            <button type="button" class="btn btn-secondary" style="margin-top: 10px;" onclick="uploadDocument()">Upload File</button>
+                            <div id="fileUploadStatus" style="margin-top: 10px; font-size: 14px;"></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Add Link (to Google Drive, etc.)</label>
+                            <input type="url" class="form-input" id="linkInput" placeholder="https://your-link.com/file">
+                            <button type="button" class="btn btn-secondary" style="margin-top: 10px;" onclick="addLink()">Add Link</button>
+                            <div id="linkStatus" style="margin-top: 10px; font-size: 14px;"></div>
+                        </div>
+                        <div id="jobAttachedFiles" style="margin-top: 20px;">
+                            <h4 style="margin-bottom: 10px;">Attached to Job:</h4>
+                            <ul id="currentJobAttachments" style="list-style: none; padding: 0;"></ul>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="margin-top: 20px;">Post Job</button>
+                </form>
+            </section>
+
+            <section id="quotes-section" class="content-section">
+                <div class="section-header">
+                    <h2 class="section-title">My Quotes</h2>
+                </div>
+                <div id="quotes-list"></div>
+            </section>
+
+            <section id="login-section" class="content-section">
+                <div class="section-header">
+                    <h2 class="section-title">Sign In</h2>
+                </div>
+                <form id="login-form" class="form-grid" style="max-width: 400px; margin: 0 auto;">
+                    <div class="form-group">
+                        <label class="form-label">Username or Email</label>
+                        <input type="text" class="form-input" id="loginIdentifier" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Password</label>
+                        <input type="password" class="form-input" id="loginPassword" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Sign In</button>
+                    <a href="#" onclick="showSection('forgot-password'); return false;" class="form-link">Forgot Password?</a>
+                    <div class="demo-accounts" style="text-align: center; margin-top: 24px;">
+                        <p style="color: var(--text-gray); margin-bottom: 16px;">Demo Accounts</p>
+                        <div style="display: flex; gap: 12px; justify-content: center;">
+                            <button type="button" class="btn btn-secondary" onclick="fillDemoCredentials('contractor')">Contractor Demo</button>
+                            <button type="button" class="btn btn-secondary" onclick="fillDemoCredentials('designer')">Designer Demo</button>
+                        </div>
+                    </div>
+                </form>
+            </section>
+
+            <section id="register-section" class="content-section">
+                <div class="section-header">
+                    <h2 class="section-title">Join SteelConnect</h2>
+                </div>
+                <form id="register-form" class="form-grid" style="max-width: 600px; margin: 0 auto;">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Full Name</label>
+                            <input type="text" class="form-input" id="regName" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Username</label>
+                            <input type="text" class="form-input" id="regUsername" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-input" id="regEmail" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Password</label>
+                            <input type="password" class="form-input" id="regPassword" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">I am a...</label>
+                        <select class="form-select" id="regType" required>
+                            <option value="">Select your role</option>
+                            <option value="contractor">Contractor (I post jobs)</option>
+                            <option value="designer">Designer (I bid on jobs)</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Create Account</button>
+                </form>
+            </section>
+            
+            <section id="forgot-password-section" class="content-section">
+                <div class="section-header">
+                    <h2 class="section-title">Forgot Password</h2>
+                </div>
+                <form id="forgot-password-form" class="form-grid" style="max-width: 400px; margin: 0 auto;">
+                    <p class="form-description">Enter your email address and we will send you a link to reset your password.</p>
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-input" id="forgotPasswordEmail" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Send Reset Link</button>
+                    <a href="#" onclick="showSection('login'); return false;" class="form-link">Back to Sign In</a>
+                </form>
+            </section>
+            
+            <section id="reset-password-section" class="content-section">
+                <div class="section-header">
+                    <h2 class="section-title">Reset Your Password</h2>
+                </div>
+                <form id="reset-password-form" class="form-grid" style="max-width: 400px; margin: 0 auto;">
+                    <p class="form-description">Enter your new password below.</p>
+                    <div class="form-group">
+                        <label class="form-label">New Password</label>
+                        <input type="password" class="form-input" id="resetPasswordNew" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Reset Password</button>
+                </form>
+            </section>
+        </div>
+    </main>
+    
+    <div id="quote-modal" class="modal-overlay" style="display: none;">
+        <!-- Modal content will be generated by script.js -->
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
