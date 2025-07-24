@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SteelConnect - Professional Steel & Rebar Design Marketplace</title>
     <link rel="stylesheet" href="style.css">
+    
+    <link rel="icon" type="image/png" href="/assets/favicon.png">
+
 </head>
 <body>
     <header class="header">
@@ -138,10 +141,12 @@
                     </div>
                     <button type="submit" class="btn btn-primary">Sign In</button>
                     <a href="#" onclick="showSection('forgot-password'); return false;" class="form-link">Forgot Password?</a>
-                    <div class="demo-accounts">
-                        <p>Demo Accounts</p>
-                        <button type="button" class="btn btn-secondary" onclick="fillDemoCredentials('contractor')">Contractor Demo</button>
-                        <button type="button" class="btn btn-secondary" onclick="fillDemoCredentials('designer')">Designer Demo</button>
+                    <div class="demo-accounts" style="text-align: center; margin-top: 24px;">
+                        <p style="color: var(--text-gray); margin-bottom: 16px;">Demo Accounts</p>
+                        <div style="display: flex; gap: 12px; justify-content: center;">
+                            <button type="button" class="btn btn-secondary" onclick="fillDemoCredentials('contractor')">Contractor Demo</button>
+                            <button type="button" class="btn btn-secondary" onclick="fillDemoCredentials('designer')">Designer Demo</button>
+                        </div>
                     </div>
                 </form>
             </section>
@@ -215,39 +220,7 @@
     </main>
     
     <div id="quote-modal" class="modal-overlay" style="display: none;">
-        <div class="modal-content">
-            <button class="modal-close-button" onclick="closeQuoteModal()">✕</button>
-            <h3 id="quote-modal-title">Submit Proposal</h3>
-            <form id="submit-quote-form" class="form-grid">
-                <div class="form-group">
-                    <label class="form-label">Your Quote Amount ($)</label>
-                    <input type="number" class="form-input" id="quoteAmount" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Describe your approach</label>
-                    <textarea class="form-textarea" id="quoteDescription" required></textarea>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Upload Quotation Document</label>
-                    <input type="file" class="form-input" id="quoteDocumentUpload">
-                    <button type="button" class="btn btn-secondary" onclick="uploadQuoteDocument()">Upload File</button>
-                    <div id="quoteFileUploadStatus"></div>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Add Portfolio Link</label>
-                    <input type="url" class="form-input" id="quoteLinkInput">
-                    <button type="button" class="btn btn-secondary" onclick="addQuoteLink()">Add Link</button>
-                    <div id="quoteLinkStatus"></div>
-                </div>
-                <div id="quoteAttachedFiles">
-                    <h4>Attached to Quote:</h4>
-                    <ul id="currentQuoteAttachments"></ul>
-                </div>
-                <button type="submit" class="btn btn-primary">Submit Proposal</button>
-            </form>
         </div>
-    </div>
-
 
     <script src="script.js"></script>
 </body>
