@@ -1,33 +1,210 @@
-const RENDER_BACKEND_URL = 'https://steelconnect-backend.onrender.com';
+document.addEventListener('DOMContentLoaded', initializeApp);
 
-// Global application state
+// --- GLOBAL STATE & CONSTANTS ---
+const BACKEND_URL = 'https://steelconnect-backend.onrender.com'; // Your live backend URL
 const appState = {
     currentUser: null,
-    jobs: [],
-    quotes: [],
-    tempJobAttachments: [],
-    tempQuoteAttachments: []
+    jwtToken: null,
+    jobs: []
 };
 
-// --- CORE UI AND NAVIGATION FUNCTIONS ---
-
-function showSection(sectionId) {
-    document.querySelectorAll('.content-section').forEach(section => {
-        section.style.display = 'none';
-    });
-    document.getElementById('hero-section').style.display = 'none';
-
-    const targetSection = document.getElementById(`${sectionId}-section`);
-    if (targetSection) {
-        targetSection.style.display = 'block';
+// --- INITIALIZATION ---
+function initializeApp() {
+    // Attach Event Listeners
+    document.getElementById('login-form').addEventListener('submit', handleLogin);
+    document.getElementById('register-form').addEventListener('submit', handleRegister);
+    document.getElementById('post-job-form').addEventListener('submit', handlePostJob);
+    document.getElementById('logout-button').addEventListener('click', logout);
+    
+    // Check local storage for a saved session
+    const token = localStorage.getItem('jwtToken');
+    const user = localStorage.getItem('currentUser');
+    if (token && user) {
+        appState.jwtToken = token;
+        appState.currentUser = JSON.parse(user);
+        updateUIForLoggedInUser();
+    } else {
+        updateUIForLoggedOutUser();
     }
+    
+    fetchJobs(); // Fetch initial list of jobs
+}
+
+// --- AUTHENTICATION FUNCTIONS ---
+async function handleRegister(event) {
+    event.preventDefault();
+    const form = event.target;
+    const userData = {
+        fullName: form.querySelector('#regName').value,
+        username: form.querySelector('#regUsername').value,
+        email: form.querySelector('#regEmail').value,
+        password: form.querySelector('#regPassword').value,
+        role: form.querySelector('#regRole').value,
+    };
+
+    try {
+        const response = await fetch(`${BACKEND_URL}/auth/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(userData),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Registration failed.');
+
+        showAlert('Registration successful! Please sign in.', 'success');
+        showSection('login');
+        form.reset();
+    } catch (error) {
+        showAlert(error.message, 'error');
+    }
+}
+
+async function handleLogin(event) {
+    event.preventDefault();
+    const form = event.target;
+    const authData = {
+        email: form.querySelector('#loginEmail').value,
+        password: form.querySelector('#loginPassword').value,
+    };
+
+    try {
+        const response = await fetch(`${BACKEND_URL}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(authData),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Login failed.');
+
+        // NOTE: The backend needs to return a JWT token for a complete solution
+        // For now, we'll simulate a token and save the user
+        appState.currentUser = data.user;
+        appState.jwtToken = 'fake-jwt-token'; // Replace with data.token when backend sends it
+        
+        localStorage.setItem('currentUser', JSON.stringify(data.user));
+        localStorage.setItem('jwtToken', appState.jwtToken);
+
+        showAlert('Login successful!', 'success');
+        updateUIForLoggedInUser();
+        fetchJobs();
+    } catch (error) {
+        showAlert(error.message, 'error');
+    }
+}
+
+function logout() {
+    appState.currentUser = null;
+    appState.jwtToken = null;
+    localStorage.removeItem('currentUser');
+    localStorage.removeItem('jwtToken');
+    updateUIForLoggedOutUser();
+    showAlert('You have been logged out.', 'info');
+}
+
+// --- JOB DATA FUNCTIONS ---
+async function fetchJobs() {
+    const jobsList = document.getElementById('jobs-list');
+    jobsList.innerHTML = '<div class="spinner-container"><div class="spinner"></div></div>';
+    
+    try {
+        // This endpoint must exist on your backend.
+        // For now, let's assume it doesn't and use sample data.
+        // const response = await fetch(`${BACKEND_URL}/jobs`);
+        // if (!response.ok) throw new Error('Could not fetch jobs.');
+        // appState.jobs = await response.json();
+        
+        // --- USING SAMPLE DATA since /jobs endpoint is not implemented ---
+        appState.jobs = [
+            { id: 1, title: 'Structural Design for a Commercial Warehouse', description: 'Seeking an experienced structural engineer to design the steel framework for a 50,000 sq ft warehouse.'},
+            { id: 2, title: 'Rebar Detailing for High-Rise Foundation', description: 'We require detailed rebar drawings for a 30-story building foundation. Experience with Tekla Structures is mandatory.' }
+        ];
+        // --- END SAMPLE DATA ---
+
+        renderJobs();
+    } catch (error) {
+        jobsList.innerHTML = `<div class="empty-state"><p>Error loading jobs: ${error.message}</p></div>`;
+    }
+}
+
+function renderJobs() {
+    const jobsList = document.getElementById('jobs-list');
+    jobsList.innerHTML = ''; 
+
+    if (appState.jobs.length === 0) {
+        jobsList.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">🗂️</div>
+                <h3>No Jobs Found</h3>
+                <p>There are currently no open jobs.</p>
+            </div>
+        `;
+        return;
+    }
+
+    appState.jobs.forEach(job => {
+        const jobCard = document.createElement('div');
+        jobCard.className = 'job-card';
+        jobCard.innerHTML = `
+            <h3 class="job-title">${job.title}</h3>
+            <p class="job-description">${job.description}</p>
+            <div class="job-actions">
+                ${appState.currentUser && appState.currentUser.role === 'designer' ? '<button class="btn btn-primary">Submit Quote</button>' : ''}
+                ${!appState.currentUser ? '<button class="btn btn-secondary" onclick="showSection(\'login\')">Sign In to Quote</button>' : ''}
+            </div>
+        `;
+        jobsList.appendChild(jobCard);
+    });
+}
+
+async function handlePostJob(event) {
+    event.preventDefault();
+    if (!appState.currentUser || !appState.jwtToken) {
+        return showAlert('You must be logged in to post a job.', 'error');
+    }
+
+    const form = event.target;
+    const jobData = {
+        title: form.querySelector('#jobTitle').value,
+        description: form.querySelector('#jobDescription').value,
+    };
+
+    try {
+        // This endpoint must exist on your backend and require a token
+        // const response = await fetch(`${BACKEND_URL}/jobs`, {
+        //     method: 'POST',
+        //     headers: { 
+        //         'Content-Type': 'application/json',
+        //         'Authorization': `Bearer ${appState.jwtToken}` 
+        //     },
+        //     body: JSON.stringify(jobData),
+        // });
+        // const newJob = await response.json();
+        // if (!response.ok) throw new Error(newJob.error || 'Failed to post job.');
+
+        showAlert('Job posted successfully! (DEMO)', 'success');
+        form.reset();
+        fetchJobs(); 
+        showSection('jobs');
+    } catch (error) {
+        showAlert(error.message, 'error');
+    }
+}
+
+// --- UI AND NAVIGATION HELPERS ---
+function showSection(sectionId) {
+    document.querySelectorAll('.content-section').forEach(s => s.style.display = 'none');
+    document.getElementById(`${sectionId}-section`).style.display = 'block';
+    
+    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+    const activeLink = document.querySelector(`.nav-link[data-section="${sectionId}"]`);
+    if(activeLink) activeLink.classList.add('active');
 }
 
 function showAlert(message, type = 'info') {
     const alertsContainer = document.getElementById('alerts');
     const alertDiv = document.createElement('div');
     alertDiv.className = `alert alert-${type}`;
-    alertDiv.textContent = message;
+    alertDiv.innerHTML = `<span>${message}</span>`;
     alertsContainer.prepend(alertDiv);
     setTimeout(() => {
         alertDiv.style.opacity = '0';
@@ -36,196 +213,34 @@ function showAlert(message, type = 'info') {
 }
 
 function updateUIForLoggedInUser() {
+    const user = appState.currentUser;
     document.getElementById('user-profile').style.display = 'flex';
-    document.querySelector('.auth-buttons').style.display = 'none';
+    document.getElementById('auth-buttons-container').style.display = 'none';
     document.getElementById('hero-section').style.display = 'none';
 
-    if (appState.currentUser) {
-        const user = appState.currentUser;
-        document.getElementById('userName').textContent = user.fullName || user.username;
-        document.getElementById('userType').textContent = user.role.charAt(0).toUpperCase() + user.role.slice(1);
-        const initials = (user.fullName || 'A').charAt(0).toUpperCase();
-        document.getElementById('userAvatar').textContent = initials;
-    }
+    document.getElementById('userName').textContent = user.fullName;
+    document.getElementById('userType').textContent = user.role.charAt(0).toUpperCase() + user.role.slice(1);
+    document.getElementById('userAvatar').textContent = user.fullName.charAt(0).toUpperCase();
+
+    const navMenu = document.getElementById('main-nav-menu');
+    navMenu.innerHTML = `
+        <button class="nav-link" data-section="jobs" onclick="showSection('jobs')">Find Jobs</button>
+        ${user.role === 'contractor' ? `<button class="nav-link" data-section="post-job" onclick="showSection('post-job')">Post Job</button>` : ''}
+        <button class="nav-link" data-section="quotes" onclick="showSection('quotes')">My Quotes</button>
+    `;
     showSection('jobs');
 }
 
 function updateUIForLoggedOutUser() {
     document.getElementById('user-profile').style.display = 'none';
-    document.querySelector('.auth-buttons').style.display = 'flex';
+    document.getElementById('auth-buttons-container').style.display = 'flex';
     document.getElementById('hero-section').style.display = 'block';
+
+    document.getElementById('auth-buttons-container').innerHTML = `
+        <button class="btn btn-outline" onclick="showSection('login')">Sign In</button>
+        <button class="btn btn-primary" onclick="showSection('register')">Join Now</button>
+    `;
+    const navMenu = document.getElementById('main-nav-menu');
+    navMenu.innerHTML = `<button class="nav-link" data-section="jobs" onclick="showSection('jobs')">Find Jobs</button>`;
     showSection('jobs');
 }
-
-// --- AUTHENTICATION HANDLERS ---
-
-async function handleRegister(event) {
-    event.preventDefault();
-    const fullName = document.getElementById('regName').value;
-    const username = document.getElementById('regUsername').value;
-    const email = document.getElementById('regEmail').value;
-    const password = document.getElementById('regPassword').value;
-    const role = document.getElementById('regType').value;
-
-    const userData = { fullName, username, email, password, role };
-
-    try {
-        const response = await fetch(`${RENDER_BACKEND_URL}/auth/register`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(userData),
-        });
-        const data = await response.json();
-        if (response.status === 201) {
-            showAlert('Registration successful! Please sign in.', 'success');
-            showSection('login');
-        } else {
-            showAlert(data.error || 'Registration failed.', 'error');
-        }
-    } catch (error) {
-        showAlert('An error occurred during registration.', 'error');
-    }
-}
-
-async function handleLogin(event) {
-    event.preventDefault();
-    const username = document.getElementById('loginIdentifier').value;
-    const password = document.getElementById('loginPassword').value;
-
-    try {
-        const response = await fetch(`${RENDER_BACKEND_URL}/auth/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password }),
-        });
-        const data = await response.json();
-        if (response.ok) {
-            localStorage.setItem('jwtToken', data.token);
-            appState.currentUser = { ...data.user, token: data.token };
-            updateUIForLoggedInUser();
-            showAlert('Login successful!', 'success');
-        } else {
-            showAlert(data.error || 'Login failed.', 'error');
-        }
-    } catch (error) {
-        showAlert('An error occurred during login.', 'error');
-    }
-}
-
-function logout() {
-    appState.currentUser = null;
-    localStorage.removeItem('jwtToken');
-    updateUIForLoggedOutUser();
-    showAlert('Logged out successfully!', 'info');
-}
-
-async function handleForgotPassword(event) {
-    event.preventDefault();
-    const email = document.getElementById('forgotPasswordEmail').value;
-    try {
-        const response = await fetch(`${RENDER_BACKEND_URL}/auth/forgot-password`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email }),
-        });
-        const data = await response.json();
-        showAlert(data.message, 'info');
-    } catch (error) {
-        showAlert('An error occurred. Please try again.', 'error');
-    }
-}
-
-async function handleResetPassword(event) {
-    event.preventDefault();
-    const newPassword = document.getElementById('resetPasswordNew').value;
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get('token');
-
-    if (!token) {
-        showAlert('No reset token found.', 'error');
-        return;
-    }
-
-    try {
-        const response = await fetch(`${RENDER_BACKEND_URL}/auth/reset-password`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token, newPassword }),
-        });
-        const data = await response.json();
-        if (response.ok) {
-            showAlert('Password reset successfully! You can now sign in.', 'success');
-            window.history.pushState({}, '', window.location.pathname);
-            showSection('login');
-        } else {
-            showAlert(data.error || 'Password reset failed.', 'error');
-        }
-    } catch (error) {
-        showAlert('An error occurred.', 'error');
-    }
-}
-
-// --- DEMO AND DATA HANDLING ---
-
-function fillDemoCredentials(type) {
-    if (type === 'contractor') {
-        document.getElementById('loginIdentifier').value = 'contractor_demo';
-        document.getElementById('loginPassword').value = 'demo123';
-    } else {
-        document.getElementById('loginIdentifier').value = 'designer_demo';
-        document.getElementById('loginPassword').value = 'demo123';
-    }
-    showAlert(`Demo credentials for ${type} filled. Click 'Sign In'.`, 'info');
-}
-
-// --- FILE AND LINK UPLOAD FUNCTIONS ---
-
-async function uploadDocument() {
-    // This function would handle file upload for the POST JOB form
-    showAlert("File upload feature for jobs is in development.", "info");
-}
-
-async function addLink() {
-    // This function would handle link adding for the POST JOB form
-    showAlert("Add link feature for jobs is in development.", "info");
-}
-
-async function uploadQuoteDocument() {
-    // This function would handle file upload for the SUBMIT QUOTE modal
-    showAlert("File upload feature for quotes is in development.", "info");
-}
-
-async function addQuoteLink() {
-    // This function would handle link adding for the SUBMIT QUOTE modal
-    showAlert("Add link feature for quotes is in development.", "info");
-}
-
-
-// --- INITIALIZATION ---
-
-function initializeApp() {
-    // Attach event listeners to forms
-    document.getElementById('login-form').addEventListener('submit', handleLogin);
-    document.getElementById('register-form').addEventListener('submit', handleRegister);
-    document.getElementById('forgot-password-form').addEventListener('submit', handleForgotPassword);
-    document.getElementById('reset-password-form').addEventListener('submit', handleResetPassword);
-
-    // Check for password reset token in URL
-    const params = new URLSearchParams(window.location.search);
-    if (params.has('token')) {
-        showSection('reset-password');
-    } else {
-        // Check for existing login session
-        const token = localStorage.getItem('jwtToken');
-        if (token) {
-            // For now, we just update the UI. A real app would verify the token.
-            appState.currentUser = { token: token, fullName: "User", role: "user" }; // Dummy object
-            updateUIForLoggedInUser();
-        } else {
-            updateUIForLoggedOutUser();
-        }
-    }
-}
-
-// Run the app after the DOM is fully loaded
-document.addEventListener('DOMContentLoaded', initializeApp);

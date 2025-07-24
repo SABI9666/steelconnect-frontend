@@ -1,33 +1,33 @@
 document.addEventListener('DOMContentLoaded', initializeApp);
 
 // --- GLOBAL STATE & CONSTANTS ---
-const BACKEND_URL = 'https://steelconnect-backend.onrender.com';
+const BACKEND_URL = 'https://steelconnect-backend.onrender.com'; // Your live backend URL
 const appState = {
     currentUser: null,
+    jwtToken: null,
     jobs: []
 };
 
 // --- INITIALIZATION ---
 function initializeApp() {
-    // Event Listeners
+    // Attach Event Listeners
     document.getElementById('login-form').addEventListener('submit', handleLogin);
     document.getElementById('register-form').addEventListener('submit', handleRegister);
     document.getElementById('post-job-form').addEventListener('submit', handlePostJob);
     document.getElementById('logout-button').addEventListener('click', logout);
-    document.getElementById('demo-contractor-btn').addEventListener('click', () => fillDemoCredentials('contractor'));
-    document.getElementById('demo-designer-btn').addEventListener('click', () => fillDemoCredentials('designer'));
     
-    // Check for logged-in user (simple version)
-    // In a real app, you would verify the JWT token with the backend
-    if (localStorage.getItem('currentUser')) {
-        appState.currentUser = JSON.parse(localStorage.getItem('currentUser'));
+    // Check local storage for a saved session
+    const token = localStorage.getItem('jwtToken');
+    const user = localStorage.getItem('currentUser');
+    if (token && user) {
+        appState.jwtToken = token;
+        appState.currentUser = JSON.parse(user);
         updateUIForLoggedInUser();
     } else {
         updateUIForLoggedOutUser();
     }
     
-    showSection('jobs');
-    fetchJobs();
+    fetchJobs(); // Fetch initial list of jobs
 }
 
 // --- AUTHENTICATION FUNCTIONS ---
@@ -76,13 +76,17 @@ async function handleLogin(event) {
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'Login failed.');
 
+        // NOTE: The backend needs to return a JWT token for a complete solution
+        // For now, we'll simulate a token and save the user
         appState.currentUser = data.user;
+        appState.jwtToken = 'fake-jwt-token'; // Replace with data.token when backend sends it
+        
         localStorage.setItem('currentUser', JSON.stringify(data.user));
-        // In a real app with tokens: localStorage.setItem('jwtToken', data.token);
+        localStorage.setItem('jwtToken', appState.jwtToken);
 
         showAlert('Login successful!', 'success');
         updateUIForLoggedInUser();
-        fetchJobs(); // Re-fetch jobs to show relevant actions
+        fetchJobs();
     } catch (error) {
         showAlert(error.message, 'error');
     }
@@ -90,62 +94,48 @@ async function handleLogin(event) {
 
 function logout() {
     appState.currentUser = null;
+    appState.jwtToken = null;
     localStorage.removeItem('currentUser');
-    // localStorage.removeItem('jwtToken');
+    localStorage.removeItem('jwtToken');
     updateUIForLoggedOutUser();
     showAlert('You have been logged out.', 'info');
-    fetchJobs(); // Re-fetch public job list
-}
-
-function fillDemoCredentials(type) {
-    const emailInput = document.getElementById('loginEmail');
-    const passwordInput = document.getElementById('loginPassword');
-    if(type === 'contractor') {
-        emailInput.value = 'contractor@demo.com';
-        passwordInput.value = 'password123';
-    } else {
-        emailInput.value = 'designer@demo.com';
-        passwordInput.value = 'password123';
-    }
-    // Automatically submit the form
-    document.getElementById('login-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 }
 
 // --- JOB DATA FUNCTIONS ---
 async function fetchJobs() {
     const jobsList = document.getElementById('jobs-list');
-    jobsList.innerHTML = '<div class="spinner-container" style="padding: 50px; text-align: center;"><div class="spinner"></div></div>';
+    jobsList.innerHTML = '<div class="spinner-container"><div class="spinner"></div></div>';
     
     try {
-        // This endpoint needs to exist on your backend and should not require authentication
-        // For now, we use sample data since the backend endpoint isn't created yet.
+        // This endpoint must exist on your backend.
+        // For now, let's assume it doesn't and use sample data.
         // const response = await fetch(`${BACKEND_URL}/jobs`);
         // if (!response.ok) throw new Error('Could not fetch jobs.');
         // appState.jobs = await response.json();
         
-        // --- USING SAMPLE DATA ---
+        // --- USING SAMPLE DATA since /jobs endpoint is not implemented ---
         appState.jobs = [
-            { id: 1, title: 'Structural Design for a Commercial Warehouse', description: 'Seeking an experienced structural engineer to design the steel framework for a 50,000 sq ft warehouse. Must be proficient in STAAD.Pro and familiar with local building codes.', budget: '15000-20000', type: 'structural', skills: ['STAAD.Pro', 'AISC', 'Structural Engineering'] },
-            { id: 2, title: 'Rebar Detailing for High-Rise Foundation', description: 'We require detailed rebar drawings for a 30-story building foundation. Experience with Tekla Structures is mandatory.', budget: '8000-12000', type: 'rebar', skills: ['Tekla Structures', 'Rebar Detailing', 'ACI 318'] }
+            { id: 1, title: 'Structural Design for a Commercial Warehouse', description: 'Seeking an experienced structural engineer to design the steel framework for a 50,000 sq ft warehouse.'},
+            { id: 2, title: 'Rebar Detailing for High-Rise Foundation', description: 'We require detailed rebar drawings for a 30-story building foundation. Experience with Tekla Structures is mandatory.' }
         ];
         // --- END SAMPLE DATA ---
 
         renderJobs();
     } catch (error) {
-        jobsList.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+        jobsList.innerHTML = `<div class="empty-state"><p>Error loading jobs: ${error.message}</p></div>`;
     }
 }
 
 function renderJobs() {
     const jobsList = document.getElementById('jobs-list');
-    jobsList.innerHTML = ''; // Clear spinner or old content
+    jobsList.innerHTML = ''; 
 
     if (appState.jobs.length === 0) {
         jobsList.innerHTML = `
             <div class="empty-state">
                 <div class="empty-state-icon">🗂️</div>
                 <h3>No Jobs Found</h3>
-                <p>There are currently no open jobs. Check back later or post a new job if you're a contractor.</p>
+                <p>There are currently no open jobs.</p>
             </div>
         `;
         return;
@@ -155,17 +145,8 @@ function renderJobs() {
         const jobCard = document.createElement('div');
         jobCard.className = 'job-card';
         jobCard.innerHTML = `
-            <div class="job-header">
-                <div>
-                    <h3 class="job-title">${job.title}</h3>
-                    <span class="job-type">${job.type}</span>
-                </div>
-                <div class="job-budget">$${job.budget}</div>
-            </div>
+            <h3 class="job-title">${job.title}</h3>
             <p class="job-description">${job.description}</p>
-            <div class="job-skills">
-                ${job.skills.map(skill => `<span class="skill-tag">${skill}</span>`).join('')}
-            </div>
             <div class="job-actions">
                 ${appState.currentUser && appState.currentUser.role === 'designer' ? '<button class="btn btn-primary">Submit Quote</button>' : ''}
                 ${!appState.currentUser ? '<button class="btn btn-secondary" onclick="showSection(\'login\')">Sign In to Quote</button>' : ''}
@@ -177,51 +158,46 @@ function renderJobs() {
 
 async function handlePostJob(event) {
     event.preventDefault();
+    if (!appState.currentUser || !appState.jwtToken) {
+        return showAlert('You must be logged in to post a job.', 'error');
+    }
+
     const form = event.target;
     const jobData = {
         title: form.querySelector('#jobTitle').value,
         description: form.querySelector('#jobDescription').value,
-        // Add other fields like budget, type, skills as needed
     };
 
-    if (!appState.currentUser) {
-        showAlert('You must be logged in to post a job.', 'error');
-        return;
-    }
-
     try {
-        // This endpoint needs to be created on your backend
+        // This endpoint must exist on your backend and require a token
         // const response = await fetch(`${BACKEND_URL}/jobs`, {
         //     method: 'POST',
         //     headers: { 
         //         'Content-Type': 'application/json',
-        //         // 'Authorization': `Bearer ${localStorage.getItem('jwtToken')}` 
+        //         'Authorization': `Bearer ${appState.jwtToken}` 
         //     },
         //     body: JSON.stringify(jobData),
         // });
         // const newJob = await response.json();
         // if (!response.ok) throw new Error(newJob.error || 'Failed to post job.');
 
-        showAlert('Job posted successfully! (DEMO)', 'success'); // Using demo alert for now
+        showAlert('Job posted successfully! (DEMO)', 'success');
         form.reset();
-        fetchJobs(); // Refresh the job list
+        fetchJobs(); 
         showSection('jobs');
-
     } catch (error) {
         showAlert(error.message, 'error');
     }
 }
 
-
 // --- UI AND NAVIGATION HELPERS ---
 function showSection(sectionId) {
     document.querySelectorAll('.content-section').forEach(s => s.style.display = 'none');
-    document.getElementById('hero-section').style.display = 'none';
     document.getElementById(`${sectionId}-section`).style.display = 'block';
-
+    
     document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-    const activeLink = document.querySelector(`.nav-link[onclick*="'${sectionId}'"]`);
-    if (activeLink) activeLink.classList.add('active');
+    const activeLink = document.querySelector(`.nav-link[data-section="${sectionId}"]`);
+    if(activeLink) activeLink.classList.add('active');
 }
 
 function showAlert(message, type = 'info') {
@@ -230,22 +206,27 @@ function showAlert(message, type = 'info') {
     alertDiv.className = `alert alert-${type}`;
     alertDiv.innerHTML = `<span>${message}</span>`;
     alertsContainer.prepend(alertDiv);
-    setTimeout(() => alertDiv.remove(), 5000);
+    setTimeout(() => {
+        alertDiv.style.opacity = '0';
+        setTimeout(() => alertDiv.remove(), 300);
+    }, 5000);
 }
 
 function updateUIForLoggedInUser() {
     const user = appState.currentUser;
     document.getElementById('user-profile').style.display = 'flex';
     document.getElementById('auth-buttons-container').style.display = 'none';
+    document.getElementById('hero-section').style.display = 'none';
+
     document.getElementById('userName').textContent = user.fullName;
     document.getElementById('userType').textContent = user.role.charAt(0).toUpperCase() + user.role.slice(1);
     document.getElementById('userAvatar').textContent = user.fullName.charAt(0).toUpperCase();
 
     const navMenu = document.getElementById('main-nav-menu');
     navMenu.innerHTML = `
-        <button class="nav-link" onclick="showSection('jobs')">Find Jobs</button>
-        ${user.role === 'contractor' ? `<button class="nav-link" onclick="showSection('post-job')">Post Job</button>` : ''}
-        <button class="nav-link" onclick="showSection('quotes')">My Quotes</button>
+        <button class="nav-link" data-section="jobs" onclick="showSection('jobs')">Find Jobs</button>
+        ${user.role === 'contractor' ? `<button class="nav-link" data-section="post-job" onclick="showSection('post-job')">Post Job</button>` : ''}
+        <button class="nav-link" data-section="quotes" onclick="showSection('quotes')">My Quotes</button>
     `;
     showSection('jobs');
 }
@@ -255,7 +236,11 @@ function updateUIForLoggedOutUser() {
     document.getElementById('auth-buttons-container').style.display = 'flex';
     document.getElementById('hero-section').style.display = 'block';
 
+    document.getElementById('auth-buttons-container').innerHTML = `
+        <button class="btn btn-outline" onclick="showSection('login')">Sign In</button>
+        <button class="btn btn-primary" onclick="showSection('register')">Join Now</button>
+    `;
     const navMenu = document.getElementById('main-nav-menu');
-    navMenu.innerHTML = `<button class="nav-link" onclick="showSection('jobs')">Find Jobs</button>`;
+    navMenu.innerHTML = `<button class="nav-link" data-section="jobs" onclick="showSection('jobs')">Find Jobs</button>`;
     showSection('jobs');
 }
