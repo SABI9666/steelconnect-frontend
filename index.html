@@ -1,133 +1,62 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SteelConnect - Professional Steel & Rebar Design Marketplace</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-    <header class="header">
-        <div class="header-container">
-            <a href="#" class="logo" onclick="showSection('jobs'); return false;">
-                <div class="logo-icon">SC</div>
-                SteelConnect
-            </a>
-            <nav id="main-nav-menu" class="nav-menu"></nav>
-            <div id="auth-buttons-container" class="auth-buttons"></div>
-        </div>
-    </header>
+import express from 'express';
+import { adminDb } from '../config/firebase.js';
 
-    <main>
-        <section id="hero-section" class="hero" style="display: none;">
-            <div class="hero-content">
-                <h1>Connect with Steel & Rebar Design Professionals</h1>
-                <p>Find expert designers and contractors for your structural steel and rebar projects.</p>
-            </div>
-        </section>
+const router = express.Router();
 
-        <div class="main-container">
-            <div id="user-profile" class="user-profile" style="display: none;">
-                <div class="user-avatar" id="userAvatar"></div>
-                <div class="user-info">
-                    <h3 id="userName"></h3>
-                    <p id="userType"></p>
-                </div>
-                <div style="margin-left: auto;">
-                    <button id="logout-button" class="btn btn-secondary">Sign Out</button>
-                </div>
-            </div>
+// --- GET ALL JOBS ---
+// This endpoint will be called by the frontend to display all available jobs.
+router.get('/', async (req, res) => {
+    try {
+        const jobsRef = adminDb.collection('jobs');
+        const snapshot = await jobsRef.orderBy('createdAt', 'desc').get();
 
-            <div id="alerts"></div>
+        if (snapshot.empty) {
+            return res.status(200).json([]); // Return empty array if no jobs
+        }
 
-            <section id="jobs-section" class="content-section">
-                <div class="section-header">
-                    <h2 class="section-title">Available Jobs</h2>
-                </div>
-                <div id="jobs-list" class="jobs-grid">
-                    <div class="spinner-container"><div class="spinner"></div></div>
-                </div>
-            </section>
+        const jobs = [];
+        snapshot.forEach(doc => {
+            jobs.push({ id: doc.id, ...doc.data() });
+        });
 
-            <section id="post-job-section" class="content-section">
-                <div class="section-header">
-                    <h2 class="section-title">Post a New Job</h2>
-                </div>
-                <form id="post-job-form" class="form-grid">
-                    <div class="form-group">
-                        <label class="form-label">Job Title</label>
-                        <input type="text" class="form-input" id="jobTitle" required placeholder="e.g., Steel Frame Design for Office Building">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Job Description</label>
-                        <textarea class="form-textarea" id="jobDescription" required placeholder="Provide detailed description of project requirements..."></textarea>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Post Job</button>
-                </form>
-            </section>
-            
-            <section id="quotes-section" class="content-section">
-                <div class="section-header">
-                    <h2 class="section-title">My Quotes</h2>
-                </div>
-                <div id="quotes-list" class="empty-state">
-                    <div class="empty-state-icon">📂</div>
-                    <h3>Feature Coming Soon</h3>
-                    <p>A place to manage your quotes will be available here.</p>
-                </div>
-            </section>
+        res.status(200).json(jobs);
+    } catch (error) {
+        console.error('ERROR FETCHING JOBS:', error);
+        res.status(500).json({ error: 'Failed to fetch jobs.' });
+    }
+});
 
-            <section id="login-section" class="content-section">
-                <div class="section-header"><h2 class="section-title">Sign In</h2></div>
-                <form id="login-form" class="form-grid" style="max-width: 400px; margin: 0 auto;">
-                    <div class="form-group">
-                        <label class="form-label">Email</label>
-                        <input type="email" class="form-input" id="loginEmail" required autocomplete="email">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Password</label>
-                        <input type="password" class="form-input" id="loginPassword" required autocomplete="current-password">
-                    </div>
-                    <button type="submit" class="btn btn-primary">Sign In</button>
-                </form>
-            </section>
+// --- POST A NEW JOB ---
+// This endpoint will be called when a contractor submits the "Post Job" form.
+router.post('/', async (req, res) => {
+    try {
+        const { title, description, budget, deadline, skills, userId, userFullName } = req.body;
 
-            <section id="register-section" class="content-section">
-                <div class="section-header"><h2 class="section-title">Join SteelConnect</h2></div>
-                <form id="register-form" class="form-grid" style="max-width: 600px; margin: 0 auto;">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label">Full Name</label>
-                            <input type="text" class="form-input" id="regName" required>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Username</label>
-                            <input type="text" class="form-input" id="regUsername" required>
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label">Email</label>
-                            <input type="email" class="form-input" id="regEmail" required autocomplete="email">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Password</label>
-                            <input type="password" class="form-input" id="regPassword" required autocomplete="new-password">
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">I am a...</label>
-                        <select class="form-select" id="regRole" required>
-                            <option value="">Select your role</option>
-                            <option value="contractor">Contractor (I post jobs)</option>
-                            <option value="designer">Designer (I bid on jobs)</option>
-                        </select>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Create Account</button>
-                </form>
-            </section>
-        </div>
-    </main>
-    <script src="script.js"></script>
-</body>
-</html>
+        if (!title || !description || !budget || !deadline || !userId) {
+            return res.status(400).json({ error: 'Missing required job fields.' });
+        }
+
+        const newJob = {
+            title,
+            description,
+            budget,
+            deadline,
+            skills: skills || [],
+            posterId: userId,
+            posterName: userFullName,
+            status: 'active',
+            createdAt: new Date().toISOString(),
+        };
+
+        const jobsRef = adminDb.collection('jobs');
+        const docRef = await jobsRef.add(newJob);
+
+        res.status(201).json({ message: 'Job posted successfully!', jobId: docRef.id });
+
+    } catch (error) {
+        console.error('ERROR POSTING JOB:', error);
+        res.status(500).json({ error: 'Failed to post new job.' });
+    }
+});
+
+export default router;
