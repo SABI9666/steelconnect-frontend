@@ -63,6 +63,8 @@ function logout() {
 
 // --- DATA FETCHING & RENDERING ---
 async function fetchJobs() {
+    const jobsList = document.getElementById('jobs-list');
+    jobsList.innerHTML = '<div class="spinner-container" style="display:flex; justify-content:center; padding: 40px;"><div class="spinner"></div></div>';
     await apiCall('/jobs', 'GET', null, null, (data) => {
         appState.jobs = data;
         renderJobs();
@@ -82,8 +84,8 @@ async function fetchMyQuotes() {
 function renderJobs() {
     const jobsList = document.getElementById('jobs-list');
     jobsList.innerHTML = '';
-    if (appState.jobs.length === 0) {
-        jobsList.innerHTML = `<div class="empty-state"><h3>No Jobs Found</h3></div>`;
+    if (!appState.jobs || appState.jobs.length === 0) {
+        jobsList.innerHTML = `<div class="empty-state"><h3>No Jobs Found</h3><p>Log in as a contractor to post the first job!</p></div>`;
         return;
     }
     appState.jobs.forEach(job => {
@@ -103,7 +105,7 @@ function renderJobs() {
                 actionButtonHTML = `<button class="btn btn-primary" onclick="showQuoteModal('${job.id}')">Submit Quote</button>`;
             }
         } else {
-            actionButtonHTML = `<button class="btn btn-secondary" onclick="showSection('login')">Sign In</button>`;
+            actionButtonHTML = `<button class="btn btn-secondary" onclick="showSection('login')">Sign In to Quote</button>`;
         }
         
         jobCard.innerHTML = `
@@ -139,6 +141,11 @@ function renderMyQuotes() {
 // --- ACTIONS (CREATE, DELETE, UPDATE) ---
 async function handlePostJob(event) {
     event.preventDefault();
+    // FIXED: Added a check to ensure user is logged in
+    if (!appState.currentUser) {
+        return showAlert('You must be logged in to post a job.', 'error');
+    }
+
     const form = event.target;
     const fileInput = form.querySelector('#jobAttachmentFile');
     const file = fileInput.files[0];
@@ -149,7 +156,7 @@ async function handlePostJob(event) {
         formData.append('document', file);
         try {
             showAlert('Uploading file...', 'info');
-            const response = await fetch(`${BACKEND_URL}/uploads/job`, { method: 'POST', body: formData, });
+            const response = await fetch(`${BACKEND_URL}/uploads/job`, { method: 'POST', body: formData });
             const data = await response.json();
             if (!response.ok) throw new Error(data.error || 'File upload failed.');
             attachmentPath = data.filePath;
@@ -181,13 +188,11 @@ async function deleteJob(jobId) {
         await apiCall(`/jobs/${jobId}`, 'DELETE', null, 'Job deleted successfully!', fetchJobs);
     }
 }
-
 async function deleteQuote(quoteId) {
     if (confirm('Are you sure you want to delete this quote?')) {
         await apiCall(`/quotes/${quoteId}`, 'DELETE', null, 'Quote deleted successfully!', fetchMyQuotes);
     }
 }
-
 async function approveQuote(quoteId) {
     if (confirm('Approve this quote? All others for this job will be rejected.')) {
         await apiCall(`/quotes/${quoteId}/approve`, 'PUT', null, 'Quote approved!', () => {
@@ -241,6 +246,10 @@ function showQuoteModal(jobId) {
 
 async function handleQuoteSubmit(event, jobId) {
     event.preventDefault();
+    // FIXED: Added a check to ensure user is logged in
+    if (!appState.currentUser) {
+        return showAlert('You must be logged in to submit a quote.', 'error');
+    }
     const form = event.target;
     const fileInput = form.querySelector('#quoteAttachmentFile');
     const file = fileInput.files[0];
@@ -345,10 +354,26 @@ async function apiCall(endpoint, method, body, successMessage, callback) {
             options.body = JSON.stringify(body);
         }
         const response = await fetch(BACKEND_URL + endpoint, options);
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'Request Failed');
-        if (successMessage) showAlert(successMessage, 'success');
-        if (callback) callback(data);
+        if (!response.ok) {
+            // Try to parse error json, fallback to status text
+            let errorData;
+            try {
+                errorData = await response.json();
+            } catch (e) {
+                throw new Error(response.statusText);
+            }
+            throw new Error(errorData.error || response.statusText);
+        }
+        // Handle cases where there is no JSON body in the response (e.g., DELETE)
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.indexOf("application/json") !== -1) {
+            const data = await response.json();
+            if (successMessage) showAlert(successMessage, 'success');
+            if (callback) callback(data);
+        } else {
+            if (successMessage) showAlert(successMessage, 'success');
+            if (callback) callback();
+        }
     } catch (error) {
         showAlert(error.message, 'error');
     }
