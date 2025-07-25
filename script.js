@@ -1,4 +1,4 @@
-ocument.addEventListener('DOMContentLoaded', initializeApp);
+document.addEventListener('DOMContentLoaded', initializeApp);
 
 const BACKEND_URL = 'https://steelconnect-backend.onrender.com';
 const appState = { currentUser: null, jwtToken: null, jobs: [], myQuotes: [] };
@@ -21,12 +21,47 @@ function initializeApp() {
     fetchJobs();
 }
 
-// --- AUTHENTICATION (No changes) ---
-async function handleRegister(event) { /* ... same as before ... */ }
-async function handleLogin(event) { /* ... same as before ... */ }
-function logout() { /* ... same as before ... */ }
+// --- AUTHENTICATION ---
+async function handleRegister(event) {
+    event.preventDefault();
+    const form = event.target;
+    const userData = {
+        fullName: form.querySelector('#regName').value,
+        username: form.querySelector('#regUsername').value,
+        email: form.querySelector('#regEmail').value,
+        password: form.querySelector('#regPassword').value,
+        role: form.querySelector('#regRole').value,
+    };
+    await apiCall('/auth/register', 'POST', userData, 'Registration successful! Please sign in.', () => {
+        showSection('login');
+        form.reset();
+    });
+}
 
-// --- DATA FETCHING & RENDERING (UPDATED) ---
+async function handleLogin(event) {
+    event.preventDefault();
+    const form = event.target;
+    const authData = { email: form.querySelector('#loginEmail').value, password: form.querySelector('#loginPassword').value };
+    
+    await apiCall('/auth/login', 'POST', authData, 'Login successful!', (data) => {
+        appState.currentUser = data.user;
+        appState.jwtToken = data.token || 'fake-jwt-token';
+        localStorage.setItem('currentUser', JSON.stringify(data.user));
+        localStorage.setItem('jwtToken', appState.jwtToken);
+        updateUIForLoggedInUser();
+        fetchJobs();
+    });
+}
+
+function logout() {
+    appState.currentUser = null;
+    appState.jwtToken = null;
+    localStorage.clear();
+    updateUIForLoggedOutUser();
+    showAlert('You have been logged out.', 'info');
+}
+
+// --- DATA FETCHING & RENDERING ---
 async function fetchJobs() {
     await apiCall('/jobs', 'GET', null, null, (data) => {
         appState.jobs = data;
@@ -102,17 +137,57 @@ function renderMyQuotes() {
 }
 
 // --- ACTIONS (CREATE, DELETE, UPDATE) ---
-async function handlePostJob(event) { /* ... same as before ... */ }
+async function handlePostJob(event) {
+    event.preventDefault();
+    const form = event.target;
+    const fileInput = form.querySelector('#jobAttachmentFile');
+    const file = fileInput.files[0];
+
+    let attachmentPath = '';
+    if (file) {
+        const formData = new FormData();
+        formData.append('document', file);
+        try {
+            showAlert('Uploading file...', 'info');
+            const response = await fetch(`${BACKEND_URL}/uploads/job`, { method: 'POST', body: formData, });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'File upload failed.');
+            attachmentPath = data.filePath;
+        } catch (error) {
+            return showAlert(error.message, 'error');
+        }
+    }
+    
+    const jobData = {
+        title: form.querySelector('#jobTitle').value,
+        description: form.querySelector('#jobDescription').value,
+        budget: form.querySelector('#jobBudget').value,
+        deadline: form.querySelector('#jobDeadline').value,
+        skills: form.querySelector('#jobSkills').value.split(',').map(s => s.trim()).filter(Boolean),
+        userId: appState.currentUser.id,
+        userFullName: appState.currentUser.fullName,
+        attachment: attachmentPath,
+        link: form.querySelector('#jobAttachmentLink').value
+    };
+    await apiCall('/jobs', 'POST', jobData, 'Job posted successfully!', () => {
+        form.reset();
+        fetchJobs();
+        showSection('jobs');
+    });
+}
+
 async function deleteJob(jobId) {
     if (confirm('Are you sure you want to delete this job?')) {
         await apiCall(`/jobs/${jobId}`, 'DELETE', null, 'Job deleted successfully!', fetchJobs);
     }
 }
+
 async function deleteQuote(quoteId) {
     if (confirm('Are you sure you want to delete this quote?')) {
         await apiCall(`/quotes/${quoteId}`, 'DELETE', null, 'Quote deleted successfully!', fetchMyQuotes);
     }
 }
+
 async function approveQuote(quoteId) {
     if (confirm('Approve this quote? All others for this job will be rejected.')) {
         await apiCall(`/quotes/${quoteId}/approve`, 'PUT', null, 'Quote approved!', () => {
@@ -148,10 +223,63 @@ async function viewQuotes(jobId) {
     });
 }
 
-function openMessageModal(recipientId) {
-    // ... same placeholder message modal as before ...
+function showQuoteModal(jobId) {
     const modalContainer = document.getElementById('modal-container');
-    modalContainer.innerHTML = `<div class="modal-overlay" onclick="closeModal()"><div class="modal-content" onclick="event.stopPropagation()"><button class="modal-close-button" onclick="closeModal()">✕</button><h3>Send a Message</h3><form id="message-form"><textarea id="messageText" required></textarea><button type="submit">Send</button></form></div></div>`;
+    modalContainer.innerHTML = `
+        <div class="modal-overlay" onclick="closeModal()"><div class="modal-content" onclick="event.stopPropagation()">
+            <button class="modal-close-button" onclick="closeModal()">✕</button>
+            <h3>Submit Your Quote</h3>
+            <form id="quote-form" class="form-grid">
+                <div class="form-group"><label class="form-label">Quote Amount ($)</label><input type="number" class="form-input" id="quoteAmount" required></div>
+                <div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="quoteDescription" required></textarea></div>
+                <div class="form-group"><label class="form-label">Attach Quotation (PDF/Word)</label><input type="file" class="form-input" id="quoteAttachmentFile"></div>
+                <button type="submit" class="btn btn-primary">Submit Quote</button>
+            </form>
+        </div></div>`;
+    document.getElementById('quote-form').addEventListener('submit', (e) => handleQuoteSubmit(e, jobId));
+}
+
+async function handleQuoteSubmit(event, jobId) {
+    event.preventDefault();
+    const form = event.target;
+    const fileInput = form.querySelector('#quoteAttachmentFile');
+    const file = fileInput.files[0];
+    let attachmentPath = '';
+    if (file) {
+        const formData = new FormData();
+        formData.append('quote_document', file);
+        try {
+            showAlert('Uploading quote file...', 'info');
+            const response = await fetch(`${BACKEND_URL}/uploads/quote`, { method: 'POST', body: formData });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'File upload failed.');
+            attachmentPath = data.filePath;
+        } catch (error) {
+            return showAlert(error.message, 'error');
+        }
+    }
+    const quoteData = {
+        jobId: jobId,
+        amount: form.querySelector('#quoteAmount').value,
+        description: form.querySelector('#quoteDescription').value,
+        attachment: attachmentPath,
+        quoterId: appState.currentUser.id,
+        quoterName: appState.currentUser.fullName
+    };
+    await apiCall('/quotes', 'POST', quoteData, 'Quote submitted successfully!', closeModal);
+}
+
+function openMessageModal(recipientId) {
+    const modalContainer = document.getElementById('modal-container');
+    modalContainer.innerHTML = `
+        <div class="modal-overlay" onclick="closeModal()"><div class="modal-content" onclick="event.stopPropagation()">
+            <button class="modal-close-button" onclick="closeModal()">✕</button>
+            <h3>Send a Message</h3>
+            <form id="message-form" class="form-grid">
+                <div class="form-group"><label>Message</label><textarea id="messageText" class="form-textarea" required></textarea></div>
+                <button type="submit" class="btn btn-primary">Send</button>
+            </form>
+        </div></div>`;
     document.getElementById('message-form').addEventListener('submit', (e) => {
         e.preventDefault();
         showAlert('Message sent! (DEMO)', 'success');
@@ -159,4 +287,69 @@ function openMessageModal(recipientId) {
     });
 }
 
-// --- UNCHANGED FUNCTIONS ---
+function closeModal() {
+    document.getElementById('modal-container').innerHTML = '';
+}
+
+// --- UI & UTILITY FUNCTIONS ---
+function updateUIForLoggedInUser() {
+    const user = appState.currentUser;
+    document.getElementById('user-profile').style.display = 'flex';
+    document.getElementById('auth-buttons-container').style.display = 'none';
+    const navMenu = document.getElementById('main-nav-menu');
+    navMenu.innerHTML = `
+        <button class="nav-link" onclick="showSection('jobs')">Find Jobs</button>
+        ${user.role === 'contractor' ? `<button class="nav-link" onclick="showSection('post-job')">Post Job</button>` : ''}
+        <button class="nav-link" onclick="showSection('quotes')">My Quotes</button>
+    `;
+    document.getElementById('userName').textContent = user.fullName;
+    document.getElementById('userType').textContent = user.role.charAt(0).toUpperCase() + user.role.slice(1);
+    document.getElementById('userAvatar').textContent = user.fullName.charAt(0).toUpperCase();
+    showSection('jobs');
+}
+
+function updateUIForLoggedOutUser() {
+    document.getElementById('user-profile').style.display = 'none';
+    document.getElementById('auth-buttons-container').style.display = 'flex';
+    document.getElementById('auth-buttons-container').innerHTML = `
+        <button class="btn btn-outline" onclick="showSection('login')">Sign In</button>
+        <button class="btn btn-primary" onclick="showSection('register')">Join Now</button>
+    `;
+    const navMenu = document.getElementById('main-nav-menu');
+    navMenu.innerHTML = `<button class="nav-link" onclick="showSection('jobs')">Find Jobs</button>`;
+    showSection('jobs');
+}
+
+function showSection(sectionId) {
+    document.querySelectorAll('.content-section').forEach(s => s.style.display = 'none');
+    document.getElementById(`${sectionId}-section`).style.display = 'block';
+    if (sectionId === 'quotes') {
+        fetchMyQuotes();
+    }
+}
+
+function showAlert(message, type = 'info') {
+    const alertsContainer = document.getElementById('alerts');
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type}`;
+    alertDiv.textContent = message;
+    alertsContainer.prepend(alertDiv);
+    setTimeout(() => alertDiv.remove(), 5000);
+}
+
+async function apiCall(endpoint, method, body, successMessage, callback) {
+    try {
+        const options = { method, headers: {} };
+        if (body) {
+            options.headers['Content-Type'] = 'application/json';
+            options.body = JSON.stringify(body);
+        }
+        const response = await fetch(BACKEND_URL + endpoint, options);
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Request Failed');
+        if (successMessage) showAlert(successMessage, 'success');
+        if (callback) callback(data);
+    } catch (error) {
+        showAlert(error.message, 'error');
+    }
+}
