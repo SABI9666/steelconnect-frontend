@@ -82,7 +82,13 @@ function renderJobs() {
         const jobCard = document.createElement('div');
         jobCard.className = 'job-card';
         const skillsHTML = (job.skills || []).map(skill => `<span class="skill-tag">${skill}</span>`).join('');
-        const attachmentHTML = job.attachment ? `<div class="job-attachment"><a href="${BACKEND_URL}${job.attachment}" target="_blank">View Attachment</a></div>` : '';
+        
+        let attachmentHTML = '';
+        if (job.attachment) {
+            attachmentHTML = `<div class="job-attachment"><a href="${BACKEND_URL}${job.attachment}" target="_blank">View File Attachment</a></div>`;
+        } else if (job.link) {
+            attachmentHTML = `<div class="job-attachment"><a href="${job.link}" target="_blank">View Link Attachment</a></div>`;
+        }
 
         jobCard.innerHTML = `
             <div class="job-header">
@@ -116,7 +122,7 @@ async function handlePostJob(event) {
         formData.append('document', file);
         try {
             showAlert('Uploading file...', 'info');
-            const response = await fetch(`${BACKEND_URL}/uploads`, {
+            const response = await fetch(`${BACKEND_URL}/uploads/job`, {
                 method: 'POST',
                 body: formData,
             });
@@ -136,7 +142,8 @@ async function handlePostJob(event) {
         skills: form.querySelector('#jobSkills').value.split(',').map(s => s.trim()).filter(Boolean),
         userId: appState.currentUser.id,
         userFullName: appState.currentUser.fullName,
-        attachment: attachmentPath
+        attachment: attachmentPath,
+        link: form.querySelector('#jobAttachmentLink').value
     };
 
     await apiCall('/jobs', 'POST', jobData, 'Job posted successfully!', () => {
@@ -157,6 +164,7 @@ function showQuoteModal(jobId) {
                 <form id="quote-form" class="form-grid">
                     <div class="form-group"><label class="form-label">Quote Amount ($)</label><input type="number" class="form-input" id="quoteAmount" required></div>
                     <div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="quoteDescription" required></textarea></div>
+                    <div class="form-group"><label class="form-label">Attach Quotation (PDF/Word)</label><input type="file" class="form-input" id="quoteAttachmentFile"></div>
                     <button type="submit" class="btn btn-primary">Submit Quote</button>
                 </form>
             </div>
@@ -171,8 +179,32 @@ function closeModal() {
 
 async function handleQuoteSubmit(event, jobId) {
     event.preventDefault();
-    // This is a placeholder. To make this work, you would need to create a POST /quotes endpoint on your backend.
-    showAlert('Quote submitted successfully! (DEMO)', 'success');
+    const form = event.target;
+    const fileInput = form.querySelector('#quoteAttachmentFile');
+    const file = fileInput.files[0];
+
+    let attachmentPath = '';
+    if (file) {
+        const formData = new FormData();
+        formData.append('quote_document', file);
+        try {
+            showAlert('Uploading quote file...', 'info');
+            const response = await fetch(`${BACKEND_URL}/uploads/quote`, { method: 'POST', body: formData });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'File upload failed.');
+            attachmentPath = data.filePath;
+        } catch (error) {
+            return showAlert(error.message, 'error');
+        }
+    }
+    
+    console.log('Submitting quote for job:', jobId, {
+        amount: form.querySelector('#quoteAmount').value,
+        description: form.querySelector('#quoteDescription').value,
+        attachment: attachmentPath
+    });
+    
+    showAlert('Quote submitted! (Backend endpoint needed)', 'success');
     closeModal();
 }
 
@@ -181,15 +213,15 @@ function updateUIForLoggedInUser() {
     const user = appState.currentUser;
     document.getElementById('user-profile').style.display = 'flex';
     document.getElementById('auth-buttons-container').style.display = 'none';
-    document.getElementById('userName').textContent = user.fullName;
-    document.getElementById('userType').textContent = user.role.charAt(0).toUpperCase() + user.role.slice(1);
-    document.getElementById('userAvatar').textContent = user.fullName.charAt(0).toUpperCase();
     const navMenu = document.getElementById('main-nav-menu');
     navMenu.innerHTML = `
         <button class="nav-link" onclick="showSection('jobs')">Find Jobs</button>
         ${user.role === 'contractor' ? `<button class="nav-link" onclick="showSection('post-job')">Post Job</button>` : ''}
         <button class="nav-link" onclick="showSection('quotes')">My Quotes</button>
     `;
+    document.getElementById('userName').textContent = user.fullName;
+    document.getElementById('userType').textContent = user.role.charAt(0).toUpperCase() + user.role.slice(1);
+    document.getElementById('userAvatar').textContent = user.fullName.charAt(0).toUpperCase();
     showSection('jobs');
 }
 
