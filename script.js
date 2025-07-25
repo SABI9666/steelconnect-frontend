@@ -64,7 +64,7 @@ function logout() {
 // --- JOB DATA & RENDERING ---
 async function fetchJobs() {
     const jobsList = document.getElementById('jobs-list');
-    jobsList.innerHTML = '<div class="spinner-container"><div class="spinner"></div></div>';
+    jobsList.innerHTML = '<div class="spinner-container" style="display:flex; justify-content:center; padding: 40px;"><div class="spinner"></div></div>';
     await apiCall('/jobs', 'GET', null, null, (data) => {
         appState.jobs = data;
         renderJobs();
@@ -74,7 +74,7 @@ async function fetchJobs() {
 function renderJobs() {
     const jobsList = document.getElementById('jobs-list');
     jobsList.innerHTML = '';
-    if (appState.jobs.length === 0) {
+    if (!appState.jobs || appState.jobs.length === 0) {
         jobsList.innerHTML = `<div class="empty-state"><h3>No Jobs Found</h3><p>Check back later or post a new job.</p></div>`;
         return;
     }
@@ -124,8 +124,8 @@ async function handlePostJob(event) {
 function showQuoteModal(jobId) {
     const modalContainer = document.getElementById('modal-container');
     modalContainer.innerHTML = `
-        <div class="modal-overlay">
-            <div class="modal-content">
+        <div class="modal-overlay" onclick="closeModal()">
+            <div class="modal-content" onclick="event.stopPropagation()">
                 <button class="modal-close-button" onclick="closeModal()">✕</button>
                 <h3>Submit Your Quote</h3>
                 <form id="quote-form" class="form-grid">
@@ -145,8 +145,7 @@ function closeModal() {
 
 async function handleQuoteSubmit(event, jobId) {
     event.preventDefault();
-    // In a real app, you would create a /quotes endpoint on the backend.
-    // For now, we'll just show a success message.
+    // This is a placeholder. To make this work, you would need to create a /quotes endpoint on the backend.
     showAlert('Quote submitted successfully! (DEMO)', 'success');
     closeModal();
 }
@@ -156,15 +155,15 @@ function updateUIForLoggedInUser() {
     const user = appState.currentUser;
     document.getElementById('user-profile').style.display = 'flex';
     document.getElementById('auth-buttons-container').style.display = 'none';
-    document.getElementById('userName').textContent = user.fullName;
-    document.getElementById('userType').textContent = user.role.charAt(0).toUpperCase() + user.role.slice(1);
-    document.getElementById('userAvatar').textContent = user.fullName.charAt(0).toUpperCase();
     const navMenu = document.getElementById('main-nav-menu');
     navMenu.innerHTML = `
         <button class="nav-link" onclick="showSection('jobs')">Find Jobs</button>
         ${user.role === 'contractor' ? `<button class="nav-link" onclick="showSection('post-job')">Post Job</button>` : ''}
         <button class="nav-link" onclick="showSection('quotes')">My Quotes</button>
     `;
+    document.getElementById('userName').textContent = user.fullName;
+    document.getElementById('userType').textContent = user.role.charAt(0).toUpperCase() + user.role.slice(1);
+    document.getElementById('userAvatar').textContent = user.fullName.charAt(0).toUpperCase();
     showSection('jobs');
 }
 
