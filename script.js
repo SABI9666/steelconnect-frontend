@@ -153,7 +153,7 @@ async function handlePostJob(event) {
     });
 }
 
-// --- QUOTE MODAL ---
+// --- QUOTE MODAL & SUBMISSION ---
 function showQuoteModal(jobId) {
     const modalContainer = document.getElementById('modal-container');
     modalContainer.innerHTML = `
@@ -198,14 +198,16 @@ async function handleQuoteSubmit(event, jobId) {
         }
     }
     
-    console.log('Submitting quote for job:', jobId, {
+    const quoteData = {
+        jobId: jobId,
         amount: form.querySelector('#quoteAmount').value,
         description: form.querySelector('#quoteDescription').value,
-        attachment: attachmentPath
-    });
-    
-    showAlert('Quote submitted! (Backend endpoint needed)', 'success');
-    closeModal();
+        attachment: attachmentPath,
+        quoterId: appState.currentUser.id,
+        quoterName: appState.currentUser.fullName
+    };
+
+    await apiCall('/quotes', 'POST', quoteData, 'Quote submitted successfully!', closeModal);
 }
 
 // --- UI & UTILITY FUNCTIONS ---
@@ -255,9 +257,14 @@ async function apiCall(endpoint, method, body, successMessage, callback) {
     try {
         const options = {
             method,
-            headers: { 'Content-Type': 'application/json' },
         };
-        if (body) options.body = JSON.stringify(body);
+        // Do not set Content-Type for FormData, the browser does it.
+        if (body instanceof FormData) {
+            options.body = body;
+        } else if (body) {
+            options.headers = { 'Content-Type': 'application/json' };
+            options.body = JSON.stringify(body);
+        }
         
         const response = await fetch(BACKEND_URL + endpoint, options);
         const data = await response.json();
