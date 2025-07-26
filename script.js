@@ -93,9 +93,12 @@ function renderJobs() {
         jobCard.className = 'job-card';
         const isMyJob = appState.currentUser?.id === job.posterId;
 
+        // UPDATED: Only show attachments if a user is logged in
         let attachmentHTML = '';
-        if (job.attachment) attachmentHTML += `<div class="job-attachment"><a href="${BACKEND_URL}${job.attachment}" target="_blank">📄 View File</a></div>`;
-        if (job.link) attachmentHTML += `<div class="job-attachment"><a href="${job.link}" target="_blank">🔗 View Link</a></div>`;
+        if (appState.currentUser) {
+            if (job.attachment) attachmentHTML += `<div class="job-attachment"><a href="${BACKEND_URL}${job.attachment}" target="_blank">📄 View File</a></div>`;
+            if (job.link) attachmentHTML += `<div class="job-attachment"><a href="${job.link}" target="_blank">🔗 View Link</a></div>`;
+        }
 
         let actionButtonHTML = '';
         if (appState.currentUser) {
@@ -105,6 +108,7 @@ function renderJobs() {
                 actionButtonHTML = `<button class="btn btn-primary" onclick="showQuoteModal('${job.id}')">Submit Quote</button>`;
             }
         } else {
+            // This button already correctly sends users to the login page
             actionButtonHTML = `<button class="btn btn-secondary" onclick="showSection('login')">Sign In to Quote</button>`;
         }
         
@@ -141,15 +145,12 @@ function renderMyQuotes() {
 // --- ACTIONS (CREATE, DELETE, UPDATE) ---
 async function handlePostJob(event) {
     event.preventDefault();
-    // FIXED: Added a check to ensure user is logged in
     if (!appState.currentUser) {
         return showAlert('You must be logged in to post a job.', 'error');
     }
-
     const form = event.target;
     const fileInput = form.querySelector('#jobAttachmentFile');
     const file = fileInput.files[0];
-
     let attachmentPath = '';
     if (file) {
         const formData = new FormData();
@@ -164,7 +165,6 @@ async function handlePostJob(event) {
             return showAlert(error.message, 'error');
         }
     }
-    
     const jobData = {
         title: form.querySelector('#jobTitle').value,
         description: form.querySelector('#jobDescription').value,
@@ -194,7 +194,7 @@ async function deleteQuote(quoteId) {
     }
 }
 async function approveQuote(quoteId) {
-    if (confirm('Approve this quote? All others for this job will be rejected.')) {
+    if (confirm('Approve this quote? All other quotes for this job will be rejected.')) {
         await apiCall(`/quotes/${quoteId}/approve`, 'PUT', null, 'Quote approved!', () => {
             closeModal();
             fetchJobs();
@@ -246,7 +246,6 @@ function showQuoteModal(jobId) {
 
 async function handleQuoteSubmit(event, jobId) {
     event.preventDefault();
-    // FIXED: Added a check to ensure user is logged in
     if (!appState.currentUser) {
         return showAlert('You must be logged in to submit a quote.', 'error');
     }
@@ -355,7 +354,6 @@ async function apiCall(endpoint, method, body, successMessage, callback) {
         }
         const response = await fetch(BACKEND_URL + endpoint, options);
         if (!response.ok) {
-            // Try to parse error json, fallback to status text
             let errorData;
             try {
                 errorData = await response.json();
@@ -364,7 +362,6 @@ async function apiCall(endpoint, method, body, successMessage, callback) {
             }
             throw new Error(errorData.error || response.statusText);
         }
-        // Handle cases where there is no JSON body in the response (e.g., DELETE)
         const contentType = response.headers.get("content-type");
         if (contentType && contentType.indexOf("application/json") !== -1) {
             const data = await response.json();
