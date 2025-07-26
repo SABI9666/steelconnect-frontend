@@ -6,7 +6,6 @@
     <title>SteelConnect - Professional Steel & Rebar Design Marketplace</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        /* --- AESTHETIC CSS UPDATES --- */
         * {
             margin: 0;
             padding: 0;
@@ -21,7 +20,9 @@
             --bg-white: #ffffff;
             --bg-light: #f3f4f6;
             --border-color: #e5e7eb;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
             --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
             --gradient-hero: linear-gradient(135deg, rgba(31, 41, 55, 0.9) 0%, rgba(17, 24, 39, 0.9) 100%);
         }
         body {
@@ -36,6 +37,7 @@
             position: sticky;
             top: 0;
             z-index: 100;
+            box-shadow: var(--shadow-sm);
         }
         .header-container {
             max-width: 1200px;
@@ -91,41 +93,43 @@
             display: inline-flex;
             align-items: center;
             gap: 6px;
+            transition: transform 0.2s ease;
         }
+        .btn:hover { transform: translateY(-1px); }
         .btn-outline { background: var(--bg-white); color: var(--text-dark); border-color: var(--border-color); }
-        .btn-outline:hover { border-color: var(--primary-color); color: var(--primary-color); }
         .btn-primary { background: var(--primary-color); color: white; }
-        .btn-primary:hover { background: var(--primary-hover); }
         .btn-secondary { background: var(--bg-light); color: var(--text-dark); }
         .btn-danger { background: #ef4444; color: white; }
-        
-        /* UPDATED HERO SECTION WITH BACKGROUND IMAGE */
         .hero {
-            position: relative;
+            background: var(--gradient-hero);
             color: white;
-            padding: 120px 0;
-            text-align: center;
-            overflow: hidden;
-        }
-        .hero-background {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            z-index: 1;
-            filter: brightness(0.4);
+            padding: 80px 0 100px;
+            text-align: left;
+            position: relative;
         }
         .hero-content {
-            position: relative;
-            z-index: 2;
-            max-width: 800px;
+            max-width: 1200px;
             margin: 0 auto;
             padding: 0 24px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            align-items: center;
         }
-        .hero-content h1 { font-size: 52px; font-weight: 700; margin-bottom: 20px; }
-        .hero-content p { font-size: 20px; opacity: 0.9; margin-bottom: 32px; }
+        .hero-text h1 { font-size: 48px; font-weight: 700; margin-bottom: 20px; line-height: 1.2; }
+        .hero-text p { font-size: 18px; opacity: 0.9; margin-bottom: 32px; }
+        .hero-visual { display: flex; align-items: center; justify-content: center; }
+        
+        /* --- UPDATED CSS FOR THE IMAGE --- */
+        .hero-image {
+            width: 100%;
+            max-width: 450px;
+            height: auto;
+            border-radius: 16px;
+            object-fit: cover;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            box-shadow: var(--shadow-lg);
+        }
         
         .main-container { max-width: 1200px; margin: 0 auto; padding: 40px 24px; }
         .content-section { display: none; }
@@ -152,29 +156,20 @@
         .quote-header h4 { font-size: 16px; font-weight: 600; }
         .quote-amount { font-size: 18px; font-weight: 700; color: var(--primary-color); }
         .quote-status { padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500; text-transform: uppercase; }
-        .quote-status.pending { background: #fef3c7; color: #92400e; }
-        .quote-status.approved { background: #d1fae5; color: #065f46; }
-        .quote-status.rejected { background: #fee2e2; color: #991b1b; }
-        .user-profile { display: flex; align-items: center; gap: 16px; padding: 16px 20px; background: var(--bg-light); border-radius: 12px; margin-bottom: 24px; border: 1px solid var(--border-color); }
+        .quote-status.pending { background: #fef3c7; color: #92400e; } .quote-status.approved { background: #d1fae5; color: #065f46; } .quote-status.rejected { background: #fee2e2; color: #991b1b; }
+        .user-profile { display: flex; align-items: center; gap: 16px; padding: 16px 20px; background: var(--bg-light); border-radius: 12px; margin-bottom: 24px; }
         .user-avatar { width: 48px; height: 48px; background: var(--primary-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 18px; }
-        .user-info h3 { font-weight: 600; font-size: 16px; }
-        .user-info p { color: var(--text-gray); font-size: 14px; }
+        .user-info h3 { font-weight: 600; font-size: 16px; } .user-info p { color: var(--text-gray); font-size: 14px; }
         .alert { padding: 16px 20px; border-radius: 8px; margin-bottom: 24px; font-weight: 500; font-size: 14px; }
-        .alert-success { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
-        .alert-error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
-        .alert-info { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
-        .empty-state { text-align: center; padding: 60px 32px; color: var(--text-gray); }
-        .empty-state h3 { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); display: flex; align-items: center; justify-content: center; z-index: 200; backdrop-filter: blur(4px); }
+        .alert-success { background: #f0fdf4; color: #166534; } .alert-error { background: #fef2f2; color: #991b1b; } .alert-info { background: #eff6ff; color: #1e40af; }
+        .empty-state { text-align: center; padding: 60px 32px; color: var(--text-gray); } .empty-state h3 { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); display: flex; align-items: center; justify-content: center; z-index: 200; }
         .modal-content { background: var(--bg-white); padding: 32px; border-radius: 12px; max-width: 600px; width: 90%; }
         .modal-close-button { position: absolute; top: 16px; right: 16px; background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-gray); }
         .spinner-container { display: flex; justify-content: center; padding: 60px; }
         .spinner { width: 32px; height: 32px; border: 3px solid var(--border-color); border-radius: 50%; border-top-color: var(--primary-color); animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        @media (max-width: 768px) {
-            .nav-menu { display: none; }
-            .form-row { grid-template-columns: 1fr; }
-        }
+        @media (max-width: 768px) { .hero-content { grid-template-columns: 1fr; text-align: center; } .hero-visual { display: none; } .nav-menu { display: none; } .form-row { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
@@ -190,11 +185,16 @@
     </header>
 
     <section class="hero" id="hero-section">
-        <img src="http://googleusercontent.com/image_collection/image_retrieval/5964532610595907468_0" 
-             alt="Modern steel building construction" class="hero-background">
         <div class="hero-content">
-            <h1>Connecting clients to steel professionals who deliver</h1>
-            <p>Find top steel designers and contractors for your projects. Post jobs, submit quotes, and build your network in the steel industry.</p>
+            <div class="hero-text">
+                <h1>Connecting clients to steel professionals who deliver</h1>
+                <p>Find top steel designers and contractors for your projects. Post jobs, submit quotes, and build your network in the steel industry.</p>
+            </div>
+            <div class="hero-visual">
+                <img src="https://images.unsplash.com/photo-1518257654620-ef442358c45d?q=80&w=2070&auto=format&fit=crop" 
+                     alt="Modern steel structure" 
+                     class="hero-image">
+            </div>
         </div>
     </section>
 
@@ -218,25 +218,19 @@
                 <div class="section-header"><h2 class="section-title">Available Jobs</h2></div>
                 <div id="jobs-list" class="jobs-grid"></div>
             </section>
-
+            
             <section id="post-job-section" class="content-section">
                 <div class="section-header"><h2 class="section-title">Post a New Job</h2></div>
                 <form id="post-job-form" class="form-grid">
-                    <div class="form-row">
-                        <div class="form-group"><label class="form-label">Job Title</label><input type="text" class="form-input" id="jobTitle" required></div>
-                        <div class="form-group"><label class="form-label">Budget Range</label><input type="text" class="form-input" id="jobBudget" required placeholder="$5000 - $10000"></div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group"><label class="form-label">Skills Required</label><input type="text" class="form-input" id="jobSkills" placeholder="AISC, AutoCAD, STAAD Pro"></div>
-                        <div class="form-group"><label class="form-label">Deadline</label><input type="date" class="form-input" id="jobDeadline" required></div>
-                    </div>
+                    <div class="form-row"><div class="form-group"><label class="form-label">Job Title</label><input type="text" class="form-input" id="jobTitle" required></div><div class="form-group"><label class="form-label">Budget Range</label><input type="text" class="form-input" id="jobBudget" required placeholder="$5000 - $10000"></div></div>
+                    <div class="form-row"><div class="form-group"><label class="form-label">Skills Required</label><input type="text" class="form-input" id="jobSkills" placeholder="AISC, AutoCAD, STAAD Pro"></div><div class="form-group"><label class="form-label">Deadline</label><input type="date" class="form-input" id="jobDeadline" required></div></div>
                     <div class="form-group"><label class="form-label">Project Description</label><textarea class="form-textarea" id="jobDescription" required></textarea></div>
                     <div class="form-group"><label class="form-label">Attach Document</label><input type="file" class="form-input" id="jobAttachmentFile"></div>
                     <div class="form-group"><label class="form-label">Or Add External Link</label><input type="url" class="form-input" id="jobAttachmentLink" placeholder="https://..."></div>
                     <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Post Job</button>
                 </form>
             </section>
-
+            
             <section id="quotes-section" class="content-section">
                 <div class="section-header"><h2 class="section-title">My Submitted Quotes</h2></div>
                 <div id="my-quotes-list" class="quotes-grid"></div>
@@ -244,27 +238,12 @@
 
             <section id="login-section" class="content-section">
                 <div class="section-header"><h2 class="section-title">Sign In</h2></div>
-                <form id="login-form" class="form-grid" style="max-width: 400px; margin: 0 auto;">
-                    <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" id="loginEmail" required></div>
-                    <div class="form-group"><label class="form-label">Password</label><input type="password" class="form-input" id="loginPassword" required></div>
-                    <button type="submit" class="btn btn-primary"><i class="fas fa-sign-in-alt"></i> Sign In</button>
-                </form>
+                <form id="login-form" class="form-grid" style="max-width: 400px; margin: 0 auto;"><div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" id="loginEmail" required></div><div class="form-group"><label class="form-label">Password</label><input type="password" class="form-input" id="loginPassword" required></div><button type="submit" class="btn btn-primary"><i class="fas fa-sign-in-alt"></i> Sign In</button></form>
             </section>
 
             <section id="register-section" class="content-section">
                 <div class="section-header"><h2 class="section-title">Join SteelConnect</h2></div>
-                <form id="register-form" class="form-grid" style="max-width: 600px; margin: 0 auto;">
-                    <div class="form-row">
-                        <div class="form-group"><label class="form-label">Full Name</label><input type="text" class="form-input" id="regName" required></div>
-                        <div class="form-group"><label class="form-label">Username</label><input type="text" class="form-input" id="regUsername" required></div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" id="regEmail" required></div>
-                        <div class="form-group"><label class="form-label">Password</label><input type="password" class="form-input" id="regPassword" required></div>
-                    </div>
-                    <div class="form-group"><label class="form-label">I am a...</label><select class="form-select" id="regRole" required><option value="">Select your role</option><option value="contractor">Contractor (I post jobs)</option><option value="designer">Designer (I bid on jobs)</option></select></div>
-                    <button type="submit" class="btn btn-primary"><i class="fas fa-user-plus"></i> Create Account</button>
-                </form>
+                <form id="register-form" class="form-grid" style="max-width: 600px; margin: 0 auto;"><div class="form-row"><div class="form-group"><label class="form-label">Full Name</label><input type="text" class="form-input" id="regName" required></div><div class="form-group"><label class="form-label">Username</label><input type="text" class="form-input" id="regUsername" required></div></div><div class="form-row"><div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" id="regEmail" required></div><div class="form-group"><label class="form-label">Password</label><input type="password" class="form-input" id="regPassword" required></div></div><div class="form-group"><label class="form-label">I am a...</label><select class="form-select" id="regRole" required><option value="">Select your role</option><option value="contractor">Contractor (I post jobs)</option><option value="designer">Designer (I bid on jobs)</option></select></div><button type="submit" class="btn btn-primary"><i class="fas fa-user-plus"></i> Create Account</button></form>
             </section>
         </div>
     </main>
@@ -302,10 +281,7 @@
                 password: form.querySelector('#regPassword').value,
                 role: form.querySelector('#regRole').value,
             };
-            await apiCall('/auth/register', 'POST', userData, 'Registration successful! Please sign in.', () => {
-                showSection('login');
-                form.reset();
-            });
+            await apiCall('/auth/register', 'POST', userData, 'Registration successful! Please sign in.', () => { showSection('login'); form.reset(); });
         }
         async function handleLogin(event) {
             event.preventDefault();
@@ -330,19 +306,13 @@
         async function fetchJobs() {
             const jobsList = document.getElementById('jobs-list');
             jobsList.innerHTML = '<div class="spinner-container"><div class="spinner"></div></div>';
-            await apiCall('/jobs', 'GET', null, null, (data) => {
-                appState.jobs = data;
-                renderJobs();
-            });
+            await apiCall('/jobs', 'GET', null, null, (data) => { appState.jobs = data; renderJobs(); });
         }
         async function fetchMyQuotes() {
             if (!appState.currentUser || appState.currentUser.role !== 'designer') return;
             const myQuotesList = document.getElementById('my-quotes-list');
             myQuotesList.innerHTML = '<div class="spinner-container"><div class="spinner"></div></div>';
-            await apiCall(`/quotes/user/${appState.currentUser.id}`, 'GET', null, null, (data) => {
-                appState.myQuotes = data;
-                renderMyQuotes();
-            });
+            await apiCall(`/quotes/user/${appState.currentUser.id}`, 'GET', null, null, (data) => { appState.myQuotes = data; renderMyQuotes(); });
         }
         function renderJobs() {
             const jobsList = document.getElementById('jobs-list');
@@ -362,14 +332,9 @@
                 }
                 let actionButtonHTML = '';
                 if (appState.currentUser) {
-                    if (isMyJob) {
-                        actionButtonHTML = `<button class="btn btn-secondary" onclick="viewQuotes('${job.id}')"><i class="fas fa-eye"></i> View Quotes</button> <button class="btn btn-danger" onclick="deleteJob('${job.id}')"><i class="fas fa-trash"></i> Delete</button>`;
-                    } else if (appState.currentUser.role === 'designer') {
-                        actionButtonHTML = `<button class="btn btn-primary" onclick="showQuoteModal('${job.id}')"><i class="fas fa-paper-plane"></i> Submit Quote</button>`;
-                    }
-                } else {
-                    actionButtonHTML = `<button class="btn btn-secondary" onclick="showSection('login')"><i class="fas fa-sign-in-alt"></i> Sign In to Quote</button>`;
-                }
+                    if (isMyJob) { actionButtonHTML = `<button class="btn btn-secondary" onclick="viewQuotes('${job.id}')"><i class="fas fa-eye"></i> View Quotes</button> <button class="btn btn-danger" onclick="deleteJob('${job.id}')"><i class="fas fa-trash"></i> Delete</button>`; }
+                    else if (appState.currentUser.role === 'designer') { actionButtonHTML = `<button class="btn btn-primary" onclick="showQuoteModal('${job.id}')"><i class="fas fa-paper-plane"></i> Submit Quote</button>`; }
+                } else { actionButtonHTML = `<button class="btn btn-secondary" onclick="showSection('login')"><i class="fas fa-sign-in-alt"></i> Sign In to Quote</button>`; }
                 jobCard.innerHTML = `<div class="job-header"><h3>${job.title}</h3><div class="job-budget">${job.budget}</div></div><p class="job-description">${job.description}</p>${attachmentHTML}<div class="job-actions">${actionButtonHTML}</div>`;
                 jobsList.appendChild(jobCard);
             });
@@ -408,51 +373,27 @@
                     attachmentPath = data.filePath;
                 } catch (error) { return showAlert(error.message, 'error'); }
             }
-            const jobData = {
-                title: form.querySelector('#jobTitle').value,
-                description: form.querySelector('#jobDescription').value,
-                budget: form.querySelector('#jobBudget').value,
-                deadline: form.querySelector('#jobDeadline').value,
-                skills: form.querySelector('#jobSkills').value.split(',').map(s => s.trim()).filter(Boolean),
-                userId: appState.currentUser.id,
-                userFullName: appState.currentUser.fullName,
-                attachment: attachmentPath,
-                link: form.querySelector('#jobAttachmentLink').value
-            };
-            await apiCall('/jobs', 'POST', jobData, 'Job posted successfully!', () => {
-                form.reset();
-                fetchJobs();
-                showSection('jobs');
-            });
+            const jobData = { title: form.querySelector('#jobTitle').value, description: form.querySelector('#jobDescription').value, budget: form.querySelector('#jobBudget').value, deadline: form.querySelector('#jobDeadline').value, skills: form.querySelector('#jobSkills').value.split(',').map(s => s.trim()).filter(Boolean), userId: appState.currentUser.id, userFullName: appState.currentUser.fullName, attachment: attachmentPath, link: form.querySelector('#jobAttachmentLink').value };
+            await apiCall('/jobs', 'POST', jobData, 'Job posted successfully!', () => { form.reset(); fetchJobs(); showSection('jobs'); });
         }
         async function deleteJob(jobId) {
-            if (confirm('Are you sure you want to delete this job?')) {
-                await apiCall(`/jobs/${jobId}`, 'DELETE', null, 'Job deleted successfully!', fetchJobs);
-            }
+            if (confirm('Are you sure you want to delete this job?')) { await apiCall(`/jobs/${jobId}`, 'DELETE', null, 'Job deleted successfully!', fetchJobs); }
         }
         async function deleteQuote(quoteId) {
-            if (confirm('Are you sure you want to delete this quote?')) {
-                await apiCall(`/quotes/${quoteId}`, 'DELETE', null, 'Quote deleted successfully!', fetchMyQuotes);
-            }
+            if (confirm('Are you sure you want to delete this quote?')) { await apiCall(`/quotes/${quoteId}`, 'DELETE', null, 'Quote deleted successfully!', fetchMyQuotes); }
         }
         async function approveQuote(quoteId) {
-            if (confirm('Approve this quote? All other quotes for this job will be rejected.')) {
-                await apiCall(`/quotes/${quoteId}/approve`, 'PUT', null, 'Quote approved!', () => {
-                    closeModal();
-                    fetchJobs();
-                });
-            }
+            if (confirm('Approve this quote? All others will be rejected.')) { await apiCall(`/quotes/${quoteId}/approve`, 'PUT', null, 'Quote approved!', () => { closeModal(); fetchJobs(); }); }
         }
         async function viewQuotes(jobId) {
             await apiCall(`/quotes/job/${jobId}`, 'GET', null, null, (quotes) => {
                 const modalContainer = document.getElementById('modal-container');
-                let quotesHTML = '<h3 style="margin-bottom: 24px;"><i class="fas fa-file-alt"></i> Received Quotes</h3>';
-                if (quotes.length === 0) {
-                    quotesHTML += `<div class="empty-state"><i class="fas fa-file-alt"></i><p>No quotes yet.</p></div>`;
-                } else {
+                let quotesHTML = '<h3><i class="fas fa-file-alt"></i> Received Quotes</h3>';
+                if (quotes.length === 0) { quotesHTML += `<div class="empty-state"><p>No quotes yet.</p></div>`; }
+                else {
                     quotes.forEach(quote => {
-                        const attachmentHTML = quote.attachment ? `<div class="job-attachment"><a href="${BACKEND_URL}${quote.attachment}" target="_blank"><i class="fas fa-file"></i> View Attachment</a></div>` : '';
-                        quotesHTML += `<div class="quote-card"><div class="quote-header"><div><h4>From: ${quote.quoterName}</h4><div class="quote-amount">$${quote.amount}</div></div><div class="quote-status ${quote.status}">${quote.status}</div></div><p style="margin-bottom: 16px;">${quote.description}</p>${attachmentHTML}<div class="job-actions">${quote.status === 'pending' ? `<button class="btn btn-primary" onclick="approveQuote('${quote.id}')"><i class="fas fa-check"></i> Approve</button>` : ''}<button class="btn btn-secondary" onclick="openMessageModal('${quote.quoterId}')"><i class="fas fa-envelope"></i> Message</button></div></div>`;
+                        const attachmentHTML = quote.attachment ? `<div class="job-attachment"><a href="${BACKEND_URL}${quote.attachment}" target="_blank">View Attachment</a></div>` : '';
+                        quotesHTML += `<div class="quote-card"><p><strong>From:</strong> ${quote.quoterName} | <strong>Amount:</strong> $${quote.amount}</p><p>${quote.description}</p>${attachmentHTML}<div class="job-actions">${quote.status === 'pending' ? `<button class="btn btn-primary" onclick="approveQuote('${quote.id}')">Approve</button>` : `<span class="quote-status ${quote.status}">${quote.status}</span>`}<button class="btn btn-secondary" onclick="openMessageModal('${quote.quoterId}')">Message</button></div></div>`;
                     });
                 }
                 modalContainer.innerHTML = `<div class="modal-overlay" onclick="closeModal()"><div class="modal-content" onclick="event.stopPropagation()"><button class="modal-close-button" onclick="closeModal()">✕</button>${quotesHTML}</div></div>`;
@@ -460,7 +401,7 @@
         }
         function showQuoteModal(jobId) {
             const modalContainer = document.getElementById('modal-container');
-            modalContainer.innerHTML = `<div class="modal-overlay" onclick="closeModal()"><div class="modal-content" onclick="event.stopPropagation()"><button class="modal-close-button" onclick="closeModal()">✕</button><h3 style="margin-bottom: 24px;">Submit Your Quote</h3><form id="quote-form" class="form-grid"><div class="form-group"><label class="form-label">Quote Amount ($)</label><input type="number" class="form-input" id="quoteAmount" required></div><div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="quoteDescription" required></textarea></div><div class="form-group"><label class="form-label">Attach Quotation</label><input type="file" class="form-input" id="quoteAttachmentFile"></div><button type="submit" class="btn btn-primary">Submit Quote</button></form></div></div>`;
+            modalContainer.innerHTML = `<div class="modal-overlay" onclick="closeModal()"><div class="modal-content" onclick="event.stopPropagation()"><button class="modal-close-button" onclick="closeModal()">✕</button><h3>Submit Your Quote</h3><form id="quote-form" class="form-grid"><div class="form-group"><label>Amount ($)</label><input type="number" id="quoteAmount" required></div><div class="form-group"><label>Description</label><textarea id="quoteDescription" required></textarea></div><div class="form-group"><label>Attach File</label><input type="file" id="quoteAttachmentFile"></div><button type="submit" class="btn btn-primary">Submit</button></form></div></div>`;
             document.getElementById('quote-form').addEventListener('submit', (e) => handleQuoteSubmit(e, jobId));
         }
         async function handleQuoteSubmit(event, jobId) {
@@ -474,31 +415,20 @@
                 const formData = new FormData();
                 formData.append('quote_document', file);
                 try {
-                    showAlert('Uploading quote file...', 'info');
+                    showAlert('Uploading file...', 'info');
                     const response = await fetch(`${BACKEND_URL}/uploads/quote`, { method: 'POST', body: formData });
                     const data = await response.json();
                     if (!response.ok) throw new Error(data.error || 'File upload failed.');
                     attachmentPath = data.filePath;
                 } catch (error) { return showAlert(error.message, 'error'); }
             }
-            const quoteData = {
-                jobId: jobId,
-                amount: form.querySelector('#quoteAmount').value,
-                description: form.querySelector('#quoteDescription').value,
-                attachment: attachmentPath,
-                quoterId: appState.currentUser.id,
-                quoterName: appState.currentUser.fullName
-            };
+            const quoteData = { jobId: jobId, amount: form.querySelector('#quoteAmount').value, description: form.querySelector('#quoteDescription').value, attachment: attachmentPath, quoterId: appState.currentUser.id, quoterName: appState.currentUser.fullName };
             await apiCall('/quotes', 'POST', quoteData, 'Quote submitted successfully!', closeModal);
         }
         function openMessageModal(recipientId) {
             const modalContainer = document.getElementById('modal-container');
-            modalContainer.innerHTML = `<div class="modal-overlay" onclick="closeModal()"><div class="modal-content" onclick="event.stopPropagation()"><button class="modal-close-button" onclick="closeModal()">✕</button><h3 style="margin-bottom: 24px;">Send a Message</h3><form id="message-form" class="form-grid"><div class="form-group"><label>Message</label><textarea id="messageText" class="form-textarea" required></textarea></div><button type="submit" class="btn btn-primary">Send</button></form></div></div>`;
-            document.getElementById('message-form').addEventListener('submit', (e) => {
-                e.preventDefault();
-                showAlert('Message sent! (DEMO)', 'success');
-                closeModal();
-            });
+            modalContainer.innerHTML = `<div class="modal-overlay" onclick="closeModal()"><div class="modal-content" onclick="event.stopPropagation()"><button class="modal-close-button" onclick="closeModal()">✕</button><h3>Send a Message</h3><form id="message-form"><textarea id="messageText" required></textarea><button type="submit">Send</button></form></div></div>`;
+            document.getElementById('message-form').addEventListener('submit', (e) => { e.preventDefault(); showAlert('Message sent! (DEMO)', 'success'); closeModal(); });
         }
         function closeModal() {
             document.getElementById('modal-container').innerHTML = '';
