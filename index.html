@@ -4,7 +4,179 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SteelConnect - Professional Steel & Rebar Design Marketplace</title>
-    <link rel="stylesheet" href="style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* --- AESTHETIC CSS UPDATES --- */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        :root {
+            --primary-color: #14a800;
+            --primary-hover: #0f7a00;
+            --primary-light: #f0fdf4;
+            --text-dark: #1f2937;
+            --text-gray: #6b7280;
+            --bg-white: #ffffff;
+            --bg-light: #f3f4f6;
+            --border-color: #e5e7eb;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --gradient-primary: linear-gradient(135deg, #14a800 0%, #108a00 100%);
+            --gradient-hero: linear-gradient(135deg, rgba(31, 41, 55, 0.9) 0%, rgba(17, 24, 39, 0.9) 100%);
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--bg-white);
+            color: var(--text-dark);
+            line-height: 1.6;
+        }
+        .header {
+            background: var(--bg-white);
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow-sm);
+        }
+        .header-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 64px;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: var(--gradient-primary);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 16px;
+        }
+        .nav-menu { display: flex; gap: 4px; }
+        .nav-link {
+            padding: 8px 16px;
+            border-radius: 6px;
+            text-decoration: none;
+            color: var(--text-gray);
+            font-weight: 500;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            background: none;
+            border: none;
+        }
+        .nav-link:hover { color: var(--text-dark); background-color: var(--bg-light); }
+        .nav-link.active { color: var(--primary-color); background-color: var(--primary-light); }
+        .auth-buttons { display: flex; gap: 12px; }
+        .btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .btn:hover { transform: translateY(-1px); }
+        .btn-outline { background: var(--bg-white); color: var(--text-dark); border-color: var(--border-color); }
+        .btn-outline:hover { border-color: var(--primary-color); color: var(--primary-color); }
+        .btn-primary { background: var(--primary-color); color: white; }
+        .btn-primary:hover { background: var(--primary-hover); box-shadow: var(--shadow-md); }
+        .btn-secondary { background: var(--bg-light); color: var(--text-dark); }
+        .btn-danger { background: #ef4444; color: white; }
+        .hero {
+            background: var(--gradient-hero);
+            color: white;
+            padding: 80px 0 100px;
+            text-align: left;
+        }
+        .hero-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            align-items: center;
+        }
+        .hero-text h1 { font-size: 48px; font-weight: 700; margin-bottom: 20px; line-height: 1.2; }
+        .hero-text p { font-size: 18px; opacity: 0.9; margin-bottom: 32px; }
+        .hero-visual { display: flex; align-items: center; justify-content: center; }
+        .hero-image { width: 100%; max-width: 400px; height: 300px; background: rgba(255,255,255,0.05); border-radius: 16px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255, 255, 255, 0.1); }
+        .hero-image i { font-size: 80px; opacity: 0.2; }
+        .main-container { max-width: 1200px; margin: 0 auto; padding: 40px 24px; }
+        .content-section { display: none; }
+        .content-section.active { display: block; }
+        .section-header { margin-bottom: 32px; padding-bottom: 16px; border-bottom: 1px solid var(--border-color); }
+        .section-title { font-size: 24px; font-weight: 600; }
+        .form-grid { display: grid; gap: 24px; }
+        .form-group { display: flex; flex-direction: column; gap: 6px; }
+        .form-label { font-weight: 500; font-size: 14px; }
+        .form-input, .form-select, .form-textarea { padding: 12px 16px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; transition: all 0.2s ease; }
+        .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(20, 168, 0, 0.1); }
+        .form-textarea { min-height: 120px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+        .jobs-grid { display: grid; gap: 20px; }
+        .job-card { background: var(--bg-white); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; transition: all 0.2s ease; }
+        .job-card:hover { border-color: var(--primary-color); box-shadow: var(--shadow-md); transform: translateY(-2px); }
+        .job-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+        .job-header h3 { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+        .job-budget { background: var(--primary-color); color: white; padding: 6px 12px; border-radius: 20px; font-weight: 600; font-size: 14px; }
+        .job-description { color: var(--text-gray); margin-bottom: 16px; font-size: 14px; }
+        .job-attachment a { color: var(--primary-color); text-decoration: none; font-weight: 500; }
+        .job-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-color); }
+        .quotes-grid { display: grid; gap: 20px; }
+        .quote-card { background: var(--bg-white); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; }
+        .quote-header h4 { font-size: 16px; font-weight: 600; }
+        .quote-amount { font-size: 18px; font-weight: 700; color: var(--primary-color); }
+        .quote-status { padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500; text-transform: uppercase; }
+        .quote-status.pending { background: #fef3c7; color: #92400e; }
+        .quote-status.approved { background: #d1fae5; color: #065f46; }
+        .quote-status.rejected { background: #fee2e2; color: #991b1b; }
+        .user-profile { display: flex; align-items: center; gap: 16px; padding: 16px 20px; background: var(--bg-light); border-radius: 12px; margin-bottom: 24px; border: 1px solid var(--border-color); }
+        .user-avatar { width: 48px; height: 48px; background: var(--gradient-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 18px; }
+        .user-info h3 { font-weight: 600; font-size: 16px; }
+        .user-info p { color: var(--text-gray); font-size: 14px; }
+        .alert { padding: 16px 20px; border-radius: 8px; margin-bottom: 24px; font-weight: 500; font-size: 14px; }
+        .alert-success { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+        .alert-error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+        .alert-info { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+        .empty-state { text-align: center; padding: 60px 32px; color: var(--text-gray); }
+        .empty-state h3 { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); display: flex; align-items: center; justify-content: center; z-index: 200; backdrop-filter: blur(4px); }
+        .modal-content { background: var(--bg-white); padding: 32px; border-radius: 12px; max-width: 600px; width: 90%; }
+        .modal-close-button { position: absolute; top: 16px; right: 16px; background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-gray); }
+        .spinner-container { display: flex; justify-content: center; padding: 60px; }
+        .spinner { width: 32px; height: 32px; border: 3px solid var(--border-color); border-radius: 50%; border-top-color: var(--primary-color); animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @media (max-width: 768px) {
+            .hero-content { grid-template-columns: 1fr; text-align: center; }
+            .hero-visual { display: none; }
+            .nav-menu { display: none; }
+            .form-row { grid-template-columns: 1fr; }
+        }
+    </style>
 </head>
 <body>
     <header class="header">
@@ -18,6 +190,20 @@
         </div>
     </header>
 
+    <section class="hero" id="hero-section">
+        <div class="hero-content">
+            <div class="hero-text">
+                <h1>Connecting clients to steel professionals who deliver</h1>
+                <p>Find top steel designers and contractors for your projects. Post jobs, submit quotes, and build your network in the steel industry.</p>
+            </div>
+            <div class="hero-visual">
+                <div class="hero-image">
+                    <i class="fas fa-drafting-compass"></i>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <main>
         <div id="main-container" class="main-container">
             <div id="user-profile" class="user-profile" style="display: none;">
@@ -27,11 +213,13 @@
                     <p id="userType"></p>
                 </div>
                 <div style="margin-left: auto;">
-                    <button id="logout-button" class="btn btn-secondary">Sign Out</button>
+                    <button id="logout-button" class="btn btn-secondary">
+                        <i class="fas fa-sign-out-alt"></i> Sign Out
+                    </button>
                 </div>
             </div>
             <div id="alerts"></div>
-            
+
             <section id="jobs-section" class="content-section">
                 <div class="section-header"><h2 class="section-title">Available Jobs</h2></div>
                 <div id="jobs-list" class="jobs-grid"></div>
@@ -49,9 +237,9 @@
                         <div class="form-group"><label class="form-label">Deadline</label><input type="date" class="form-input" id="jobDeadline" required></div>
                     </div>
                     <div class="form-group"><label class="form-label">Project Description</label><textarea class="form-textarea" id="jobDescription" required></textarea></div>
-                    <div class="form-group"><label class="form-label">Attach Document (PDF, Word, Image)</label><input type="file" class="form-input" id="jobAttachmentFile"></div>
-                    <div class="form-group"><label class="form-label">Or Add External Link (Optional)</label><input type="url" class="form-input" id="jobAttachmentLink" placeholder="https://..."></div>
-                    <button type="submit" class="btn btn-primary">Post Job</button>
+                    <div class="form-group"><label class="form-label">Attach Document</label><input type="file" class="form-input" id="jobAttachmentFile"></div>
+                    <div class="form-group"><label class="form-label">Or Add External Link</label><input type="url" class="form-input" id="jobAttachmentLink" placeholder="https://..."></div>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Post Job</button>
                 </form>
             </section>
 
@@ -65,7 +253,7 @@
                 <form id="login-form" class="form-grid" style="max-width: 400px; margin: 0 auto;">
                     <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" id="loginEmail" required></div>
                     <div class="form-group"><label class="form-label">Password</label><input type="password" class="form-input" id="loginPassword" required></div>
-                    <button type="submit" class="btn btn-primary">Sign In</button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-sign-in-alt"></i> Sign In</button>
                 </form>
             </section>
 
@@ -81,12 +269,307 @@
                         <div class="form-group"><label class="form-label">Password</label><input type="password" class="form-input" id="regPassword" required></div>
                     </div>
                     <div class="form-group"><label class="form-label">I am a...</label><select class="form-select" id="regRole" required><option value="">Select your role</option><option value="contractor">Contractor (I post jobs)</option><option value="designer">Designer (I bid on jobs)</option></select></div>
-                    <button type="submit" class="btn btn-primary">Create Account</button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-user-plus"></i> Create Account</button>
                 </form>
             </section>
         </div>
     </main>
+        
     <div id="modal-container"></div>
-    <script src="script.js"></script>
+        
+    <script>
+        // --- JAVASCRIPT (FUNCTIONALLY UNCHANGED) ---
+        document.addEventListener('DOMContentLoaded', initializeApp);
+        const BACKEND_URL = 'https://steelconnect-backend.onrender.com';
+        const appState = { currentUser: null, jwtToken: null, jobs: [], myQuotes: [] };
+        function initializeApp() {
+            document.getElementById('login-form').addEventListener('submit', handleLogin);
+            document.getElementById('register-form').addEventListener('submit', handleRegister);
+            document.getElementById('post-job-form').addEventListener('submit', handlePostJob);
+            document.getElementById('logout-button').addEventListener('click', logout);
+            const token = localStorage.getItem('jwtToken');
+            const user = localStorage.getItem('currentUser');
+            if (token && user) {
+                appState.jwtToken = token;
+                appState.currentUser = JSON.parse(user);
+                updateUIForLoggedInUser();
+            } else {
+                updateUIForLoggedOutUser();
+            }
+            fetchJobs();
+        }
+        async function handleRegister(event) {
+            event.preventDefault();
+            const form = event.target;
+            const userData = {
+                fullName: form.querySelector('#regName').value,
+                username: form.querySelector('#regUsername').value,
+                email: form.querySelector('#regEmail').value,
+                password: form.querySelector('#regPassword').value,
+                role: form.querySelector('#regRole').value,
+            };
+            await apiCall('/auth/register', 'POST', userData, 'Registration successful! Please sign in.', () => {
+                showSection('login');
+                form.reset();
+            });
+        }
+        async function handleLogin(event) {
+            event.preventDefault();
+            const form = event.target;
+            const authData = { email: form.querySelector('#loginEmail').value, password: form.querySelector('#loginPassword').value };
+            await apiCall('/auth/login', 'POST', authData, 'Login successful!', (data) => {
+                appState.currentUser = data.user;
+                appState.jwtToken = data.token || 'fake-jwt-token';
+                localStorage.setItem('currentUser', JSON.stringify(data.user));
+                localStorage.setItem('jwtToken', appState.jwtToken);
+                updateUIForLoggedInUser();
+                fetchJobs();
+            });
+        }
+        function logout() {
+            appState.currentUser = null;
+            appState.jwtToken = null;
+            localStorage.clear();
+            updateUIForLoggedOutUser();
+            showAlert('You have been logged out.', 'info');
+        }
+        async function fetchJobs() {
+            const jobsList = document.getElementById('jobs-list');
+            jobsList.innerHTML = '<div class="spinner-container"><div class="spinner"></div></div>';
+            await apiCall('/jobs', 'GET', null, null, (data) => {
+                appState.jobs = data;
+                renderJobs();
+            });
+        }
+        async function fetchMyQuotes() {
+            if (!appState.currentUser || appState.currentUser.role !== 'designer') return;
+            const myQuotesList = document.getElementById('my-quotes-list');
+            myQuotesList.innerHTML = '<div class="spinner-container"><div class="spinner"></div></div>';
+            await apiCall(`/quotes/user/${appState.currentUser.id}`, 'GET', null, null, (data) => {
+                appState.myQuotes = data;
+                renderMyQuotes();
+            });
+        }
+        function renderJobs() {
+            const jobsList = document.getElementById('jobs-list');
+            jobsList.innerHTML = '';
+            if (!appState.jobs || appState.jobs.length === 0) {
+                jobsList.innerHTML = `<div class="empty-state"><i class="fas fa-briefcase"></i><h3>No Jobs Found</h3><p>Log in as a contractor to post the first job!</p></div>`;
+                return;
+            }
+            appState.jobs.forEach(job => {
+                const jobCard = document.createElement('div');
+                jobCard.className = 'job-card';
+                const isMyJob = appState.currentUser?.id === job.posterId;
+                let attachmentHTML = '';
+                if (appState.currentUser) {
+                    if (job.attachment) attachmentHTML += `<div class="job-attachment"><a href="${BACKEND_URL}${job.attachment}" target="_blank"><i class="fas fa-file"></i> View File</a></div>`;
+                    if (job.link) attachmentHTML += `<div class="job-attachment"><a href="${job.link}" target="_blank"><i class="fas fa-external-link-alt"></i> View Link</a></div>`;
+                }
+                let actionButtonHTML = '';
+                if (appState.currentUser) {
+                    if (isMyJob) {
+                        actionButtonHTML = `<button class="btn btn-secondary" onclick="viewQuotes('${job.id}')"><i class="fas fa-eye"></i> View Quotes</button> <button class="btn btn-danger" onclick="deleteJob('${job.id}')"><i class="fas fa-trash"></i> Delete</button>`;
+                    } else if (appState.currentUser.role === 'designer') {
+                        actionButtonHTML = `<button class="btn btn-primary" onclick="showQuoteModal('${job.id}')"><i class="fas fa-paper-plane"></i> Submit Quote</button>`;
+                    }
+                } else {
+                    actionButtonHTML = `<button class="btn btn-secondary" onclick="showSection('login')"><i class="fas fa-sign-in-alt"></i> Sign In to Quote</button>`;
+                }
+                jobCard.innerHTML = `<div class="job-header"><h3>${job.title}</h3><div class="job-budget">${job.budget}</div></div><p class="job-description">${job.description}</p>${attachmentHTML}<div class="job-actions">${actionButtonHTML}</div>`;
+                jobsList.appendChild(jobCard);
+            });
+        }
+        function renderMyQuotes() {
+            const myQuotesList = document.getElementById('my-quotes-list');
+            myQuotesList.innerHTML = '';
+            if (appState.myQuotes.length === 0) {
+                myQuotesList.innerHTML = `<div class="empty-state"><i class="fas fa-file-alt"></i><h3>You haven't submitted any quotes.</h3></div>`;
+                return;
+            }
+            appState.myQuotes.forEach(quote => {
+                const job = appState.jobs.find(j => j.id === quote.jobId);
+                const quoteCard = document.createElement('div');
+                quoteCard.className = 'quote-card';
+                const attachmentHTML = quote.attachment ? `<div class="job-attachment"><a href="${BACKEND_URL}${quote.attachment}" target="_blank"><i class="fas fa-file"></i> View My Attachment</a></div>` : '';
+                quoteCard.innerHTML = `<div class="quote-header"><div><h4>Quote for: ${job?.title || 'Job not found'}</h4><div class="quote-amount">$${quote.amount}</div></div><div class="quote-status ${quote.status}">${quote.status}</div></div><p>${quote.description}</p>${attachmentHTML}<div class="job-actions"><button class="btn btn-danger" onclick="deleteQuote('${quote.id}')"><i class="fas fa-trash"></i> Delete Quote</button></div>`;
+                myQuotesList.appendChild(quoteCard);
+            });
+        }
+        async function handlePostJob(event) {
+            event.preventDefault();
+            if (!appState.currentUser) { return showAlert('You must be logged in to post a job.', 'error'); }
+            const form = event.target;
+            const fileInput = form.querySelector('#jobAttachmentFile');
+            const file = fileInput.files[0];
+            let attachmentPath = '';
+            if (file) {
+                const formData = new FormData();
+                formData.append('document', file);
+                try {
+                    showAlert('Uploading file...', 'info');
+                    const response = await fetch(`${BACKEND_URL}/uploads/job`, { method: 'POST', body: formData });
+                    const data = await response.json();
+                    if (!response.ok) throw new Error(data.error || 'File upload failed.');
+                    attachmentPath = data.filePath;
+                } catch (error) { return showAlert(error.message, 'error'); }
+            }
+            const jobData = {
+                title: form.querySelector('#jobTitle').value,
+                description: form.querySelector('#jobDescription').value,
+                budget: form.querySelector('#jobBudget').value,
+                deadline: form.querySelector('#jobDeadline').value,
+                skills: form.querySelector('#jobSkills').value.split(',').map(s => s.trim()).filter(Boolean),
+                userId: appState.currentUser.id,
+                userFullName: appState.currentUser.fullName,
+                attachment: attachmentPath,
+                link: form.querySelector('#jobAttachmentLink').value
+            };
+            await apiCall('/jobs', 'POST', jobData, 'Job posted successfully!', () => {
+                form.reset();
+                fetchJobs();
+                showSection('jobs');
+            });
+        }
+        async function deleteJob(jobId) {
+            if (confirm('Are you sure you want to delete this job?')) {
+                await apiCall(`/jobs/${jobId}`, 'DELETE', null, 'Job deleted successfully!', fetchJobs);
+            }
+        }
+        async function deleteQuote(quoteId) {
+            if (confirm('Are you sure you want to delete this quote?')) {
+                await apiCall(`/quotes/${quoteId}`, 'DELETE', null, 'Quote deleted successfully!', fetchMyQuotes);
+            }
+        }
+        async function approveQuote(quoteId) {
+            if (confirm('Approve this quote? All others for this job will be rejected.')) {
+                await apiCall(`/quotes/${quoteId}/approve`, 'PUT', null, 'Quote approved!', () => {
+                    closeModal();
+                    fetchJobs();
+                });
+            }
+        }
+        async function viewQuotes(jobId) {
+            await apiCall(`/quotes/job/${jobId}`, 'GET', null, null, (quotes) => {
+                const modalContainer = document.getElementById('modal-container');
+                let quotesHTML = '<h3 style="margin-bottom: 24px;"><i class="fas fa-file-alt"></i> Received Quotes</h3>';
+                if (quotes.length === 0) {
+                    quotesHTML += `<div class="empty-state"><i class="fas fa-file-alt"></i><p>No quotes yet.</p></div>`;
+                } else {
+                    quotes.forEach(quote => {
+                        const attachmentHTML = quote.attachment ? `<div class="job-attachment"><a href="${BACKEND_URL}${quote.attachment}" target="_blank"><i class="fas fa-file"></i> View Attachment</a></div>` : '';
+                        quotesHTML += `<div class="quote-card"><div class="quote-header"><div><h4>From: ${quote.quoterName}</h4><div class="quote-amount">$${quote.amount}</div></div><div class="quote-status ${quote.status}">${quote.status}</div></div><p style="margin-bottom: 16px;">${quote.description}</p>${attachmentHTML}<div class="job-actions">${quote.status === 'pending' ? `<button class="btn btn-primary" onclick="approveQuote('${quote.id}')"><i class="fas fa-check"></i> Approve</button>` : ''}<button class="btn btn-secondary" onclick="openMessageModal('${quote.quoterId}')"><i class="fas fa-envelope"></i> Message</button></div></div>`;
+                    });
+                }
+                modalContainer.innerHTML = `<div class="modal-overlay" onclick="closeModal()"><div class="modal-content" onclick="event.stopPropagation()"><button class="modal-close-button" onclick="closeModal()">✕</button>${quotesHTML}</div></div>`;
+            });
+        }
+        function showQuoteModal(jobId) {
+            const modalContainer = document.getElementById('modal-container');
+            modalContainer.innerHTML = `<div class="modal-overlay" onclick="closeModal()"><div class="modal-content" onclick="event.stopPropagation()"><button class="modal-close-button" onclick="closeModal()">✕</button><h3 style="margin-bottom: 24px;">Submit Your Quote</h3><form id="quote-form" class="form-grid"><div class="form-group"><label class="form-label">Quote Amount ($)</label><input type="number" class="form-input" id="quoteAmount" required></div><div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="quoteDescription" required></textarea></div><div class="form-group"><label class="form-label">Attach Quotation</label><input type="file" class="form-input" id="quoteAttachmentFile"></div><button type="submit" class="btn btn-primary">Submit Quote</button></form></div></div>`;
+            document.getElementById('quote-form').addEventListener('submit', (e) => handleQuoteSubmit(e, jobId));
+        }
+        async function handleQuoteSubmit(event, jobId) {
+            event.preventDefault();
+            if (!appState.currentUser) { return showAlert('You must be logged in to submit a quote.', 'error'); }
+            const form = event.target;
+            const fileInput = form.querySelector('#quoteAttachmentFile');
+            const file = fileInput.files[0];
+            let attachmentPath = '';
+            if (file) {
+                const formData = new FormData();
+                formData.append('quote_document', file);
+                try {
+                    showAlert('Uploading quote file...', 'info');
+                    const response = await fetch(`${BACKEND_URL}/uploads/quote`, { method: 'POST', body: formData });
+                    const data = await response.json();
+                    if (!response.ok) throw new Error(data.error || 'File upload failed.');
+                    attachmentPath = data.filePath;
+                } catch (error) { return showAlert(error.message, 'error'); }
+            }
+            const quoteData = {
+                jobId: jobId,
+                amount: form.querySelector('#quoteAmount').value,
+                description: form.querySelector('#quoteDescription').value,
+                attachment: attachmentPath,
+                quoterId: appState.currentUser.id,
+                quoterName: appState.currentUser.fullName
+            };
+            await apiCall('/quotes', 'POST', quoteData, 'Quote submitted successfully!', closeModal);
+        }
+        function openMessageModal(recipientId) {
+            const modalContainer = document.getElementById('modal-container');
+            modalContainer.innerHTML = `<div class="modal-overlay" onclick="closeModal()"><div class="modal-content" onclick="event.stopPropagation()"><button class="modal-close-button" onclick="closeModal()">✕</button><h3 style="margin-bottom: 24px;">Send a Message</h3><form id="message-form" class="form-grid"><div class="form-group"><label>Message</label><textarea id="messageText" class="form-textarea" required></textarea></div><button type="submit" class="btn btn-primary">Send</button></form></div></div>`;
+            document.getElementById('message-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                showAlert('Message sent! (DEMO)', 'success');
+                closeModal();
+            });
+        }
+        function closeModal() {
+            document.getElementById('modal-container').innerHTML = '';
+        }
+        function updateUIForLoggedInUser() {
+            const user = appState.currentUser;
+            document.getElementById('hero-section').style.display = 'none';
+            document.getElementById('user-profile').style.display = 'flex';
+            document.getElementById('auth-buttons-container').style.display = 'none';
+            const navMenu = document.getElementById('main-nav-menu');
+            navMenu.innerHTML = `<button class="nav-link" onclick="showSection('jobs')">Find Jobs</button>${user.role === 'contractor' ? `<button class="nav-link" onclick="showSection('post-job')">Post Job</button>` : ''}<button class="nav-link" onclick="showSection('quotes')">My Quotes</button>`;
+            document.getElementById('userName').textContent = user.fullName;
+            document.getElementById('userType').textContent = user.role.charAt(0).toUpperCase() + user.role.slice(1);
+            document.getElementById('userAvatar').textContent = user.fullName.charAt(0).toUpperCase();
+            showSection('jobs');
+        }
+        function updateUIForLoggedOutUser() {
+            document.getElementById('hero-section').style.display = 'block';
+            document.getElementById('user-profile').style.display = 'none';
+            document.getElementById('auth-buttons-container').style.display = 'flex';
+            document.getElementById('auth-buttons-container').innerHTML = `<button class="btn btn-outline" onclick="showSection('login')">Sign In</button><button class="btn btn-primary" onclick="showSection('register')">Join Now</button>`;
+            const navMenu = document.getElementById('main-nav-menu');
+            navMenu.innerHTML = `<button class="nav-link" onclick="showSection('jobs')">Find Jobs</button>`;
+            showSection('jobs');
+        }
+        function showSection(sectionId) {
+            document.querySelectorAll('.content-section').forEach(s => s.style.display = 'none');
+            document.getElementById(`${sectionId}-section`).style.display = 'block';
+            if (sectionId === 'quotes') {
+                fetchMyQuotes();
+            }
+        }
+        function showAlert(message, type = 'info') {
+            const alertsContainer = document.getElementById('alerts');
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            const icon = type === 'success' ? 'fas fa-check-circle' : type === 'error' ? 'fas fa-exclamation-circle' : 'fas fa-info-circle';
+            alertDiv.innerHTML = `<i class="${icon}"></i> ${message}`;
+            alertsContainer.prepend(alertDiv);
+            setTimeout(() => alertDiv.remove(), 5000);
+        }
+        async function apiCall(endpoint, method, body, successMessage, callback) {
+            try {
+                const options = { method, headers: {} };
+                if (body) {
+                    options.headers['Content-Type'] = 'application/json';
+                    options.body = JSON.stringify(body);
+                }
+                const response = await fetch(BACKEND_URL + endpoint, options);
+                if (!response.ok) {
+                    let errorData;
+                    try { errorData = await response.json(); } catch (e) { throw new Error(response.statusText); }
+                    throw new Error(errorData.error || response.statusText);
+                }
+                const contentType = response.headers.get("content-type");
+                if (contentType && contentType.indexOf("application/json") !== -1) {
+                    const data = await response.json();
+                    if (successMessage) showAlert(successMessage, 'success');
+                    if (callback) callback(data);
+                } else {
+                    if (successMessage) showAlert(successMessage, 'success');
+                    if (callback) callback();
+                }
+            } catch (error) { showAlert(error.message, 'error'); }
+        }
+    </script>
 </body>
 </html>
