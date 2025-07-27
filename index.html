@@ -11,55 +11,57 @@
             --primary-color: #005a9c; /* Professional Blue */
             --primary-hover: #004a80;
             --primary-light: #e6f0f7;
+            --secondary-color: #f59e0b; /* Construction Orange/Gold Accent */
             --text-dark: #1f2937;
             --text-gray: #6b7280;
             --bg-white: #ffffff;
             --bg-light: #f9fafb;
             --border-color: #e5e7eb;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
             --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
         }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: var(--bg-light); color: var(--text-dark); line-height: 1.6; }
-        .header { background: var(--bg-white); border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 100; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: var(--bg-light); color: var(--text-dark); line-height: 1.6; }
+        .header { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 100; }
         .header-container { max-width: 1200px; margin: 0 auto; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; height: 64px; }
         .logo { display: flex; align-items: center; gap: 8px; font-size: 24px; font-weight: 700; color: var(--text-dark); text-decoration: none; }
         .logo-icon { width: 32px; height: 32px; background: var(--primary-color); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: white; }
         .nav-menu { display: flex; gap: 4px; }
         .nav-link { padding: 8px 16px; border-radius: 6px; color: var(--text-gray); font-weight: 500; font-size: 14px; cursor: pointer; background: none; border: none; }
+        .nav-link:hover { color: var(--primary-color); background-color: var(--primary-light); }
+        .nav-link.active { color: var(--primary-color); font-weight: 600; }
         .auth-buttons { display: flex; gap: 12px; }
-        .btn { padding: 8px 16px; border-radius: 6px; font-weight: 500; font-size: 14px; cursor: pointer; border: 1px solid transparent; display: inline-flex; align-items: center; gap: 8px; }
+        .btn { padding: 8px 16px; border-radius: 6px; font-weight: 500; font-size: 14px; cursor: pointer; border: 1px solid transparent; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s ease; }
+        .btn:hover { transform: translateY(-1px); }
         .btn-outline { background: var(--bg-white); color: var(--primary-color); border-color: var(--primary-color); }
-        .btn-primary { background: var(--primary-color); color: white; }
-        .hero { position: relative; color: white; padding: 120px 0; text-align: center; overflow: hidden; }
-        .hero-background { 
-            position: absolute; 
-            top: 0; 
-            left: 0; 
-            width: 100%; 
-            height: 100%; 
-            object-fit: cover; 
-            z-index: 1; 
-            /* REMOVED: Black shade (filter: brightness(0.5);) */
-        }
-        .hero-content { position: relative; z-index: 2; max-width: 800px; margin: 0 auto; padding: 0 24px; }
-        .hero-content h1 { font-size: 48px; font-weight: 800; margin-bottom: 20px; line-height: 1.2; text-shadow: 0 2px 8px rgba(0,0,0,0.7); }
-        .hero-content p { font-size: 18px; opacity: 0.95; max-width: 600px; margin: 0 auto; text-shadow: 0 1px 4px rgba(0,0,0,0.7); }
-        .main-container { max-width: 1200px; margin: 0 auto; padding: 40px 24px; }
-        .content-section { display: none; }
-        .content-section.active { display: block; }
+        .btn-primary { background: var(--primary-color); color: white; box-shadow: var(--shadow-sm); }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-secondary { background: var(--bg-light); color: var(--text-gray); border-color: var(--border-color); }
+        .btn-danger { background: #dc2626; color: white; }
+        .hero { position: relative; color: white; padding: 120px 24px; text-align: center; overflow: hidden; }
+        .hero-background { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
+        .hero::after { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(135deg, rgba(30, 58, 138, 0.7), rgba(17, 24, 39, 0.8)); z-index: 2; }
+        .hero-content { position: relative; z-index: 3; max-width: 800px; margin: 0 auto; }
+        .hero-content h1 { font-size: 48px; font-weight: 800; margin-bottom: 20px; line-height: 1.2; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+        .hero-content p { font-size: 18px; opacity: 0.95; max-width: 600px; margin: 0 auto; text-shadow: 0 1px 3px rgba(0,0,0,0.5); }
+        .main-container { max-width: 1200px; margin: 40px auto; padding: 0 24px; }
+        .content-section { display: none; background: var(--bg-white); border: 1px solid var(--border-color); border-radius: 12px; padding: 32px; margin-bottom: 24px; }
+        .content-section.active { display: block; animation: fadeIn 0.5s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .section-header { margin-bottom: 32px; padding-bottom: 16px; border-bottom: 1px solid var(--border-color); }
         .section-title { font-size: 24px; font-weight: 700; color: var(--text-dark); }
         .form-grid { display: grid; gap: 24px; }
         .form-group { display: flex; flex-direction: column; gap: 8px; }
         .form-label { font-weight: 500; font-size: 14px; }
         .form-input, .form-select, .form-textarea { padding: 12px 16px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; }
-        .form-textarea { min-height: 120px; }
+        .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(0, 90, 156, 0.1); }
+        .form-textarea { min-height: 120px; resize: vertical; }
         .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
         .jobs-grid, .quotes-grid { display: grid; gap: 20px; }
         .job-card, .quote-card { background: var(--bg-white); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; }
         .job-card:hover { border-color: var(--primary-color); box-shadow: var(--shadow-md); }
         .job-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
-        .job-header h3 { font-size: 18px; font-weight: 600; }
-        .job-budget { background: var(--primary-light); color: var(--primary-color); padding: 6px 12px; border-radius: 20px; font-size: 14px; }
+        .job-header h3 { font-size: 18px; font-weight: 600; line-height: 1.4; }
+        .job-budget { background: var(--primary-light); color: var(--primary-color); padding: 6px 12px; border-radius: 20px; font-weight: 600; font-size: 14px; white-space: nowrap; }
         .job-description { color: var(--text-gray); margin-bottom: 16px; }
         .job-attachment a { color: var(--primary-color); text-decoration: none; font-weight: 500; }
         .job-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-color); }
@@ -96,11 +98,11 @@
     </header>
 
     <section class="hero" id="hero-section">
-        <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEAAoHCBYWFRgWFhYZGRgaHBocHBwaHBkcHBocHBkcHCIaHh0cIS4lHB4rHxoaJjgmKy8xNTU1GiQ7QDs0Py40NTEBDAwMEA8QHxISHzQrJCs0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NP/AABEIALcBEwMBIgACEQEDEQH/xAAcAAABBQEBAQAAAAAAAAAAAAADAAECBAUGBwj/xABFEAABAwIDBgQDBgQFAgYDAAABAAIRAyEEEjEFQVFhBYGRIjJxgTKhsUJSctHwFEPhFUNiovGCkrLCcyU0Y3ODwtLi/8/aAAgBAQABPwD7YhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCEAhCE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" 
+        <img src="https://images.unsplash.com/photo-1590215282492-35d27579975f?q=80&w=2940&auto=format&fit=crop" 
              alt="Steel construction site with girders and beams" class="hero-background">
         <div class="hero-content">
             <h1>Connecting clients to steel & construction professionals who deliver</h1>
-            <p>Find top steel designers and contractors for your projects. Post jobs, submit quotes, and build your network in the construction industry.</p>
+            <p>Find top steel designers and contractors for your projects. Post jobs, submit quotes, and build your network.</p>
         </div>
     </section>
 
@@ -162,7 +164,6 @@
     </main>
     <div id="modal-container"></div>
     <script>
-        // --- COMPLETE JAVASCRIPT ---
         document.addEventListener('DOMContentLoaded', initializeApp);
         const BACKEND_URL = 'https://steelconnect-backend.onrender.com';
         const appState = { currentUser: null, jwtToken: null, jobs: [], myQuotes: [] };
@@ -402,9 +403,3 @@
     </script>
 </body>
 </html>
-
-
-
-
-
-
