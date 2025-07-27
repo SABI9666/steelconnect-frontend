@@ -19,66 +19,103 @@
             --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
         }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: var(--bg-light); color: var(--text-dark); line-height: 1.6; }
-        .header { background: var(--bg-white); border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 100; }
+        .header { background: var(--bg-white); border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow-md); }
         .header-container { max-width: 1200px; margin: 0 auto; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; height: 64px; }
         .logo { display: flex; align-items: center; gap: 8px; font-size: 24px; font-weight: 700; color: var(--text-dark); text-decoration: none; }
         .logo-icon { width: 32px; height: 32px; background: var(--primary-color); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: white; }
         .nav-menu { display: flex; gap: 4px; }
-        .nav-link { padding: 8px 16px; border-radius: 6px; color: var(--text-gray); font-weight: 500; font-size: 14px; cursor: pointer; background: none; border: none; }
+        .nav-link { padding: 8px 16px; border-radius: 6px; color: var(--text-gray); font-weight: 500; font-size: 14px; cursor: pointer; background: none; border: none; transition: all 0.2s; }
+        .nav-link:hover { background: var(--primary-light); color: var(--primary-color); }
         .auth-buttons { display: flex; gap: 12px; }
-        .btn { padding: 8px 16px; border-radius: 6px; font-weight: 500; font-size: 14px; cursor: pointer; border: 1px solid transparent; display: inline-flex; align-items: center; gap: 8px; }
+        .btn { padding: 8px 16px; border-radius: 6px; font-weight: 500; font-size: 14px; cursor: pointer; border: 1px solid transparent; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s; }
+        .btn:hover { transform: translateY(-1px); }
         .btn-outline { background: var(--bg-white); color: var(--primary-color); border-color: var(--primary-color); }
+        .btn-outline:hover { background: var(--primary-color); color: white; }
         .btn-primary { background: var(--primary-color); color: white; }
+        .btn-primary:hover { background: var(--primary-hover); }
         .hero { position: relative; color: white; padding: 120px 0; text-align: center; overflow: hidden; }
         .hero-background { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
         .hero::after { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(135deg, rgba(30, 58, 138, 0.7), rgba(17, 24, 39, 0.8)); z-index: 2; }
         .hero-content { position: relative; z-index: 3; max-width: 800px; margin: 0 auto; padding: 0 24px; }
         .hero-content h1 { font-size: 48px; font-weight: 800; margin-bottom: 20px; line-height: 1.2; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
         .hero-content p { font-size: 18px; opacity: 0.95; max-width: 600px; margin: 0 auto; text-shadow: 0 1px 3px rgba(0,0,0,0.5); }
+        /* Professional Features Section */
+        .features-section { background: var(--bg-white); padding: 80px 0; }
+        .features-container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+        .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 40px; margin-top: 50px; }
+        .feature-card { text-align: center; padding: 30px 20px; background: var(--bg-light); border-radius: 12px; transition: transform 0.3s; }
+        .feature-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-md); }
+        .feature-icon { width: 80px; height: 80px; margin: 0 auto 20px; background: var(--primary-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .feature-icon img { width: 40px; height: 40px; object-fit: contain; }
+        .feature-card h3 { font-size: 20px; margin-bottom: 15px; color: var(--text-dark); }
+        .feature-card p { color: var(--text-gray); line-height: 1.6; }
+        .section-title-center { text-align: center; font-size: 36px; font-weight: 700; margin-bottom: 20px; color: var(--text-dark); }
+        .section-subtitle { text-align: center; font-size: 18px; color: var(--text-gray); max-width: 600px; margin: 0 auto; }
         .main-container { max-width: 1200px; margin: 40px auto; padding: 0 24px; }
-        .content-section { display: none; background: var(--bg-white); border-radius: 12px; padding: 32px; margin-bottom: 24px; }
+        .content-section { display: none; background: var(--bg-white); border-radius: 12px; padding: 32px; margin-bottom: 24px; box-shadow: var(--shadow-md); }
         .content-section.active { display: block; }
-        .section-header { margin-bottom: 32px; padding-bottom: 16px; border-bottom: 1px solid var(--border-color); }
+        .section-header { margin-bottom: 32px; padding-bottom: 16px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 16px; }
+        .section-header-icon { width: 40px; height: 40px; background: var(--primary-light); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--primary-color); }
         .section-title { font-size: 24px; font-weight: 700; color: var(--text-dark); }
         .form-grid { display: grid; gap: 24px; }
         .form-group { display: flex; flex-direction: column; gap: 8px; }
         .form-label { font-weight: 500; font-size: 14px; }
-        .form-input, .form-select, .form-textarea { padding: 12px 16px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; }
+        .form-input, .form-select, .form-textarea { padding: 12px 16px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; transition: border-color 0.2s; }
+        .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: var(--primary-color); }
         .form-textarea { min-height: 120px; }
         .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
         .jobs-grid, .quotes-grid { display: grid; gap: 20px; }
-        .job-card, .quote-card { background: var(--bg-white); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; }
+        .job-card, .quote-card { background: var(--bg-white); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; transition: transform 0.2s, box-shadow 0.2s; }
+        .job-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
         .job-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
-        .job-header h3 { font-size: 18px; font-weight: 600; }
-        .job-budget { background: var(--primary-light); color: var(--primary-color); padding: 6px 12px; border-radius: 20px; font-size: 14px; }
+        .job-header h3 { font-size: 18px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+        .job-type-icon { width: 24px; height: 24px; opacity: 0.7; }
+        .job-budget { background: var(--primary-light); color: var(--primary-color); padding: 6px 12px; border-radius: 20px; font-size: 14px; font-weight: 600; }
         .job-description { color: var(--text-gray); margin-bottom: 16px; }
-        .job-attachment a { color: var(--primary-color); text-decoration: none; font-weight: 500; }
+        .job-attachment a { color: var(--primary-color); text-decoration: none; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; }
         .job-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-color); }
         .quote-header h4 { font-size: 16px; }
         .quote-amount { font-size: 18px; font-weight: 700; color: var(--primary-color); }
-        .quote-status { padding: 4px 12px; border-radius: 12px; font-size: 12px; text-transform: uppercase; }
+        .quote-status { padding: 4px 12px; border-radius: 12px; font-size: 12px; text-transform: uppercase; font-weight: 600; }
         .quote-status.pending { background: #fef3c7; color: #92400e; } .quote-status.approved { background: #d1fae5; color: #065f46; } .quote-status.rejected { background: #fee2e2; color: #991b1b; }
-        .user-profile { display: flex; align-items: center; gap: 16px; padding: 16px 20px; background: var(--bg-light); border-radius: 12px; margin-bottom: 24px; }
-        .user-avatar { width: 48px; height: 48px; background: var(--primary-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 18px; }
-        .user-info h3 { font-size: 16px; } .user-info p { color: var(--text-gray); font-size: 14px; }
-        .alert { padding: 16px 20px; border-radius: 8px; margin-bottom: 24px; font-weight: 500; }
+        .user-profile { display: flex; align-items: center; gap: 16px; padding: 16px 20px; background: linear-gradient(135deg, var(--primary-color), var(--primary-hover)); border-radius: 12px; margin-bottom: 24px; color: white; box-shadow: var(--shadow-md); }
+        .user-avatar { width: 48px; height: 48px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 18px; border: 2px solid rgba(255,255,255,0.3); }
+        .user-info h3 { font-size: 16px; color: white; } .user-info p { color: rgba(255,255,255,0.8); font-size: 14px; }
+        .alert { padding: 16px 20px; border-radius: 8px; margin-bottom: 24px; font-weight: 500; display: flex; align-items: center; gap: 12px; }
         .alert-success { background: #e6f0f7; color: #004a80; } .alert-error { background: #fef2f2; color: #991b1b; } .alert-info { background: #eff6ff; color: #1e40af; }
         .empty-state { text-align: center; padding: 60px 32px; color: var(--text-gray); background: var(--bg-white); border-radius: 12px; border: 1px dashed var(--border-color); }
+        .empty-state-icon { width: 64px; height: 64px; margin: 0 auto 20px; opacity: 0.5; }
         .empty-state h3 { font-size: 20px; margin-bottom: 8px; color: var(--text-dark); }
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.7); display: flex; align-items: center; justify-content: center; z-index: 200; }
-        .modal-content { background: var(--bg-white); padding: 32px; border-radius: 12px; max-width: 600px; width: 90%; }
+        .modal-content { background: var(--bg-white); padding: 32px; border-radius: 12px; max-width: 600px; width: 90%; position: relative; }
         .modal-close-button { position: absolute; top: 16px; right: 16px; background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-gray); }
         .spinner-container { display: flex; justify-content: center; padding: 60px; }
         .spinner { width: 32px; height: 32px; border: 3px solid var(--border-color); border-radius: 50%; border-top-color: var(--primary-color); animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        @media (max-width: 768px) { .nav-menu { display: none; } .form-row { grid-template-columns: 1fr; } }
+        /* Professional imagery placeholders */
+        .project-showcase { background: var(--bg-light); padding: 60px 0; }
+        .showcase-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; max-width: 1000px; margin: 0 auto; padding: 0 24px; }
+        .showcase-item { background: var(--bg-white); border-radius: 8px; overflow: hidden; box-shadow: var(--shadow-md); transition: transform 0.3s; }
+        .showcase-item:hover { transform: scale(1.02); }
+        .showcase-image { width: 100%; height: 150px; object-fit: cover; }
+        .showcase-content { padding: 15px; }
+        .showcase-content h4 { font-size: 14px; margin-bottom: 5px; color: var(--text-dark); }
+        .showcase-content p { font-size: 12px; color: var(--text-gray); }
+        @media (max-width: 768px) {
+             .nav-menu { display: none; }
+             .form-row { grid-template-columns: 1fr; }
+             .hero-content h1 { font-size: 32px; }
+            .features-grid { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
     <header class="header">
         <div class="header-container">
             <a href="#" class="logo" onclick="showSection('jobs'); return false;">
-                <div class="logo-icon">SC</div>
+                <div class="logo-icon">
+                    <i class="fas fa-industry"></i>
+                </div>
                 SteelConnect
             </a>
             <nav id="main-nav-menu" class="nav-menu"></nav>
@@ -87,11 +124,77 @@
     </header>
 
     <section class="hero" id="hero-section">
-        <img src="https://images.unsplash.com/photo-1590215282492-35d27579975f?q=80&w=2940&auto=format&fit=crop" 
-             alt="Steel construction site with girders and beams" class="hero-background">
+        <img src="https://images.unsplash.com/photo-1590215282492-35d27579975f?q=80&w=2940&auto=format&fit=crop"
+              alt="Steel construction site with girders and beams" class="hero-background">
         <div class="hero-content">
             <h1>Connecting clients to steel & construction professionals who deliver</h1>
             <p>Find top steel designers and contractors for your projects. Post jobs, submit quotes, and build your network.</p>
+        </div>
+    </section>
+
+    <section class="features-section" id="features-section">
+        <div class="features-container">
+            <h2 class="section-title-center">Why Choose SteelConnect?</h2>
+            <p class="section-subtitle">Connect with verified steel professionals and streamline your construction projects</p>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <img src="https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=100&h=100&fit=crop&crop=center" alt="Quality Engineering">
+                    </div>
+                    <h3>Expert Steel Design</h3>
+                    <p>Connect with certified structural engineers and steel designers with proven track records in industrial projects.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <img src="https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?w=100&h=100&fit=crop&crop=center" alt="Project Management">
+                    </div>
+                    <h3>Project Management</h3>
+                    <p>Streamlined workflow from initial quote to project completion with integrated communication tools.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <img src="https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=100&h=100&fit=crop&crop=center" alt="Quality Assurance">
+                    </div>
+                    <h3>Quality Assurance</h3>
+                    <p>All professionals are vetted and verified. Review ratings and past project portfolios before hiring.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="project-showcase" id="project-showcase">
+        <div class="features-container">
+            <h2 class="section-title-center">Recent Steel Projects</h2>
+            <div class="showcase-grid">
+                <div class="showcase-item">
+                    <img src="https://images.unsplash.com/photo-1590215277411-be2d90ecaa85?w=300&h=200&fit=crop" alt="High-rise Building Structure" class="showcase-image">
+                    <div class="showcase-content">
+                        <h4>Commercial High-rise</h4>
+                        <p>Structural steel design for 15-story building</p>
+                    </div>
+                </div>
+                <div class="showcase-item">
+                    <img src="https://images.unsplash.com/photo-1563794482-f96e7bd55b14?w=300&h=200&fit=crop" alt="Industrial Warehouse" class="showcase-image">
+                    <div class="showcase-content">
+                        <h4>Industrial Warehouse</h4>
+                        <p>Pre-engineered steel building design</p>
+                    </div>
+                </div>
+                <div class="showcase-item">
+                    <img src="https://images.unsplash.com/photo-1559308425-43b99d0d0634?w=300&h=200&fit=crop" alt="Bridge Construction" class="showcase-image">
+                    <div class="showcase-content">
+                        <h4>Bridge Infrastructure</h4>
+                        <p>Steel bridge design and engineering analysis</p>
+                    </div>
+                </div>
+                <div class="showcase-item">
+                    <img src="https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=200&fit=crop" alt="Manufacturing Plant" class="showcase-image">
+                    <div class="showcase-content">
+                        <h4>Manufacturing Facility</h4>
+                        <p>Heavy industrial steel framework</p>
+                    </div>
+                </div>
+            </div>
         </div>
     </section>
 
@@ -108,14 +211,22 @@
                 </div>
             </div>
             <div id="alerts"></div>
-            
             <section id="jobs-section" class="content-section">
-                <div class="section-header"><h2 class="section-title">Available Steel & Construction Jobs</h2></div>
+                <div class="section-header">
+                    <div class="section-header-icon">
+                        <i class="fas fa-briefcase"></i>
+                    </div>
+                    <h2 class="section-title">Available Steel & Construction Jobs</h2>
+                </div>
                 <div id="jobs-list" class="jobs-grid"></div>
             </section>
-
             <section id="post-job-section" class="content-section">
-                <div class="section-header"><h2 class="section-title">Post a New Steel Project</h2></div>
+                <div class="section-header">
+                    <div class="section-header-icon">
+                        <i class="fas fa-plus-circle"></i>
+                    </div>
+                    <h2 class="section-title">Post a New Steel Project</h2>
+                </div>
                 <form id="post-job-form" class="form-grid">
                     <div class="form-row"><div class="form-group"><label class="form-label">Project Title</label><input type="text" class="form-input" id="jobTitle" required placeholder="e.g., Structural Steel Design for a 5-Story Building"></div><div class="form-group"><label class="form-label">Budget Range</label><input type="text" class="form-input" id="jobBudget" required placeholder="$5,000 - $10,000"></div></div>
                     <div class="form-row"><div class="form-group"><label class="form-label">Skills Required</label><input type="text" class="form-input" id="jobSkills" placeholder="AISC, Tekla Structures, AutoCAD"></div><div class="form-group"><label class="form-label">Project Deadline</label><input type="date" class="form-input" id="jobDeadline" required></div></div>
@@ -125,23 +236,35 @@
                     <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Post Project</button>
                 </form>
             </section>
-
             <section id="quotes-section" class="content-section">
-                <div class="section-header"><h2 class="section-title">My Submitted Quotes</h2></div>
+                <div class="section-header">
+                    <div class="section-header-icon">
+                        <i class="fas fa-file-invoice-dollar"></i>
+                    </div>
+                    <h2 class="section-title">My Submitted Quotes</h2>
+                </div>
                 <div id="my-quotes-list" class="quotes-grid"></div>
             </section>
-
             <section id="login-section" class="content-section">
-                <div class="section-header"><h2 class="section-title">Sign In to SteelConnect</h2></div>
+                <div class="section-header">
+                    <div class="section-header-icon">
+                        <i class="fas fa-sign-in-alt"></i>
+                    </div>
+                    <h2 class="section-title">Sign In to SteelConnect</h2>
+                </div>
                 <form id="login-form" class="form-grid" style="max-width: 450px; margin: 0 auto;">
                     <div class="form-group"><label class="form-label">Email Address</label><input type="email" class="form-input" id="loginEmail" required></div>
                     <div class="form-group"><label class="form-label">Password</label><input type="password" class="form-input" id="loginPassword" required></div>
                     <button type="submit" class="btn btn-primary">Sign In</button>
                 </form>
             </section>
-
             <section id="register-section" class="content-section">
-                <div class="section-header"><h2 class="section-title">Join the SteelConnect Network</h2></div>
+                <div class="section-header">
+                    <div class="section-header-icon">
+                        <i class="fas fa-user-plus"></i>
+                    </div>
+                    <h2 class="section-title">Join the SteelConnect Network</h2>
+                </div>
                 <form id="register-form" class="form-grid" style="max-width: 650px; margin: 0 auto;">
                     <div class="form-row"><div class="form-group"><label class="form-label">Full Name</label><input type="text" class="form-input" id="regName" required></div><div class="form-group"><label class="form-label">Username</label><input type="text" class="form-input" id="regUsername" required></div></div>
                     <div class="form-row"><div class="form-group"><label class="form-label">Email Address</label><input type="email" class="form-input" id="regEmail" required></div><div class="form-group"><label class="form-label">Password</label><input type="password" class="form-input" id="regPassword" required></div></div>
@@ -151,7 +274,9 @@
             </section>
         </div>
     </main>
+
     <div id="modal-container"></div>
+
     <script>
         document.addEventListener('DOMContentLoaded', initializeApp);
         const BACKEND_URL = 'https://steelconnect-backend.onrender.com';
@@ -233,28 +358,48 @@
             myQuotesList.innerHTML = '<div class="spinner-container"><div class="spinner"></div></div>';
             await apiCall(`/quotes/user/${appState.currentUser.id}`, 'GET', null, null, (data) => { appState.myQuotes = data; renderMyQuotes(); });
         }
+        function getJobTypeIcon(title, skills) {
+            const titleLower = title.toLowerCase();
+            const skillsLower = (skills || []).join(' ').toLowerCase();
+            if (titleLower.includes('bridge') || skillsLower.includes('bridge')) {
+                return 'https://images.unsplash.com/photo-1559308425-43b99d0d0634?w=24&h=24&fit=crop&crop=center';
+            } else if (titleLower.includes('warehouse') || titleLower.includes('industrial')) {
+                return 'https://images.unsplash.com/photo-1563794482-f96e7bd55b14?w=24&h=24&fit=crop&crop=center';
+            } else if (titleLower.includes('building') || titleLower.includes('commercial')) {
+                return 'https://images.unsplash.com/photo-1590215277411-be2d90ecaa85?w=24&h=24&fit=crop&crop=center';
+            } else {
+                return 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=24&h=24&fit=crop&crop=center';
+            }
+        }
         function renderJobs() {
             const jobsList = document.getElementById('jobs-list');
             jobsList.innerHTML = '';
             if (!appState.jobs || appState.jobs.length === 0) {
-                jobsList.innerHTML = `<div class="empty-state"><h3>No Jobs Found</h3><p>Log in as a contractor to post the first job!</p></div>`;
+                jobsList.innerHTML = `<div class="empty-state">                    <img src="https://images.unsplash.com/photo-1590215282492-35d27579975f?w=64&h=64&fit=crop&crop=center" alt="No jobs" class="empty-state-icon">                    <h3>No Jobs Found</h3>                    <p>Log in as a contractor to post the first job!</p>                </div>`;
                 return;
             }
             appState.jobs.forEach(job => {
                 const jobCard = document.createElement('div');
                 jobCard.className = 'job-card';
                 const isMyJob = appState.currentUser?.id === job.posterId;
+                const jobIcon = getJobTypeIcon(job.title, job.skills);
                 let attachmentHTML = '';
                 if (appState.currentUser) {
-                    if (job.attachment) attachmentHTML += `<div class="job-attachment"><a href="${BACKEND_URL}${job.attachment}" target="_blank">📄 View File</a></div>`;
-                    if (job.link) attachmentHTML += `<div class="job-attachment"><a href="${job.link}" target="_blank">🔗 View Link</a></div>`;
+                    if (job.attachment) attachmentHTML += `<div class="job-attachment"><a href="${BACKEND_URL}${job.attachment}" target="_blank"><i class="fas fa-file-pdf"></i> View File</a></div>`;
+                    if (job.link) attachmentHTML += `<div class="job-attachment"><a href="${job.link}" target="_blank"><i class="fas fa-external-link-alt"></i> View Link</a></div>`;
                 }
                 let actionButtonHTML = '';
                 if (appState.currentUser) {
-                    if (isMyJob) { actionButtonHTML = `<button class="btn btn-secondary" onclick="viewQuotes('${job.id}')">View Quotes</button> <button class="btn btn-danger" onclick="deleteJob('${job.id}')">Delete</button>`; }
-                    else if (appState.currentUser.role === 'designer') { actionButtonHTML = `<button class="btn btn-primary" onclick="showQuoteModal('${job.id}')">Submit Quote</button>`; }
-                } else { actionButtonHTML = `<button class="btn btn-secondary" onclick="showSection('login')">Sign In to Quote</button>`; }
-                jobCard.innerHTML = `<div class="job-header"><h3>${job.title}</h3><div class="job-budget">${job.budget}</div></div><p class="job-description">${job.description}</p>${attachmentHTML}<div class="job-actions">${actionButtonHTML}</div>`;
+                    if (isMyJob) {
+                         actionButtonHTML = `<button class="btn btn-outline" onclick="viewQuotes('${job.id}')"><i class="fas fa-eye"></i> View Quotes</button> <button class="btn btn-danger" onclick="deleteJob('${job.id}')"><i class="fas fa-trash"></i> Delete</button>`;
+                     }
+                    else if (appState.currentUser.role === 'designer') {
+                         actionButtonHTML = `<button class="btn btn-primary" onclick="showQuoteModal('${job.id}')"><i class="fas fa-dollar-sign"></i> Submit Quote</button>`;
+                     }
+                } else {
+                     actionButtonHTML = `<button class="btn btn-outline" onclick="showSection('login')"><i class="fas fa-sign-in-alt"></i> Sign In to Quote</button>`;
+                 }
+                jobCard.innerHTML = `                    <div class="job-header">                        <h3><img src="${jobIcon}" alt="Job type" class="job-type-icon"> ${job.title}</h3>                        <div class="job-budget">${job.budget}</div>                    </div>                    <p class="job-description">${job.description}</p>                    ${attachmentHTML}                    <div class="job-actions">${actionButtonHTML}</div>`;
                 jobsList.appendChild(jobCard);
             });
         }
@@ -262,15 +407,15 @@
             const myQuotesList = document.getElementById('my-quotes-list');
             myQuotesList.innerHTML = '';
             if (appState.myQuotes.length === 0) {
-                myQuotesList.innerHTML = `<div class="empty-state"><h3>You haven't submitted any quotes.</h3></div>`;
+                myQuotesList.innerHTML = `<div class="empty-state">                    <img src="https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=64&h=64&fit=crop&crop=center" alt="No quotes" class="empty-state-icon">                    <h3>You haven't submitted any quotes.</h3>                    <p>Browse available jobs and submit your first quote!</p>                </div>`;
                 return;
             }
             appState.myQuotes.forEach(quote => {
                 const job = appState.jobs.find(j => j.id === quote.jobId);
                 const quoteCard = document.createElement('div');
                 quoteCard.className = 'quote-card';
-                const attachmentHTML = quote.attachment ? `<div class="job-attachment"><a href="${BACKEND_URL}${quote.attachment}" target="_blank">📄 View My Attachment</a></div>` : '';
-                quoteCard.innerHTML = `<div class="quote-header"><div><h4>Quote for: ${job?.title || 'Job not found'}</h4><div class="quote-amount">$${quote.amount}</div></div><div class="quote-status ${quote.status}">${quote.status}</div></div><p>${quote.description}</p>${attachmentHTML}<div class="job-actions"><button class="btn btn-danger" onclick="deleteQuote('${quote.id}')">Delete Quote</button></div>`;
+                const attachmentHTML = quote.attachment ? `<div class="job-attachment"><a href="${BACKEND_URL}${quote.attachment}" target="_blank"><i class="fas fa-file-pdf"></i> View My Attachment</a></div>` : '';
+                quoteCard.innerHTML = `                    <div class="quote-header">                        <div>                            <h4>Quote for: ${job?.title || 'Job not found'}</h4>                            <div class="quote-amount">${quote.amount}</div>                        </div>                        <div class="quote-status ${quote.status}">${quote.status}</div>                    </div>                    <p>${quote.description}</p>                    ${attachmentHTML}                    <div class="job-actions">                        <button class="btn btn-danger" onclick="deleteQuote('${quote.id}')"><i class="fas fa-trash"></i> Delete Quote</button>                    </div>`;
                 myQuotesList.appendChild(quoteCard);
             });
         }
@@ -292,35 +437,59 @@
                     attachmentPath = data.filePath;
                 } catch (error) { return showAlert(error.message, 'error'); }
             }
-            const jobData = { title: form.querySelector('#jobTitle').value, description: form.querySelector('#jobDescription').value, budget: form.querySelector('#jobBudget').value, deadline: form.querySelector('#jobDeadline').value, skills: form.querySelector('#jobSkills').value.split(',').map(s => s.trim()).filter(Boolean), userId: appState.currentUser.id, userFullName: appState.currentUser.fullName, attachment: attachmentPath, link: form.querySelector('#jobAttachmentLink').value };
-            await apiCall('/jobs', 'POST', jobData, 'Job posted successfully!', () => { form.reset(); fetchJobs(); showSection('jobs'); });
+            const jobData = {
+                 title: form.querySelector('#jobTitle').value,
+                 description: form.querySelector('#jobDescription').value,
+                 budget: form.querySelector('#jobBudget').value,
+                 deadline: form.querySelector('#jobDeadline').value,
+                 skills: form.querySelector('#jobSkills').value.split(',').map(s => s.trim()).filter(Boolean),
+                 userId: appState.currentUser.id,
+                 userFullName: appState.currentUser.fullName,
+                 attachment: attachmentPath,
+                 link: form.querySelector('#jobAttachmentLink').value
+             };
+            await apiCall('/jobs', 'POST', jobData, 'Job posted successfully!', () => {
+                 form.reset();
+                 fetchJobs();
+                 showSection('jobs');
+             });
         }
         async function deleteJob(jobId) {
-            if (confirm('Are you sure you want to delete this job?')) { await apiCall(`/jobs/${jobId}`, 'DELETE', null, 'Job deleted successfully!', fetchJobs); }
+            if (confirm('Are you sure you want to delete this job?')) {
+                 await apiCall(`/jobs/${jobId}`, 'DELETE', null, 'Job deleted successfully!', fetchJobs);
+             }
         }
         async function deleteQuote(quoteId) {
-            if (confirm('Are you sure you want to delete this quote?')) { await apiCall(`/quotes/${quoteId}`, 'DELETE', null, 'Quote deleted successfully!', fetchMyQuotes); }
+            if (confirm('Are you sure you want to delete this quote?')) {
+                 await apiCall(`/quotes/${quoteId}`, 'DELETE', null, 'Quote deleted successfully!', fetchMyQuotes);
+             }
         }
         async function approveQuote(quoteId) {
-            if (confirm('Approve this quote? All others will be rejected.')) { await apiCall(`/quotes/${quoteId}/approve`, 'PUT', null, 'Quote approved!', () => { closeModal(); fetchJobs(); }); }
+            if (confirm('Approve this quote? All others will be rejected.')) {
+                 await apiCall(`/quotes/${quoteId}/approve`, 'PUT', null, 'Quote approved!', () => {
+                     closeModal();
+                     fetchJobs();
+                 });
+             }
         }
         async function viewQuotes(jobId) {
             await apiCall(`/quotes/job/${jobId}`, 'GET', null, null, (quotes) => {
                 const modalContainer = document.getElementById('modal-container');
-                let quotesHTML = '<h3>Received Quotes</h3>';
-                if (quotes.length === 0) { quotesHTML += `<div class="empty-state"><p>No quotes yet.</p></div>`; }
-                else {
+                let quotesHTML = '<h3><i class="fas fa-file-invoice-dollar"></i> Received Quotes</h3>';
+                if (quotes.length === 0) {
+                     quotesHTML += `<div class="empty-state">                        <img src="https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=64&h=64&fit=crop&crop=center" alt="No quotes" class="empty-state-icon">                        <p>No quotes received yet.</p>                    </div>`;
+                 } else {
                     quotes.forEach(quote => {
-                        const attachmentHTML = quote.attachment ? `<div class="job-attachment"><a href="${BACKEND_URL}${quote.attachment}" target="_blank">View Attachment</a></div>` : '';
-                        quotesHTML += `<div class="quote-card"><p><strong>From:</strong> ${quote.quoterName} | <strong>Amount:</strong> $${quote.amount}</p><p>${quote.description}</p>${attachmentHTML}<div class="job-actions">${quote.status === 'pending' ? `<button class="btn btn-primary" onclick="approveQuote('${quote.id}')">Approve</button>` : `<span class="quote-status ${quote.status}">${quote.status}</span>`}<button class="btn btn-secondary" onclick="openMessageModal('${quote.quoterId}')">Message</button></div></div>`;
+                        const attachmentHTML = quote.attachment ? `<div class="job-attachment"><a href="${BACKEND_URL}${quote.attachment}" target="_blank"><i class="fas fa-file-pdf"></i> View Attachment</a></div>` : '';
+                        quotesHTML += `                            <div class="quote-card">                                <p><strong>From:</strong> ${quote.quoterName} | <strong>Amount:</strong> ${quote.amount}</p>                                <p>${quote.description}</p>                                ${attachmentHTML}                                <div class="job-actions">                                    ${quote.status === 'pending' ? `<button class="btn btn-primary" onclick="approveQuote('${quote.id}')"><i class="fas fa-check"></i> Approve</button>` : `<span class="quote-status ${quote.status}">${quote.status}</span>`}                                    <button class="btn btn-outline" onclick="openMessageModal('${quote.quoterId}')"><i class="fas fa-envelope"></i> Message</button>                                </div>                            </div>`;
                     });
                 }
-                modalContainer.innerHTML = `<div class="modal-overlay" onclick="closeModal()"><div class="modal-content" onclick="event.stopPropagation()"><button class="modal-close-button" onclick="closeModal()">✕</button>${quotesHTML}</div></div>`;
+                modalContainer.innerHTML = `                    <div class="modal-overlay" onclick="closeModal()">                        <div class="modal-content" onclick="event.stopPropagation()">                            <button class="modal-close-button" onclick="closeModal()">✕</button>                            ${quotesHTML}                        </div>                    </div>`;
             });
         }
         function showQuoteModal(jobId) {
             const modalContainer = document.getElementById('modal-container');
-            modalContainer.innerHTML = `<div class="modal-overlay" onclick="closeModal()"><div class="modal-content" onclick="event.stopPropagation()"><button class="modal-close-button" onclick="closeModal()">✕</button><h3>Submit Your Quote</h3><form id="quote-form" class="form-grid"><div class="form-group"><label>Amount ($)</label><input type="number" id="quoteAmount" required></div><div class="form-group"><label>Description</label><textarea id="quoteDescription" required></textarea></div><div class="form-group"><label>Attach File</label><input type="file" id="quoteAttachmentFile"></div><button type="submit" class="btn btn-primary">Submit</button></form></div></div>`;
+            modalContainer.innerHTML = `                <div class="modal-overlay" onclick="closeModal()">                    <div class="modal-content" onclick="event.stopPropagation()">                        <button class="modal-close-button" onclick="closeModal()">✕</button>                        <h3><i class="fas fa-dollar-sign"></i> Submit Your Quote</h3>                        <form id="quote-form" class="form-grid">                            <div class="form-group">                                <label>Amount ($)</label>                                <input type="number" id="quoteAmount" required>                            </div>                            <div class="form-group">                                <label>Description</label>                                <textarea id="quoteDescription" required placeholder="Describe your approach, timeline, and deliverables..."></textarea>                            </div>                            <div class="form-group">                                <label>Attach File (Portfolio, Certifications, etc.)</label>                                <input type="file" id="quoteAttachmentFile">                            </div>                            <button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane"></i> Submit Quote</button>                        </form>                    </div>                </div>`;
             document.getElementById('quote-form').addEventListener('submit', (e) => handleQuoteSubmit(e, jobId));
         }
         async function handleQuoteSubmit(event, jobId) {
@@ -341,13 +510,24 @@
                     attachmentPath = data.filePath;
                 } catch (error) { return showAlert(error.message, 'error'); }
             }
-            const quoteData = { jobId: jobId, amount: form.querySelector('#quoteAmount').value, description: form.querySelector('#quoteDescription').value, attachment: attachmentPath, quoterId: appState.currentUser.id, quoterName: appState.currentUser.fullName };
+            const quoteData = {
+                 jobId: jobId,
+                 amount: form.querySelector('#quoteAmount').value,
+                 description: form.querySelector('#quoteDescription').value,
+                 attachment: attachmentPath,
+                 quoterId: appState.currentUser.id,
+                 quoterName: appState.currentUser.fullName
+             };
             await apiCall('/quotes', 'POST', quoteData, 'Quote submitted successfully!', closeModal);
         }
         function openMessageModal(recipientId) {
             const modalContainer = document.getElementById('modal-container');
-            modalContainer.innerHTML = `<div class="modal-overlay" onclick="closeModal()"><div class="modal-content" onclick="event.stopPropagation()"><button class="modal-close-button" onclick="closeModal()">✕</button><h3>Send a Message</h3><form id="message-form"><textarea id="messageText" required></textarea><button type="submit">Send</button></form></div></div>`;
-            document.getElementById('message-form').addEventListener('submit', (e) => { e.preventDefault(); showAlert('Message sent! (DEMO)', 'success'); closeModal(); });
+            modalContainer.innerHTML = `                <div class="modal-overlay" onclick="closeModal()">                    <div class="modal-content" onclick="event.stopPropagation()">                        <button class="modal-close-button" onclick="closeModal()">✕</button>                        <h3><i class="fas fa-envelope"></i> Send a Message</h3>                        <form id="message-form" class="form-grid">                            <div class="form-group">                                <label>Message</label>                                <textarea id="messageText" required placeholder="Type your message here..."></textarea>                            </div>                            <button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane"></i> Send Message</button>                        </form>                    </div>                </div>`;
+            document.getElementById('message-form').addEventListener('submit', (e) => {
+                 e.preventDefault();
+                 showAlert('Message sent! (Demo feature)', 'success');
+                 closeModal();
+             });
         }
         function closeModal() {
             document.getElementById('modal-container').innerHTML = '';
@@ -355,10 +535,12 @@
         function updateUIForLoggedInUser() {
             const user = appState.currentUser;
             document.getElementById('hero-section').style.display = 'none';
+            document.getElementById('features-section').style.display = 'none';
+            document.getElementById('project-showcase').style.display = 'none';
             document.getElementById('user-profile').style.display = 'flex';
             document.getElementById('auth-buttons-container').style.display = 'none';
             const navMenu = document.getElementById('main-nav-menu');
-            navMenu.innerHTML = `<button class="nav-link" onclick="showSection('jobs')">Find Jobs</button>${user.role === 'contractor' ? `<button class="nav-link" onclick="showSection('post-job')">Post Job</button>` : ''}<button class="nav-link" onclick="showSection('quotes')">My Quotes</button>`;
+            navMenu.innerHTML = `                <button class="nav-link" onclick="showSection('jobs')"><i class="fas fa-briefcase"></i> Find Jobs</button>                ${user.role === 'contractor' ? `<button class="nav-link" onclick="showSection('post-job')"><i class="fas fa-plus"></i> Post Job</button>` : ''}                <button class="nav-link" onclick="showSection('quotes')"><i class="fas fa-file-invoice-dollar"></i> My Quotes</button>`;
             document.getElementById('userName').textContent = user.fullName;
             document.getElementById('userType').textContent = user.role.charAt(0).toUpperCase() + user.role.slice(1);
             document.getElementById('userAvatar').textContent = user.fullName.charAt(0).toUpperCase();
@@ -366,9 +548,11 @@
         }
         function updateUIForLoggedOutUser() {
             document.getElementById('hero-section').style.display = 'block';
+            document.getElementById('features-section').style.display = 'block';
+            document.getElementById('project-showcase').style.display = 'block';
             document.getElementById('user-profile').style.display = 'none';
             document.getElementById('auth-buttons-container').style.display = 'flex';
-            document.getElementById('auth-buttons-container').innerHTML = `<button class="btn btn-outline" onclick="showSection('login')">Sign In</button><button class="btn btn-primary" onclick="showSection('register')">Join Now</button>`;
+            document.getElementById('auth-buttons-container').innerHTML = `                <button class="btn btn-outline" onclick="showSection('login')">Sign In</button>                <button class="btn btn-primary" onclick="showSection('register')">Join Now</button>`;
             const navMenu = document.getElementById('main-nav-menu');
             navMenu.innerHTML = `<button class="nav-link" onclick="showSection('jobs')">Find Jobs</button>`;
             showSection('jobs');
@@ -376,6 +560,12 @@
         function showSection(sectionId) {
             document.querySelectorAll('.content-section').forEach(s => s.style.display = 'none');
             document.getElementById(`${sectionId}-section`).style.display = 'block';
+            // Hide hero and features when showing specific sections
+            if (sectionId !== 'jobs' || appState.currentUser) {
+                document.getElementById('hero-section').style.display = 'none';
+                document.getElementById('features-section').style.display = 'none';
+                document.getElementById('project-showcase').style.display = 'none';
+            }
             if (sectionId === 'quotes') {
                 fetchMyQuotes();
             }
