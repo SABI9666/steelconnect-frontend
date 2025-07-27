@@ -8,35 +8,32 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
-            --primary-color: #14a800; --primary-hover: #0f7a00; --primary-light: #f0fdf4;
+            --primary-color: #005a9c; --primary-hover: #004a80; --primary-light: #e6f0f7;
             --text-dark: #1f2937; --text-gray: #6b7280; --bg-white: #ffffff; --bg-light: #f3f4f6;
             --border-color: #e5e7eb; --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-            --gradient-hero: linear-gradient(135deg, rgba(31, 41, 55, 0.9) 0%, rgba(17, 24, 39, 0.9) 100%);
         }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: var(--bg-white); color: var(--text-dark); line-height: 1.6; }
         .header { background: var(--bg-white); border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 100; }
         .header-container { max-width: 1200px; margin: 0 auto; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; height: 64px; }
-        .logo { display: flex; align-items: center; gap: 8px; font-size: 24px; font-weight: 700; color: var(--primary-color); text-decoration: none; }
-        .logo-icon { width: 32px; height: 32px; background: var(--primary-color); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: white; }
+        .logo { display: flex; align-items: center; gap: 8px; font-size: 24px; font-weight: 700; color: var(--text-dark); text-decoration: none; }
+        .logo-icon { width: 32px; height: 32px; background: var(--primary-color); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: white; font-size: 16px; }
         .nav-menu { display: flex; gap: 4px; }
         .nav-link { padding: 8px 16px; border-radius: 6px; color: var(--text-gray); font-weight: 500; font-size: 14px; cursor: pointer; background: none; border: none; }
-        .nav-link:hover { color: var(--text-dark); background-color: var(--bg-light); }
-        .nav-link.active { color: var(--primary-color); background-color: var(--primary-light); }
+        .nav-link:hover { color: var(--primary-color); background-color: var(--primary-light); }
+        .nav-link.active { color: var(--primary-color); font-weight: 600; }
         .auth-buttons { display: flex; gap: 12px; }
         .btn { padding: 8px 16px; border-radius: 6px; font-weight: 500; font-size: 14px; cursor: pointer; border: 1px solid transparent; display: inline-flex; align-items: center; gap: 6px; }
-        .btn-outline { background: var(--bg-white); color: var(--text-dark); border-color: var(--border-color); }
+        .btn-outline { background: var(--bg-white); color: var(--primary-color); border-color: var(--primary-color); }
         .btn-primary { background: var(--primary-color); color: white; }
-        .btn-secondary { background: var(--bg-light); color: var(--text-dark); }
-        .btn-danger { background: #ef4444; color: white; }
-        .hero { background: var(--gradient-hero); color: white; padding: 80px 0; text-align: left; }
-        .hero-content { max-width: 1200px; margin: 0 auto; padding: 0 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; }
-        .hero-text h1 { font-size: 48px; font-weight: 700; margin-bottom: 20px; line-height: 1.2; }
-        .hero-text p { font-size: 18px; opacity: 0.9; }
-        .hero-visual { display: flex; align-items: center; justify-content: center; }
-        .hero-image { width: 100%; max-width: 450px; height: auto; border-radius: 16px; object-fit: cover; border: 2px solid rgba(255, 255, 255, 0.1); box-shadow: var(--shadow-md); }
+        .hero { position: relative; color: white; padding: 100px 0; text-align: center; overflow: hidden; }
+        .hero-background { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; filter: brightness(0.5); }
+        .hero-content { position: relative; z-index: 2; max-width: 800px; margin: 0 auto; padding: 0 24px; }
+        .hero-content h1 { font-size: 48px; font-weight: 700; margin-bottom: 20px; }
+        .hero-content p { font-size: 18px; opacity: 0.9; }
         .main-container { max-width: 1200px; margin: 0 auto; padding: 40px 24px; }
         .content-section { display: none; }
-        .content-section.active { display: block; }
+        .content-section.active { display: block; animation: fadeIn 0.5s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .section-header { margin-bottom: 32px; padding-bottom: 16px; border-bottom: 1px solid var(--border-color); }
         .section-title { font-size: 24px; font-weight: 600; }
         .form-grid { display: grid; gap: 24px; }
@@ -47,10 +44,9 @@
         .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
         .jobs-grid, .quotes-grid { display: grid; gap: 20px; }
         .job-card, .quote-card { background: var(--bg-white); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; }
-        .job-card:hover { border-color: var(--primary-color); box-shadow: var(--shadow-md); }
         .job-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
         .job-header h3 { font-size: 18px; font-weight: 600; }
-        .job-budget { background: var(--primary-color); color: white; padding: 6px 12px; border-radius: 20px; font-size: 14px; }
+        .job-budget { background: var(--primary-color); color: white; padding: 6px 12px; border-radius: 20px; font-weight: 600; font-size: 14px; }
         .job-description { color: var(--text-gray); margin-bottom: 16px; }
         .job-attachment a { color: var(--primary-color); text-decoration: none; font-weight: 500; }
         .job-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-color); }
@@ -70,30 +66,30 @@
         .spinner-container { display: flex; justify-content: center; padding: 60px; }
         .spinner { width: 32px; height: 32px; border: 3px solid var(--border-color); border-radius: 50%; border-top-color: var(--primary-color); animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        @media (max-width: 768px) { .hero-content { grid-template-columns: 1fr; text-align: center; } .hero-visual { display: none; } .nav-menu { display: none; } .form-row { grid-template-columns: 1fr; } }
+        @media (max-width: 768px) { .nav-menu { display: none; } .form-row { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
     <header class="header">
         <div class="header-container">
             <a href="#" class="logo" onclick="showSection('jobs'); return false;">
-                <div class="logo-icon">SC</div> SteelConnect
+                <div class="logo-icon">SC</div>
+                SteelConnect
             </a>
             <nav id="main-nav-menu" class="nav-menu"></nav>
             <div id="auth-buttons-container" class="auth-buttons"></div>
         </div>
     </header>
+
     <section class="hero" id="hero-section">
+        <img src="https://images.unsplash.com/photo-1590215282492-35d27579975f?q=80&w=2940&auto=format&fit=crop" 
+             alt="Steel construction site with girders and beams" class="hero-background">
         <div class="hero-content">
-            <div class="hero-text">
-                <h1>Connecting clients to steel professionals who deliver</h1>
-                <p>Find top steel designers and contractors for your projects. Post jobs, submit quotes, and build your network.</p>
-            </div>
-            <div class="hero-visual">
-                <img src="https://images.unsplash.com/photo-1518257654620-ef442358c45d?q=80&w=2070&auto=format&fit=crop" alt="Modern steel structure" class="hero-image">
-            </div>
+            <h1>The Premier Marketplace for Steel & Rebar Professionals</h1>
+            <p>Find expert structural designers and contractors. Post your project and get competitive quotes from the best in the industry.</p>
         </div>
     </section>
+
     <main>
         <div id="main-container" class="main-container">
             <div id="user-profile" class="user-profile" style="display: none;">
@@ -107,36 +103,292 @@
                 </div>
             </div>
             <div id="alerts"></div>
+            
             <section id="jobs-section" class="content-section">
                 <div class="section-header"><h2 class="section-title">Available Jobs</h2></div>
                 <div id="jobs-list" class="jobs-grid"></div>
             </section>
+
             <section id="post-job-section" class="content-section">
                 <div class="section-header"><h2 class="section-title">Post a New Job</h2></div>
                 <form id="post-job-form" class="form-grid">
-                    <div class="form-row"><div class="form-group"><label class="form-label">Job Title</label><input type="text" class="form-input" id="jobTitle" required></div><div class="form-group"><label class="form-label">Budget</label><input type="text" class="form-input" id="jobBudget" required></div></div>
-                    <div class="form-row"><div class="form-group"><label class="form-label">Skills</label><input type="text" class="form-input" id="jobSkills"></div><div class="form-group"><label class="form-label">Deadline</label><input type="date" class="form-input" id="jobDeadline" required></div></div>
-                    <div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="jobDescription" required></textarea></div>
-                    <div class="form-group"><label class="form-label">Attach File</label><input type="file" class="form-input" id="jobAttachmentFile"></div>
-                    <div class="form-group"><label class="form-label">Attach Link</label><input type="url" class="form-input" id="jobAttachmentLink" placeholder="https://..."></div>
+                    <div class="form-row"><div class="form-group"><label class="form-label">Job Title</label><input type="text" class="form-input" id="jobTitle" required placeholder="e.g., Structural Steel Design for a 5-Story Building"></div><div class="form-group"><label class="form-label">Budget Range</label><input type="text" class="form-input" id="jobBudget" required placeholder="$5,000 - $10,000"></div></div>
+                    <div class="form-row"><div class="form-group"><label class="form-label">Skills Required</label><input type="text" class="form-input" id="jobSkills" placeholder="AISC, Tekla Structures, AutoCAD"></div><div class="form-group"><label class="form-label">Project Deadline</label><input type="date" class="form-input" id="jobDeadline" required></div></div>
+                    <div class="form-group"><label class="form-label">Project Description</label><textarea class="form-textarea" id="jobDescription" required placeholder="Describe the project scope, deliverables, and any specific requirements..."></textarea></div>
+                    <div class="form-group"><label class="form-label">Attach Document (PDF, Word, Image)</label><input type="file" class="form-input" id="jobAttachmentFile"></div>
+                    <div class="form-group"><label class="form-label">Or Add External Link (e.g., Google Drive)</label><input type="url" class="form-input" id="jobAttachmentLink" placeholder="https://..."></div>
                     <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Post Job</button>
                 </form>
             </section>
+
             <section id="quotes-section" class="content-section">
                 <div class="section-header"><h2 class="section-title">My Submitted Quotes</h2></div>
                 <div id="my-quotes-list" class="quotes-grid"></div>
             </section>
+
             <section id="login-section" class="content-section">
                 <div class="section-header"><h2 class="section-title">Sign In</h2></div>
                 <form id="login-form" class="form-grid" style="max-width: 400px; margin: 0 auto;"><div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" id="loginEmail" required></div><div class="form-group"><label class="form-label">Password</label><input type="password" class="form-input" id="loginPassword" required></div><button type="submit" class="btn btn-primary">Sign In</button></form>
             </section>
+
             <section id="register-section" class="content-section">
                 <div class="section-header"><h2 class="section-title">Join SteelConnect</h2></div>
-                <form id="register-form" class="form-grid" style="max-width: 600px; margin: 0 auto;"><div class="form-row"><div class="form-group"><label class="form-label">Full Name</label><input type="text" class="form-input" id="regName" required></div><div class="form-group"><label class="form-label">Username</label><input type="text" class="form-input" id="regUsername" required></div></div><div class="form-row"><div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" id="regEmail" required></div><div class="form-group"><label class="form-label">Password</label><input type="password" class="form-input" id="regPassword" required></div></div><div class="form-group"><label class="form-label">I am a...</label><select class="form-select" id="regRole" required><option value="">Select role</option><option value="contractor">Contractor</option><option value="designer">Designer</option></select></div><button type="submit" class="btn btn-primary">Create Account</button></form>
+                <form id="register-form" class="form-grid" style="max-width: 600px; margin: 0 auto;"><div class="form-row"><div class="form-group"><label class="form-label">Full Name</label><input type="text" class="form-input" id="regName" required></div><div class="form-group"><label class="form-label">Username</label><input type="text" class="form-input" id="regUsername" required></div></div><div class="form-row"><div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" id="regEmail" required></div><div class="form-group"><label class="form-label">Password</label><input type="password" class="form-input" id="regPassword" required></div></div><div class="form-group"><label class="form-label">I am a...</label><select class="form-select" id="regRole" required><option value="">Select your role</option><option value="contractor">Contractor (I post jobs)</option><option value="designer">Designer (I bid on jobs)</option></select></div><button type="submit" class="btn btn-primary">Create Account</button></form>
             </section>
         </div>
     </main>
     <div id="modal-container"></div>
-    <script src="script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', initializeApp);
+
+        const BACKEND_URL = 'https://steelconnect-backend.onrender.com';
+        const appState = { currentUser: null, jwtToken: null, jobs: [], myQuotes: [] };
+
+        function initializeApp() {
+            document.getElementById('login-form').addEventListener('submit', handleLogin);
+            document.getElementById('register-form').addEventListener('submit', handleRegister);
+            document.getElementById('post-job-form').addEventListener('submit', handlePostJob);
+            document.getElementById('logout-button').addEventListener('click', logout);
+            
+            const token = localStorage.getItem('jwtToken');
+            const user = localStorage.getItem('currentUser');
+            if (token && user) {
+                appState.jwtToken = token;
+                appState.currentUser = JSON.parse(user);
+                updateUIForLoggedInUser();
+            } else {
+                updateUIForLoggedOutUser();
+            }
+            fetchJobs();
+        }
+
+        async function apiCall(endpoint, method, body, successMessage, callback) {
+            try {
+                const options = { method, headers: {} };
+                if (body) {
+                    options.headers['Content-Type'] = 'application/json';
+                    options.body = JSON.stringify(body);
+                }
+                const response = await fetch(BACKEND_URL + endpoint, options);
+                if (!response.ok) {
+                    let errorData;
+                    try { errorData = await response.json(); } catch (e) { throw new Error(response.statusText); }
+                    throw new Error(errorData.error || response.statusText);
+                }
+                const contentType = response.headers.get("content-type");
+                if (contentType && contentType.indexOf("application/json") !== -1) {
+                    const data = await response.json();
+                    if (successMessage) showAlert(successMessage, 'success');
+                    if (callback) callback(data);
+                } else {
+                    if (successMessage) showAlert(successMessage, 'success');
+                    if (callback) callback();
+                }
+            } catch (error) { showAlert(error.message, 'error'); }
+        }
+
+        async function handleRegister(event) {
+            event.preventDefault();
+            const form = event.target;
+            const userData = { fullName: form.querySelector('#regName').value, username: form.querySelector('#regUsername').value, email: form.querySelector('#regEmail').value, password: form.querySelector('#regPassword').value, role: form.querySelector('#regRole').value };
+            await apiCall('/auth/register', 'POST', userData, 'Registration successful! Please sign in.', () => { showSection('login'); form.reset(); });
+        }
+
+        async function handleLogin(event) {
+            event.preventDefault();
+            const form = event.target;
+            const authData = { email: form.querySelector('#loginEmail').value, password: form.querySelector('#loginPassword').value };
+            await apiCall('/auth/login', 'POST', authData, 'Login successful!', (data) => {
+                appState.currentUser = data.user;
+                appState.jwtToken = data.token || 'fake-jwt-token';
+                localStorage.setItem('currentUser', JSON.stringify(data.user));
+                localStorage.setItem('jwtToken', appState.jwtToken);
+                updateUIForLoggedInUser();
+                fetchJobs();
+            });
+        }
+
+        function logout() {
+            appState.currentUser = null;
+            appState.jwtToken = null;
+            localStorage.clear();
+            updateUIForLoggedOutUser();
+            showAlert('You have been logged out.', 'info');
+        }
+
+        async function fetchJobs() {
+            const jobsList = document.getElementById('jobs-list');
+            jobsList.innerHTML = '<div class="spinner-container"><div class="spinner"></div></div>';
+            await apiCall('/jobs', 'GET', null, null, (data) => { appState.jobs = data; renderJobs(); });
+        }
+
+        async function fetchMyQuotes() {
+            if (!appState.currentUser || appState.currentUser.role !== 'designer') return;
+            const myQuotesList = document.getElementById('my-quotes-list');
+            myQuotesList.innerHTML = '<div class="spinner-container"><div class="spinner"></div></div>';
+            await apiCall(`/quotes/user/${appState.currentUser.id}`, 'GET', null, null, (data) => { appState.myQuotes = data; renderMyQuotes(); });
+        }
+
+        function renderJobs() {
+            const jobsList = document.getElementById('jobs-list');
+            jobsList.innerHTML = '';
+            if (!appState.jobs || appState.jobs.length === 0) {
+                jobsList.innerHTML = `<div class="empty-state"><h3>No Jobs Found</h3><p>Log in as a contractor to post the first job!</p></div>`;
+                return;
+            }
+            appState.jobs.forEach(job => {
+                const jobCard = document.createElement('div');
+                jobCard.className = 'job-card';
+                const isMyJob = appState.currentUser?.id === job.posterId;
+                let attachmentHTML = '';
+                if (appState.currentUser) {
+                    if (job.attachment) attachmentHTML += `<div class="job-attachment"><a href="${BACKEND_URL}${job.attachment}" target="_blank">📄 View File</a></div>`;
+                    if (job.link) attachmentHTML += `<div class="job-attachment"><a href="${job.link}" target="_blank">🔗 View Link</a></div>`;
+                }
+                let actionButtonHTML = '';
+                if (appState.currentUser) {
+                    if (isMyJob) { actionButtonHTML = `<button class="btn btn-secondary" onclick="viewQuotes('${job.id}')">View Quotes</button> <button class="btn btn-danger" onclick="deleteJob('${job.id}')">Delete</button>`; }
+                    else if (appState.currentUser.role === 'designer') { actionButtonHTML = `<button class="btn btn-primary" onclick="showQuoteModal('${job.id}')">Submit Quote</button>`; }
+                } else { actionButtonHTML = `<button class="btn btn-secondary" onclick="showSection('login')">Sign In to Quote</button>`; }
+                jobCard.innerHTML = `<div class="job-header"><h3>${job.title}</h3><div class="job-budget">${job.budget}</div></div><p class="job-description">${job.description}</p>${attachmentHTML}<div class="job-actions">${actionButtonHTML}</div>`;
+                jobsList.appendChild(jobCard);
+            });
+        }
+
+        function renderMyQuotes() {
+            const myQuotesList = document.getElementById('my-quotes-list');
+            myQuotesList.innerHTML = '';
+            if (appState.myQuotes.length === 0) {
+                myQuotesList.innerHTML = `<div class="empty-state"><h3>You haven't submitted any quotes.</h3></div>`;
+                return;
+            }
+            appState.myQuotes.forEach(quote => {
+                const job = appState.jobs.find(j => j.id === quote.jobId);
+                const quoteCard = document.createElement('div');
+                quoteCard.className = 'quote-card';
+                const attachmentHTML = quote.attachment ? `<div class="job-attachment"><a href="${BACKEND_URL}${quote.attachment}" target="_blank">📄 View My Attachment</a></div>` : '';
+                quoteCard.innerHTML = `<div class="quote-header"><div><h4>Quote for: ${job?.title || 'Job not found'}</h4><div class="quote-amount">$${quote.amount}</div></div><div class="quote-status ${quote.status}">${quote.status}</div></div><p>${quote.description}</p>${attachmentHTML}<div class="job-actions"><button class="btn btn-danger" onclick="deleteQuote('${quote.id}')">Delete Quote</button></div>`;
+                myQuotesList.appendChild(quoteCard);
+            });
+        }
+        
+        async function handlePostJob(event) {
+            event.preventDefault();
+            if (!appState.currentUser) { return showAlert('You must be logged in to post a job.', 'error'); }
+            const form = event.target;
+            const fileInput = form.querySelector('#jobAttachmentFile');
+            const file = fileInput.files[0];
+            let attachmentPath = '';
+            if (file) {
+                const formData = new FormData();
+                formData.append('document', file);
+                try {
+                    showAlert('Uploading file...', 'info');
+                    const response = await fetch(`${BACKEND_URL}/uploads/job`, { method: 'POST', body: formData });
+                    const data = await response.json();
+                    if (!response.ok) throw new Error(data.error || 'File upload failed.');
+                    attachmentPath = data.filePath;
+                } catch (error) { return showAlert(error.message, 'error'); }
+            }
+            const jobData = { title: form.querySelector('#jobTitle').value, description: form.querySelector('#jobDescription').value, budget: form.querySelector('#jobBudget').value, deadline: form.querySelector('#jobDeadline').value, skills: form.querySelector('#jobSkills').value.split(',').map(s => s.trim()).filter(Boolean), userId: appState.currentUser.id, userFullName: appState.currentUser.fullName, attachment: attachmentPath, link: form.querySelector('#jobAttachmentLink').value };
+            await apiCall('/jobs', 'POST', jobData, 'Job posted successfully!', () => { form.reset(); fetchJobs(); showSection('jobs'); });
+        }
+
+        async function deleteJob(jobId) {
+            if (confirm('Are you sure you want to delete this job?')) { await apiCall(`/jobs/${jobId}`, 'DELETE', null, 'Job deleted successfully!', fetchJobs); }
+        }
+        async function deleteQuote(quoteId) {
+            if (confirm('Are you sure you want to delete this quote?')) { await apiCall(`/quotes/${quoteId}`, 'DELETE', null, 'Quote deleted successfully!', fetchMyQuotes); }
+        }
+        async function approveQuote(quoteId) {
+            if (confirm('Approve this quote? All others will be rejected.')) { await apiCall(`/quotes/${quoteId}/approve`, 'PUT', null, 'Quote approved!', () => { closeModal(); fetchJobs(); }); }
+        }
+
+        async function viewQuotes(jobId) {
+            await apiCall(`/quotes/job/${jobId}`, 'GET', null, null, (quotes) => {
+                const modalContainer = document.getElementById('modal-container');
+                let quotesHTML = '<h3>Received Quotes</h3>';
+                if (quotes.length === 0) { quotesHTML += `<div class="empty-state"><p>No quotes yet.</p></div>`; }
+                else {
+                    quotes.forEach(quote => {
+                        const attachmentHTML = quote.attachment ? `<div class="job-attachment"><a href="${BACKEND_URL}${quote.attachment}" target="_blank">View Attachment</a></div>` : '';
+                        quotesHTML += `<div class="quote-card"><p><strong>From:</strong> ${quote.quoterName} | <strong>Amount:</strong> $${quote.amount}</p><p>${quote.description}</p>${attachmentHTML}<div class="job-actions">${quote.status === 'pending' ? `<button class="btn btn-primary" onclick="approveQuote('${quote.id}')">Approve</button>` : `<span class="quote-status ${quote.status}">${quote.status}</span>`}<button class="btn btn-secondary" onclick="openMessageModal('${quote.quoterId}')">Message</button></div></div>`;
+                    });
+                }
+                modalContainer.innerHTML = `<div class="modal-overlay" onclick="closeModal()"><div class="modal-content" onclick="event.stopPropagation()"><button class="modal-close-button" onclick="closeModal()">✕</button>${quotesHTML}</div></div>`;
+            });
+        }
+        function showQuoteModal(jobId) {
+            const modalContainer = document.getElementById('modal-container');
+            modalContainer.innerHTML = `<div class="modal-overlay" onclick="closeModal()"><div class="modal-content" onclick="event.stopPropagation()"><button class="modal-close-button" onclick="closeModal()">✕</button><h3>Submit Your Quote</h3><form id="quote-form" class="form-grid"><div class="form-group"><label>Amount ($)</label><input type="number" id="quoteAmount" required></div><div class="form-group"><label>Description</label><textarea id="quoteDescription" required></textarea></div><div class="form-group"><label>Attach File</label><input type="file" id="quoteAttachmentFile"></div><button type="submit" class="btn btn-primary">Submit</button></form></div></div>`;
+            document.getElementById('quote-form').addEventListener('submit', (e) => handleQuoteSubmit(e, jobId));
+        }
+        async function handleQuoteSubmit(event, jobId) {
+            event.preventDefault();
+            if (!appState.currentUser) { return showAlert('You must be logged in to submit a quote.', 'error'); }
+            const form = event.target;
+            const fileInput = form.querySelector('#quoteAttachmentFile');
+            const file = fileInput.files[0];
+            let attachmentPath = '';
+            if (file) {
+                const formData = new FormData();
+                formData.append('quote_document', file);
+                try {
+                    showAlert('Uploading file...', 'info');
+                    const response = await fetch(`${BACKEND_URL}/uploads/quote`, { method: 'POST', body: formData });
+                    const data = await response.json();
+                    if (!response.ok) throw new Error(data.error || 'File upload failed.');
+                    attachmentPath = data.filePath;
+                } catch (error) { return showAlert(error.message, 'error'); }
+            }
+            const quoteData = { jobId: jobId, amount: form.querySelector('#quoteAmount').value, description: form.querySelector('#quoteDescription').value, attachment: attachmentPath, quoterId: appState.currentUser.id, quoterName: appState.currentUser.fullName };
+            await apiCall('/quotes', 'POST', quoteData, 'Quote submitted successfully!', closeModal);
+        }
+        function openMessageModal(recipientId) {
+            const modalContainer = document.getElementById('modal-container');
+            modalContainer.innerHTML = `<div class="modal-overlay" onclick="closeModal()"><div class="modal-content" onclick="event.stopPropagation()"><button class="modal-close-button" onclick="closeModal()">✕</button><h3>Send a Message</h3><form id="message-form"><textarea id="messageText" required></textarea><button type="submit">Send</button></form></div></div>`;
+            document.getElementById('message-form').addEventListener('submit', (e) => { e.preventDefault(); showAlert('Message sent! (DEMO)', 'success'); closeModal(); });
+        }
+        function closeModal() {
+            document.getElementById('modal-container').innerHTML = '';
+        }
+        function updateUIForLoggedInUser() {
+            const user = appState.currentUser;
+            document.getElementById('hero-section').style.display = 'none';
+            document.getElementById('user-profile').style.display = 'flex';
+            document.getElementById('auth-buttons-container').style.display = 'none';
+            const navMenu = document.getElementById('main-nav-menu');
+            navMenu.innerHTML = `<button class="nav-link" onclick="showSection('jobs')">Find Jobs</button>${user.role === 'contractor' ? `<button class="nav-link" onclick="showSection('post-job')">Post Job</button>` : ''}<button class="nav-link" onclick="showSection('quotes')">My Quotes</button>`;
+            document.getElementById('userName').textContent = user.fullName;
+            document.getElementById('userType').textContent = user.role.charAt(0).toUpperCase() + user.role.slice(1);
+            document.getElementById('userAvatar').textContent = user.fullName.charAt(0).toUpperCase();
+            showSection('jobs');
+        }
+        function updateUIForLoggedOutUser() {
+            document.getElementById('hero-section').style.display = 'block';
+            document.getElementById('user-profile').style.display = 'none';
+            document.getElementById('auth-buttons-container').style.display = 'flex';
+            document.getElementById('auth-buttons-container').innerHTML = `<button class="btn btn-outline" onclick="showSection('login')">Sign In</button><button class="btn btn-primary" onclick="showSection('register')">Join Now</button>`;
+            const navMenu = document.getElementById('main-nav-menu');
+            navMenu.innerHTML = `<button class="nav-link" onclick="showSection('jobs')">Find Jobs</button>`;
+            showSection('jobs');
+        }
+        function showSection(sectionId) {
+            document.querySelectorAll('.content-section').forEach(s => s.style.display = 'none');
+            document.getElementById(`${sectionId}-section`).style.display = 'block';
+            if (sectionId === 'quotes') {
+                fetchMyQuotes();
+            }
+        }
+        function showAlert(message, type = 'info') {
+            const alertsContainer = document.getElementById('alerts');
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            const icon = type === 'success' ? 'fas fa-check-circle' : type === 'error' ? 'fas fa-exclamation-circle' : 'fas fa-info-circle';
+            alertDiv.innerHTML = `<i class="${icon}"></i> ${message}`;
+            alertsContainer.prepend(alertDiv);
+            setTimeout(() => alertDiv.remove(), 5000);
+        }
+    </script>
 </body>
 </html>
