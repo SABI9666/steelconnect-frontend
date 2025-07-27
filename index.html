@@ -18,6 +18,7 @@
             --border-color: #e5e7eb;
             --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
             --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 10px 10px -5px rgb(0 0 0 / 0.04);
         }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: var(--bg-light); color: var(--text-dark); line-height: 1.6; }
         .header { background: var(--bg-white); border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow-md); }
@@ -40,17 +41,123 @@
         .hero-content { position: relative; z-index: 3; max-width: 800px; margin: 0 auto; padding: 0 24px; }
         .hero-content h1 { font-size: 48px; font-weight: 800; margin-bottom: 20px; line-height: 1.2; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
         .hero-content p { font-size: 18px; opacity: 0.95; max-width: 600px; margin: 0 auto; text-shadow: 0 1px 3px rgba(0,0,0,0.5); }
-        /* Professional Features Section */
+
+        /* --- MODIFIED: Enhanced Features Section --- */
         .features-section { background: var(--bg-white); padding: 80px 0; }
         .features-container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
-        .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 40px; margin-top: 50px; }
-        .feature-card { text-align: center; padding: 30px 20px; background: var(--bg-light); border-radius: 12px; transition: transform 0.3s; }
-        .feature-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-md); }
-        /* --- MODIFIED: Made feature icons and images larger --- */
-        .feature-icon { width: 100px; height: 100px; margin: 0 auto 20px; background: var(--primary-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
-        .feature-icon img { width: 50px; height: 50px; object-fit: contain; }
-        .feature-card h3 { font-size: 20px; margin-bottom: 15px; color: var(--text-dark); }
-        .feature-card p { color: var(--text-gray); line-height: 1.6; }
+        .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 30px; margin-top: 50px; }
+        .feature-card {
+            background: var(--bg-light);
+            border-radius: 16px;
+            overflow: hidden;
+            transition: all 0.4s ease;
+            cursor: pointer;
+            border: 2px solid transparent;
+            position: relative;
+        }
+        .feature-card:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-xl);
+            border-color: var(--primary-color);
+        }
+        .feature-card.expanded {
+           transform: scale(1.02);
+           box-shadow: var(--shadow-xl);
+           border-color: var(--primary-color);
+           z-index: 10;
+        }
+        .feature-header {
+           padding: 30px 20px;
+           text-align: center;
+           background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+        }
+        .feature-icon {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 20px;
+            background: var(--primary-light);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            box-shadow: var(--shadow-md);
+            transition: transform 0.3s ease;
+        }
+        .feature-card:hover .feature-icon {
+            transform: scale(1.1);
+        }
+        .feature-icon img {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 50%;
+        }
+        .feature-header h3 {
+            font-size: 22px;
+            margin-bottom: 15px;
+            color: var(--text-dark);
+            font-weight: 700;
+        }
+        .feature-header p {
+            color: var(--text-gray);
+            line-height: 1.6;
+            font-size: 16px;
+        }
+        .feature-expanded-content {
+           max-height: 0;
+           overflow: hidden;
+           transition: max-height 0.4s ease;
+           background: var(--bg-white);
+        }
+        .feature-card.expanded .feature-expanded-content {
+           max-height: 600px; /* Adjust as needed */
+        }
+        .feature-expanded-inner {
+           padding: 30px;
+        }
+        .feature-gallery {
+           display: grid;
+           grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+           gap: 15px;
+           margin-bottom: 25px;
+        }
+        .feature-gallery img {
+           width: 100%;
+           height: 120px;
+           object-fit: cover;
+           border-radius: 12px;
+           transition: transform 0.3s ease;
+           cursor: pointer;
+        }
+        .feature-gallery img:hover {
+           transform: scale(1.05);
+        }
+        .feature-details h4 {
+           color: var(--primary-color);
+           font-size: 18px;
+           margin-bottom: 15px;
+           font-weight: 600;
+        }
+        .feature-list {
+           list-style: none;
+           padding: 0;
+        }
+        .feature-list li {
+           padding: 8px 0;
+           border-bottom: 1px solid var(--border-color);
+           display: flex;
+           align-items: center;
+           gap: 10px;
+        }
+        .feature-list li:last-child {
+           border-bottom: none;
+        }
+        .feature-list i {
+           color: var(--primary-color);
+           width: 20px;
+        }
+
         .section-title-center { text-align: center; font-size: 36px; font-weight: 700; margin-bottom: 20px; color: var(--text-dark); }
         .section-subtitle { text-align: center; font-size: 18px; color: var(--text-gray); max-width: 600px; margin: 0 auto; }
         .main-container { max-width: 1200px; margin: 40px auto; padding: 0 24px; }
@@ -94,26 +201,13 @@
         .spinner-container { display: flex; justify-content: center; padding: 60px; }
         .spinner { width: 32px; height: 32px; border: 3px solid var(--border-color); border-radius: 50%; border-top-color: var(--primary-color); animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        /* --- MODIFIED: Professional styles for "Recent Steel Projects" --- */
-        .project-showcase { background: var(--bg-light); padding: 80px 0; }
-        .showcase-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 30px; max-width: 1200px; margin: 50px auto; padding: 0 24px; }
-        .showcase-item { background: var(--bg-white); border-radius: 12px; overflow: hidden; box-shadow: var(--shadow-md); transition: transform 0.3s ease, box-shadow 0.3s ease; position: relative; }
-        .showcase-item:hover { transform: translateY(-8px); box-shadow: var(--shadow-lg); }
-        .showcase-image-container { width: 100%; height: 200px; overflow: hidden; }
-        .showcase-image { width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s ease; }
-        .showcase-item:hover .showcase-image { transform: scale(1.05); }
-        .showcase-content { padding: 24px; }
-        .showcase-content h4 { font-size: 18px; margin-bottom: 10px; color: var(--text-dark); font-weight: 600; }
-        .showcase-content p { font-size: 14px; color: var(--text-gray); }
-        .showcase-item-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to top, rgba(0, 90, 156, 0.8), transparent); opacity: 0; transition: opacity 0.4s ease; display: flex; align-items: flex-end; padding: 20px; }
-        .showcase-item:hover .showcase-item-overlay { opacity: 1; }
-        .showcase-overlay-text { color: white; font-weight: 600; transform: translateY(10px); opacity: 0; transition: all 0.3s ease 0.1s; }
-        .showcase-item:hover .showcase-overlay-text { transform: translateY(0); opacity: 1; }
+
         @media (max-width: 768px) {
              .nav-menu { display: none; }
              .form-row { grid-template-columns: 1fr; }
              .hero-content h1 { font-size: 32px; }
             .features-grid { grid-template-columns: 1fr; }
+            .feature-gallery { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -145,82 +239,84 @@
             <h2 class="section-title-center">Why Choose SteelConnect?</h2>
             <p class="section-subtitle">Connect with verified steel professionals and streamline your construction projects</p>
             <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <img src="https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=100&h=100&fit=crop&crop=center" alt="Quality Engineering">
+                <div class="feature-card" onclick="toggleFeatureCard(this)">
+                    <div class="feature-header">
+                        <div class="feature-icon">
+                            <img src="https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=100&h=100&fit=crop&crop=center" alt="Quality Engineering">
+                        </div>
+                        <h3>Expert Steel Design</h3>
+                        <p>Connect with certified structural engineers and designers with proven track records.</p>
                     </div>
-                    <h3>Expert Steel Design</h3>
-                    <p>Connect with certified structural engineers and steel designers with proven track records in industrial projects.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <img src="https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?w=100&h=100&fit=crop&crop=center" alt="Project Management">
+                    <div class="feature-expanded-content">
+                        <div class="feature-expanded-inner">
+                            <div class="feature-gallery">
+                                <img src="https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=300&h=200&fit=crop" alt="Structural Design">
+                                <img src="https://images.unsplash.com/photo-1590215277411-be2d90ecaa85?w=300&h=200&fit=crop" alt="Steel Framework">
+                            </div>
+                            <div class="feature-details">
+                                <h4>Our Expert Services Include:</h4>
+                                <ul class="feature-list">
+                                    <li><i class="fas fa-check"></i> AISC Certified Structural Engineers</li>
+                                    <li><i class="fas fa-check"></i> Advanced CAD & BIM Modeling</li>
+                                    <li><i class="fas fa-check"></i> Load Analysis & Connection Design</li>
+                                    <li><i class="fas fa-check"></i> Seismic & Wind Load Analysis</li>
+                                </ul>
+                            </div>
+                        </div>
                     </div>
-                    <h3>Project Management</h3>
-                    <p>Streamlined workflow from initial quote to project completion with integrated communication tools.</p>
                 </div>
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <img src="https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=100&h=100&fit=crop&crop=center" alt="Quality Assurance">
-                    </div>
-                    <h3>Quality Assurance</h3>
-                    <p>All professionals are vetted and verified. Review ratings and past project portfolios before hiring.</p>
-                </div>
-            </div>
-        </div>
-    </section>
 
-    <section class="project-showcase" id="project-showcase">
-        <div class="features-container">
-            <h2 class="section-title-center">Recent Steel Projects</h2>
-            <p class="section-subtitle">Explore a selection of successful projects facilitated through SteelConnect.</p>
-            <div class="showcase-grid">
-                <div class="showcase-item">
-                    <div class="showcase-image-container">
-                        <img src="https://images.unsplash.com/photo-1590215277411-be2d90ecaa85?w=400&h=300&fit=crop" alt="High-rise Building Structure" class="showcase-image">
+                <div class="feature-card" onclick="toggleFeatureCard(this)">
+                    <div class="feature-header">
+                        <div class="feature-icon">
+                            <img src="https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?w=100&h=100&fit=crop&crop=center" alt="Project Management">
+                        </div>
+                        <h3>Project Management</h3>
+                        <p>Streamlined workflow from initial quote to project completion with integrated tools.</p>
                     </div>
-                    <div class="showcase-content">
-                        <h4>Commercial High-rise</h4>
-                        <p>Structural steel design for 15-story building</p>
-                    </div>
-                    <div class="showcase-item-overlay">
-                        <div class="showcase-overlay-text">View Project <i class="fas fa-arrow-right"></i></div>
-                    </div>
-                </div>
-                <div class="showcase-item">
-                    <div class="showcase-image-container">
-                        <img src="https://images.unsplash.com/photo-1563794482-f96e7bd55b14?w=400&h=300&fit=crop" alt="Industrial Warehouse" class="showcase-image">
-                    </div>
-                    <div class="showcase-content">
-                        <h4>Industrial Warehouse</h4>
-                        <p>Pre-engineered steel building design</p>
-                    </div>
-                     <div class="showcase-item-overlay">
-                        <div class="showcase-overlay-text">View Project <i class="fas fa-arrow-right"></i></div>
+                    <div class="feature-expanded-content">
+                        <div class="feature-expanded-inner">
+                            <div class="feature-gallery">
+                                <img src="https://images.unsplash.com/photo-1552664730-d307ca884978?w=300&h=200&fit=crop" alt="Team Collaboration">
+                                <img src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=300&h=200&fit=crop" alt="Digital Tools">
+                            </div>
+                            <div class="feature-details">
+                                <h4>Comprehensive Project Management:</h4>
+                                <ul class="feature-list">
+                                    <li><i class="fas fa-check"></i> Real-time Project Tracking</li>
+                                    <li><i class="fas fa-check"></i> Milestone & Deadline Management</li>
+                                    <li><i class="fas fa-check"></i> Integrated Communication Platform</li>
+                                    <li><i class="fas fa-check"></i> Document Management System</li>
+                                </ul>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="showcase-item">
-                    <div class="showcase-image-container">
-                        <img src="https://images.unsplash.com/photo-1559308425-43b99d0d0634?w=400&h=300&fit=crop" alt="Bridge Construction" class="showcase-image">
+
+                <div class="feature-card" onclick="toggleFeatureCard(this)">
+                    <div class="feature-header">
+                        <div class="feature-icon">
+                            <img src="https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=100&h=100&fit=crop&crop=center" alt="Quality Assurance">
+                        </div>
+                        <h3>Quality Assurance</h3>
+                        <p>All professionals are vetted. Review ratings and past project portfolios before hiring.</p>
                     </div>
-                    <div class="showcase-content">
-                        <h4>Bridge Infrastructure</h4>
-                        <p>Steel bridge design and engineering analysis</p>
-                    </div>
-                     <div class="showcase-item-overlay">
-                        <div class="showcase-overlay-text">View Project <i class="fas fa-arrow-right"></i></div>
-                    </div>
-                </div>
-                <div class="showcase-item">
-                    <div class="showcase-image-container">
-                        <img src="https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=300&fit=crop" alt="Manufacturing Plant" class="showcase-image">
-                    </div>
-                    <div class="showcase-content">
-                        <h4>Manufacturing Facility</h4>
-                        <p>Heavy industrial steel framework</p>
-                    </div>
-                     <div class="showcase-item-overlay">
-                        <div class="showcase-overlay-text">View Project <i class="fas fa-arrow-right"></i></div>
+                    <div class="feature-expanded-content">
+                        <div class="feature-expanded-inner">
+                            <div class="feature-gallery">
+                                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=200&fit=crop" alt="Professional Team">
+                                <img src="https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=300&h=200&fit=crop" alt="Certification">
+                            </div>
+                            <div class="feature-details">
+                                <h4>Rigorous Quality Standards:</h4>
+                                <ul class="feature-list">
+                                    <li><i class="fas fa-check"></i> Professional License Verification</li>
+                                    <li><i class="fas fa-check"></i> Portfolio & Reference Reviews</li>
+                                    <li><i class="fas fa-check"></i> Client Rating & Feedback System</li>
+                                    <li><i class="fas fa-check"></i> Insurance & Bonding Verification</li>
+                                </ul>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -310,6 +406,22 @@
         document.addEventListener('DOMContentLoaded', initializeApp);
         const BACKEND_URL = 'https://steelconnect-backend.onrender.com';
         const appState = { currentUser: null, jwtToken: null, jobs: [], myQuotes: [] };
+
+        // --- MODIFIED: Added toggle function for feature cards ---
+        function toggleFeatureCard(card) {
+            const isExpanded = card.classList.contains('expanded');
+
+            // Close all other expanded cards
+            document.querySelectorAll('.feature-card.expanded').forEach(otherCard => {
+                if (otherCard !== card) {
+                    otherCard.classList.remove('expanded');
+                }
+            });
+
+            // Toggle current card
+            card.classList.toggle('expanded');
+        }
+
         function initializeApp() {
             document.getElementById('login-form').addEventListener('submit', handleLogin);
             document.getElementById('register-form').addEventListener('submit', handleRegister);
@@ -565,7 +677,6 @@
             const user = appState.currentUser;
             document.getElementById('hero-section').style.display = 'none';
             document.getElementById('features-section').style.display = 'none';
-            document.getElementById('project-showcase').style.display = 'none';
             document.getElementById('user-profile').style.display = 'flex';
             document.getElementById('auth-buttons-container').style.display = 'none';
             const navMenu = document.getElementById('main-nav-menu');
@@ -578,7 +689,6 @@
         function updateUIForLoggedOutUser() {
             document.getElementById('hero-section').style.display = 'block';
             document.getElementById('features-section').style.display = 'block';
-            document.getElementById('project-showcase').style.display = 'block';
             document.getElementById('user-profile').style.display = 'none';
             document.getElementById('auth-buttons-container').style.display = 'flex';
             document.getElementById('auth-buttons-container').innerHTML = `                <button class="btn btn-outline" onclick="showSection('login')">Sign In</button>                <button class="btn btn-primary" onclick="showSection('register')">Join Now</button>`;
@@ -593,7 +703,6 @@
             if (sectionId !== 'jobs' || appState.currentUser) {
                 document.getElementById('hero-section').style.display = 'none';
                 document.getElementById('features-section').style.display = 'none';
-                document.getElementById('project-showcase').style.display = 'none';
             }
             if (sectionId === 'quotes') {
                 fetchMyQuotes();
