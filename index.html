@@ -40,16 +40,32 @@
         .hero-content h1 { font-size: 48px; font-weight: 800; margin-bottom: 20px; line-height: 1.2; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
         .hero-content p { font-size: 18px; opacity: 0.95; max-width: 600px; margin: 0 auto; text-shadow: 0 1px 3px rgba(0,0,0,0.5); }
         
-        /* --- MODIFIED: Reverted to simpler "Why Choose" section styles --- */
+        /* --- NEW: Interactive "Why SteelConnect" Section --- */
         .features-section { background: var(--bg-white); padding: 80px 24px; }
         .features-container { max-width: 1200px; margin: 0 auto; }
-        .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 30px; margin-top: 50px; }
-        .feature-card { text-align: center; padding: 40px 30px; background: var(--bg-white); border-radius: 12px; transition: all 0.3s; border: 1px solid var(--border-color); box-shadow: var(--shadow-md); }
-        .feature-card:hover { transform: translateY(-8px); box-shadow: var(--shadow-lg); }
-        .feature-icon { width: 80px; height: 80px; margin: 0 auto 25px; background: var(--primary-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-        .feature-icon img { width: 100%; height: 100%; object-fit: cover; }
-        .feature-card h3 { font-size: 22px; margin-bottom: 15px; color: var(--text-dark); font-weight: 600; }
-        .feature-card p { color: var(--text-gray); line-height: 1.7; font-size: 16px; }
+        .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 30px; }
+        .feature-card { text-align: center; padding: 30px 25px; background: var(--bg-white); border-radius: 16px; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); border: 1px solid var(--border-color); box-shadow: var(--shadow-md); cursor: pointer; position: relative; overflow: hidden; }
+        .feature-card::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 3px; background: linear-gradient(90deg, var(--primary-color), #1e40af); transition: left 0.4s ease; }
+        .feature-card:hover::before { left: 0; }
+        .feature-card:hover { transform: translateY(-12px) scale(1.02); box-shadow: 0 20px 40px rgba(0, 91, 156, 0.15); }
+        .feature-card.expanded { transform: translateY(-8px) scale(1.02); box-shadow: 0 15px 35px rgba(0, 91, 156, 0.2); }
+        .feature-icon { width: 90px; height: 90px; margin: 0 auto 25px; background: linear-gradient(135deg, var(--primary-light), #e0f2fe); border-radius: 50%; display: flex; align-items: center; justify-content: center; position: relative; transition: all 0.3s ease; }
+        .feature-card:hover .feature-icon { transform: rotate(5deg) scale(1.1); }
+        .feature-icon i { font-size: 36px; color: var(--primary-color); transition: all 0.3s ease; }
+        .feature-card:hover .feature-icon i { color: #1e40af; }
+        .feature-card h3 { font-size: 24px; margin-bottom: 15px; color: var(--text-dark); font-weight: 700; transition: color 0.3s ease; }
+        .feature-card:hover h3 { color: var(--primary-color); }
+        .feature-card p { color: var(--text-gray); line-height: 1.7; font-size: 16px; margin-bottom: 20px; }
+        .feature-expanded-content { max-height: 0; overflow: hidden; transition: max-height 0.4s ease, padding 0.4s ease; opacity: 0; }
+        .feature-card.expanded .feature-expanded-content { max-height: 300px; opacity: 1; padding-top: 20px; border-top: 1px solid var(--border-color); margin-top: 20px; }
+        .standards-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 15px 0; text-align: left; }
+        .standard-item { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--bg-light); border-radius: 8px; font-size: 14px; font-weight: 500; }
+        .standard-item i { color: var(--primary-color); font-size: 12px; }
+        .expand-indicator { position: absolute; bottom: 20px; right: 20px; width: 30px; height: 30px; background: var(--primary-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; transition: all 0.3s ease; }
+        .feature-card.expanded .expand-indicator { transform: rotate(180deg); background: #1e40af; }
+        .global-reach { display: flex; align-items: center; justify-content: center; gap: 15px; margin: 15px 0; flex-wrap: wrap; }
+        .country-flag { width: 24px; height: 16px; border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+        .features-section .section-title { background: linear-gradient(135deg, var(--primary-color), #1e40af); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-size: 36px; font-weight: 800; }
 
         .main-layout { display: flex; }
         .sidebar { width: 260px; background: var(--bg-white); border-right: 1px solid var(--border-color); padding: 24px; height: calc(100vh - 64px); position: sticky; top: 64px; display: none; }
@@ -103,11 +119,14 @@
         @keyframes spin { to { transform: rotate(360deg); } }
         @media (max-width: 992px) {
             .sidebar { display: none; }
+            .standards-grid { grid-template-columns: 1fr; }                        
+            .features-section .section-title { font-size: 28px; }
         }
         @media (max-width: 768px) {
             .nav-menu { display: none; }
             .form-row { grid-template-columns: 1fr; }
             .main-content { padding: 24px; }
+            .feature-card { padding: 25px 20px; }  
         }
     </style>
 </head>
@@ -135,28 +154,58 @@
 
         <section class="features-section" id="features-section">
             <div class="features-container">
-                <h2 class="section-title" style="text-align: center;">A Foundation of Excellence</h2>
+                <h2 class="section-title" style="text-align: center;">Why SteelConnect?</h2>
+                <p style="text-align: center; color: var(--text-gray); font-size: 18px; max-width: 800px; margin: 0 auto 50px;">
+                    Connecting clients worldwide with certified steel professionals who deliver excellence across international standards
+                </p>
                 <div class="features-grid">
-                    <div class="feature-card">
-                        <div class="feature-icon">
-                            <img src="https://images.unsplash.com/photo-1569775069229-61d0f55b448a?q=80&w=800" alt="Mechanical and Structural Design">
+                    <div class="feature-card" onclick="toggleCard(this)">
+                        <div class="feature-icon"><i class="fas fa-globe-americas"></i></div>
+                        <h3>Global Standards Compliance</h3>
+                        <p>Work with professionals certified in international steel and construction standards across continents.</p>
+                        <div class="feature-expanded-content">
+                            <div class="standards-grid">
+                                <div class="standard-item"><i class="fas fa-check-circle"></i><span>AISC (USA)</span></div>
+                                <div class="standard-item"><i class="fas fa-check-circle"></i><span>Eurocode (EU)</span></div>
+                                <div class="standard-item"><i class="fas fa-check-circle"></i><span>BS 5950 (UK)</span></div>
+                                <div class="standard-item"><i class="fas fa-check-circle"></i><span>IS 800 (India)</span></div>
+                                <div class="standard-item"><i class="fas fa-check-circle"></i><span>AS 4100 (Australia)</span></div>
+                                <div class="standard-item"><i class="fas fa-check-circle"></i><span>CSA S16 (Canada)</span></div>
+                            </div>
                         </div>
-                        <h3>Expert Steel Design</h3>
-                        <p>Access professionals for high-quality structural steel, rebar, and precast detailing, adhering to key industry standards like AISC, ACI, and ASCE.</p>
+                        <div class="expand-indicator"><i class="fas fa-chevron-down"></i></div>
                     </div>
-                    <div class="feature-card">
-                        <div class="feature-icon">
-                            <img src="https://images.unsplash.com/photo-1556761175-b413da4baf72?q=80&w=800" alt="Project Management">
+                    <div class="feature-card" onclick="toggleCard(this)">
+                        <div class="feature-icon"><i class="fas fa-drafting-compass"></i></div>
+                        <h3>Advanced Engineering Solutions</h3>
+                        <p>Comprehensive steel design services from concept to construction with cutting-edge technology.</p>
+                        <div class="feature-expanded-content">
+                            <div class="standards-grid">
+                                <div class="standard-item"><i class="fas fa-cog"></i><span>Tekla Structures</span></div>
+                                <div class="standard-item"><i class="fas fa-cog"></i><span>AutoCAD Steel</span></div>
+                                <div class="standard-item"><i class="fas fa-cog"></i><span>Revit Structure</span></div>
+                                <div class="standard-item"><i class="fas fa-cog"></i><span>STAAD Pro</span></div>
+                                <div class="standard-item"><i class="fas fa-cog"></i><span>SAP2000</span></div>
+                                <div class="standard-item"><i class="fas fa-cog"></i><span>RAM Steel</span></div>
+                            </div>
                         </div>
-                        <h3>Advanced Shop Drawings</h3>
-                        <p>Receive detailed erection drawings, CAD files, and BIM services to ensure a seamless link between engineering and construction.</p>
+                        <div class="expand-indicator"><i class="fas fa-chevron-down"></i></div>
                     </div>
-                    <div class="feature-card">
-                        <div class="feature-icon">
-                            <img src="https://images.unsplash.com/photo-1521791136064-7986c2920216?q=80&w=800" alt="Quality Assurance">
+                    <div class="feature-card" onclick="toggleCard(this)">
+                        <div class="feature-icon"><i class="fas fa-certificate"></i></div>
+                        <h3>Certified Professionals</h3>
+                        <p>Connect with PE-licensed engineers and certified professionals across multiple jurisdictions.</p>
+                        <div class="feature-expanded-content">
+                            <div class="standards-grid">
+                                <div class="standard-item"><i class="fas fa-medal"></i><span>PE Licensed (48 States)</span></div>
+                                <div class="standard-item"><i class="fas fa-medal"></i><span>CEng (UK)</span></div>
+                                <div class="standard-item"><i class="fas fa-medal"></i><span>EUR ING (Europe)</span></div>
+                                <div class="standard-item"><i class="fas fa-medal"></i><span>CPEng (Australia)</span></div>
+                                <div class="standard-item"><i class="fas fa-medal"></i><span>P.Eng (Canada)</span></div>
+                                <div class="standard-item"><i class="fas fa-medal"></i><span>ISO 9001:2015</span></div>
+                            </div>
                         </div>
-                        <h3>Certified & Verified</h3>
-                        <p>Work with confidence, knowing our professionals are certified, PE-stamped in 48 states, and compliant with ISO 9001:2015.</p>
+                        <div class="expand-indicator"><i class="fas fa-chevron-down"></i></div>
                     </div>
                 </div>
             </div>
@@ -244,6 +293,16 @@
         document.addEventListener('DOMContentLoaded', initializeApp);
         const BACKEND_URL = 'https://steelconnect-backend.onrender.com';
         const appState = { currentUser: null, jwtToken: null, jobs: [], myQuotes: [] };
+        
+        // --- ADDED: Function to toggle interactive cards ---
+        function toggleCard(card) {
+            document.querySelectorAll('.feature-card.expanded').forEach(otherCard => {
+                if (otherCard !== card) {
+                    otherCard.classList.remove('expanded');
+                }
+            });
+            card.classList.toggle('expanded');
+        }
 
         function initializeApp() {
             document.getElementById('login-form').addEventListener('submit', handleLogin);
@@ -395,6 +454,7 @@
             document.getElementById('landing-page-content').style.display = 'none';
             document.getElementById('app-sidebar').style.display = 'flex';
             document.getElementById('auth-buttons-container').style.display = 'none';
+            document.getElementById('main-nav-menu').style.display = 'none';
 
             document.getElementById('userName').textContent = user.fullName;
             document.getElementById('userType').textContent = user.role.charAt(0).toUpperCase() + user.role.slice(1);
@@ -429,8 +489,10 @@
             document.getElementById('auth-buttons-container').style.display = 'flex';
             document.getElementById('auth-buttons-container').innerHTML = `<button class="btn btn-outline" onclick="showSection('login')">Sign In</button><button class="btn btn-primary" onclick="showSection('register')">Join Now</button>`;
             
+            // --- MODIFIED: Added "My Job" link to top nav ---
             const navMenu = document.getElementById('main-nav-menu');
-            navMenu.innerHTML = ``;
+            navMenu.style.display = 'flex';
+            navMenu.innerHTML = `<button class="nav-link" onclick="showSection('login')">My Job</button>`;
             
             showSection('jobs');
         }
@@ -481,14 +543,3 @@
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
