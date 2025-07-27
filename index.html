@@ -39,20 +39,20 @@
         .hero-content { position: relative; z-index: 3; max-width: 800px; margin: 0 auto; padding: 0 24px; }
         .hero-content h1 { font-size: 48px; font-weight: 800; margin-bottom: 20px; line-height: 1.2; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
         .hero-content p { font-size: 18px; opacity: 0.95; max-width: 600px; margin: 0 auto; text-shadow: 0 1px 3px rgba(0,0,0,0.5); }
+        
+        /* --- MODIFIED: Reverted to simpler "Why Choose" section styles --- */
         .features-section { background: var(--bg-white); padding: 80px 24px; }
         .features-container { max-width: 1200px; margin: 0 auto; }
         .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 30px; margin-top: 50px; }
-        .feature-card { text-align: center; padding: 30px 20px; background: var(--bg-light); border-radius: 12px; transition: all 0.3s; border: 1px solid var(--border-color); }
-        .feature-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-lg); }
-        .feature-icon { width: 80px; height: 80px; margin: 0 auto 20px; background: var(--primary-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .feature-card { text-align: center; padding: 40px 30px; background: var(--bg-white); border-radius: 12px; transition: all 0.3s; border: 1px solid var(--border-color); box-shadow: var(--shadow-md); }
+        .feature-card:hover { transform: translateY(-8px); box-shadow: var(--shadow-lg); }
+        .feature-icon { width: 80px; height: 80px; margin: 0 auto 25px; background: var(--primary-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; overflow: hidden; }
         .feature-icon img { width: 100%; height: 100%; object-fit: cover; }
-        .feature-card h3 { font-size: 20px; margin-bottom: 15px; color: var(--text-dark); }
-        .feature-card p { color: var(--text-gray); line-height: 1.6; }
-        .feature-list { list-style: none; padding: 0; margin-top: 20px; text-align: left; }
-        .feature-list li { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 14px; }
-        .feature-list i { color: var(--primary-color); }
+        .feature-card h3 { font-size: 22px; margin-bottom: 15px; color: var(--text-dark); font-weight: 600; }
+        .feature-card p { color: var(--text-gray); line-height: 1.7; font-size: 16px; }
+
         .main-layout { display: flex; }
-        .sidebar { width: 260px; background: var(--bg-white); border-right: 1px solid var(--border-color); padding: 24px; height: calc(100vh - 64px); position: sticky; top: 64px; display: none; /* Hidden by default */ }
+        .sidebar { width: 260px; background: var(--bg-white); border-right: 1px solid var(--border-color); padding: 24px; height: calc(100vh - 64px); position: sticky; top: 64px; display: none; }
         .main-content { flex-grow: 1; padding: 40px; }
         .main-container { max-width: 1200px; margin: 0 auto; }
         .content-section { display: none; background: var(--bg-white); border-radius: 12px; padding: 32px; margin-bottom: 24px; box-shadow: var(--shadow-md); }
@@ -97,24 +97,12 @@
         .modal-close-button { position: absolute; top: 16px; right: 16px; background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-gray); }
         .spinner-container { display: flex; justify-content: center; padding: 60px; }
         .spinner { width: 32px; height: 32px; border: 3px solid var(--border-color); border-radius: 50%; border-top-color: var(--primary-color); animation: spin 1s linear infinite; }
-        /* --- ADDED: Style for the "Back to Home" link --- */
-        .back-to-home {
-            text-align: center;
-            margin-top: 24px;
-        }
-        .back-to-home a {
-            color: var(--primary-color);
-            font-weight: 500;
-            text-decoration: none;
-            transition: color 0.2s;
-        }
-        .back-to-home a:hover {
-            color: var(--primary-hover);
-            text-decoration: underline;
-        }
+        .back-to-home { text-align: center; margin-top: 24px; }
+        .back-to-home a { color: var(--primary-color); font-weight: 500; text-decoration: none; transition: color 0.2s; }
+        .back-to-home a:hover { color: var(--primary-hover); text-decoration: underline; }
         @keyframes spin { to { transform: rotate(360deg); } }
         @media (max-width: 992px) {
-            .sidebar { display: none; } /* Hide sidebar on smaller screens */
+            .sidebar { display: none; }
         }
         @media (max-width: 768px) {
             .nav-menu { display: none; }
@@ -148,43 +136,27 @@
         <section class="features-section" id="features-section">
             <div class="features-container">
                 <h2 class="section-title" style="text-align: center;">A Foundation of Excellence</h2>
-                <p class="section-subtitle" style="max-width: 700px; margin: 10px auto 0;">Leverage our comprehensive engineering and detailing services for your next project.</p>
                 <div class="features-grid">
                     <div class="feature-card">
                         <div class="feature-icon">
-                            <img src="https://images.unsplash.com/photo-1621947081720-869708235779?q=80&w=800" alt="Mechanical and Structural Design">
+                            <img src="https://images.unsplash.com/photo-1569775069229-61d0f55b448a?q=80&w=800" alt="Mechanical and Structural Design">
                         </div>
                         <h3>Expert Steel Design</h3>
-                        <p>High-quality structural steel and rebar detailing from a team with deep, practical experience.</p>
-                        <ul class="feature-list">
-                            <li><i class="fas fa-check-circle"></i>Civil & Structural Engineering</li>
-                            <li><i class="fas fa-check-circle"></i>Mechanical & Piping Design</li>
-                            <li><i class="fas fa-check-circle"></i>Adherence to AISC, ACI, ASCE standards</li>
-                        </ul>
+                        <p>Access professionals for high-quality structural steel, rebar, and precast detailing, adhering to key industry standards like AISC, ACI, and ASCE.</p>
                     </div>
                     <div class="feature-card">
                         <div class="feature-icon">
                             <img src="https://images.unsplash.com/photo-1556761175-b413da4baf72?q=80&w=800" alt="Project Management">
                         </div>
                         <h3>Advanced Shop Drawings</h3>
-                        <p>Ensuring critical links between engineering, project management, and construction are maintained.</p>
-                        <ul class="feature-list">
-                            <li><i class="fas fa-check-circle"></i>Detailed Erection Drawings</li>
-                            <li><i class="fas fa-check-circle"></i>CAD, PDF, DXF and NC Files</li>
-                            <li><i class="fas fa-check-circle"></i>BIM & Clash Detection Services</li>
-                        </ul>
+                        <p>Receive detailed erection drawings, CAD files, and BIM services to ensure a seamless link between engineering and construction.</p>
                     </div>
                     <div class="feature-card">
                         <div class="feature-icon">
                             <img src="https://images.unsplash.com/photo-1521791136064-7986c2920216?q=80&w=800" alt="Quality Assurance">
                         </div>
                         <h3>Certified & Verified</h3>
-                        <p>Work with confidence, knowing our professionals are certified and recognized by industry authorities.</p>
-                         <ul class="feature-list">
-                            <li><i class="fas fa-check-circle"></i>NISD Certified Professionals</li>
-                            <li><i class="fas fa-check-circle"></i>PE Seal & Stamping in 48 States</li>
-                            <li><i class="fas fa-check-circle"></i>ISO 9001:2015 Compliant</li>
-                        </ul>
+                        <p>Work with confidence, knowing our professionals are certified, PE-stamped in 48 states, and compliant with ISO 9001:2015.</p>
                     </div>
                 </div>
             </div>
@@ -259,7 +231,7 @@
                         <div class="form-group"><label class="form-label">Professional Role</label><select class="form-select" id="regRole" required><option value="">Select your professional role</option><option value="contractor">Client / Contractor</option><option value="designer">Designer / Engineer</option></select></div>
                         <button type="submit" class="btn btn-primary"><i class="fas fa-user-plus"></i> Create Professional Account</button>
                     </form>
-                     <div class="back-to-home">
+                    <div class="back-to-home">
                         <a href="#" onclick="showSection('jobs'); return false;">&larr; Back to Home</a>
                     </div>
                 </section>
@@ -372,7 +344,7 @@
                 jobCard.className = 'job-card';
                 const isMyJob = appState.currentUser?.id === job.posterId;
                 let budgetHTML = '';
-                if (appState.currentUser) { // Only show budget if logged in
+                if (appState.currentUser) {
                     budgetHTML = `<div class="job-budget">${job.budget}</div>`;
                 }
                 let actionButtonHTML = '';
@@ -458,7 +430,7 @@
             document.getElementById('auth-buttons-container').innerHTML = `<button class="btn btn-outline" onclick="showSection('login')">Sign In</button><button class="btn btn-primary" onclick="showSection('register')">Join Now</button>`;
             
             const navMenu = document.getElementById('main-nav-menu');
-            navMenu.innerHTML = ``; // Clear top nav for logged-out users
+            navMenu.innerHTML = ``;
             
             showSection('jobs');
         }
@@ -509,6 +481,13 @@
     </script>
 </body>
 </html>
+
+
+
+
+
+
+
 
 
 
