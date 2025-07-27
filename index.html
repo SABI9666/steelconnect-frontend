@@ -40,7 +40,6 @@
         .hero-content h1 { font-size: 48px; font-weight: 800; margin-bottom: 20px; line-height: 1.2; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
         .hero-content p { font-size: 18px; opacity: 0.95; max-width: 600px; margin: 0 auto; text-shadow: 0 1px 3px rgba(0,0,0,0.5); }
         
-        /* --- NEW: Interactive "Why SteelConnect" Section --- */
         .features-section { background: var(--bg-white); padding: 80px 24px; }
         .features-container { max-width: 1200px; margin: 0 auto; }
         .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 30px; }
@@ -56,8 +55,8 @@
         .feature-card h3 { font-size: 24px; margin-bottom: 15px; color: var(--text-dark); font-weight: 700; transition: color 0.3s ease; }
         .feature-card:hover h3 { color: var(--primary-color); }
         .feature-card p { color: var(--text-gray); line-height: 1.7; font-size: 16px; margin-bottom: 20px; }
-        .feature-expanded-content { max-height: 0; overflow: hidden; transition: max-height 0.4s ease, padding 0.4s ease; opacity: 0; }
-        .feature-card.expanded .feature-expanded-content { max-height: 300px; opacity: 1; padding-top: 20px; border-top: 1px solid var(--border-color); margin-top: 20px; }
+        .feature-expanded-content { max-height: 0; overflow: hidden; transition: max-height 0.5s ease, padding 0.5s ease, opacity 0.5s ease; opacity: 0; }
+        .feature-card.expanded .feature-expanded-content { max-height: 600px; opacity: 1; padding-top: 20px; border-top: 1px solid var(--border-color); margin-top: 20px; }
         .standards-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 15px 0; text-align: left; }
         .standard-item { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--bg-light); border-radius: 8px; font-size: 14px; font-weight: 500; }
         .standard-item i { color: var(--primary-color); font-size: 12px; }
@@ -66,6 +65,17 @@
         .global-reach { display: flex; align-items: center; justify-content: center; gap: 15px; margin: 15px 0; flex-wrap: wrap; }
         .country-flag { width: 24px; height: 16px; border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
         .features-section .section-title { background: linear-gradient(135deg, var(--primary-color), #1e40af); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-size: 36px; font-weight: 800; }
+        
+        /* --- ADDED: Styles for the new card's content --- */
+        .professional-image { width: 100%; height: auto; border-radius: 12px; margin-bottom: 20px; }
+        .market-data { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; text-align: left; margin-bottom: 20px; }
+        .market-card { background-color: var(--bg-light); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); }
+        .market-card h4 { font-size: 16px; color: var(--primary-color); margin-bottom: 5px; }
+        .market-card p { font-size: 14px; line-height: 1.5; margin-bottom: 0; }
+        .industry-stats { display: flex; justify-content: space-around; text-align: center; padding: 20px 0; border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); margin-bottom: 20px; }
+        .stat-item { display: flex; flex-direction: column; }
+        .stat-number { font-size: 24px; font-weight: 700; color: var(--text-dark); }
+        .stat-label { font-size: 12px; color: var(--text-gray); text-transform: uppercase; }
 
         .main-layout { display: flex; }
         .sidebar { width: 260px; background: var(--bg-white); border-right: 1px solid var(--border-color); padding: 24px; height: calc(100vh - 64px); position: sticky; top: 64px; display: none; }
@@ -84,7 +94,6 @@
         .sidebar-nav-link i { width: 20px; text-align: center; }
         .logout-btn-container { margin-top: auto; padding-top: 20px; }
         .section-header { margin-bottom: 32px; padding-bottom: 16px; border-bottom: 1px solid var(--border-color); }
-        .section-title { font-size: 28px; font-weight: 700; color: var(--text-dark); }
         .form-grid { display: grid; gap: 24px; }
         .form-group { display: flex; flex-direction: column; gap: 8px; }
         .form-label { font-weight: 500; font-size: 14px; }
@@ -126,7 +135,8 @@
             .nav-menu { display: none; }
             .form-row { grid-template-columns: 1fr; }
             .main-content { padding: 24px; }
-            .feature-card { padding: 25px 20px; }  
+            .feature-card { padding: 25px 20px; }
+            .market-data { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -161,16 +171,24 @@
                 <div class="features-grid">
                     <div class="feature-card" onclick="toggleCard(this)">
                         <div class="feature-icon"><i class="fas fa-globe-americas"></i></div>
-                        <h3>Global Standards Compliance</h3>
-                        <p>Work with professionals certified in international steel and construction standards across continents.</p>
+                        <h3>Connect to Global Design Experts</h3>
+                        <p>Access a worldwide network of freelance steel designers and engineering companies. No more searching for vendors - find the perfect match instantly.</p>
                         <div class="feature-expanded-content">
-                            <div class="standards-grid">
-                                <div class="standard-item"><i class="fas fa-check-circle"></i><span>AISC (USA)</span></div>
-                                <div class="standard-item"><i class="fas fa-check-circle"></i><span>Eurocode (EU)</span></div>
-                                <div class="standard-item"><i class="fas fa-check-circle"></i><span>BS 5950 (UK)</span></div>
-                                <div class="standard-item"><i class="fas fa-check-circle"></i><span>IS 800 (India)</span></div>
-                                <div class="standard-item"><i class="fas fa-check-circle"></i><span>AS 4100 (Australia)</span></div>
-                                <div class="standard-item"><i class="fas fa-check-circle"></i><span>CSA S16 (Canada)</span></div>
+                            <div class="market-data">
+                                <div class="market-card">
+                                    <h4>Global Talent Pool</h4>
+                                    <p>Connect with certified professionals from 50+ countries.</p>
+                                </div>
+                                <div class="market-card">
+                                    <h4>No Vendor Search Hassle</h4>
+                                    <p>Post once and receive multiple qualified bids within hours.</p>
+                                </div>
+                            </div>
+                            <div class="industry-stats">
+                                <div class="stat-item"><span class="stat-number">10K+</span><span class="stat-label">Designers</span></div>
+                                <div class="stat-item"><span class="stat-number">50+</span><span class="stat-label">Countries</span></div>
+                                <div class="stat-item"><span class="stat-number">24/7</span><span class="stat-label">Available</span></div>
+                                <div class="stat-item"><span class="stat-number">2hrs</span><span class="stat-label">Avg Response</span></div>
                             </div>
                         </div>
                         <div class="expand-indicator"><i class="fas fa-chevron-down"></i></div>
@@ -185,8 +203,6 @@
                                 <div class="standard-item"><i class="fas fa-cog"></i><span>AutoCAD Steel</span></div>
                                 <div class="standard-item"><i class="fas fa-cog"></i><span>Revit Structure</span></div>
                                 <div class="standard-item"><i class="fas fa-cog"></i><span>STAAD Pro</span></div>
-                                <div class="standard-item"><i class="fas fa-cog"></i><span>SAP2000</span></div>
-                                <div class="standard-item"><i class="fas fa-cog"></i><span>RAM Steel</span></div>
                             </div>
                         </div>
                         <div class="expand-indicator"><i class="fas fa-chevron-down"></i></div>
@@ -200,8 +216,6 @@
                                 <div class="standard-item"><i class="fas fa-medal"></i><span>PE Licensed (48 States)</span></div>
                                 <div class="standard-item"><i class="fas fa-medal"></i><span>CEng (UK)</span></div>
                                 <div class="standard-item"><i class="fas fa-medal"></i><span>EUR ING (Europe)</span></div>
-                                <div class="standard-item"><i class="fas fa-medal"></i><span>CPEng (Australia)</span></div>
-                                <div class="standard-item"><i class="fas fa-medal"></i><span>P.Eng (Canada)</span></div>
                                 <div class="standard-item"><i class="fas fa-medal"></i><span>ISO 9001:2015</span></div>
                             </div>
                         </div>
@@ -294,7 +308,6 @@
         const BACKEND_URL = 'https://steelconnect-backend.onrender.com';
         const appState = { currentUser: null, jwtToken: null, jobs: [], myQuotes: [] };
         
-        // --- ADDED: Function to toggle interactive cards ---
         function toggleCard(card) {
             document.querySelectorAll('.feature-card.expanded').forEach(otherCard => {
                 if (otherCard !== card) {
@@ -489,7 +502,6 @@
             document.getElementById('auth-buttons-container').style.display = 'flex';
             document.getElementById('auth-buttons-container').innerHTML = `<button class="btn btn-outline" onclick="showSection('login')">Sign In</button><button class="btn btn-primary" onclick="showSection('register')">Join Now</button>`;
             
-            // --- MODIFIED: Added "My Job" link to top nav ---
             const navMenu = document.getElementById('main-nav-menu');
             navMenu.style.display = 'flex';
             navMenu.innerHTML = `<button class="nav-link" onclick="showSection('login')">My Job</button>`;
