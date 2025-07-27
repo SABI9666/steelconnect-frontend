@@ -17,6 +17,7 @@
             --bg-light: #f9fafb;
             --border-color: #e5e7eb;
             --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
         }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: var(--bg-light); color: var(--text-dark); line-height: 1.6; }
         .header { background: var(--bg-white); border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow-md); }
@@ -45,8 +46,9 @@
         .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 40px; margin-top: 50px; }
         .feature-card { text-align: center; padding: 30px 20px; background: var(--bg-light); border-radius: 12px; transition: transform 0.3s; }
         .feature-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-md); }
-        .feature-icon { width: 80px; height: 80px; margin: 0 auto 20px; background: var(--primary-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
-        .feature-icon img { width: 40px; height: 40px; object-fit: contain; }
+        /* --- MODIFIED: Made feature icons and images larger --- */
+        .feature-icon { width: 100px; height: 100px; margin: 0 auto 20px; background: var(--primary-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .feature-icon img { width: 50px; height: 50px; object-fit: contain; }
         .feature-card h3 { font-size: 20px; margin-bottom: 15px; color: var(--text-dark); }
         .feature-card p { color: var(--text-gray); line-height: 1.6; }
         .section-title-center { text-align: center; font-size: 36px; font-weight: 700; margin-bottom: 20px; color: var(--text-dark); }
@@ -92,15 +94,21 @@
         .spinner-container { display: flex; justify-content: center; padding: 60px; }
         .spinner { width: 32px; height: 32px; border: 3px solid var(--border-color); border-radius: 50%; border-top-color: var(--primary-color); animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        /* Professional imagery placeholders */
-        .project-showcase { background: var(--bg-light); padding: 60px 0; }
-        .showcase-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; max-width: 1000px; margin: 0 auto; padding: 0 24px; }
-        .showcase-item { background: var(--bg-white); border-radius: 8px; overflow: hidden; box-shadow: var(--shadow-md); transition: transform 0.3s; }
-        .showcase-item:hover { transform: scale(1.02); }
-        .showcase-image { width: 100%; height: 150px; object-fit: cover; }
-        .showcase-content { padding: 15px; }
-        .showcase-content h4 { font-size: 14px; margin-bottom: 5px; color: var(--text-dark); }
-        .showcase-content p { font-size: 12px; color: var(--text-gray); }
+        /* --- MODIFIED: Professional styles for "Recent Steel Projects" --- */
+        .project-showcase { background: var(--bg-light); padding: 80px 0; }
+        .showcase-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 30px; max-width: 1200px; margin: 50px auto; padding: 0 24px; }
+        .showcase-item { background: var(--bg-white); border-radius: 12px; overflow: hidden; box-shadow: var(--shadow-md); transition: transform 0.3s ease, box-shadow 0.3s ease; position: relative; }
+        .showcase-item:hover { transform: translateY(-8px); box-shadow: var(--shadow-lg); }
+        .showcase-image-container { width: 100%; height: 200px; overflow: hidden; }
+        .showcase-image { width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s ease; }
+        .showcase-item:hover .showcase-image { transform: scale(1.05); }
+        .showcase-content { padding: 24px; }
+        .showcase-content h4 { font-size: 18px; margin-bottom: 10px; color: var(--text-dark); font-weight: 600; }
+        .showcase-content p { font-size: 14px; color: var(--text-gray); }
+        .showcase-item-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to top, rgba(0, 90, 156, 0.8), transparent); opacity: 0; transition: opacity 0.4s ease; display: flex; align-items: flex-end; padding: 20px; }
+        .showcase-item:hover .showcase-item-overlay { opacity: 1; }
+        .showcase-overlay-text { color: white; font-weight: 600; transform: translateY(10px); opacity: 0; transition: all 0.3s ease 0.1s; }
+        .showcase-item:hover .showcase-overlay-text { transform: translateY(0); opacity: 1; }
         @media (max-width: 768px) {
              .nav-menu { display: none; }
              .form-row { grid-template-columns: 1fr; }
@@ -165,33 +173,54 @@
     <section class="project-showcase" id="project-showcase">
         <div class="features-container">
             <h2 class="section-title-center">Recent Steel Projects</h2>
+            <p class="section-subtitle">Explore a selection of successful projects facilitated through SteelConnect.</p>
             <div class="showcase-grid">
                 <div class="showcase-item">
-                    <img src="https://images.unsplash.com/photo-1590215277411-be2d90ecaa85?w=300&h=200&fit=crop" alt="High-rise Building Structure" class="showcase-image">
+                    <div class="showcase-image-container">
+                        <img src="https://images.unsplash.com/photo-1590215277411-be2d90ecaa85?w=400&h=300&fit=crop" alt="High-rise Building Structure" class="showcase-image">
+                    </div>
                     <div class="showcase-content">
                         <h4>Commercial High-rise</h4>
                         <p>Structural steel design for 15-story building</p>
                     </div>
+                    <div class="showcase-item-overlay">
+                        <div class="showcase-overlay-text">View Project <i class="fas fa-arrow-right"></i></div>
+                    </div>
                 </div>
                 <div class="showcase-item">
-                    <img src="https://images.unsplash.com/photo-1563794482-f96e7bd55b14?w=300&h=200&fit=crop" alt="Industrial Warehouse" class="showcase-image">
+                    <div class="showcase-image-container">
+                        <img src="https://images.unsplash.com/photo-1563794482-f96e7bd55b14?w=400&h=300&fit=crop" alt="Industrial Warehouse" class="showcase-image">
+                    </div>
                     <div class="showcase-content">
                         <h4>Industrial Warehouse</h4>
                         <p>Pre-engineered steel building design</p>
                     </div>
+                     <div class="showcase-item-overlay">
+                        <div class="showcase-overlay-text">View Project <i class="fas fa-arrow-right"></i></div>
+                    </div>
                 </div>
                 <div class="showcase-item">
-                    <img src="https://images.unsplash.com/photo-1559308425-43b99d0d0634?w=300&h=200&fit=crop" alt="Bridge Construction" class="showcase-image">
+                    <div class="showcase-image-container">
+                        <img src="https://images.unsplash.com/photo-1559308425-43b99d0d0634?w=400&h=300&fit=crop" alt="Bridge Construction" class="showcase-image">
+                    </div>
                     <div class="showcase-content">
                         <h4>Bridge Infrastructure</h4>
                         <p>Steel bridge design and engineering analysis</p>
                     </div>
+                     <div class="showcase-item-overlay">
+                        <div class="showcase-overlay-text">View Project <i class="fas fa-arrow-right"></i></div>
+                    </div>
                 </div>
                 <div class="showcase-item">
-                    <img src="https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=200&fit=crop" alt="Manufacturing Plant" class="showcase-image">
+                    <div class="showcase-image-container">
+                        <img src="https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=300&fit=crop" alt="Manufacturing Plant" class="showcase-image">
+                    </div>
                     <div class="showcase-content">
                         <h4>Manufacturing Facility</h4>
                         <p>Heavy industrial steel framework</p>
+                    </div>
+                     <div class="showcase-item-overlay">
+                        <div class="showcase-overlay-text">View Project <i class="fas fa-arrow-right"></i></div>
                     </div>
                 </div>
             </div>
