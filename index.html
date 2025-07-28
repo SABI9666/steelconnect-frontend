@@ -6,17 +6,9 @@
     <title>SteelConnect - Professional Steel & Rebar Design Marketplace</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        /* --- General Resets & Variables --- */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
         :root {
             --primary-color: #1e3a8a;
             --primary-hover: #1e40af;
-            --primary-light: #dbeafe;
             --secondary-color: #0ea5e9;
             --text-dark: #1f2937;
             --text-gray: #6b7280;
@@ -29,11 +21,14 @@
             --gradient-secondary: linear-gradient(135deg, #0f172a, #1e3a8a);
         }
 
+        html { scroll-behavior: smooth; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background-color: var(--bg-light);
             color: var(--text-dark);
             line-height: 1.6;
+            margin: 0;
+            padding: 0;
         }
 
         /* --- Header & Navigation --- */
@@ -79,11 +74,7 @@
             font-weight: 600;
         }
 
-        .nav-menu {
-            display: flex;
-            gap: 4px;
-        }
-
+        .nav-menu { display: flex; gap: 4px; }
         .nav-link {
             padding: 8px 16px;
             border-radius: 6px;
@@ -94,17 +85,10 @@
             background: none;
             border: none;
             transition: all 0.2s;
+            text-decoration: none;
         }
-
-        .nav-link:hover {
-            background: var(--primary-light);
-            color: var(--primary-color);
-        }
-
-        .auth-buttons {
-            display: flex;
-            gap: 12px;
-        }
+        .nav-link:hover { background: var(--primary-light); color: var(--primary-color); }
+        .auth-buttons { display: flex; gap: 12px; }
 
         /* --- Buttons --- */
         .btn {
@@ -121,403 +105,122 @@
             transition: all 0.2s;
             text-decoration: none;
         }
+        .btn:hover { transform: translateY(-1px); }
+        .btn-outline { background: var(--bg-white); color: var(--primary-color); border-color: var(--primary-color); }
+        .btn-outline:hover { background: var(--primary-color); color: white; }
+        .btn-primary { background: var(--gradient-primary); color: white; border: none; }
+        .btn-primary:hover { background: var(--gradient-secondary); box-shadow: var(--shadow-md); }
 
-        .btn:hover {
-            transform: translateY(-1px);
-        }
-
-        .btn-outline {
-            background: var(--bg-white);
-            color: var(--primary-color);
-            border-color: var(--primary-color);
-        }
-        
-        .btn-outline:hover {
-            background: var(--primary-color);
-            color: white;
-        }
-
-        .btn-primary {
+        /* --- Landing Page Sections --- */
+        .landing-section { padding: 100px 24px; }
+        .landing-container { max-width: 1200px; margin: 0 auto; }
+        .section-title {
+            font-size: 42px;
+            font-weight: 800;
+            text-align: center;
+            margin-bottom: 20px;
             background: var(--gradient-primary);
-            color: white;
-            border: none;
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
         }
-        
-        .btn-primary:hover {
-            background: var(--gradient-secondary);
-            box-shadow: var(--shadow-md);
+        .section-subtitle {
+            text-align: center;
+            color: var(--text-gray);
+            font-size: 18px;
+            max-width: 800px;
+            margin: 0 auto 60px;
         }
 
-        /* --- Landing Page: Hero Section --- */
+        /* Hero */
         .hero {
             position: relative;
             color: white;
-            padding: 140px 0;
+            padding: 140px 24px;
             text-align: center;
-            overflow: hidden;
             background: var(--gradient-secondary);
         }
-
-        .hero-background {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            z-index: 1;
-            opacity: 0.15;
-        }
-
-        .hero::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background:
-                radial-gradient(circle at 30% 20%, rgba(14, 165, 233, 0.3) 0%, transparent 50%),
-                radial-gradient(circle at 70% 80%, rgba(30, 58, 138, 0.4) 0%, transparent 50%),
-                var(--gradient-secondary);
-            z-index: 2;
-        }
-
-        .hero-content {
-            position: relative;
-            z-index: 3;
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 0 24px;
-        }
-
         .hero-content h1 {
             font-size: 56px;
             font-weight: 800;
             margin-bottom: 24px;
             line-height: 1.1;
             text-shadow: 0 4px 8px rgba(0,0,0,0.3);
-            background: linear-gradient(135deg, #ffffff, #e0f2fe);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
         }
+        .hero-content p { font-size: 20px; max-width: 700px; margin: 0 auto 40px; }
+
+        /* Features */
+        .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 30px; }
+        .feature-card {
+            text-align: center;
+            padding: 40px 30px;
+            background: var(--bg-white);
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-md);
+        }
+        .feature-icon {
+            font-size: 40px;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+        }
+
+        /* Testimonials */
+        .testimonial-section { background: var(--bg-light); }
+        .testimonial-card {
+            background: var(--bg-white);
+            padding: 50px;
+            border-radius: 20px;
+            box-shadow: var(--shadow-lg);
+            max-width: 800px; margin: 0 auto; text-align: center;
+        }
+        .testimonial-quote { font-size: 22px; font-style: italic; margin-bottom: 30px; }
+        
+        /* Auth Forms Section */
+        .auth-section { padding: 100px 24px; background: var(--bg-white); }
+        .auth-container { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center; max-width: 1200px; margin: 0 auto;}
         
         /* --- App Layout --- */
-        .main-layout {
-            display: flex;
-            min-height: calc(100vh - 64px);
-        }
-
-        .sidebar {
-            width: 260px;
-            background: var(--bg-white);
-            border-right: 1px solid var(--border-color);
-            padding: 24px;
-            height: calc(100vh - 64px);
-            position: sticky;
-            top: 64px;
-        }
-
-        .main-content {
-            flex-grow: 1;
-            padding: 40px;
-            background: var(--bg-light);
-        }
-
-        .main-container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .content-section {
-            display: none;
-            background: var(--bg-white);
-            border-radius: 12px;
-            padding: 32px;
-            margin-bottom: 24px;
-            box-shadow: var(--shadow-md);
-        }
+        .app-layout { display: flex; min-height: calc(100vh - 65px); }
+        .sidebar { width: 260px; background: var(--bg-white); border-right: 1px solid var(--border-color); padding: 24px; position: sticky; top: 64px; height: calc(100vh - 64px); display: flex; flex-direction: column; }
+        .app-main-content { flex-grow: 1; padding: 40px; }
+        .app-container { max-width: 1200px; margin: 0 auto; }
+        .sidebar-user-profile { text-align: center; margin-bottom: 30px; }
+        .sidebar-avatar { width: 80px; height: 80px; background: var(--gradient-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 32px; margin: 0 auto 10px; }
+        .sidebar-nav { flex-grow: 1; }
+        .sidebar-nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 8px; color: var(--text-gray); font-weight: 500; font-size: 15px; cursor: pointer; text-decoration: none; transition: all 0.2s; }
+        .sidebar-nav-link:hover { background: var(--primary-light); color: var(--primary-color); }
+        .sidebar-nav-link.active { background: var(--gradient-primary); color: white; box-shadow: var(--shadow-md); }
+        .sidebar-nav-link i { width: 20px; text-align: center; }
+        .logout-btn-container { margin-top: auto; padding-top: 20px; border-top: 1px solid var(--border-color); }
+        .section-header { margin-bottom: 32px; padding-bottom: 16px; border-bottom: 1px solid var(--border-color); }
+        .section-header h2 { font-size: 28px; font-weight: 700; color: var(--text-dark); }
         
-        .content-section.active {
-            display: block;
-        }
-
-        .sidebar-user-profile {
-            text-align: center;
-            margin-bottom: 30px;
-            padding: 20px;
-            background: var(--bg-light);
-            border-radius: 12px;
-        }
-
-        .sidebar-avatar {
-            width: 80px;
-            height: 80px;
-            background: var(--gradient-primary);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: 600;
-            font-size: 32px;
-            margin: 0 auto 10px;
-            border: 3px solid var(--primary-light);
-        }
-
-        .sidebar-user-profile h3 {
-            font-size: 18px;
-            font-weight: 600;
-            margin-bottom: 5px;
-        }
-
-        .sidebar-user-profile p {
-            color: var(--text-gray);
-            font-size: 14px;
-            text-transform: capitalize;
-        }
-
-        .sidebar-nav {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            flex-grow: 1;
-        }
-
-        .sidebar-nav-link {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 12px 16px;
-            border-radius: 8px;
-            color: var(--text-gray);
-            font-weight: 500;
-            font-size: 15px;
-            cursor: pointer;
-            text-decoration: none;
-            transition: all 0.2s;
-        }
-
-        .sidebar-nav-link:hover {
-            background: var(--primary-light);
-            color: var(--primary-color);
-        }
-
-        .sidebar-nav-link.active {
-            background: var(--gradient-primary);
-            color: white;
-            box-shadow: var(--shadow-md);
-        }
-
-        .sidebar-nav-link i {
-            width: 20px;
-            text-align: center;
-        }
-
-        .logout-btn-container {
-            margin-top: auto;
-            padding-top: 20px;
-            border-top: 1px solid var(--border-color);
-        }
-
-        /* --- Forms & Cards --- */
-        .section-header {
-            margin-bottom: 32px;
-            padding-bottom: 16px;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .section-header h2 {
-            font-size: 28px;
-            font-weight: 700;
-            color: var(--text-dark);
-        }
+        /* --- Forms & Cards (Shared) --- */
+        .form-grid { display: grid; gap: 20px; }
+        .form-group { display: flex; flex-direction: column; gap: 8px; }
+        .form-label { font-weight: 500; font-size: 14px; }
+        .form-input, .form-select { padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; width: 100%; }
+        .form-input:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1); }
         
-        .form-grid {
-            display: grid;
-            gap: 24px;
-        }
+        /* --- Job Cards --- */
+        .jobs-grid { display: grid; gap: 24px; }
+        .job-card { background: var(--bg-white); border: 1px solid var(--border-color); border-left: 5px solid var(--secondary-color); border-radius: 12px; padding: 24px; transition: all 0.3s; }
+        .job-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); border-left-color: var(--primary-color); }
+        .job-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
+        .job-header h3 { font-size: 20px; font-weight: 600; }
+        .job-budget { background: var(--primary-light); color: var(--primary-color); padding: 6px 12px; border-radius: 20px; font-size: 14px; font-weight: 600; white-space: nowrap; }
 
-        .form-group {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .form-label {
-            font-weight: 500;
-            font-size: 14px;
-            color: var(--text-dark);
-        }
-        
-        .form-input, .form-select, .form-textarea {
-            padding: 12px 16px;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            font-size: 14px;
-            transition: border-color 0.2s;
-            width: 100%;
-        }
-
-        .form-input:focus, .form-select:focus, .form-textarea:focus {
-            outline: none;
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
-        }
-
-        .form-textarea {
-            min-height: 120px;
-            resize: vertical;
-        }
-
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 24px;
-        }
-        
-        .jobs-grid, .quotes-grid {
-            display: grid;
-            gap: 24px;
-        }
-
-        .job-card {
-            background: var(--bg-white);
-            border: 1px solid var(--border-color);
-            border-left: 5px solid var(--secondary-color);
-            border-radius: 12px;
-            padding: 24px;
-            transition: all 0.3s;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .job-card:hover {
-            transform: translateY(-4px);
-            box-shadow: var(--shadow-lg);
-            border-left-color: var(--primary-color);
-        }
-        
-        .job-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 16px;
-            gap: 16px;
-        }
-
-        .job-header h3 {
-            font-size: 20px;
-            font-weight: 600;
-            color: var(--text-dark);
-            line-height: 1.3;
-        }
-
-        .job-budget {
-            background: var(--primary-light);
-            color: var(--primary-color);
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: 600;
-            white-space: nowrap;
-        }
-
-        .job-description {
-            color: var(--text-gray);
-            margin-bottom: 20px;
-            flex-grow: 1;
-        }
-
-        .job-meta {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 24px;
-            font-size: 14px;
-            color: var(--text-gray);
-            margin-bottom: 20px;
-        }
-        
-        .meta-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .meta-item i {
-            color: var(--primary-color);
-        }
-
-        .job-actions {
-            display: flex;
-            gap: 12px;
-            justify-content: flex-end;
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 1px solid var(--border-color);
-        }
-        
-        /* --- Alerts & Modals --- */
-        #alerts-container {
-            position: fixed;
-            top: 80px;
-            right: 24px;
-            z-index: 2000;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-        
-        .alert {
-            padding: 16px 20px;
-            border-radius: 8px;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            min-width: 300px;
-            box-shadow: var(--shadow-lg);
-            opacity: 0;
-            transform: translateX(100%);
-            animation: slideIn 0.5s forwards;
-        }
-        
-        @keyframes slideIn {
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-        
+        /* --- Alerts --- */
+        #alerts-container { position: fixed; top: 80px; right: 24px; z-index: 2000; display: flex; flex-direction: column; gap: 12px; }
+        .alert { padding: 16px 20px; border-radius: 8px; font-weight: 500; display: flex; align-items: center; gap: 12px; min-width: 300px; box-shadow: var(--shadow-lg); opacity: 0; animation: slideIn 0.5s forwards; }
+        @keyframes slideIn { to { opacity: 1; } }
         .alert-success { background: #d1fae5; color: #065f46; border-left: 5px solid #10b981; }
         .alert-error { background: #fee2e2; color: #991b1b; border-left: 5px solid #ef4444; }
-        .alert-info { background: #dbeafe; color: #1e40af; border-left: 5px solid #3b82f6; }
-        
-        .empty-state {
-            text-align: center;
-            padding: 60px 32px;
-            color: var(--text-gray);
-            background: var(--bg-light);
-            border-radius: 12px;
-            border: 2px dashed var(--border-color);
-        }
-        
-        /* --- Responsive Design --- */
-        @media (max-width: 992px) {
-            .sidebar { display: none; }
-            .form-row { grid-template-columns: 1fr; }
-        }
-        
-        @media (max-width: 768px) {
-            .nav-menu { display: none; }
-            .hero-content h1 { font-size: 40px; }
-            .main-content { padding: 24px; }
-        }
-
     </style>
 </head>
 <body>
+
     <header class="header">
         <div class="header-container">
             <a class="logo" onclick="goToHome()">
@@ -525,53 +228,113 @@
                 SteelConnect
             </a>
             <nav id="main-nav-menu" class="nav-menu">
-                <button class="nav-link">Features</button>
-                <button class="nav-link">Projects</button>
-                <button class="nav-link">About</button>
+                <a href="#features" class="nav-link">Features</a>
+                <a href="#about" class="nav-link">About Us</a>
+                <a href="#auth" class="nav-link">Join</a>
             </nav>
             <div id="auth-buttons-container" class="auth-buttons">
-                <button class="btn btn-outline" onclick="showSection('login')">Sign In</button>
-                <button class="btn btn-primary" onclick="showSection('register')">Join Now</button>
+                <a href="#auth" class="btn btn-outline">Sign In</a>
+                <a href="#auth" class="btn btn-primary">Join Now</a>
             </div>
         </div>
     </header>
 
     <div id="alerts-container"></div>
 
-    <div id="landing-page-content">
-        <section class="hero" id="hero-section">
+    <main id="landing-page-content">
+        <section class="hero">
             <div class="hero-content">
                 <h1>Connecting Clients to Steel & Construction Professionals Who Deliver</h1>
+                <p>Find top steel designers and contractors for your projects. Post jobs, submit quotes, and build your network with certified professionals worldwide.</p>
             </div>
         </section>
-        <main class="main-content">
-            <div id="main-container" class="main-container">
-                </div>
-        </main>
-    </div>
 
-    <div id="app-layout" class="main-layout" style="display: none;">
-        <aside class="sidebar" id="app-sidebar">
-            <div style="display: flex; flex-direction: column; height: 100%;">
-                <div class="sidebar-user-profile">
-                    <div class="sidebar-avatar" id="userAvatar"></div>
-                    <h3 id="userName"></h3>
-                    <p id="userType"></p>
-                </div>
-                <nav class="sidebar-nav" id="sidebar-nav-menu"></nav>
-                <div class="logout-btn-container">
-                    <a href="#" id="logout-button" class="sidebar-nav-link">
-                        <i class="fas fa-sign-out-alt"></i>
-                        <span>Logout</span>
-                    </a>
+        <section id="features" class="landing-section">
+            <div class="landing-container">
+                <h2 class="section-title">Why Choose SteelConnect?</h2>
+                <p class="section-subtitle">A platform designed for reliability, expertise, and efficiency in the structural steel industry.</p>
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon"><i class="fas fa-globe-americas"></i></div>
+                        <h3>Global Talent Pool</h3>
+                        <p>Access a worldwide network of freelance steel designers and engineering firms, ready to bid on your project.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon"><i class="fas fa-drafting-compass"></i></div>
+                        <h3>Advanced Solutions</h3>
+                        <p>From complex connection designs to full structural frameworks, find experts using the latest industry software.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon"><i class="fas fa-certificate"></i></div>
+                        <h3>Certified Professionals</h3>
+                        <p>Connect with PE-licensed engineers and certified professionals to ensure quality and compliance.</p>
+                    </div>
                 </div>
             </div>
+        </section>
+
+        <section id="about" class="landing-section testimonial-section">
+            <div class="landing-container">
+                <h2 class="section-title">Trusted by Industry Leaders</h2>
+                <div class="testimonial-card">
+                    <p class="testimonial-quote">"SteelConnect transformed our procurement process. We found a certified structural engineer for our high-rise project in under 24 hours. The quality of work and communication was exceptional."</p>
+                    <div class="testimonial-author">
+                        <p><strong>John Carter</strong>, Project Manager at Apex Construction</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="auth" class="landing-section auth-section">
+            <div class="auth-container">
+                <div id="register-container">
+                    <h2 class="section-title" style="text-align: left;">Join the Network</h2>
+                    <p class="section-subtitle" style="text-align: left; margin-left: 0;">Create an account to start posting projects or finding work.</p>
+                    <form id="register-form" class="form-grid">
+                        <div class="form-group"><label class="form-label">Full Name</label><input type="text" class="form-input" id="regName" required></div>
+                        <div class="form-group"><label class="form-label">Email Address</label><input type="email" class="form-input" id="regEmail" required></div>
+                        <div class="form-group"><label class="form-label">Password</label><input type="password" class="form-input" id="regPassword" required></div>
+                        <div class="form-group">
+                            <label class="form-label">Professional Role</label>
+                            <select class="form-select" id="regRole" required>
+                                <option value="">Select your role</option>
+                                <option value="contractor">Client / Contractor</option>
+                                <option value="designer">Designer / Engineer</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Create Account</button>
+                    </form>
+                </div>
+                 <div id="login-container">
+                    <h2 class="section-title" style="text-align: left;">Sign In</h2>
+                    <p class="section-subtitle" style="text-align: left; margin-left: 0;">Welcome back! Please sign in to your account.</p>
+                    <form id="login-form" class="form-grid">
+                        <div class="form-group"><label class="form-label">Email Address</label><input type="email" class="form-input" id="loginEmail" required></div>
+                        <div class="form-group"><label class="form-label">Password</label><input type="password" class="form-input" id="loginPassword" required></div>
+                        <button type="submit" class="btn btn-primary">Sign In</button>
+                    </form>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <main id="app-layout" class="app-layout" style="display: none;">
+        <aside class="sidebar">
+            <div class="sidebar-user-profile">
+                <div class="sidebar-avatar" id="userAvatar"></div>
+                <h3 id="userName"></h3>
+                <p id="userType"></p>
+            </div>
+            <nav class="sidebar-nav" id="sidebar-nav-menu"></nav>
+            <div class="logout-btn-container">
+                <a href="#" id="logout-button" class="sidebar-nav-link"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a>
+            </div>
         </aside>
-        <main class="main-content">
-            <div id="app-main-container" class="main-container">
-                 </div>
-        </main>
-    </div>
+        <div class="app-main-content">
+            <div id="app-container" class="app-container">
+                </div>
+        </div>
+    </main>
 
     <script>
         document.addEventListener('DOMContentLoaded', initializeApp);
@@ -583,15 +346,12 @@
             activeSection: 'jobs'
         };
         
-        // --- CORE APP INITIALIZATION ---
+        // --- CORE APP INITIALIZATION & UI ROUTING ---
         function initializeApp() {
-            // Attach permanent event listeners
-            document.getElementById('logout-button').addEventListener('click', (e) => {
-                e.preventDefault();
-                logout();
-            });
+            document.getElementById('logout-button').addEventListener('click', (e) => { e.preventDefault(); logout(); });
+            document.getElementById('login-form').addEventListener('submit', handleLogin);
+            document.getElementById('register-form').addEventListener('submit', handleRegister);
             
-            // Check for existing session
             const token = localStorage.getItem('jwtToken');
             const user = localStorage.getItem('currentUser');
             
@@ -599,402 +359,194 @@
                 try {
                     appState.jwtToken = token;
                     appState.currentUser = JSON.parse(user);
-                    updateUIForLoggedInUser();
+                    showAppView();
                 } catch (error) {
-                    logout(); // Clear invalid data
+                    logout();
                 }
             } else {
-                updateUIForLoggedOutUser();
+                showLandingPageView();
             }
         }
 
-        // --- UI MANAGEMENT ---
-        function updateUIForLoggedInUser() {
+        function showLandingPageView() {
+            document.getElementById('landing-page-content').style.display = 'block';
+            document.getElementById('app-layout').style.display = 'none';
+            document.getElementById('main-nav-menu').style.display = 'flex';
+            document.getElementById('auth-buttons-container').style.display = 'flex';
+        }
+
+        function showAppView() {
             document.getElementById('landing-page-content').style.display = 'none';
             document.getElementById('app-layout').style.display = 'flex';
+            document.getElementById('main-nav-menu').style.display = 'none';
+            document.getElementById('auth-buttons-container').style.display = 'none';
             
             const user = appState.currentUser;
             document.getElementById('userName').textContent = user.fullName;
             document.getElementById('userType').textContent = user.role;
-            document.getElementById('userAvatar').textContent = user.fullName.charAt(0).toUpperCase();
+            document.getElementById('userAvatar').textContent = (user.fullName || "A").charAt(0).toUpperCase();
 
             buildSidebarNav();
-            showSection(appState.activeSection);
+            // Default to 'jobs' section for both roles on login
+            appState.activeSection = 'jobs';
+            renderAppSection(appState.activeSection);
         }
 
-        function updateUIForLoggedOutUser() {
-            document.getElementById('landing-page-content').style.display = 'block';
-            document.getElementById('app-layout').style.display = 'none';
-            showSection('login');
-        }
-
-        function showSection(sectionId) {
+        function renderAppSection(sectionId) {
             appState.activeSection = sectionId;
-            const container = appState.currentUser ? document.getElementById('app-main-container') : document.getElementById('main-container');
-            
-            // Clear previous content
+            const container = document.getElementById('app-container');
             container.innerHTML = '';
             
-            // Deactivate all sidebar links
             document.querySelectorAll('.sidebar-nav-link').forEach(link => link.classList.remove('active'));
-
-            // Activate current sidebar link
-            const activeLink = document.querySelector(`.sidebar-nav-link[onclick*="'${sectionId}'"]`);
+            const activeLink = document.querySelector(`.sidebar-nav-link[data-section='${sectionId}']`);
             if (activeLink) activeLink.classList.add('active');
 
-            // Inject the correct HTML template
-            let sectionHtml = '';
-            switch (sectionId) {
-                case 'login':
-                    sectionHtml = getLoginTemplate();
-                    break;
-                case 'register':
-                    sectionHtml = getRegisterTemplate();
-                    break;
-                case 'jobs':
-                    sectionHtml = getJobsTemplate();
-                    fetchJobs();
-                    break;
-                case 'post-job':
-                    sectionHtml = getPostJobTemplate();
-                    break;
-                case 'quotes':
-                    sectionHtml = getQuotesTemplate();
-                    fetchMyQuotes();
-                    break;
+            let sectionTemplate = '';
+            if (sectionId === 'jobs') {
+                sectionTemplate = getJobsTemplate();
+                fetchAndRenderJobs();
+            } else if (sectionId === 'post-job') {
+                sectionTemplate = getPostJobTemplate();
             }
-            container.innerHTML = sectionHtml;
+            container.innerHTML = sectionTemplate;
 
-            // Re-attach event listeners for the new content
-            attachEventListeners(sectionId);
-        }
-
-        function attachEventListeners(sectionId) {
-            switch (sectionId) {
-                case 'login':
-                    document.getElementById('login-form').addEventListener('submit', handleLogin);
-                    break;
-                case 'register':
-                    document.getElementById('register-form').addEventListener('submit', handleRegister);
-                    break;
-                case 'post-job':
-                     document.getElementById('post-job-form').addEventListener('submit', handlePostJob);
-                    break;
+            if (sectionId === 'post-job') {
+                document.getElementById('post-job-form').addEventListener('submit', handlePostJob);
             }
         }
         
         function goToHome() {
-            if (appState.currentUser) {
-                showSection('jobs');
-            } else {
-                showSection('login');
+            if (!appState.currentUser) {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
             }
         }
         
         function buildSidebarNav() {
             const navContainer = document.getElementById('sidebar-nav-menu');
             const role = appState.currentUser.role;
-            let navLinks = '';
-
-            if (role === 'designer') {
-                navLinks = `
-                    <a href="#" class="sidebar-nav-link" onclick="showSection('jobs')"><i class="fas fa-briefcase"></i> <span>Find Jobs</span></a>
-                    <a href="#" class="sidebar-nav-link" onclick="showSection('quotes')"><i class="fas fa-file-invoice-dollar"></i> <span>My Quotes</span></a>
-                `;
-            } else { // contractor
-                navLinks = `
-                    <a href="#" class="sidebar-nav-link" onclick="showSection('jobs')"><i class="fas fa-tasks"></i> <span>My Projects</span></a>
-                    <a href="#" class="sidebar-nav-link" onclick="showSection('post-job')"><i class="fas fa-plus-circle"></i> <span>Post a Job</span></a>
-                `;
-            }
+            let navLinks = (role === 'designer')
+                ? `<a href="#" class="sidebar-nav-link" data-section="jobs"><i class="fas fa-briefcase"></i> <span>Find Jobs</span></a>`
+                : `<a href="#" class="sidebar-nav-link" data-section="jobs"><i class="fas fa-tasks"></i> <span>My Projects</span></a>
+                   <a href="#" class="sidebar-nav-link" data-section="post-job"><i class="fas fa-plus-circle"></i> <span>Post a Job</span></a>`;
+            
             navContainer.innerHTML = navLinks;
+            navContainer.querySelectorAll('.sidebar-nav-link').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    renderAppSection(link.dataset.section);
+                });
+            });
         }
-
 
         // --- API & DATA HANDLING ---
         async function apiCall(endpoint, method, body = null) {
-            const url = `${BACKEND_URL}${endpoint}`;
-            const options = {
-                method,
-                headers: { 'Content-Type': 'application/json' }
-            };
-
+            const headers = { 'Content-Type': 'application/json' };
             if (appState.jwtToken) {
-                options.headers['Authorization'] = `Bearer ${appState.jwtToken}`;
+                headers['Authorization'] = `Bearer ${appState.jwtToken}`;
             }
-
-            if (body) {
-                options.body = JSON.stringify(body);
-            }
-
-            try {
-                const response = await fetch(url, options);
-                const data = await response.json();
-                
-                if (!response.ok) {
-                    throw new Error(data.error || 'An unknown error occurred.');
-                }
-                return data;
-            } catch (error) {
-                showAlert(error.message, 'error');
-                throw error;
-            }
+            const response = await fetch(`${BACKEND_URL}${endpoint}`, { method, headers, body: body ? JSON.stringify(body) : null });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'An API error occurred.');
+            return data;
         }
         
         async function handleRegister(event) {
             event.preventDefault();
             const form = event.target;
-            const userData = {
-                fullName: form.regName.value,
-                username: form.regUsername.value,
-                email: form.regEmail.value,
-                password: form.regPassword.value,
-                role: form.regRole.value
-            };
             try {
-                await apiCall('/auth/register', 'POST', userData);
+                await apiCall('/auth/register', 'POST', {
+                    fullName: form.regName.value,
+                    email: form.regEmail.value,
+                    password: form.regPassword.value,
+                    role: form.regRole.value
+                });
                 showAlert('Registration successful! Please sign in.', 'success');
-                showSection('login');
-            } catch (error) {
-                // Error is already shown by apiCall
-            }
+                form.reset();
+            } catch (error) { showAlert(error.message, 'error'); }
         }
 
         async function handleLogin(event) {
             event.preventDefault();
             const form = event.target;
-            const credentials = {
-                email: form.loginEmail.value,
-                password: form.loginPassword.value
-            };
             try {
-                const data = await apiCall('/auth/login', 'POST', credentials);
+                const data = await apiCall('/auth/login', 'POST', { email: form.loginEmail.value, password: form.loginPassword.value });
                 appState.currentUser = data.user;
                 appState.jwtToken = data.token;
                 localStorage.setItem('currentUser', JSON.stringify(data.user));
                 localStorage.setItem('jwtToken', data.token);
                 showAlert('Login successful!', 'success');
-                updateUIForLoggedInUser();
-            } catch (error) {
-                // Error is already shown by apiCall
-            }
+                showAppView();
+            } catch (error) { showAlert(error.message, 'error'); }
         }
         
         function logout() {
+            localStorage.clear();
             appState.currentUser = null;
             appState.jwtToken = null;
-            localStorage.removeItem('currentUser');
-            localStorage.removeItem('jwtToken');
-            updateUIForLoggedOutUser();
+            showLandingPageView();
         }
 
-        async function fetchJobs() {
+        async function fetchAndRenderJobs() {
+            const listEl = document.getElementById('jobs-list');
             try {
                 const jobs = await apiCall('/jobs', 'GET');
-                renderJobs(jobs);
-            } catch (error) {
-                document.getElementById('jobs-list').innerHTML = `<p>Could not load jobs.</p>`;
-            }
+                if (!jobs || jobs.length === 0) {
+                    listEl.innerHTML = `<p>No jobs found.</p>`;
+                    return;
+                }
+                listEl.innerHTML = jobs.map(job => `
+                    <div class="job-card">
+                        <div class="job-header">
+                            <h3>${job.title}</h3>
+                            <div class="job-budget">${job.budget}</div>
+                        </div>
+                        <p>${job.description}</p>
+                    </div>`).join('');
+            } catch (error) { showAlert(error.message, 'error'); }
         }
-        
+
         async function handlePostJob(event) {
             event.preventDefault();
             const form = event.target;
-            const jobData = {
-                title: form.jobTitle.value,
-                description: form.jobDescription.value,
-                budget: form.jobBudget.value,
-                skills: form.jobSkills.value.split(',').map(s => s.trim()),
-                deadline: form.jobDeadline.value,
-            };
             try {
-                await apiCall('/jobs', 'POST', jobData);
+                await apiCall('/jobs', 'POST', {
+                    title: form.jobTitle.value,
+                    description: form.jobDescription.value,
+                    budget: form.jobBudget.value,
+                    skills: (form.jobSkills.value || "").split(',').map(s => s.trim()),
+                    deadline: form.jobDeadline.value,
+                });
                 showAlert('Job posted successfully!', 'success');
-                showSection('jobs');
-            } catch(error) {
-                // Error handled in apiCall
-            }
+                renderAppSection('jobs');
+            } catch(error) { showAlert(error.message, 'error'); }
         }
 
-        async function fetchMyQuotes() {
-            const listEl = document.getElementById('quotes-list');
-            listEl.innerHTML = `<div class="empty-state"><h3>Feature Coming Soon</h3><p>The ability to view and manage your quotes is under development.</p></div>`;
-        }
-
-        // --- RENDERING ---
-        function renderJobs(jobs) {
-            const listEl = document.getElementById('jobs-list');
-            if (!jobs || jobs.length === 0) {
-                listEl.innerHTML = `<div class="empty-state"><h3>No jobs found.</h3><p>There are currently no open projects. Check back later or post a new job.</p></div>`;
-                return;
-            }
-            
-            listEl.innerHTML = jobs.map(job => `
-                <div class="job-card">
-                    <div class="job-header">
-                        <h3>${job.title}</h3>
-                        <div class="job-budget">${job.budget}</div>
-                    </div>
-                    <p class="job-description">${job.description}</p>
-                    <div class="job-meta">
-                        <div class="meta-item"><i class="fas fa-cogs"></i> <span>${job.skills.join(', ')}</span></div>
-                        <div class="meta-item"><i class="fas fa-calendar-alt"></i> <span>Deadline: ${new Date(job.deadline).toLocaleDateString()}</span></div>
-                    </div>
-                    ${appState.currentUser.role === 'designer' ? 
-                    `<div class="job-actions">
-                        <button class="btn btn-primary"><i class="fas fa-file-alt"></i> Submit Quote</button>
-                    </div>` : ''
-                    }
-                </div>
-            `).join('');
-        }
-        
+        // --- UTILITIES & TEMPLATES ---
         function showAlert(message, type = 'info') {
             const container = document.getElementById('alerts-container');
             const alertDiv = document.createElement('div');
             alertDiv.className = `alert alert-${type}`;
             alertDiv.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i> <span>${message}</span>`;
-            
             container.appendChild(alertDiv);
-            
-            setTimeout(() => {
-                alertDiv.style.animation = 'slideOut 0.5s forwards';
-                setTimeout(() => alertDiv.remove(), 500);
-            }, 4000);
-        }
-        
-        // --- HTML TEMPLATES ---
-        function getLoginTemplate() {
-            return `
-            <section id="login-section" class="content-section active">
-                <div class="section-header" style="text-align: center;">
-                    <h2>Sign In to SteelConnect</h2>
-                    <p style="color: var(--text-gray);">Welcome back! Please sign in to your account.</p>
-                </div>
-                <form id="login-form" class="form-grid" style="max-width: 450px; margin: 40px auto 0;">
-                    <div class="form-group">
-                        <label class="form-label">Email Address</label>
-                        <input type="email" class="form-input" id="loginEmail" required placeholder="Enter your email">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Password</label>
-                        <input type="password" class="form-input" id="loginPassword" required placeholder="Enter your password">
-                    </div>
-                    <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px;">Sign In</button>
-                    <div style="text-align: center; margin-top: 16px;">
-                        <span style="color: var(--text-gray);">Don't have an account? </span>
-                        <a href="#" onclick="showSection('register')" style="color: var(--primary-color); text-decoration: none; font-weight: 500;">Sign up here</a>
-                    </div>
-                </form>
-            </section>
-            `;
-        }
-
-        function getRegisterTemplate() {
-            return `
-            <section id="register-section" class="content-section active">
-                <div class="section-header" style="text-align: center;">
-                    <h2>Join the SteelConnect Network</h2>
-                    <p style="color: var(--text-gray);">Create your professional account and start connecting.</p>
-                </div>
-                <form id="register-form" class="form-grid" style="max-width: 650px; margin: 40px auto 0;">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label">Full Name</label>
-                            <input type="text" class="form-input" id="regName" required placeholder="Enter your full name">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Username</label>
-                            <input type="text" class="form-input" id="regUsername" required placeholder="Choose a username">
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label">Email Address</label>
-                            <input type="email" class="form-input" id="regEmail" required placeholder="Enter your email">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Password</label>
-                            <input type="password" class="form-input" id="regPassword" required placeholder="Create a password">
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Professional Role</label>
-                        <select class="form-select" id="regRole" required>
-                            <option value="">Select your professional role</option>
-                            <option value="contractor">Client / Contractor (I post jobs)</option>
-                            <option value="designer">Designer / Engineer (I bid on jobs)</option>
-                        </select>
-                    </div>
-                    <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px;">Create Account</button>
-                    <div style="text-align: center; margin-top: 16px;">
-                        <span style="color: var(--text-gray);">Already have an account? </span>
-                        <a href="#" onclick="showSection('login')" style="color: var(--primary-color); text-decoration: none; font-weight: 500;">Sign in here</a>
-                    </div>
-                </form>
-            </section>
-            `;
+            setTimeout(() => { alertDiv.style.opacity = '0'; setTimeout(() => alertDiv.remove(), 500); }, 4000);
         }
         
         function getJobsTemplate() {
             const title = appState.currentUser.role === 'designer' ? 'Find a New Project' : 'My Posted Projects';
-            return `
-            <section id="jobs-section" class="content-section active">
-                <div class="section-header">
-                    <h2>${title}</h2>
-                </div>
-                <div id="jobs-list" class="jobs-grid">
-                    </div>
-            </section>
-            `;
+            return `<div class="section-header"><h2>${title}</h2></div><div id="jobs-list" class="jobs-grid"></div>`;
         }
 
         function getPostJobTemplate() {
             return `
-            <section id="post-job-section" class="content-section active">
-                <div class="section-header">
-                    <h2>Post a New Steel Project</h2>
-                </div>
-                <form id="post-job-form" class="form-grid">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label">Project Title</label>
-                            <input type="text" class="form-input" id="jobTitle" required placeholder="e.g., Structural Steel Design for a 5-Story Building">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Budget Range</label>
-                            <input type="text" class="form-input" id="jobBudget" required placeholder="$5,000 - $10,000">
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label">Skills Required (comma-separated)</label>
-                            <input type="text" class="form-input" id="jobSkills" placeholder="AISC, Tekla Structures, AutoCAD">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Project Deadline</label>
-                            <input type="date" class="form-input" id="jobDeadline" required>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Project Description</label>
-                        <textarea class="form-textarea" id="jobDescription" required placeholder="Describe the project scope, deliverables, steel specifications, and any specific requirements..."></textarea>
-                    </div>
-                    <button type="submit" class="btn btn-primary" style="justify-self: start; padding: 12px 24px;">Post Project</button>
+                <div class="section-header"><h2>Post a New Steel Project</h2></div>
+                <form id="post-job-form" class="form-grid" style="max-width: 800px;">
+                    <div class="form-group"><label class="form-label">Project Title</label><input type="text" class="form-input" id="jobTitle" required></div>
+                    <div class="form-group"><label class="form-label">Budget Range</label><input type="text" class="form-input" id="jobBudget" required></div>
+                    <div class="form-group"><label class="form-label">Skills Required (comma-separated)</label><input type="text" class="form-input" id="jobSkills"></div>
+                    <div class="form-group"><label class="form-label">Project Deadline</label><input type="date" class="form-input" id="jobDeadline" required></div>
+                    <div class="form-group"><label class="form-label">Project Description</label><textarea class="form-input" style="min-height: 120px;" id="jobDescription" required></textarea></div>
+                    <button type="submit" class="btn btn-primary" style="justify-self: start;">Post Project</button>
                 </form>
-            </section>
-            `;
-        }
-        
-        function getQuotesTemplate() {
-             return `
-            <section id="quotes-section" class="content-section active">
-                <div class="section-header">
-                    <h2>My Submitted Quotes</h2>
-                </div>
-                <div id="quotes-list" class="quotes-grid">
-                    </div>
-            </section>
             `;
         }
 
