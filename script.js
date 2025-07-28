@@ -14,7 +14,7 @@ const appState = {
  * checking for an existing user session in localStorage.
  */
 function initializeApp() {
-    console.log("SteelConnect App Initializing..."); // For debugging
+    console.log("SteelConnect App Initializing...");
 
     // Landing page auth buttons
     document.getElementById('signin-btn').addEventListener('click', () => showAuthModal('login'));
@@ -25,7 +25,7 @@ function initializeApp() {
     document.querySelector('.logo').addEventListener('click', (e) => {
         e.preventDefault();
         if (appState.currentUser) {
-            showAppView();
+            renderAppSection('jobs'); // Go to default app view
         } else {
             showLandingPageView();
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -176,7 +176,7 @@ async function fetchAndRenderJobs() {
             const actions = user.role === 'designer'
                 ? `<button class="btn btn-primary" onclick="showQuoteModal(${job.id})">Submit Quote</button>`
                 : `<button class="btn btn-outline" onclick="viewQuotes(${job.id})">View Quotes</button>
-                   <button class="btn btn-primary" onclick="deleteJob(${job.id})">Delete Job</button>`;
+                   <button class="btn btn-danger" onclick="deleteJob(${job.id})">Delete</button>`;
             
             jobsHTML += `
                 <div class="job-card">
@@ -323,6 +323,7 @@ function showAppView() {
     document.getElementById('landing-page-content').style.display = 'none';
     document.getElementById('app-content').style.display = 'flex';
     document.getElementById('auth-buttons-container').style.display = 'none';
+    document.getElementById('main-nav-menu').innerHTML = ''; // Clear landing page nav
 
     const user = appState.currentUser;
     document.getElementById('userName').textContent = user.fullName;
@@ -330,13 +331,14 @@ function showAppView() {
     document.getElementById('userAvatar').textContent = (user.fullName || "A").charAt(0).toUpperCase();
 
     buildSidebarNav();
-    renderAppSection('jobs');
+    renderAppSection('jobs'); // Show default view for logged-in user
 }
 
 function showLandingPageView() {
     document.getElementById('landing-page-content').style.display = 'block';
     document.getElementById('app-content').style.display = 'none';
     document.getElementById('auth-buttons-container').style.display = 'flex';
+    // Restore landing page navigation
     document.getElementById('main-nav-menu').innerHTML = `
         <a href="#features" class="nav-link">Features</a>
         <a href="#showcase" class="nav-link">Showcase</a>
@@ -375,7 +377,6 @@ function renderAppSection(sectionId) {
     if (sectionId === 'jobs') {
         const title = appState.currentUser.role === 'designer' ? 'Available Projects' : 'My Posted Projects';
         container.innerHTML = `<div class="section-header"><h2>${title}</h2></div><div id="jobs-list" class="jobs-grid"></div>`;
-        // Fetch and render the appropriate jobs for the current user
         fetchAndRenderJobs();
     } else if (sectionId === 'post-job') {
         container.innerHTML = getPostJobTemplate();

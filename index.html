@@ -1,61 +1,240 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SteelConnect - Professional Marketplace</title>
+    <title>SteelConnect - Professional Steel & Rebar Design Marketplace</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        /* Your aesthetic CSS goes here. It has not been changed. */
+        /* Your existing CSS styles go here. No changes needed. */
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        :root { --primary-color: #005a9c; --text-dark: #1f2937; --text-gray: #6b7280; --bg-white: #ffffff; --bg-light: #f9fafb; --border-color: #e5e7eb; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: var(--bg-light); color: var(--text-dark); }
-        .header { background: var(--bg-white); border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 1000; }
+        :root {
+            --primary-color: #005a9c; /* Professional Blue */
+            --primary-hover: #004a80;
+            --primary-light: #e6f0f7;
+            --text-dark: #1f2937;
+            --text-gray: #6b7280;
+            --bg-white: #ffffff;
+            --bg-light: #f9fafb;
+            --border-color: #e5e7eb;
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+        html { scroll-behavior: smooth; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: var(--bg-light); color: var(--text-dark); line-height: 1.6; }
+        .header { background: rgba(255,255,255,0.8); border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 1000; backdrop-filter: blur(10px); }
         .header-container { max-width: 1400px; margin: 0 auto; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; height: 64px; }
-        .logo { font-size: 24px; font-weight: 700; color: var(--text-dark); text-decoration: none; cursor: pointer; }
+        .logo { display: flex; align-items: center; gap: 8px; font-size: 24px; font-weight: 700; color: var(--text-dark); text-decoration: none; cursor: pointer; }
+        .logo-icon { width: 32px; height: 32px; background: var(--primary-color); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; }
         .nav-menu { display: flex; gap: 4px; }
-        .nav-link { padding: 8px 16px; border-radius: 6px; color: var(--text-gray); font-weight: 500; cursor: pointer; background: none; border: none; }
-        .btn { padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; border: 1px solid transparent; }
+        .nav-link { padding: 8px 16px; border-radius: 6px; color: var(--text-gray); font-weight: 500; font-size: 14px; cursor: pointer; background: none; border: none; text-decoration: none; }
+        .nav-link:hover { color: var(--primary-color); }
+        .auth-buttons { display: flex; gap: 12px; }
+        .btn { padding: 10px 20px; border-radius: 8px; font-weight: 600; font-size: 15px; cursor: pointer; border: 1px solid transparent; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s; }
+        .btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
         .btn-outline { background: var(--bg-white); color: var(--primary-color); border-color: var(--primary-color); }
+        .btn-outline:hover { background: var(--primary-color); color: white; }
         .btn-primary { background: var(--primary-color); color: white; }
-        .main-container { max-width: 1200px; margin: 0 auto; padding: 40px 24px; }
-        .form-grid { display: grid; gap: 20px; max-width: 500px; margin: auto; background: white; padding: 40px; border-radius: 12px; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .hero { color: white; padding: 120px 24px; text-align: center; background: linear-gradient(135deg, #1e3a8a, #005a9c); }
+        .hero-content { max-width: 900px; margin: 0 auto; }
+        .hero-text h1 { font-size: 52px; font-weight: 800; line-height: 1.1; margin-bottom: 24px; }
+        .hero-text p { font-size: 18px; opacity: 0.9; max-width: 700px; margin: 0 auto 32px; }
+        .landing-section { background: var(--bg-white); padding: 100px 24px; }
+        .landing-container { max-width: 1200px; margin: 0 auto; }
+        .section-title { font-size: 36px; font-weight: 800; text-align: center; margin-bottom: 50px; color: var(--text-dark); }
+        .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 30px; }
+        .feature-card { text-align: center; padding: 40px 30px; background: var(--bg-white); border-radius: 16px; transition: all 0.4s; border: 1px solid var(--border-color); box-shadow: var(--shadow-md); cursor: pointer; position: relative; overflow: hidden; }
+        .feature-card:hover { transform: translateY(-8px); box-shadow: var(--shadow-lg); }
+        .feature-icon { font-size: 36px; color: var(--primary-color); margin-bottom: 20px; }
+        .feature-card h3 { font-size: 22px; margin-bottom: 15px; color: var(--text-dark); }
+        .feature-expanded-content { max-height: 0; overflow: hidden; transition: max-height 0.5s ease, padding 0.5s ease, opacity 0.5s ease; opacity: 0; }
+        .feature-card.expanded .feature-expanded-content { max-height: 600px; opacity: 1; padding-top: 20px; border-top: 1px solid var(--border-color); margin-top: 20px; }
+        .expand-indicator { position: absolute; bottom: 20px; right: 20px; width: 30px; height: 30px; background: var(--primary-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--primary-color); font-size: 14px; transition: all 0.3s ease; }
+        .feature-card.expanded .expand-indicator { transform: rotate(180deg); }
+        .professional-image { width: 100%; height: auto; border-radius: 12px; margin-bottom: 20px; }
+        .industry-showcase { background: var(--bg-light); }
+        .showcase-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; }
+        .showcase-card { background: var(--bg-white); border-radius: 16px; border: 1px solid var(--border-color); overflow: hidden; transition: all 0.3s ease; }
+        .showcase-card:hover { transform: translateY(-8px); box-shadow: var(--shadow-lg); }
+        .showcase-image { width: 100%; height: 200px; object-fit: cover; }
+        .showcase-content { padding: 24px; }
+        .showcase-content h3 { font-size: 20px; margin-bottom: 10px; }
+        .showcase-content p { color: var(--text-gray); }
+        .main-layout { display: flex; }
+        .sidebar { width: 260px; background: var(--bg-white); border-right: 1px solid var(--border-color); padding: 24px; height: calc(100vh - 64px); position: sticky; top: 64px; display: flex; flex-direction: column; }
+        .main-content { flex-grow: 1; padding: 40px; }
+        .main-container { max-width: 1200px; margin: 0 auto; }
+        .sidebar-user-profile { text-align: center; margin-bottom: 30px; }
+        .sidebar-avatar { width: 80px; height: 80px; background: var(--primary-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 32px; margin: 0 auto 10px; }
+        .sidebar-user-profile h3 { font-size: 18px; font-weight: 600; }
+        .sidebar-user-profile p { color: var(--text-gray); font-size: 14px; text-transform: capitalize; }
+        .sidebar-nav { flex-grow: 1; display: flex; flex-direction: column; gap: 8px; }
+        .sidebar-nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 8px; color: var(--text-gray); font-weight: 500; font-size: 15px; cursor: pointer; text-decoration: none; transition: all 0.2s; }
+        .sidebar-nav-link:hover { background: var(--primary-light); color: var(--primary-color); }
+        .sidebar-nav-link.active { background: var(--primary-color); color: white; }
+        .logout-btn-container { margin-top: auto; padding-top: 20px; }
+        .section-header { margin-bottom: 32px; padding-bottom: 16px; border-bottom: 1px solid var(--border-color); }
+        .section-header h2 { font-size: 28px; font-weight: 700; color: var(--text-dark); }
+        .form-grid { display: grid; gap: 20px; }
         .form-group { display: flex; flex-direction: column; gap: 8px; }
-        .form-label { font-weight: 500; }
+        .form-label { font-weight: 500; font-size: 14px; }
         .form-input, .form-select, .form-textarea { padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 15px; width: 100%; }
+        .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(0, 90, 156, 0.1); }
         .jobs-grid { display: grid; gap: 24px; }
-        .job-card { background: var(--bg-white); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; }
-        .job-header { display: flex; justify-content: space-between; }
-        .job-budget { color: var(--primary-color); font-weight: 600; }
-        .job-attachment a { color: var(--primary-color); text-decoration: none; font-weight: 500; }
+        .job-card { background: var(--bg-white); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; transition: all 0.3s; }
+        .job-card:hover { box-shadow: var(--shadow-lg); }
+        .job-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
+        .job-header h3 { font-size: 20px; font-weight: 600; }
+        .job-budget { background: var(--primary-light); color: var(--primary-color); padding: 6px 12px; border-radius: 20px; font-size: 14px; font-weight: 600; white-space: nowrap; }
         .job-actions { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-color); text-align: right; }
-        #alerts-container { position: fixed; top: 80px; right: 24px; z-index: 2000; }
-        .alert { padding: 16px; border-radius: 8px; margin-bottom: 10px; }
-        .alert-success { background: #d1fae5; color: #065f46; }
-        .alert-error { background: #fee2e2; color: #991b1b; }
+        #alerts-container { position: fixed; top: 80px; right: 24px; z-index: 2000; display: flex; flex-direction: column; gap: 12px; }
+        .alert { padding: 16px 20px; border-radius: 8px; font-weight: 500; display: flex; align-items: center; gap: 12px; min-width: 300px; box-shadow: var(--shadow-lg); opacity: 0; animation: slideIn 0.5s forwards; border-left: 5px solid; }
+        @keyframes slideIn { to { opacity: 1; transform: translateX(0); } }
+        .alert-success { background: #d1fae5; color: #065f46; border-color: #10b981; }
+        .alert-error { background: #fee2e2; color: #991b1b; border-color: #ef4444; }
+        .alert-info { background: #e0f2fe; color: #075985; border-color: #0ea5e9; }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.7); display: flex; align-items: center; justify-content: center; z-index: 1100; backdrop-filter: blur(5px); }
+        .modal-content { background: var(--bg-white); padding: 40px; border-radius: 16px; max-width: 450px; width: 90%; position: relative; box-shadow: var(--shadow-lg); }
+        .modal-close-button { position: absolute; top: 16px; right: 16px; background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-gray); }
+        .modal-switch { text-align: center; margin-top: 16px; font-size: 14px; }
+        .modal-switch a { color: var(--primary-color); cursor: pointer; font-weight: 500; }
+        .empty-state { text-align: center; padding: 40px; background-color: var(--bg-light); border-radius: 12px; }
+        .empty-state h3 { margin-bottom: 8px; color: var(--text-dark); }
+        .empty-state p { color: var(--text-gray); }
+        .quote-card { border: 1px solid var(--border-color); padding: 16px; border-radius: 8px; margin-bottom: 12px; }
+        @media (max-width: 992px) { .hero-content { text-align: center; } }
+        @media (max-width: 768px) { .nav-menu { display: none; } .hero-content h1 { font-size: 36px; } }
     </style>
 </head>
+
 <body>
     <header class="header">
         <div class="header-container">
-            <a href="#" class="logo">SteelConnect</a>
-            <nav id="main-nav-menu" class="nav-menu"></nav>
-            <div id="auth-buttons-container" style="display: flex; gap: 12px;">
+            <a href="#" class="logo">
+                <div class="logo-icon">SC</div>
+                SteelConnect
+            </a>
+            <nav id="main-nav-menu" class="nav-menu">
+                </nav>
+            <div id="auth-buttons-container" class="auth-buttons">
                 <button id="signin-btn" class="btn btn-outline">Sign In</button>
                 <button id="join-btn" class="btn btn-primary">Join Now</button>
             </div>
-            <div id="user-profile" style="display: none; align-items: center; gap: 15px;">
-                <span id="userName" style="font-weight: 600;"></span>
-                <button id="logout-button" class="btn btn-outline">Logout</button>
-            </div>
         </div>
     </header>
+
     <div id="alerts-container"></div>
+    <div id="modal-container"></div>
+
     <main>
-        <div id="jobs-section" class="main-container" style="display: none;"><div id="jobs-list" class="jobs-grid"></div></div>
-        <div id="post-job-section" class="main-container" style="display: none;"><form id="post-job-form" class="form-grid"></form></div>
-        <div id="login-section" class="main-container" style="display: none;"><form id="login-form" class="form-grid"></form></div>
-        <div id="register-section" class="main-container" style="display: none;"><form id="register-form" class="form-grid"></form></div>
+        <div id="landing-page-content">
+            <section class="hero">
+                <div class="hero-content">
+                    <div class="hero-text">
+                        <h1>Connecting Clients to Steel & Construction Professionals Who Deliver</h1>
+                        <p>Find top steel designers and contractors for your projects. Post jobs, submit quotes, and
+                            build your network.</p>
+                        <button id="get-started-btn" class="btn btn-primary" style="padding: 16px 32px; font-size: 16px;">
+                            Get Started Today <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="features" class="landing-section">
+                <div class="landing-container">
+                    <h2 class="section-title">Why SteelConnect?</h2>
+                    <div class="features-grid">
+                        <div class="feature-card" onclick="toggleCard(this)">
+                            <div class="feature-icon"><i class="fas fa-globe-americas"></i></div>
+                            <h3>Connect to Global Experts</h3>
+                            <p>Access a worldwide network of freelance steel designers and engineering companies.</p>
+                            <div class="feature-expanded-content">
+                                <img src="https://images.unsplash.com/photo-1573164713714-d95e436ab8d6?q=80&w=2940&auto=format&fit=crop" alt="Global engineering team" class="professional-image">
+                                <p style="text-align: left; color: var(--text-gray);">Post your project once and receive multiple, qualified bids within hours from certified professionals in over 50 countries.</p>
+                            </div>
+                            <div class="expand-indicator"><i class="fas fa-chevron-down"></i></div>
+                        </div>
+                        <div class="feature-card" onclick="toggleCard(this)">
+                            <div class="feature-icon"><i class="fas fa-drafting-compass"></i></div>
+                            <h3>Advanced Engineering</h3>
+                            <p>From concept to construction with cutting-edge technology and software solutions.</p>
+                            <div class="feature-expanded-content">
+                                 <img src="https://images.unsplash.com/photo-1581092160562-40aa08e78837?q=80&w=2940&auto=format&fit=crop" alt="Steel engineering and CAD design" class="professional-image">
+                                 <p style="text-align: left; color: var(--text-gray);">Our professionals are proficient in industry-standard software like Tekla Structures, AutoCAD, Revit, and STAAD Pro to deliver precise designs.</p>
+                            </div>
+                            <div class="expand-indicator"><i class="fas fa-chevron-down"></i></div>
+                        </div>
+                        <div class="feature-card" onclick="toggleCard(this)">
+                            <div class="feature-icon"><i class="fas fa-certificate"></i></div>
+                            <h3>Certified Professionals</h3>
+                            <p>Connect with PE-licensed engineers and certified professionals across multiple jurisdictions.</p>
+                            <div class="feature-expanded-content">
+                                <img src="https://images.unsplash.com/photo-1556742502-ec7c0e9f34b1?q=80&w=2940&auto=format&fit=crop" alt="Professional with certifications" class="professional-image">
+                                <p style="text-align: left; color: var(--text-gray);">Ensure quality, safety, and compliance with access to a network of engineers holding certifications like PE (USA), CEng (UK), and EUR ING (Europe).</p>
+                            </div>
+                            <div class="expand-indicator"><i class="fas fa-chevron-down"></i></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <section id="showcase" class="landing-section" style="background: var(--bg-light);">
+                 <div class="landing-container">
+                    <h2 class="section-title">Industry Excellence Showcase</h2>
+                    <div class="showcase-grid">
+                        <div class="showcase-card">
+                            <img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2940&auto=format&fit=crop" alt="Modern skyscraper" class="showcase-image">
+                            <div class="showcase-content">
+                                <h3>High-Rise Construction</h3>
+                                <p>Structural steel design for towers and commercial buildings with advanced seismic engineering.</p>
+                            </div>
+                        </div>
+                        <div class="showcase-card">
+                            <img src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?q=80&w=2940&auto=format&fit=crop" alt="Steel bridge" class="showcase-image">
+                            <div class="showcase-content">
+                               <h3>Infrastructure Projects</h3>
+                               <p>Complex bridge design, highway infrastructure, and transportation networks.</p>
+                            </div>
+                        </div>
+                        <div class="showcase-card">
+                            <img src="https://images.unsplash.com/photo-1565008447742-97f6f38c985c?q=80&w=2940&auto=format&fit=crop" alt="Industrial facility" class="showcase-image">
+                            <div class="showcase-content">
+                                <h3>Industrial Facilities</h3>
+                                <p>Manufacturing plants, warehouses, and complexes with specialized steel frame solutions.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+
+        <div id="app-content" class="main-layout" style="display: none;">
+            <aside class="sidebar">
+                <div class="sidebar-user-profile">
+                    <div class="sidebar-avatar" id="userAvatar"></div>
+                    <h3 id="userName"></h3>
+                    <p id="userType"></p>
+                </div>
+                <nav class="sidebar-nav" id="sidebar-nav-menu"></nav>
+                <div class="logout-btn-container">
+                    <a href="#" id="logout-button" class="sidebar-nav-link">
+                        <i class="fas fa-sign-out-alt"></i><span>Logout</span>
+                    </a>
+                </div>
+            </aside>
+            <div class="main-content">
+                <div id="app-container" class="main-container">
+                    </div>
+            </div>
+        </div>
     </main>
+    
     <script src="script.js" defer></script>
+
 </body>
+
 </html>
