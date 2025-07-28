@@ -8,7 +8,7 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
-            --primary-color: #005a9c; /* Professional Blue */
+            --primary-color: #005a9c;
             --primary-hover: #004a80;
             --primary-light: #e6f0f7;
             --text-dark: #1f2937;
@@ -20,7 +20,7 @@
             --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
         }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: var(--bg-light); color: var(--text-dark); line-height: 1.6; }
-        .header { background: rgba(255,255,255,0.8); border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 1000; backdrop-filter: blur(10px); }
+        .header { background: rgba(255,255,255,0.95); border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 1000; backdrop-filter: blur(10px); }
         .header-container { max-width: 1400px; margin: 0 auto; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; height: 64px; }
         .logo { display: flex; align-items: center; gap: 8px; font-size: 24px; font-weight: 700; color: var(--text-dark); text-decoration: none; }
         .logo-icon { width: 32px; height: 32px; background: var(--primary-color); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; }
@@ -33,20 +33,26 @@
         .btn-outline:hover { background: var(--primary-color); color: white; }
         .btn-primary { background: var(--primary-color); color: white; }
         .btn-primary:hover { background: var(--primary-hover); }
-        
         .hero { position: relative; color: white; padding: 100px 24px; overflow: hidden; background: linear-gradient(135deg, #1e3a8a, #1e40af); }
         .hero-content { position: relative; z-index: 2; max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 60px; }
+        .hero-text { text-align: left; }
         .hero-text h1 { font-size: 52px; font-weight: 800; line-height: 1.1; text-shadow: 0 2px 4px rgba(0,0,0,0.3); margin-bottom: 24px; }
+        .hero-subtitle { font-size: 24px; font-weight: 600; color: #93c5fd; margin-bottom: 16px; text-shadow: 0 1px 3px rgba(0,0,0,0.3); }
         .hero-text p { font-size: 18px; opacity: 0.9; max-width: 500px; margin-bottom: 32px; }
         .hero-image-container { perspective: 1500px; }
         .hero-image { width: 100%; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.2); transform: rotateY(-15deg) rotateX(5deg); transition: transform 0.5s ease; }
         .hero-image:hover { transform: rotateY(0) rotateX(0) scale(1.05); }
-
         .features-section { background: var(--bg-white); padding: 80px 24px; }
+        .features-container { max-width: 1200px; margin: 0 auto; }
+        .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 30px; }
+        .feature-card { text-align: center; padding: 30px 25px; background: var(--bg-white); border-radius: 16px; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); border: 1px solid var(--border-color); box-shadow: var(--shadow-md); cursor: pointer; position: relative; overflow: hidden; }
+        .feature-card:hover { transform: translateY(-12px) scale(1.02); box-shadow: 0 20px 40px rgba(0, 91, 156, 0.15); }
+        .feature-expanded-content { max-height: 0; overflow: hidden; transition: max-height 0.5s ease, opacity 0.5s ease; opacity: 0; }
+        .feature-card.expanded .feature-expanded-content { max-height: 600px; opacity: 1; padding-top: 20px; border-top: 1px solid var(--border-color); margin-top: 20px; }
+        .expand-indicator { position: absolute; bottom: 20px; right: 20px; width: 30px; height: 30px; background: var(--primary-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; transition: all 0.3s ease; }
+        .feature-card.expanded .expand-indicator { transform: rotate(180deg); }
         .main-container { max-width: 1200px; margin: 0 auto; padding: 40px 24px; }
         .content-section { display: none; background: var(--bg-white); border-radius: 12px; padding: 32px; box-shadow: var(--shadow-md); }
-
-        /* Styles for all other sections remain here... */
         .main-layout { display: flex; }
         .sidebar { width: 260px; background: var(--bg-white); border-right: 1px solid var(--border-color); padding: 24px; height: calc(100vh - 64px); position: sticky; top: 64px; }
         .main-content { flex-grow: 1; padding: 40px; }
@@ -58,7 +64,7 @@
         .sidebar-nav-link.active { background: var(--primary-color); color: white; }
         .sidebar-nav-link i { width: 20px; text-align: center; }
         .logout-btn-container { margin-top: auto; padding-top: 20px; }
-        .section-header { margin-bottom: 32px; padding-bottom: 16px; border-bottom: 1px solid var(--border-color); }
+        .section-header { margin-bottom: 32px; padding-bottom: 16px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
         .section-title { font-size: 28px; font-weight: 700; color: var(--text-dark); }
         .form-grid { display: grid; gap: 24px; }
         .form-group { display: flex; flex-direction: column; gap: 8px; }
@@ -74,9 +80,9 @@
         .job-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-color); }
         .back-to-home { text-align: center; margin-top: 24px; }
         .back-to-home a { color: var(--primary-color); font-weight: 500; text-decoration: none; }
-        
         @media (max-width: 992px) {
             .hero-content { grid-template-columns: 1fr; text-align: center; }
+            .hero-text { text-align: center; }
             .hero-text p { margin-left: auto; margin-right: auto; }
         }
         @media (max-width: 768px) {
@@ -102,17 +108,19 @@
             <section class="hero" id="hero-section">
                 <div class="hero-content">
                     <div class="hero-text">
+                        <div class="hero-subtitle">Attractive & Professional</div>
                         <h1>Connecting Clients to Steel & Construction Professionals Who Deliver</h1>
-                        <p>Find top steel designers and contractors for your projects. Post jobs, submit quotes, and build your network.</p>
-                        <button class="btn btn-primary" style="padding: 16px 32px; font-size: 16px;" onclick="showSection('register')">Get Started Today <i class="fas fa-arrow-right"></i></button>
+                        <p>Find top steel designers and contractors for your projects. Post jobs, submit quotes, and build your network with verified professionals worldwide.</p>
+                        <button class="btn btn-primary" style="padding: 16px 32px; font-size: 16px;" onclick="showSection('register')">
+                            Get Started Today <i class="fas fa-arrow-right"></i>
+                        </button>
                     </div>
                     <div class="hero-image-container">
                         <img src="https://images.unsplash.com/photo-1556952549-7c4ac4433842?q=80&w=2874&auto=format&fit=crop" alt="3D model of a steel structure" class="hero-image">
                     </div>
                 </div>
             </section>
-            </div>
-
+        </div>
         <div id="auth-forms-content" class="main-container" style="display: none;">
             <section id="login-section" class="content-section">
                 <div class="section-header"><h2 class="section-title">Sign In to SteelConnect</h2></div>
@@ -137,44 +145,59 @@
     </div>
 
     <div id="app-view" class="main-layout" style="display: none;">
-        <aside class="sidebar" id="app-sidebar">
+        <aside class="sidebar">
             <div class="sidebar-user-profile">
-                <div class="sidebar-avatar" id="userAvatar"></div>
-                <h3 id="userName"></h3>
-                <p id="userType"></p>
+                <div class="sidebar-avatar" id="sidebar-avatar">U</div>
+                <h3 id="sidebar-username">User</h3>
+                <p id="sidebar-user-type">Client</p>
             </div>
             <nav class="sidebar-nav" id="sidebar-nav-menu"></nav>
             <div class="logout-btn-container">
-                <a href="#" id="logout-button" class="sidebar-nav-link"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                <button class="btn btn-outline" style="width: 100%;" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Logout
+                </button>
             </div>
         </aside>
         <main class="main-content">
-            <div id="alerts-app"></div>
             <section id="jobs-section" class="content-section">
-                <div class="section-header"><h2 id="jobs-title" class="section-title"></h2></div>
+                <div class="section-header">
+                    <h2 id="jobs-title">Available Jobs</h2>
+                    <button class="btn btn-primary" onclick="showSection('post-job')">
+                        <i class="fas fa-plus"></i>
+                        Post New Job
+                    </button>
+                </div>
                 <div id="jobs-list" class="jobs-grid"></div>
             </section>
             <section id="post-job-section" class="content-section">
-                <div class="section-header"><h2 class="section-title">Post a New Steel Project</h2></div>
+                <div class="section-header"><h2>Post New Job</h2></div>
                 <form id="post-job-form" class="form-grid">
-                    <div class="form-row"><div class="form-group"><label class="form-label">Project Title</label><input type="text" class="form-input" id="postJobTitle" required></div><div class="form-group"><label class="form-label">Budget Range</label><input type="text" class="form-input" id="postJobBudget" required></div></div>
-                    <div class="form-group"><label class="form-label">Project Description</label><textarea class="form-textarea" id="postJobDescription" required></textarea></div>
-                    <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Post Project</button>
+                    <div class="form-group"><label class="form-label">Project Title</label><input type="text" class="form-input" id="postJobTitle" required></div>
+                    <div class="form-group"><label class="form-label">Budget</label><input type="text" class="form-input" id="postJobBudget" placeholder="$5,000 - $10,000" required></div>
+                    <div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="postJobDescription" required></textarea></div>
+                    <div class="form-row">
+                        <button type="button" class="btn btn-outline" onclick="showSection('jobs')">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Post Job</button>
+                    </div>
                 </form>
             </section>
             </main>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', initializeApp);
-        const appState = { currentUser: null };
+        const appState = {
+            currentUser: null,
+            jobs: [
+                { id: 1, title: 'Structural Design for Retail Center', budget: '$15,000', description: 'Seeking a certified engineer for a two-story retail building.' },
+                { id: 2, title: 'Rebar Detailing for Parking Garage', budget: '$8,000', description: 'Need detailed rebar shop drawings for a 3-level underground parking structure.' }
+            ]
+        };
 
         function initializeApp() {
-            // Attach all event listeners since HTML is now static
             document.getElementById('login-form').addEventListener('submit', handleLogin);
             document.getElementById('register-form').addEventListener('submit', handleRegister);
             document.getElementById('post-job-form').addEventListener('submit', handlePostJob);
-            document.getElementById('logout-button').addEventListener('click', logout);
             
             const user = localStorage.getItem('currentUser');
             if (user) {
@@ -187,35 +210,37 @@
 
         function handleLogin(event) {
             event.preventDefault();
-            // --- Dummy Login ---
             const email = document.getElementById('loginEmail').value;
-            appState.currentUser = { fullName: "Demo User", email: email, role: 'contractor' };
+            appState.currentUser = { name: email.split('@')[0], role: 'contractor' };
             localStorage.setItem('currentUser', JSON.stringify(appState.currentUser));
             updateUIForLoggedInUser();
         }
 
         function handleRegister(event) {
             event.preventDefault();
-            // --- Dummy Register ---
-            const fullName = document.getElementById('regName').value;
-            const email = document.getElementById('regEmail').value;
+            const name = document.getElementById('regName').value;
             const role = document.getElementById('regRole').value;
-            appState.currentUser = { fullName: fullName, email: email, role: role };
+            appState.currentUser = { name: name, role: role };
             localStorage.setItem('currentUser', JSON.stringify(appState.currentUser));
             updateUIForLoggedInUser();
-        }
-        
-        function logout(event) {
-            event.preventDefault();
-            appState.currentUser = null;
-            localStorage.removeItem('currentUser');
-            updateUIForLoggedOutUser();
         }
 
         function handlePostJob(event) {
             event.preventDefault();
-            alert('New job posted!');
+            const newJob = {
+                id: Date.now(),
+                title: document.getElementById('postJobTitle').value,
+                budget: document.getElementById('postJobBudget').value,
+                description: document.getElementById('postJobDescription').value
+            };
+            appState.jobs.unshift(newJob);
             showSection('jobs');
+        }
+
+        function logout() {
+            appState.currentUser = null;
+            localStorage.removeItem('currentUser');
+            updateUIForLoggedOutUser();
         }
 
         function updateUIForLoggedInUser() {
@@ -225,18 +250,16 @@
             document.getElementById('main-nav-menu').style.display = 'none';
 
             const user = appState.currentUser;
-            document.getElementById('userName').textContent = user.fullName;
-            document.getElementById('userType').textContent = user.role.charAt(0).toUpperCase() + user.role.slice(1);
-            document.getElementById('userAvatar').textContent = user.fullName.charAt(0).toUpperCase();
-            
+            document.getElementById('sidebar-username').textContent = user.name;
+            document.getElementById('sidebar-user-type').textContent = user.role.charAt(0).toUpperCase() + user.role.slice(1);
+            document.getElementById('sidebar-avatar').textContent = user.name.charAt(0).toUpperCase();
+
             const sidebarNav = document.getElementById('sidebar-nav-menu');
-            let navLinks = `<a href="#" class="sidebar-nav-link" onclick="showSection('jobs')"><i class="fas fa-briefcase"></i> ${user.role === 'contractor' ? 'My Projects' : 'Available Jobs'}</a>`;
-            if (user.role === 'contractor') {
-                navLinks += `<a href="#" class="sidebar-nav-link" onclick="showSection('post-job')"><i class="fas fa-plus-circle"></i> Post Job</a>`;
-            }
-            sidebarNav.innerHTML = navLinks;
+            sidebarNav.innerHTML = `
+                <a href="#" class="sidebar-nav-link active" onclick="showSection('jobs')"><i class="fas fa-briefcase"></i> My Projects</a>
+                ${user.role === 'contractor' ? `<a href="#" class="sidebar-nav-link" onclick="showSection('post-job')"><i class="fas fa-plus"></i> Post Job</a>` : ''}
+            `;
             showSection('jobs');
-            renderJobs();
         }
 
         function updateUIForLoggedOutUser() {
@@ -244,47 +267,49 @@
             document.getElementById('app-view').style.display = 'none';
             document.getElementById('auth-buttons-container').style.display = 'flex';
             document.getElementById('main-nav-menu').style.display = 'flex';
-            
             document.getElementById('auth-buttons-container').innerHTML = `<button class="btn btn-outline" onclick="showSection('login')">Sign In</button><button class="btn btn-primary" onclick="showSection('register')">Join Now</button>`;
             document.getElementById('main-nav-menu').innerHTML = `<button class="nav-link" onclick="showSection('login')">My Job</button>`;
             showSection('landing');
         }
 
         function showSection(sectionId) {
-            if (appState.currentUser) {
-                // Logged-in view
-                document.querySelectorAll('#app-view .content-section').forEach(s => s.style.display = 'none');
+            document.getElementById('landing-page-content').style.display = 'none';
+            document.getElementById('auth-forms-content').style.display = 'none';
+            document.querySelectorAll('#app-view .content-section').forEach(s => s.style.display = 'none');
+
+            if (sectionId === 'landing') {
+                document.getElementById('landing-page-content').style.display = 'block';
+            } else if (sectionId === 'login' || sectionId === 'register') {
+                document.getElementById('auth-forms-content').style.display = 'block';
                 document.getElementById(`${sectionId}-section`).style.display = 'block';
             } else {
-                // Logged-out view
-                document.getElementById('landing-page-content').style.display = 'none';
-                document.getElementById('auth-forms-content').style.display = 'none';
-
-                if (sectionId === 'login' || sectionId === 'register') {
-                    document.getElementById('auth-forms-content').style.display = 'block';
-                    document.querySelectorAll('#auth-forms-content .content-section').forEach(s => s.style.display = 'none');
-                    document.getElementById(`${sectionId}-section`).style.display = 'block';
-                } else { // 'landing' or default
-                    document.getElementById('landing-page-content').style.display = 'block';
-                }
+                document.getElementById('app-view').style.display = 'flex';
+                document.getElementById(`${sectionId}-section`).style.display = 'block';
+                if (sectionId === 'jobs') renderJobs();
             }
         }
         
-        function renderJobs(){
-             const jobsList = document.getElementById('jobs-list');
-             jobsList.innerHTML = `
+        function renderJobs() {
+            const jobsList = document.getElementById('jobs-list');
+            if (appState.jobs.length === 0) {
+                jobsList.innerHTML = `<p>No jobs posted yet.</p>`;
+                return;
+            }
+            jobsList.innerHTML = appState.jobs.map(job => `
                 <div class="job-card">
-                    <div class="job-header"><h3>Structural Design for Retail Center</h3><div class="job-budget">$15,000</div></div>
-                    <p class="job-description">Seeking a certified engineer for a two-story retail building. Must be proficient in Tekla and AISC standards.</p>
-                    <div class="job-actions"><button class="btn btn-primary">Submit Quote</button></div>
+                    <div class="job-header">
+                        <h3>${job.title}</h3>
+                        <div class="job-budget">${job.budget}</div>
+                    </div>
+                    <p class="job-description">${job.description}</p>
+                    <div class="job-actions">
+                        <button class="btn btn-outline">View Quotes</button>
+                    </div>
                 </div>
-                 <div class="job-card">
-                    <div class="job-header"><h3>Rebar Detailing for Parking Garage</h3><div class="job-budget">$8,000</div></div>
-                    <p class="job-description">Need detailed rebar shop drawings for a 3-level underground parking structure. ACI code compliance is mandatory.</p>
-                    <div class="job-actions"><button class="btn btn-primary">Submit Quote</button></div>
-                </div>
-             `;
+            `).join('');
         }
+
+        document.addEventListener('DOMContentLoaded', initializeApp);
     </script>
 </body>
 </html>
