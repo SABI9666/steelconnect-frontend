@@ -1,208 +1,259 @@
+
+
+// --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', initializeApp);
 
+// --- CONSTANTS & STATE ---
 const BACKEND_URL = 'https://steelconnect-backend.onrender.com';
-const appState = { currentUser: null, jwtToken: null, jobs: [], myQuotes: [] };
+const appState = {
+    currentUser: null,
+    jwtToken: null,
+    jobs: [],
+    myQuotes: []
+};
 
+/**
+ * Initializes the application by setting up event listeners and
+ * checking for an existing user session in localStorage.
+ */
 function initializeApp() {
-    document.getElementById('login-form').addEventListener('submit', handleLogin);
-    document.getElementById('register-form').addEventListener('submit', handleRegister);
-    document.getElementById('post-job-form').addEventListener('submit', handlePostJob);
-    document.getElementById('logout-button').addEventListener('click', logout);
-    
+    // Landing page listeners
+    document.querySelectorAll('.btn-outline, .btn-primary').forEach(btn => {
+        if (btn.textContent.includes('Sign In')) {
+            btn.addEventListener('click', () => showAuthModal('login'));
+        } else if (btn.textContent.includes('Join Now') || btn.textContent.includes('Get Started')) {
+            btn.addEventListener('click', () => showAuthModal('register'));
+        }
+    });
+
+    document.querySelector('.logo').addEventListener('click', (e) => {
+        e.preventDefault();
+        if (appState.currentUser) {
+            showAppView();
+        } else {
+            showLandingPageView();
+        }
+    });
+
+    document.getElementById('logout-button').addEventListener('click', (e) => {
+        e.preventDefault();
+        logout();
+    });
+
+    // Check for stored user session
     const token = localStorage.getItem('jwtToken');
     const user = localStorage.getItem('currentUser');
     if (token && user) {
-        appState.jwtToken = token;
-        appState.currentUser = JSON.parse(user);
-        updateUIForLoggedInUser();
+        try {
+            appState.jwtToken = token;
+            appState.currentUser = JSON.parse(user);
+            showAppView();
+        } catch (error) {
+            console.error("Error parsing user data from localStorage:", error);
+            logout(); // Clear corrupted data
+        }
     } else {
-        updateUIForLoggedOutUser();
+        showLandingPageView();
     }
-    fetchJobs();
 }
 
+// --- API ABSTRACTION ---
+/**
+ * A generic function for making API calls to the backend.
+ * It automatically handles headers, authorization, and error parsing.
+ * @param {string} endpoint - The API endpoint (e.g., '/jobs').
+ * @param {string} method - The HTTP method (e.g., 'GET', 'POST').
+ * @param {object|FormData} [body] - The request body for POST/PUT requests.
+ * @param {string|null} [successMessage] - A message to show on success.
+ * @param {function} [callback] - A function to call with the response data on success.
+ */
+async function apiCall(endpoint, method, body = null, successMessage = null, callback = null) {
+    try {
+        const options = {
+            method,
+            headers: {}
+        };
+
+        if (appState.jwtToken) {
+            options.headers['Authorization'] = `Bearer ${appState.jwtToken}`;
+        }
+
+        if (body) {
+            if (body instanceof FormData) {
+                // Let the browser set the Content-Type header for FormData
+                options.body = body;
+            } else {
+                options.headers['Content-Type'] = 'application/json';
+                options.body = JSON.stringify(body);
+            }
+        }
+
+        const response = await fetch(BACKEND_URL + endpoint, options);
+        const contentType = response.headers.get("content-type");
+        let data;
+
+        if (contentType && contentType.includes("application/json")) {
+            data = await response.json();
+        } else {
+            data = await response.text();
+        }
+
+        if (!response.ok) {
+            const errorMessage = (data && (data.error || data.message)) ? (data.error || data.message) : `Request failed with status ${response.status}`;
+            throw new Error(errorMessage);
+        }
+
+        if (successMessage) {
+            showAlert(successMessage, 'success');
+        }
+
+        if (callback) {
+            callback(data);
+        }
+
+    } catch (error) {
+        console.error(`API call to ${endpoint} failed:`, error);
+        showAlert(error.message, 'error');
+    }
+}
+
+
 // --- AUTHENTICATION ---
+/**
+ * Handles user registration form submission.
+ * @param {Event} event - The form submission event.
+ */
 async function handleRegister(event) {
     event.preventDefault();
     const form = event.target;
     const userData = {
-        fullName: form.querySelector('#regName').value,
-        username: form.querySelector('#regUsername').value,
-        email: form.querySelector('#regEmail').value,
-        password: form.querySelector('#regPassword').value,
-        role: form.querySelector('#regRole').value,
+        fullName: form.regName.value,
+        username: form.regUsername.value,
+        email: form.regEmail.value,
+        password: form.regPassword.value,
+        role: form.regRole.value,
     };
     await apiCall('/auth/register', 'POST', userData, 'Registration successful! Please sign in.', () => {
-        showSection('login');
-        form.reset();
+        renderAuthForm('login');
     });
 }
 
+/**
+ * Handles user login form submission.
+ * @param {Event} event - The form submission event.
+ */
 async function handleLogin(event) {
     event.preventDefault();
     const form = event.target;
-    const authData = { email: form.querySelector('#loginEmail').value, password: form.querySelector('#loginPassword').value };
-    
+    const authData = {
+        email: form.loginEmail.value,
+        password: form.loginPassword.value
+    };
     await apiCall('/auth/login', 'POST', authData, 'Login successful!', (data) => {
         appState.currentUser = data.user;
-        appState.jwtToken = data.token || 'fake-jwt-token';
+        appState.jwtToken = data.token;
         localStorage.setItem('currentUser', JSON.stringify(data.user));
-        localStorage.setItem('jwtToken', appState.jwtToken);
-        updateUIForLoggedInUser();
-        fetchJobs();
+        localStorage.setItem('jwtToken', data.token);
+        closeModal();
+        showAppView();
     });
 }
 
+/**
+ * Logs the current user out, clears storage, and returns to the landing page.
+ */
 function logout() {
     appState.currentUser = null;
     appState.jwtToken = null;
     localStorage.clear();
-    updateUIForLoggedOutUser();
+    showLandingPageView();
     showAlert('You have been logged out.', 'info');
 }
 
 // --- DATA FETCHING & RENDERING ---
-async function fetchJobs() {
+/**
+ * Fetches all jobs from the backend and renders them.
+ */
+async function fetchAndRenderJobs() {
     const jobsList = document.getElementById('jobs-list');
-    jobsList.innerHTML = '<div class="spinner-container" style="display:flex; justify-content:center; padding: 40px;"><div class="spinner"></div></div>';
-    await apiCall('/jobs', 'GET', null, null, (data) => {
-        appState.jobs = data;
-        renderJobs();
-    });
-}
+    jobsList.innerHTML = `<div style="text-align:center; padding: 40px;">Loading projects...</div>`;
 
-async function fetchMyQuotes() {
-    if (!appState.currentUser || appState.currentUser.role !== 'designer') return;
-    const myQuotesList = document.getElementById('my-quotes-list');
-    myQuotesList.innerHTML = '<div class="spinner-container"><div class="spinner"></div></div>';
-    await apiCall(`/quotes/user/${appState.currentUser.id}`, 'GET', null, null, (data) => {
-        appState.myQuotes = data;
-        renderMyQuotes();
-    });
-}
-
-function renderJobs() {
-    const jobsList = document.getElementById('jobs-list');
-    jobsList.innerHTML = '';
-    if (!appState.jobs || appState.jobs.length === 0) {
-        jobsList.innerHTML = `<div class="empty-state"><h3>No Jobs Found</h3><p>Log in as a contractor to post the first job!</p></div>`;
-        return;
-    }
-    appState.jobs.forEach(job => {
-        const jobCard = document.createElement('div');
-        jobCard.className = 'job-card';
-        const isMyJob = appState.currentUser?.id === job.posterId;
-
-        // UPDATED: Only show attachments if a user is logged in
-        let attachmentHTML = '';
-        if (appState.currentUser) {
-            if (job.attachment) attachmentHTML += `<div class="job-attachment"><a href="${BACKEND_URL}${job.attachment}" target="_blank">📄 View File</a></div>`;
-            if (job.link) attachmentHTML += `<div class="job-attachment"><a href="${job.link}" target="_blank">🔗 View Link</a></div>`;
+    await apiCall('/jobs', 'GET', null, null, (jobs) => {
+        appState.jobs = jobs;
+        jobsList.innerHTML = '';
+        if (!jobs || jobs.length === 0) {
+            jobsList.innerHTML = `<div class="empty-state"><h3>No Jobs Found</h3><p>Check back later or post a job if you are a contractor.</p></div>`;
+            return;
         }
 
-        let actionButtonHTML = '';
-        if (appState.currentUser) {
-            if (isMyJob) {
-                actionButtonHTML = `<button class="btn btn-secondary" onclick="viewQuotes('${job.id}')">View Quotes</button> <button class="btn btn-danger" onclick="deleteJob('${job.id}')">Delete</button>`;
-            } else if (appState.currentUser.role === 'designer') {
-                actionButtonHTML = `<button class="btn btn-primary" onclick="showQuoteModal('${job.id}')">Submit Quote</button>`;
+        jobs.forEach(job => {
+            const jobCard = document.createElement('div');
+            jobCard.className = 'job-card';
+
+            const isMyJob = appState.currentUser ? .id === job.posterId;
+            let actionButtonHTML = '';
+
+            if (appState.currentUser) {
+                if (isMyJob) {
+                    actionButtonHTML = `<button class="btn btn-secondary" onclick="viewQuotes('${job.id}')">View Quotes</button> <button class="btn btn-danger" onclick="deleteJob('${job.id}')">Delete</button>`;
+                } else if (appState.currentUser.role === 'designer') {
+                    actionButtonHTML = `<button class="btn btn-primary" onclick="showQuoteModal('${job.id}')">Submit Quote</button>`;
+                }
+            } else {
+                actionButtonHTML = `<button class="btn btn-secondary" onclick="showAuthModal('login')">Sign In to Quote</button>`;
             }
-        } else {
-            // This button already correctly sends users to the login page
-            actionButtonHTML = `<button class="btn btn-secondary" onclick="showSection('login')">Sign In to Quote</button>`;
-        }
-        
-        jobCard.innerHTML = `
-            <div class="job-header"><h3>${job.title}</h3><div class="job-budget">${job.budget}</div></div>
-            <p class="job-description">${job.description}</p>
-            ${attachmentHTML}
-            <div class="job-actions">${actionButtonHTML}</div>`;
-        jobsList.appendChild(jobCard);
+
+            jobCard.innerHTML = `
+                <div class="job-header">
+                    <h3>${job.title}</h3>
+                    <div class="job-budget">${job.budget}</div>
+                </div>
+                <p class="job-description">${job.description}</p>
+                <div class="job-actions">${actionButtonHTML}</div>
+            `;
+            jobsList.appendChild(jobCard);
+        });
     });
 }
 
-function renderMyQuotes() {
-    const myQuotesList = document.getElementById('my-quotes-list');
-    myQuotesList.innerHTML = '';
-    if (appState.myQuotes.length === 0) {
-        myQuotesList.innerHTML = `<div class="empty-state"><h3>You haven't submitted any quotes.</h3></div>`;
-        return;
-    }
-    appState.myQuotes.forEach(quote => {
-        const job = appState.jobs.find(j => j.id === quote.jobId);
-        const quoteCard = document.createElement('div');
-        quoteCard.className = 'quote-card';
-        const attachmentHTML = quote.attachment ? `<div class="job-attachment"><a href="${BACKEND_URL}${quote.attachment}" target="_blank">📄 View My Attachment</a></div>` : '';
-        quoteCard.innerHTML = `
-            <div class="quote-header"><div><h4>Quote for: ${job?.title || 'Job not found'}</h4><div class="quote-amount">$${quote.amount}</div></div><div class="quote-status ${quote.status}">${quote.status}</div></div>
-            <p>${quote.description}</p>
-            ${attachmentHTML}
-            <div class="job-actions"><button class="btn btn-danger" onclick="deleteQuote('${quote.id}')">Delete Quote</button></div>`;
-        myQuotesList.appendChild(quoteCard);
-    });
-}
-
-// --- ACTIONS (CREATE, DELETE, UPDATE) ---
+// --- ACTIONS (CREATE, DELETE) ---
+/**
+ * Handles the submission of the 'Post a Job' form.
+ * @param {Event} event - The form submission event.
+ */
 async function handlePostJob(event) {
     event.preventDefault();
-    if (!appState.currentUser) {
-        return showAlert('You must be logged in to post a job.', 'error');
-    }
     const form = event.target;
-    const fileInput = form.querySelector('#jobAttachmentFile');
-    const file = fileInput.files[0];
-    let attachmentPath = '';
-    if (file) {
-        const formData = new FormData();
-        formData.append('document', file);
-        try {
-            showAlert('Uploading file...', 'info');
-            const response = await fetch(`${BACKEND_URL}/uploads/job`, { method: 'POST', body: formData });
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.error || 'File upload failed.');
-            attachmentPath = data.filePath;
-        } catch (error) {
-            return showAlert(error.message, 'error');
-        }
-    }
     const jobData = {
-        title: form.querySelector('#jobTitle').value,
-        description: form.querySelector('#jobDescription').value,
-        budget: form.querySelector('#jobBudget').value,
-        deadline: form.querySelector('#jobDeadline').value,
-        skills: form.querySelector('#jobSkills').value.split(',').map(s => s.trim()).filter(Boolean),
+        title: form.jobTitle.value,
+        description: form.jobDescription.value,
+        budget: form.jobBudget.value,
+        skills: (form.jobSkills.value || "").split(',').map(s => s.trim()).filter(Boolean),
         userId: appState.currentUser.id,
         userFullName: appState.currentUser.fullName,
-        attachment: attachmentPath,
-        link: form.querySelector('#jobAttachmentLink').value
     };
     await apiCall('/jobs', 'POST', jobData, 'Job posted successfully!', () => {
         form.reset();
-        fetchJobs();
-        showSection('jobs');
+        renderAppSection('jobs');
     });
 }
 
+/**
+ * Deletes a job after user confirmation.
+ * @param {string} jobId - The ID of the job to delete.
+ */
 async function deleteJob(jobId) {
-    if (confirm('Are you sure you want to delete this job?')) {
-        await apiCall(`/jobs/${jobId}`, 'DELETE', null, 'Job deleted successfully!', fetchJobs);
-    }
-}
-async function deleteQuote(quoteId) {
-    if (confirm('Are you sure you want to delete this quote?')) {
-        await apiCall(`/quotes/${quoteId}`, 'DELETE', null, 'Quote deleted successfully!', fetchMyQuotes);
-    }
-}
-async function approveQuote(quoteId) {
-    if (confirm('Approve this quote? All other quotes for this job will be rejected.')) {
-        await apiCall(`/quotes/${quoteId}/approve`, 'PUT', null, 'Quote approved!', () => {
-            closeModal();
-            fetchJobs();
-        });
+    if (confirm('Are you sure you want to delete this job and all its quotes?')) {
+        await apiCall(`/jobs/${jobId}`, 'DELETE', null, 'Job deleted successfully!', fetchAndRenderJobs);
     }
 }
 
+
 // --- MODALS ---
+/**
+ * Displays a modal for a contractor to view quotes for their job.
+ * @param {string} jobId - The ID of the job to view quotes for.
+ */
 async function viewQuotes(jobId) {
     await apiCall(`/quotes/job/${jobId}`, 'GET', null, null, (quotes) => {
         const modalContainer = document.getElementById('modal-container');
@@ -211,167 +262,258 @@ async function viewQuotes(jobId) {
             quotesHTML += `<div class="empty-state"><p>No quotes yet.</p></div>`;
         } else {
             quotes.forEach(quote => {
-                const attachmentHTML = quote.attachment ? `<div class="job-attachment"><a href="${BACKEND_URL}${quote.attachment}" target="_blank">📄 View Attachment</a></div>` : '';
                 quotesHTML += `
                     <div class="quote-card">
                         <p><strong>From:</strong> ${quote.quoterName} | <strong>Amount:</strong> $${quote.amount}</p>
                         <p>${quote.description}</p>
-                        ${attachmentHTML}
-                        <div class="job-actions">
-                            ${quote.status === 'pending' ? `<button class="btn btn-primary" onclick="approveQuote('${quote.id}')">Approve</button>` : `<span class="quote-status ${quote.status}">${quote.status}</span>`}
-                            <button class="btn btn-secondary" onclick="openMessageModal('${quote.quoterId}')">Message</button>
-                        </div>
                     </div>`;
             });
         }
-        modalContainer.innerHTML = `<div class="modal-overlay" onclick="closeModal()"><div class="modal-content" onclick="event.stopPropagation()"><button class="modal-close-button" onclick="closeModal()">✕</button>${quotesHTML}</div></div>`;
+        modalContainer.innerHTML = `
+            <div class="modal-overlay" onclick="closeModal()">
+                <div class="modal-content" onclick="event.stopPropagation()">
+                    <button class="modal-close-button" onclick="closeModal()">✕</button>
+                    ${quotesHTML}
+                </div>
+            </div>`;
     });
 }
 
+/**
+ * Shows the modal for a designer to submit a quote.
+ * @param {string} jobId - The job ID to submit a quote for.
+ */
 function showQuoteModal(jobId) {
     const modalContainer = document.getElementById('modal-container');
     modalContainer.innerHTML = `
-        <div class="modal-overlay" onclick="closeModal()"><div class="modal-content" onclick="event.stopPropagation()">
-            <button class="modal-close-button" onclick="closeModal()">✕</button>
-            <h3>Submit Your Quote</h3>
-            <form id="quote-form" class="form-grid">
-                <div class="form-group"><label class="form-label">Quote Amount ($)</label><input type="number" class="form-input" id="quoteAmount" required></div>
-                <div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="quoteDescription" required></textarea></div>
-                <div class="form-group"><label class="form-label">Attach Quotation (PDF/Word)</label><input type="file" class="form-input" id="quoteAttachmentFile"></div>
-                <button type="submit" class="btn btn-primary">Submit Quote</button>
-            </form>
-        </div></div>`;
+        <div class="modal-overlay" onclick="closeModal()">
+            <div class="modal-content" style="max-width: 500px;" onclick="event.stopPropagation()">
+                <button class="modal-close-button" onclick="closeModal()">✕</button>
+                <h3>Submit Your Quote</h3>
+                <form id="quote-form" class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Quote Amount ($)</label>
+                        <input type="number" class="form-input" id="quoteAmount" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Description / Cover Letter</label>
+                        <textarea class="form-textarea" style="min-height: 120px;" id="quoteDescription" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Submit Quote</button>
+                </form>
+            </div>
+        </div>`;
     document.getElementById('quote-form').addEventListener('submit', (e) => handleQuoteSubmit(e, jobId));
 }
 
+/**
+ * Handles the submission of a quote form.
+ * @param {Event} event - The form submission event.
+ * @param {string} jobId - The job ID the quote is for.
+ */
 async function handleQuoteSubmit(event, jobId) {
     event.preventDefault();
-    if (!appState.currentUser) {
-        return showAlert('You must be logged in to submit a quote.', 'error');
-    }
     const form = event.target;
-    const fileInput = form.querySelector('#quoteAttachmentFile');
-    const file = fileInput.files[0];
-    let attachmentPath = '';
-    if (file) {
-        const formData = new FormData();
-        formData.append('quote_document', file);
-        try {
-            showAlert('Uploading quote file...', 'info');
-            const response = await fetch(`${BACKEND_URL}/uploads/quote`, { method: 'POST', body: formData });
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.error || 'File upload failed.');
-            attachmentPath = data.filePath;
-        } catch (error) {
-            return showAlert(error.message, 'error');
-        }
-    }
     const quoteData = {
         jobId: jobId,
         amount: form.querySelector('#quoteAmount').value,
         description: form.querySelector('#quoteDescription').value,
-        attachment: attachmentPath,
         quoterId: appState.currentUser.id,
         quoterName: appState.currentUser.fullName
     };
     await apiCall('/quotes', 'POST', quoteData, 'Quote submitted successfully!', closeModal);
 }
 
-function openMessageModal(recipientId) {
+/**
+ * Renders the authentication modal for either login or registration.
+ * @param {'login'|'register'} view - The form to display.
+ */
+function showAuthModal(view) {
     const modalContainer = document.getElementById('modal-container');
     modalContainer.innerHTML = `
-        <div class="modal-overlay" onclick="closeModal()"><div class="modal-content" onclick="event.stopPropagation()">
-            <button class="modal-close-button" onclick="closeModal()">✕</button>
-            <h3>Send a Message</h3>
-            <form id="message-form" class="form-grid">
-                <div class="form-group"><label>Message</label><textarea id="messageText" class="form-textarea" required></textarea></div>
-                <button type="submit" class="btn btn-primary">Send</button>
-            </form>
-        </div></div>`;
-    document.getElementById('message-form').addEventListener('submit', (e) => {
-        e.preventDefault();
-        showAlert('Message sent! (DEMO)', 'success');
-        closeModal();
-    });
+        <div class="modal-overlay" onclick="closeModal()">
+            <div class="modal-content" onclick="event.stopPropagation()">
+                <button class="modal-close-button" onclick="closeModal()">&times;</button>
+                <div id="modal-form-container"></div>
+            </div>
+        </div>`;
+    renderAuthForm(view);
 }
 
+/**
+ * Renders the specific login or register form inside the auth modal.
+ * @param {'login'|'register'} view
+ */
+function renderAuthForm(view) {
+    const container = document.getElementById('modal-form-container');
+    if (view === 'login') {
+        container.innerHTML = getLoginTemplate();
+        document.getElementById('login-form').addEventListener('submit', handleLogin);
+    } else {
+        container.innerHTML = getRegisterTemplate();
+        document.getElementById('register-form').addEventListener('submit', handleRegister);
+    }
+}
+
+/**
+ * Clears and hides any active modal.
+ */
 function closeModal() {
     document.getElementById('modal-container').innerHTML = '';
 }
 
-// --- UI & UTILITY FUNCTIONS ---
-function updateUIForLoggedInUser() {
-    const user = appState.currentUser;
-    document.getElementById('user-profile').style.display = 'flex';
+
+// --- UI & VIEW MANAGEMENT ---
+/**
+ * Switches the view to the main application dashboard for logged-in users.
+ */
+function showAppView() {
+    document.getElementById('landing-page-content').style.display = 'none';
+    document.getElementById('app-content').style.display = 'flex';
     document.getElementById('auth-buttons-container').style.display = 'none';
-    const navMenu = document.getElementById('main-nav-menu');
-    navMenu.innerHTML = `
-        <button class="nav-link" onclick="showSection('jobs')">Find Jobs</button>
-        ${user.role === 'contractor' ? `<button class="nav-link" onclick="showSection('post-job')">Post Job</button>` : ''}
-        <button class="nav-link" onclick="showSection('quotes')">My Quotes</button>
-    `;
+
+    const user = appState.currentUser;
     document.getElementById('userName').textContent = user.fullName;
     document.getElementById('userType').textContent = user.role.charAt(0).toUpperCase() + user.role.slice(1);
-    document.getElementById('userAvatar').textContent = user.fullName.charAt(0).toUpperCase();
-    showSection('jobs');
+    document.getElementById('userAvatar').textContent = (user.fullName || "A").charAt(0).toUpperCase();
+
+    buildSidebarNav();
+    renderAppSection('jobs'); // Default to jobs view
 }
 
-function updateUIForLoggedOutUser() {
-    document.getElementById('user-profile').style.display = 'none';
+/**
+ * Switches the view to the public landing page for logged-out users.
+ */
+function showLandingPageView() {
+    document.getElementById('landing-page-content').style.display = 'block';
+    document.getElementById('app-content').style.display = 'none';
     document.getElementById('auth-buttons-container').style.display = 'flex';
-    document.getElementById('auth-buttons-container').innerHTML = `
-        <button class="btn btn-outline" onclick="showSection('login')">Sign In</button>
-        <button class="btn btn-primary" onclick="showSection('register')">Join Now</button>
+    document.getElementById('main-nav-menu').innerHTML = `
+        <a href="#features" class="nav-link">Features</a>
+        <a href="#showcase" class="nav-link">Showcase</a>
     `;
-    const navMenu = document.getElementById('main-nav-menu');
-    navMenu.innerHTML = `<button class="nav-link" onclick="showSection('jobs')">Find Jobs</button>`;
-    showSection('jobs');
+    fetchAndRenderJobs(); // Also fetch jobs for the landing page view if desired
 }
 
-function showSection(sectionId) {
-    document.querySelectorAll('.content-section').forEach(s => s.style.display = 'none');
-    document.getElementById(`${sectionId}-section`).style.display = 'block';
-    if (sectionId === 'quotes') {
-        fetchMyQuotes();
+
+/**
+ * Builds the sidebar navigation links based on the current user's role.
+ */
+function buildSidebarNav() {
+    const navContainer = document.getElementById('sidebar-nav-menu');
+    const role = appState.currentUser.role;
+    let links = '';
+
+    if (role === 'designer') {
+        links = `
+            <a href="#" class="sidebar-nav-link" data-section="jobs"><i class="fas fa-briefcase"></i> <span>Find Jobs</span></a>
+            <a href="#" class="sidebar-nav-link" data-section="my-quotes"><i class="fas fa-file-invoice-dollar"></i> <span>My Quotes</span></a>`;
+    } else { // contractor
+        links = `
+            <a href="#" class="sidebar-nav-link" data-section="jobs"><i class="fas fa-tasks"></i> <span>My Projects</span></a>
+            <a href="#" class="sidebar-nav-link" data-section="post-job"><i class="fas fa-plus-circle"></i> <span>Post a Job</span></a>`;
+    }
+    navContainer.innerHTML = links;
+    navContainer.querySelectorAll('.sidebar-nav-link').forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            renderAppSection(link.dataset.section);
+        });
+    });
+}
+
+/**
+ * Renders a specific section (e.g., 'jobs', 'post-job') in the main content area.
+ * @param {string} sectionId - The ID of the section to render.
+ */
+function renderAppSection(sectionId) {
+    const container = document.getElementById('app-container');
+    document.querySelectorAll('.sidebar-nav-link').forEach(link => {
+        link.classList.toggle('active', link.dataset.section === sectionId);
+    });
+
+    if (sectionId === 'jobs') {
+        const title = appState.currentUser.role === 'designer' ? 'Available Projects' : 'My Posted Projects';
+        container.innerHTML = `<div class="section-header"><h2>${title}</h2></div><div id="jobs-list" class="jobs-grid"></div>`;
+        fetchAndRenderJobs();
+    } else if (sectionId === 'post-job') {
+        container.innerHTML = getPostJobTemplate();
+        document.getElementById('post-job-form').addEventListener('submit', handlePostJob);
+    } else if (sectionId === 'my-quotes') {
+        container.innerHTML = `<div class="section-header"><h2>My Submitted Quotes</h2></div><p>This feature is coming soon!</p>`;
+        // In the future, you would call a function like fetchAndRenderMyQuotes() here.
     }
 }
 
+/**
+ * Displays a temporary notification alert at the top of the screen.
+ * @param {string} message - The message to display.
+ * @param {'success'|'error'|'info'} type - The type of alert.
+ */
 function showAlert(message, type = 'info') {
-    const alertsContainer = document.getElementById('alerts');
+    const alertsContainer = document.getElementById('alerts-container');
     const alertDiv = document.createElement('div');
     alertDiv.className = `alert alert-${type}`;
-    alertDiv.textContent = message;
+    alertDiv.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i> <span>${message}</span>`;
     alertsContainer.prepend(alertDiv);
-    setTimeout(() => alertDiv.remove(), 5000);
+    setTimeout(() => {
+        alertDiv.style.opacity = '0';
+        setTimeout(() => alertDiv.remove(), 500);
+    }, 5000);
 }
 
-async function apiCall(endpoint, method, body, successMessage, callback) {
-    try {
-        const options = { method, headers: {} };
-        if (body) {
-            options.headers['Content-Type'] = 'application/json';
-            options.body = JSON.stringify(body);
+
+// --- HTML TEMPLATE FUNCTIONS ---
+function getLoginTemplate() {
+    return `
+        <h2 style="text-align: center; margin-bottom: 24px;">Sign In</h2>
+        <form id="login-form" class="form-grid">
+            <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" id="loginEmail" name="loginEmail" required></div>
+            <div class="form-group"><label class="form-label">Password</label><input type="password" class="form-input" id="loginPassword" name="loginPassword" required></div>
+            <button type="submit" class="btn btn-primary">Sign In</button>
+        </form>
+        <div class="modal-switch">Don't have an account? <a onclick="renderAuthForm('register')">Sign Up</a></div>`;
+}
+
+function getRegisterTemplate() {
+    return `
+        <h2 style="text-align: center; margin-bottom: 24px;">Create an Account</h2>
+        <form id="register-form" class="form-grid">
+            <div class="form-group"><label class="form-label">Full Name</label><input type="text" class="form-input" id="regName" name="regName" required></div>
+            <div class="form-group"><label class="form-label">Username</label><input type="text" class="form-input" id="regUsername" name="regUsername" required></div>
+            <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" id="regEmail" name="regEmail" required></div>
+            <div class="form-group"><label class="form-label">Password</label><input type="password" class="form-input" id="regPassword" name="regPassword" required></div>
+            <div class="form-group">
+                <label class="form-label">I am a...</label>
+                <select class="form-select" id="regRole" name="regRole" required>
+                    <option value="">Select your role</option>
+                    <option value="contractor">Client / Contractor</option>
+                    <option value="designer">Designer / Engineer</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Create Account</button>
+        </form>
+        <div class="modal-switch">Already have an account? <a onclick="renderAuthForm('login')">Sign In</a></div>`;
+}
+
+function getPostJobTemplate() {
+    return `
+        <div class="section-header"><h2>Post a New Project</h2></div>
+        <form id="post-job-form" class="form-grid" style="max-width: 800px;">
+            <div class="form-group"><label class="form-label">Project Title</label><input type="text" class="form-input" id="jobTitle" name="jobTitle" required></div>
+            <div class="form-group"><label class="form-label">Budget Range (e.g., $500 - $1000)</label><input type="text" class="form-input" id="jobBudget" name="jobBudget" required></div>
+            <div class="form-group"><label class="form-label">Required Skills (comma-separated)</label><input type="text" class="form-input" id="jobSkills" name="jobSkills"></div>
+            <div class="form-group"><label class="form-label">Project Description</label><textarea class="form-input" style="min-height: 120px;" id="jobDescription" name="jobDescription" required></textarea></div>
+            <button type="submit" class="btn btn-primary" style="justify-self: start;">Post Project</button>
+        </form>`;
+}
+
+function toggleCard(card) {
+    const isExpanded = card.classList.contains('expanded');
+    document.querySelectorAll('.feature-card.expanded').forEach(otherCard => {
+        if (otherCard !== card) {
+            otherCard.classList.remove('expanded');
         }
-        const response = await fetch(BACKEND_URL + endpoint, options);
-        if (!response.ok) {
-            let errorData;
-            try {
-                errorData = await response.json();
-            } catch (e) {
-                throw new Error(response.statusText);
-            }
-            throw new Error(errorData.error || response.statusText);
-        }
-        const contentType = response.headers.get("content-type");
-        if (contentType && contentType.indexOf("application/json") !== -1) {
-            const data = await response.json();
-            if (successMessage) showAlert(successMessage, 'success');
-            if (callback) callback(data);
-        } else {
-            if (successMessage) showAlert(successMessage, 'success');
-            if (callback) callback();
-        }
-    } catch (error) {
-        showAlert(error.message, 'error');
-    }
+    });
+    card.classList.toggle('expanded');
 }
