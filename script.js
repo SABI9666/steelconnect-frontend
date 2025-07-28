@@ -67,7 +67,6 @@ async function apiCall(endpoint, method, body = null, successMessage = null, cal
         }
 
         if (body) {
-            // This logic correctly handles both JSON and FormData
             if (body instanceof FormData) {
                 options.body = body;
             } else {
@@ -77,12 +76,15 @@ async function apiCall(endpoint, method, body = null, successMessage = null, cal
         }
 
         const response = await fetch(BACKEND_URL + endpoint, options);
-        const data = await response.json();
-
+        // Check if the response is JSON, otherwise handle as text or blob
+        const contentType = response.headers.get("content-type");
         if (!response.ok) {
-            const errorMessage = data.error || data.message || `Request failed with status ${response.status}`;
-            throw new Error(errorMessage);
+             const errorData = contentType && contentType.includes("application/json") ? await response.json() : await response.text();
+             const errorMessage = errorData.message || errorData.error || `Request failed with status ${response.status}`;
+             throw new Error(errorMessage);
         }
+
+        const data = contentType && contentType.includes("application/json") ? await response.json() : await response.text();
 
         if (successMessage) {
             showAlert(successMessage, 'success');
@@ -104,11 +106,10 @@ async function handleRegister(event) {
     event.preventDefault();
     const form = event.target;
     const userData = {
-        fullName: form.regName.value,
-        username: form.regUsername.value,
+        name: form.regName.value,
         email: form.regEmail.value,
         password: form.regPassword.value,
-        role: form.regRole.value,
+        type: form.regRole.value,
     };
     await apiCall('/auth/register', 'POST', userData, 'Registration successful! Please sign in.', () => {
         renderAuthForm('login');
@@ -148,14 +149,17 @@ async function fetchAndRenderJobs() {
     jobsListContainer.innerHTML = '<p>Loading projects...</p>';
 
     const user = appState.currentUser;
-    const endpoint = user.role === 'designer' ? '/jobs' : `/jobs/user/${user.id}`;
+    // Use the new /jobs/user/:userId route for contractors
+    const endpoint = user.type === 'designer' 
+        ? '/jobs' 
+        : `/jobs/user/${user.id}`;
 
     await apiCall(endpoint, 'GET', null, null, (response) => {
         const jobs = response.data || [];
         appState.jobs = jobs;
 
         if (jobs.length === 0) {
-            const emptyMessage = user.role === 'designer'
+            const emptyMessage = user.type === 'designer'
                 ? `<div class="empty-state"><h3>No Projects Available</h3><p>Check back later for new opportunities.</p></div>`
                 : `<div class="empty-state"><h3>You haven't posted any projects.</h3><p>Click 'Post a Job' to get started.</p></div>`;
             jobsListContainer.innerHTML = emptyMessage;
@@ -164,7 +168,7 @@ async function fetchAndRenderJobs() {
 
         let jobsHTML = '';
         jobs.forEach(job => {
-            const actions = user.role === 'designer'
+            const actions = user.type === 'designer'
                 ? `<button class="btn btn-primary" onclick="showQuoteModal('${job.id}')">Submit Quote</button>`
                 : `<button class="btn btn-outline" onclick="viewQuotes('${job.id}')">View Quotes</button>
                    <button class="btn btn-primary" onclick="deleteJob('${job.id}')">Delete Job</button>`;
@@ -181,7 +185,7 @@ async function fetchAndRenderJobs() {
                     <p>${job.description}</p>
                     ${job.skills && job.skills.length > 0 ? `<p style="margin-top: 12px;"><strong>Skills:</strong> ${job.skills.join(', ')}</p>` : ''}
                     ${job.link ? `<p style="margin-top: 12px;"><strong>Link:</strong> <a href="${job.link}" target="_blank" rel="noopener noreferrer">${job.link}</a></p>` : ''}
-                    ${job.attachment ? `<p style="margin-top: 12px;"><strong>Attachment:</strong> <a href="${BACKEND_URL}${job.attachment}" target="_blank" rel="noopener noreferrer">View File</a></p>` : ''}
+                    ${job.attachment ? `<p style="margin-top: 12px;"><strong>Attachment:</strong> <a href="${job.attachment}" target="_blank" rel="noopener noreferrer">View File</a></p>` : ''}
                     <div class="job-actions">
                         ${actions}
                     </div>
@@ -202,6 +206,7 @@ async function handlePostJob(event) {
     formData.append('title', form.jobTitle.value);
     formData.append('description', form.jobDescription.value);
     formData.append('budget', form.jobBudget.value);
+    formData.append('deadline', form.jobDeadline.value);
     formData.append('skills', (form.jobSkills.value || "").split(',').map(s => s.trim()).filter(Boolean));
     formData.append('link', form.jobLink.value);
 
@@ -217,7 +222,7 @@ async function handlePostJob(event) {
 }
 
 async function deleteJob(jobId) {
-    if (confirm('Are you sure you want to delete this job and all its quotes?')) {
+    if (confirm('Are you sure you want to delete this job?')) {
         await apiCall(`/jobs/${jobId}`, 'DELETE', null, 'Job deleted successfully!', () => renderAppSection('jobs'));
     }
 }
@@ -258,18 +263,10 @@ function showQuoteModal(jobId) {
                 <button class="modal-close-button" onclick="closeModal()">✕</button>
                 <h3>Submit Your Quote</h3>
                 <form id="quote-form" class="form-grid">
-                    <div class="form-group">
-                        <label class="form-label">Quote Amount ($)</label>
-                        <input type="number" class="form-input" name="quoteAmount" required>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Attachments (Optional, up to 5)</label>
-                        <input type="file" class="form-input" name="attachments" multiple>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Description / Cover Letter</label>
-                        <textarea class="form-textarea" style="min-height: 120px;" name="description" required></textarea>
-                    </div>
+                    <div class="form-group"><label class="form-label">Quote Amount ($)</label><input type="number" class="form-input" name="quoteAmount" required></div>
+                    <div class="form-group"><label class="form-label">Timeline (in days)</label><input type="number" class="form-input" name="timeline" required></div>
+                    <div class="form-group"><label class="form-label">Attachments (Optional)</label><input type="file" class="form-input" name="attachments" multiple></div>
+                    <div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" style="min-height: 120px;" name="description" required></textarea></div>
                     <button type="submit" class="btn btn-primary">Submit Quote</button>
                 </form>
             </div>
@@ -284,6 +281,7 @@ async function handleQuoteSubmit(event, jobId) {
     const formData = new FormData();
     formData.append('jobId', jobId);
     formData.append('quoteAmount', form.quoteAmount.value);
+    formData.append('timeline', form.timeline.value);
     formData.append('description', form.description.value);
 
     const fileInput = form.attachments;
@@ -332,9 +330,9 @@ function showAppView() {
     document.getElementById('main-nav-menu').innerHTML = '';
 
     const user = appState.currentUser;
-    document.getElementById('userName').textContent = user.name || user.fullName;
-    document.getElementById('userType').textContent = user.type || user.role;
-    document.getElementById('userAvatar').textContent = ((user.name || user.fullName) || "A").charAt(0).toUpperCase();
+    document.getElementById('userName').textContent = user.name;
+    document.getElementById('userType').textContent = user.type;
+    document.getElementById('userAvatar').textContent = (user.name || "A").charAt(0).toUpperCase();
 
     buildSidebarNav();
     renderAppSection('jobs');
@@ -352,7 +350,7 @@ function showLandingPageView() {
 
 function buildSidebarNav() {
     const navContainer = document.getElementById('sidebar-nav-menu');
-    const role = appState.currentUser.type || appState.currentUser.role;
+    const role = appState.currentUser.type;
     let links = '';
 
     if (role === 'designer') {
@@ -379,7 +377,7 @@ function renderAppSection(sectionId) {
         link.classList.toggle('active', link.dataset.section === sectionId);
     });
 
-    const userRole = appState.currentUser.type || appState.currentUser.role;
+    const userRole = appState.currentUser.type;
 
     if (sectionId === 'jobs') {
         const title = userRole === 'designer' ? 'Available Projects' : 'My Posted Projects';
@@ -423,7 +421,6 @@ function getRegisterTemplate() {
         <h2 style="text-align: center; margin-bottom: 24px;">Create an Account</h2>
         <form id="register-form" class="form-grid">
             <div class="form-group"><label class="form-label">Full Name</label><input type="text" class="form-input" name="regName" required></div>
-            <div class="form-group"><label class="form-label">Username</label><input type="text" class="form-input" name="regUsername" required></div>
             <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" name="regEmail" required></div>
             <div class="form-group"><label class="form-label">Password</label><input type="password" class="form-input" name="regPassword" required></div>
             <div class="form-group">
@@ -443,30 +440,13 @@ function getPostJobTemplate() {
     return `
         <div class="section-header"><h2>Post a New Project</h2></div>
         <form id="post-job-form" class="form-grid" style="max-width: 800px;">
-            <div class="form-group">
-                <label class="form-label">Project Title</label>
-                <input type="text" class="form-input" name="jobTitle" required>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Budget Range (e.g., $500 - $1000)</label>
-                <input type="text" class="form-input" name="jobBudget" required>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Required Skills (comma-separated)</label>
-                <input type="text" class="form-input" name="jobSkills">
-            </div>
-            <div class="form-group">
-                <label class="form-label">Relevant Link (Optional)</label>
-                <input type="url" class="form-input" name="jobLink" placeholder="https://example.com/project-details">
-            </div>
-            <div class="form-group">
-                <label class="form-label">Attachment (PDF, DOC, PNG, JPG - Optional)</label>
-                <input type="file" class="form-input" name="attachment">
-            </div>
-            <div class="form-group">
-                <label class="form-label">Project Description</label>
-                <textarea class="form-input" style="min-height: 120px;" name="jobDescription" required></textarea>
-            </div>
+            <div class="form-group"><label class="form-label">Project Title</label><input type="text" class="form-input" name="jobTitle" required></div>
+            <div class="form-group"><label class="form-label">Budget Range</label><input type="text" class="form-input" name="jobBudget" required></div>
+            <div class="form-group"><label class="form-label">Deadline</label><input type="date" class="form-input" name="jobDeadline" required></div>
+            <div class="form-group"><label class="form-label">Skills (comma-separated)</label><input type="text" class="form-input" name="jobSkills"></div>
+            <div class="form-group"><label class="form-label">Relevant Link (Optional)</label><input type="url" class="form-input" name="jobLink"></div>
+            <div class="form-group"><label class="form-label">Attachment (Optional)</label><input type="file" class="form-input" name="attachment"></div>
+            <div class="form-group"><label class="form-label">Project Description</label><textarea class="form-input" style="min-height: 120px;" name="jobDescription" required></textarea></div>
             <button type="submit" class="btn btn-primary" style="justify-self: start;">Post Project</button>
         </form>`;
 }
