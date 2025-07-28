@@ -6,310 +6,1008 @@
     <title>SteelConnect - Professional Steel & Rebar Design Marketplace</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        /* --- General Resets & Variables --- */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         :root {
-            --primary-color: #005a9c;
-            --primary-hover: #004a80;
-            --primary-light: #e6f0f7;
+            --primary-color: #1e3a8a;
+            --primary-hover: #1e40af;
+            --primary-light: #dbeafe;
+            --secondary-color: #0ea5e9;
             --text-dark: #1f2937;
             --text-gray: #6b7280;
             --bg-white: #ffffff;
-            --bg-light: #f9fafb;
+            --bg-light: #f8fafc;
             --border-color: #e5e7eb;
             --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
             --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            --gradient-primary: linear-gradient(135deg, #1e3a8a, #0ea5e9);
+            --gradient-secondary: linear-gradient(135deg, #0f172a, #1e3a8a);
         }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: var(--bg-light); color: var(--text-dark); line-height: 1.6; }
-        .header { background: rgba(255,255,255,0.95); border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 1000; backdrop-filter: blur(10px); }
-        .header-container { max-width: 1400px; margin: 0 auto; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; height: 64px; }
-        .logo { display: flex; align-items: center; gap: 8px; font-size: 24px; font-weight: 700; color: var(--text-dark); text-decoration: none; }
-        .logo-icon { width: 32px; height: 32px; background: var(--primary-color); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; }
-        .nav-menu { display: flex; gap: 4px; }
-        .nav-link { padding: 8px 16px; border-radius: 6px; color: var(--text-gray); font-weight: 500; font-size: 14px; cursor: pointer; background: none; border: none; }
-        .auth-buttons { display: flex; gap: 12px; }
-        .btn { padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 15px; cursor: pointer; border: 1px solid transparent; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s; }
-        .btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
-        .btn-outline { background: var(--bg-white); color: var(--primary-color); border-color: var(--primary-color); }
-        .btn-outline:hover { background: var(--primary-color); color: white; }
-        .btn-primary { background: var(--primary-color); color: white; }
-        .btn-primary:hover { background: var(--primary-hover); }
-        .hero { position: relative; color: white; padding: 100px 24px; overflow: hidden; background: linear-gradient(135deg, #1e3a8a, #1e40af); }
-        .hero-content { position: relative; z-index: 2; max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 60px; }
-        .hero-text { text-align: left; }
-        .hero-text h1 { font-size: 52px; font-weight: 800; line-height: 1.1; text-shadow: 0 2px 4px rgba(0,0,0,0.3); margin-bottom: 24px; }
-        .hero-subtitle { font-size: 24px; font-weight: 600; color: #93c5fd; margin-bottom: 16px; text-shadow: 0 1px 3px rgba(0,0,0,0.3); }
-        .hero-text p { font-size: 18px; opacity: 0.9; max-width: 500px; margin-bottom: 32px; }
-        .hero-image-container { perspective: 1500px; }
-        .hero-image { width: 100%; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.2); transform: rotateY(-15deg) rotateX(5deg); transition: transform 0.5s ease; }
-        .hero-image:hover { transform: rotateY(0) rotateX(0) scale(1.05); }
-        .features-section { background: var(--bg-white); padding: 80px 24px; }
-        .features-container { max-width: 1200px; margin: 0 auto; }
-        .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 30px; }
-        .feature-card { text-align: center; padding: 30px 25px; background: var(--bg-white); border-radius: 16px; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); border: 1px solid var(--border-color); box-shadow: var(--shadow-md); cursor: pointer; position: relative; overflow: hidden; }
-        .feature-card:hover { transform: translateY(-12px) scale(1.02); box-shadow: 0 20px 40px rgba(0, 91, 156, 0.15); }
-        .feature-expanded-content { max-height: 0; overflow: hidden; transition: max-height 0.5s ease, opacity 0.5s ease; opacity: 0; }
-        .feature-card.expanded .feature-expanded-content { max-height: 600px; opacity: 1; padding-top: 20px; border-top: 1px solid var(--border-color); margin-top: 20px; }
-        .expand-indicator { position: absolute; bottom: 20px; right: 20px; width: 30px; height: 30px; background: var(--primary-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; transition: all 0.3s ease; }
-        .feature-card.expanded .expand-indicator { transform: rotate(180deg); }
-        .main-container { max-width: 1200px; margin: 0 auto; padding: 40px 24px; }
-        .content-section { display: none; background: var(--bg-white); border-radius: 12px; padding: 32px; box-shadow: var(--shadow-md); }
-        .main-layout { display: flex; }
-        .sidebar { width: 260px; background: var(--bg-white); border-right: 1px solid var(--border-color); padding: 24px; height: calc(100vh - 64px); position: sticky; top: 64px; }
-        .main-content { flex-grow: 1; padding: 40px; }
-        .sidebar-user-profile { text-align: center; margin-bottom: 30px; }
-        .sidebar-avatar { width: 80px; height: 80px; background: var(--primary-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 32px; margin: 0 auto 10px; border: 3px solid var(--primary-light); }
-        .sidebar-nav { display: flex; flex-direction: column; gap: 8px; }
-        .sidebar-nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 8px; color: var(--text-gray); font-weight: 500; font-size: 15px; cursor: pointer; text-decoration: none; transition: all 0.2s; }
-        .sidebar-nav-link:hover { background: var(--primary-light); color: var(--primary-color); }
-        .sidebar-nav-link.active { background: var(--primary-color); color: white; }
-        .sidebar-nav-link i { width: 20px; text-align: center; }
-        .logout-btn-container { margin-top: auto; padding-top: 20px; }
-        .section-header { margin-bottom: 32px; padding-bottom: 16px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
-        .section-title { font-size: 28px; font-weight: 700; color: var(--text-dark); }
-        .form-grid { display: grid; gap: 24px; }
-        .form-group { display: flex; flex-direction: column; gap: 8px; }
-        .form-label { font-weight: 500; font-size: 14px; }
-        .form-input, .form-select, .form-textarea { padding: 12px 16px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; }
-        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
-        .jobs-grid { display: grid; gap: 20px; }
-        .job-card { background: var(--bg-white); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; transition: all 0.3s; }
-        .job-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
-        .job-header h3 { font-size: 18px; font-weight: 600; }
-        .job-budget { background: var(--primary-light); color: var(--primary-color); padding: 6px 12px; border-radius: 20px; font-size: 14px; }
-        .job-description { color: var(--text-gray); margin-bottom: 16px; }
-        .job-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-color); }
-        .back-to-home { text-align: center; margin-top: 24px; }
-        .back-to-home a { color: var(--primary-color); font-weight: 500; text-decoration: none; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-light);
+            color: var(--text-dark);
+            line-height: 1.6;
+        }
+
+        /* --- Header & Navigation --- */
+        .header {
+            background: rgba(255,255,255,0.95);
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+        }
+
+        .header-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 64px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-dark);
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: var(--gradient-primary);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+        }
+
+        .nav-menu {
+            display: flex;
+            gap: 4px;
+        }
+
+        .nav-link {
+            padding: 8px 16px;
+            border-radius: 6px;
+            color: var(--text-gray);
+            font-weight: 500;
+            font-size: 14px;
+            cursor: pointer;
+            background: none;
+            border: none;
+            transition: all 0.2s;
+        }
+
+        .nav-link:hover {
+            background: var(--primary-light);
+            color: var(--primary-color);
+        }
+
+        .auth-buttons {
+            display: flex;
+            gap: 12px;
+        }
+
+        /* --- Buttons --- */
+        .btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 14px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .btn-outline {
+            background: var(--bg-white);
+            color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .btn-outline:hover {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary {
+            background: var(--gradient-primary);
+            color: white;
+            border: none;
+        }
+        
+        .btn-primary:hover {
+            background: var(--gradient-secondary);
+            box-shadow: var(--shadow-md);
+        }
+
+        /* --- Landing Page: Hero Section --- */
+        .hero {
+            position: relative;
+            color: white;
+            padding: 140px 0;
+            text-align: center;
+            overflow: hidden;
+            background: var(--gradient-secondary);
+        }
+
+        .hero-background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 1;
+            opacity: 0.15;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background:
+                radial-gradient(circle at 30% 20%, rgba(14, 165, 233, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 70% 80%, rgba(30, 58, 138, 0.4) 0%, transparent 50%),
+                var(--gradient-secondary);
+            z-index: 2;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 3;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        .hero-content h1 {
+            font-size: 56px;
+            font-weight: 800;
+            margin-bottom: 24px;
+            line-height: 1.1;
+            text-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            background: linear-gradient(135deg, #ffffff, #e0f2fe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        /* --- App Layout --- */
+        .main-layout {
+            display: flex;
+            min-height: calc(100vh - 64px);
+        }
+
+        .sidebar {
+            width: 260px;
+            background: var(--bg-white);
+            border-right: 1px solid var(--border-color);
+            padding: 24px;
+            height: calc(100vh - 64px);
+            position: sticky;
+            top: 64px;
+        }
+
+        .main-content {
+            flex-grow: 1;
+            padding: 40px;
+            background: var(--bg-light);
+        }
+
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .content-section {
+            display: none;
+            background: var(--bg-white);
+            border-radius: 12px;
+            padding: 32px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow-md);
+        }
+        
+        .content-section.active {
+            display: block;
+        }
+
+        .sidebar-user-profile {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: var(--bg-light);
+            border-radius: 12px;
+        }
+
+        .sidebar-avatar {
+            width: 80px;
+            height: 80px;
+            background: var(--gradient-primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 32px;
+            margin: 0 auto 10px;
+            border: 3px solid var(--primary-light);
+        }
+
+        .sidebar-user-profile h3 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .sidebar-user-profile p {
+            color: var(--text-gray);
+            font-size: 14px;
+            text-transform: capitalize;
+        }
+
+        .sidebar-nav {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex-grow: 1;
+        }
+
+        .sidebar-nav-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            color: var(--text-gray);
+            font-weight: 500;
+            font-size: 15px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .sidebar-nav-link:hover {
+            background: var(--primary-light);
+            color: var(--primary-color);
+        }
+
+        .sidebar-nav-link.active {
+            background: var(--gradient-primary);
+            color: white;
+            box-shadow: var(--shadow-md);
+        }
+
+        .sidebar-nav-link i {
+            width: 20px;
+            text-align: center;
+        }
+
+        .logout-btn-container {
+            margin-top: auto;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        /* --- Forms & Cards --- */
+        .section-header {
+            margin-bottom: 32px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .section-header h2 {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+        
+        .form-grid {
+            display: grid;
+            gap: 24px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-label {
+            font-weight: 500;
+            font-size: 14px;
+            color: var(--text-dark);
+        }
+        
+        .form-input, .form-select, .form-textarea {
+            padding: 12px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+            width: 100%;
+        }
+
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
+        }
+
+        .form-textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+        
+        .jobs-grid, .quotes-grid {
+            display: grid;
+            gap: 24px;
+        }
+
+        .job-card {
+            background: var(--bg-white);
+            border: 1px solid var(--border-color);
+            border-left: 5px solid var(--secondary-color);
+            border-radius: 12px;
+            padding: 24px;
+            transition: all 0.3s;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .job-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+            border-left-color: var(--primary-color);
+        }
+        
+        .job-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+            gap: 16px;
+        }
+
+        .job-header h3 {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text-dark);
+            line-height: 1.3;
+        }
+
+        .job-budget {
+            background: var(--primary-light);
+            color: var(--primary-color);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .job-description {
+            color: var(--text-gray);
+            margin-bottom: 20px;
+            flex-grow: 1;
+        }
+
+        .job-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+            font-size: 14px;
+            color: var(--text-gray);
+            margin-bottom: 20px;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .meta-item i {
+            color: var(--primary-color);
+        }
+
+        .job-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-color);
+        }
+        
+        /* --- Alerts & Modals --- */
+        #alerts-container {
+            position: fixed;
+            top: 80px;
+            right: 24px;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .alert {
+            padding: 16px 20px;
+            border-radius: 8px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 300px;
+            box-shadow: var(--shadow-lg);
+            opacity: 0;
+            transform: translateX(100%);
+            animation: slideIn 0.5s forwards;
+        }
+        
+        @keyframes slideIn {
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        .alert-success { background: #d1fae5; color: #065f46; border-left: 5px solid #10b981; }
+        .alert-error { background: #fee2e2; color: #991b1b; border-left: 5px solid #ef4444; }
+        .alert-info { background: #dbeafe; color: #1e40af; border-left: 5px solid #3b82f6; }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 32px;
+            color: var(--text-gray);
+            background: var(--bg-light);
+            border-radius: 12px;
+            border: 2px dashed var(--border-color);
+        }
+        
+        /* --- Responsive Design --- */
         @media (max-width: 992px) {
-            .hero-content { grid-template-columns: 1fr; text-align: center; }
-            .hero-text { text-align: center; }
-            .hero-text p { margin-left: auto; margin-right: auto; }
-        }
-        @media (max-width: 768px) {
-            .hero-image-container { display: none; }
+            .sidebar { display: none; }
             .form-row { grid-template-columns: 1fr; }
         }
+        
+        @media (max-width: 768px) {
+            .nav-menu { display: none; }
+            .hero-content h1 { font-size: 40px; }
+            .main-content { padding: 24px; }
+        }
+
     </style>
 </head>
 <body>
     <header class="header">
         <div class="header-container">
-            <a href="#" class="logo" onclick="showSection('landing'); return false;">
+            <a class="logo" onclick="goToHome()">
                 <div class="logo-icon">SC</div>
                 SteelConnect
             </a>
-            <nav id="main-nav-menu" class="nav-menu"></nav>
-            <div id="auth-buttons-container" class="auth-buttons"></div>
+            <nav id="main-nav-menu" class="nav-menu">
+                <button class="nav-link">Features</button>
+                <button class="nav-link">Projects</button>
+                <button class="nav-link">About</button>
+            </nav>
+            <div id="auth-buttons-container" class="auth-buttons">
+                <button class="btn btn-outline" onclick="showSection('login')">Sign In</button>
+                <button class="btn btn-primary" onclick="showSection('register')">Join Now</button>
+            </div>
         </div>
     </header>
 
-    <div id="public-view">
-        <div id="landing-page-content">
-            <section class="hero" id="hero-section">
-                <div class="hero-content">
-                    <div class="hero-text">
-                        <div class="hero-subtitle">Attractive & Professional</div>
-                        <h1>Connecting Clients to Steel & Construction Professionals Who Deliver</h1>
-                        <p>Find top steel designers and contractors for your projects. Post jobs, submit quotes, and build your network with verified professionals worldwide.</p>
-                        <button class="btn btn-primary" style="padding: 16px 32px; font-size: 16px;" onclick="showSection('register')">
-                            Get Started Today <i class="fas fa-arrow-right"></i>
-                        </button>
-                    </div>
-                    <div class="hero-image-container">
-                        <img src="https://images.unsplash.com/photo-1556952549-7c4ac4433842?q=80&w=2874&auto=format&fit=crop" alt="3D model of a steel structure" class="hero-image">
-                    </div>
+    <div id="alerts-container"></div>
+
+    <div id="landing-page-content">
+        <section class="hero" id="hero-section">
+            <div class="hero-content">
+                <h1>Connecting Clients to Steel & Construction Professionals Who Deliver</h1>
+            </div>
+        </section>
+        <main class="main-content">
+            <div id="main-container" class="main-container">
                 </div>
-            </section>
-        </div>
-        <div id="auth-forms-content" class="main-container" style="display: none;">
-            <section id="login-section" class="content-section">
-                <div class="section-header"><h2 class="section-title">Sign In to SteelConnect</h2></div>
-                <form id="login-form" class="form-grid" style="max-width: 450px; margin: 40px auto;">
-                    <div class="form-group"><label class="form-label">Email Address</label><input type="email" class="form-input" id="loginEmail" required></div>
-                    <div class="form-group"><label class="form-label">Password</label><input type="password" class="form-input" id="loginPassword" required></div>
-                    <button type="submit" class="btn btn-primary">Sign In</button>
-                </form>
-                <div class="back-to-home"><a href="#" onclick="showSection('landing'); return false;">&larr; Back to Home</a></div>
-            </section>
-            <section id="register-section" class="content-section">
-                <div class="section-header"><h2 class="section-title">Join the SteelConnect Network</h2></div>
-                <form id="register-form" class="form-grid" style="max-width: 650px; margin: 40px auto;">
-                    <div class="form-row"><div class="form-group"><label class="form-label">Full Name</label><input type="text" class="form-input" id="regName" required></div><div class="form-group"><label class="form-label">Username</label><input type="text" class="form-input" id="regUsername" required></div></div>
-                    <div class="form-row"><div class="form-group"><label class="form-label">Email Address</label><input type="email" class="form-input" id="regEmail" required></div><div class="form-group"><label class="form-label">Password</label><input type="password" class="form-input" id="regPassword" required></div></div>
-                    <div class="form-group"><label class="form-label">Professional Role</label><select class="form-select" id="regRole" required><option value="">Select your professional role</option><option value="contractor">Client / Contractor</option><option value="designer">Designer / Engineer</option></select></div>
-                    <button type="submit" class="btn btn-primary"><i class="fas fa-user-plus"></i> Create Professional Account</button>
-                </form>
-                <div class="back-to-home"><a href="#" onclick="showSection('landing'); return false;">&larr; Back to Home</a></div>
-            </section>
-        </div>
+        </main>
     </div>
 
-    <div id="app-view" class="main-layout" style="display: none;">
-        <aside class="sidebar">
-            <div class="sidebar-user-profile">
-                <div class="sidebar-avatar" id="sidebar-avatar">U</div>
-                <h3 id="sidebar-username">User</h3>
-                <p id="sidebar-user-type">Client</p>
-            </div>
-            <nav class="sidebar-nav" id="sidebar-nav-menu"></nav>
-            <div class="logout-btn-container">
-                <button class="btn btn-outline" style="width: 100%;" onclick="logout()">
-                    <i class="fas fa-sign-out-alt"></i>
-                    Logout
-                </button>
+    <div id="app-layout" class="main-layout" style="display: none;">
+        <aside class="sidebar" id="app-sidebar">
+            <div style="display: flex; flex-direction: column; height: 100%;">
+                <div class="sidebar-user-profile">
+                    <div class="sidebar-avatar" id="userAvatar"></div>
+                    <h3 id="userName"></h3>
+                    <p id="userType"></p>
+                </div>
+                <nav class="sidebar-nav" id="sidebar-nav-menu"></nav>
+                <div class="logout-btn-container">
+                    <a href="#" id="logout-button" class="sidebar-nav-link">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>Logout</span>
+                    </a>
+                </div>
             </div>
         </aside>
         <main class="main-content">
-            <section id="jobs-section" class="content-section">
-                <div class="section-header">
-                    <h2 id="jobs-title">Available Jobs</h2>
-                    <button class="btn btn-primary" onclick="showSection('post-job')">
-                        <i class="fas fa-plus"></i>
-                        Post New Job
-                    </button>
-                </div>
-                <div id="jobs-list" class="jobs-grid"></div>
-            </section>
-            <section id="post-job-section" class="content-section">
-                <div class="section-header"><h2>Post New Job</h2></div>
-                <form id="post-job-form" class="form-grid">
-                    <div class="form-group"><label class="form-label">Project Title</label><input type="text" class="form-input" id="postJobTitle" required></div>
-                    <div class="form-group"><label class="form-label">Budget</label><input type="text" class="form-input" id="postJobBudget" placeholder="$5,000 - $10,000" required></div>
-                    <div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="postJobDescription" required></textarea></div>
-                    <div class="form-row">
-                        <button type="button" class="btn btn-outline" onclick="showSection('jobs')">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Post Job</button>
-                    </div>
-                </form>
-            </section>
-            </main>
+            <div id="app-main-container" class="main-container">
+                 </div>
+        </main>
     </div>
 
     <script>
+        document.addEventListener('DOMContentLoaded', initializeApp);
+
+        const BACKEND_URL = 'https://steelconnect-backend.onrender.com';
         const appState = {
             currentUser: null,
-            jobs: [
-                { id: 1, title: 'Structural Design for Retail Center', budget: '$15,000', description: 'Seeking a certified engineer for a two-story retail building.' },
-                { id: 2, title: 'Rebar Detailing for Parking Garage', budget: '$8,000', description: 'Need detailed rebar shop drawings for a 3-level underground parking structure.' }
-            ]
+            jwtToken: null,
+            activeSection: 'jobs'
         };
-
+        
+        // --- CORE APP INITIALIZATION ---
         function initializeApp() {
-            document.getElementById('login-form').addEventListener('submit', handleLogin);
-            document.getElementById('register-form').addEventListener('submit', handleRegister);
-            document.getElementById('post-job-form').addEventListener('submit', handlePostJob);
+            // Attach permanent event listeners
+            document.getElementById('logout-button').addEventListener('click', (e) => {
+                e.preventDefault();
+                logout();
+            });
             
+            // Check for existing session
+            const token = localStorage.getItem('jwtToken');
             const user = localStorage.getItem('currentUser');
-            if (user) {
-                appState.currentUser = JSON.parse(user);
-                updateUIForLoggedInUser();
+            
+            if (token && user) {
+                try {
+                    appState.jwtToken = token;
+                    appState.currentUser = JSON.parse(user);
+                    updateUIForLoggedInUser();
+                } catch (error) {
+                    logout(); // Clear invalid data
+                }
             } else {
                 updateUIForLoggedOutUser();
             }
         }
 
-        function handleLogin(event) {
-            event.preventDefault();
-            const email = document.getElementById('loginEmail').value;
-            appState.currentUser = { name: email.split('@')[0], role: 'contractor' };
-            localStorage.setItem('currentUser', JSON.stringify(appState.currentUser));
-            updateUIForLoggedInUser();
-        }
-
-        function handleRegister(event) {
-            event.preventDefault();
-            const name = document.getElementById('regName').value;
-            const role = document.getElementById('regRole').value;
-            appState.currentUser = { name: name, role: role };
-            localStorage.setItem('currentUser', JSON.stringify(appState.currentUser));
-            updateUIForLoggedInUser();
-        }
-
-        function handlePostJob(event) {
-            event.preventDefault();
-            const newJob = {
-                id: Date.now(),
-                title: document.getElementById('postJobTitle').value,
-                budget: document.getElementById('postJobBudget').value,
-                description: document.getElementById('postJobDescription').value
-            };
-            appState.jobs.unshift(newJob);
-            showSection('jobs');
-        }
-
-        function logout() {
-            appState.currentUser = null;
-            localStorage.removeItem('currentUser');
-            updateUIForLoggedOutUser();
-        }
-
+        // --- UI MANAGEMENT ---
         function updateUIForLoggedInUser() {
-            document.getElementById('public-view').style.display = 'none';
-            document.getElementById('app-view').style.display = 'flex';
-            document.getElementById('auth-buttons-container').style.display = 'none';
-            document.getElementById('main-nav-menu').style.display = 'none';
-
+            document.getElementById('landing-page-content').style.display = 'none';
+            document.getElementById('app-layout').style.display = 'flex';
+            
             const user = appState.currentUser;
-            document.getElementById('sidebar-username').textContent = user.name;
-            document.getElementById('sidebar-user-type').textContent = user.role.charAt(0).toUpperCase() + user.role.slice(1);
-            document.getElementById('sidebar-avatar').textContent = user.name.charAt(0).toUpperCase();
+            document.getElementById('userName').textContent = user.fullName;
+            document.getElementById('userType').textContent = user.role;
+            document.getElementById('userAvatar').textContent = user.fullName.charAt(0).toUpperCase();
 
-            const sidebarNav = document.getElementById('sidebar-nav-menu');
-            sidebarNav.innerHTML = `
-                <a href="#" class="sidebar-nav-link active" onclick="showSection('jobs')"><i class="fas fa-briefcase"></i> My Projects</a>
-                ${user.role === 'contractor' ? `<a href="#" class="sidebar-nav-link" onclick="showSection('post-job')"><i class="fas fa-plus"></i> Post Job</a>` : ''}
-            `;
-            showSection('jobs');
+            buildSidebarNav();
+            showSection(appState.activeSection);
         }
 
         function updateUIForLoggedOutUser() {
-            document.getElementById('public-view').style.display = 'block';
-            document.getElementById('app-view').style.display = 'none';
-            document.getElementById('auth-buttons-container').style.display = 'flex';
-            document.getElementById('main-nav-menu').style.display = 'flex';
-            document.getElementById('auth-buttons-container').innerHTML = `<button class="btn btn-outline" onclick="showSection('login')">Sign In</button><button class="btn btn-primary" onclick="showSection('register')">Join Now</button>`;
-            document.getElementById('main-nav-menu').innerHTML = `<button class="nav-link" onclick="showSection('login')">My Job</button>`;
-            showSection('landing');
+            document.getElementById('landing-page-content').style.display = 'block';
+            document.getElementById('app-layout').style.display = 'none';
+            showSection('login');
         }
 
         function showSection(sectionId) {
-            document.getElementById('landing-page-content').style.display = 'none';
-            document.getElementById('auth-forms-content').style.display = 'none';
-            document.querySelectorAll('#app-view .content-section').forEach(s => s.style.display = 'none');
+            appState.activeSection = sectionId;
+            const container = appState.currentUser ? document.getElementById('app-main-container') : document.getElementById('main-container');
+            
+            // Clear previous content
+            container.innerHTML = '';
+            
+            // Deactivate all sidebar links
+            document.querySelectorAll('.sidebar-nav-link').forEach(link => link.classList.remove('active'));
 
-            if (sectionId === 'landing') {
-                document.getElementById('landing-page-content').style.display = 'block';
-            } else if (sectionId === 'login' || sectionId === 'register') {
-                document.getElementById('auth-forms-content').style.display = 'block';
-                document.getElementById(`${sectionId}-section`).style.display = 'block';
-            } else {
-                document.getElementById('app-view').style.display = 'flex';
-                document.getElementById(`${sectionId}-section`).style.display = 'block';
-                if (sectionId === 'jobs') renderJobs();
+            // Activate current sidebar link
+            const activeLink = document.querySelector(`.sidebar-nav-link[onclick*="'${sectionId}'"]`);
+            if (activeLink) activeLink.classList.add('active');
+
+            // Inject the correct HTML template
+            let sectionHtml = '';
+            switch (sectionId) {
+                case 'login':
+                    sectionHtml = getLoginTemplate();
+                    break;
+                case 'register':
+                    sectionHtml = getRegisterTemplate();
+                    break;
+                case 'jobs':
+                    sectionHtml = getJobsTemplate();
+                    fetchJobs();
+                    break;
+                case 'post-job':
+                    sectionHtml = getPostJobTemplate();
+                    break;
+                case 'quotes':
+                    sectionHtml = getQuotesTemplate();
+                    fetchMyQuotes();
+                    break;
+            }
+            container.innerHTML = sectionHtml;
+
+            // Re-attach event listeners for the new content
+            attachEventListeners(sectionId);
+        }
+
+        function attachEventListeners(sectionId) {
+            switch (sectionId) {
+                case 'login':
+                    document.getElementById('login-form').addEventListener('submit', handleLogin);
+                    break;
+                case 'register':
+                    document.getElementById('register-form').addEventListener('submit', handleRegister);
+                    break;
+                case 'post-job':
+                     document.getElementById('post-job-form').addEventListener('submit', handlePostJob);
+                    break;
             }
         }
         
-        function renderJobs() {
-            const jobsList = document.getElementById('jobs-list');
-            if (appState.jobs.length === 0) {
-                jobsList.innerHTML = `<p>No jobs posted yet.</p>`;
+        function goToHome() {
+            if (appState.currentUser) {
+                showSection('jobs');
+            } else {
+                showSection('login');
+            }
+        }
+        
+        function buildSidebarNav() {
+            const navContainer = document.getElementById('sidebar-nav-menu');
+            const role = appState.currentUser.role;
+            let navLinks = '';
+
+            if (role === 'designer') {
+                navLinks = `
+                    <a href="#" class="sidebar-nav-link" onclick="showSection('jobs')"><i class="fas fa-briefcase"></i> <span>Find Jobs</span></a>
+                    <a href="#" class="sidebar-nav-link" onclick="showSection('quotes')"><i class="fas fa-file-invoice-dollar"></i> <span>My Quotes</span></a>
+                `;
+            } else { // contractor
+                navLinks = `
+                    <a href="#" class="sidebar-nav-link" onclick="showSection('jobs')"><i class="fas fa-tasks"></i> <span>My Projects</span></a>
+                    <a href="#" class="sidebar-nav-link" onclick="showSection('post-job')"><i class="fas fa-plus-circle"></i> <span>Post a Job</span></a>
+                `;
+            }
+            navContainer.innerHTML = navLinks;
+        }
+
+
+        // --- API & DATA HANDLING ---
+        async function apiCall(endpoint, method, body = null) {
+            const url = `${BACKEND_URL}${endpoint}`;
+            const options = {
+                method,
+                headers: { 'Content-Type': 'application/json' }
+            };
+
+            if (appState.jwtToken) {
+                options.headers['Authorization'] = `Bearer ${appState.jwtToken}`;
+            }
+
+            if (body) {
+                options.body = JSON.stringify(body);
+            }
+
+            try {
+                const response = await fetch(url, options);
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'An unknown error occurred.');
+                }
+                return data;
+            } catch (error) {
+                showAlert(error.message, 'error');
+                throw error;
+            }
+        }
+        
+        async function handleRegister(event) {
+            event.preventDefault();
+            const form = event.target;
+            const userData = {
+                fullName: form.regName.value,
+                username: form.regUsername.value,
+                email: form.regEmail.value,
+                password: form.regPassword.value,
+                role: form.regRole.value
+            };
+            try {
+                await apiCall('/auth/register', 'POST', userData);
+                showAlert('Registration successful! Please sign in.', 'success');
+                showSection('login');
+            } catch (error) {
+                // Error is already shown by apiCall
+            }
+        }
+
+        async function handleLogin(event) {
+            event.preventDefault();
+            const form = event.target;
+            const credentials = {
+                email: form.loginEmail.value,
+                password: form.loginPassword.value
+            };
+            try {
+                const data = await apiCall('/auth/login', 'POST', credentials);
+                appState.currentUser = data.user;
+                appState.jwtToken = data.token;
+                localStorage.setItem('currentUser', JSON.stringify(data.user));
+                localStorage.setItem('jwtToken', data.token);
+                showAlert('Login successful!', 'success');
+                updateUIForLoggedInUser();
+            } catch (error) {
+                // Error is already shown by apiCall
+            }
+        }
+        
+        function logout() {
+            appState.currentUser = null;
+            appState.jwtToken = null;
+            localStorage.removeItem('currentUser');
+            localStorage.removeItem('jwtToken');
+            updateUIForLoggedOutUser();
+        }
+
+        async function fetchJobs() {
+            try {
+                const jobs = await apiCall('/jobs', 'GET');
+                renderJobs(jobs);
+            } catch (error) {
+                document.getElementById('jobs-list').innerHTML = `<p>Could not load jobs.</p>`;
+            }
+        }
+        
+        async function handlePostJob(event) {
+            event.preventDefault();
+            const form = event.target;
+            const jobData = {
+                title: form.jobTitle.value,
+                description: form.jobDescription.value,
+                budget: form.jobBudget.value,
+                skills: form.jobSkills.value.split(',').map(s => s.trim()),
+                deadline: form.jobDeadline.value,
+            };
+            try {
+                await apiCall('/jobs', 'POST', jobData);
+                showAlert('Job posted successfully!', 'success');
+                showSection('jobs');
+            } catch(error) {
+                // Error handled in apiCall
+            }
+        }
+
+        async function fetchMyQuotes() {
+            const listEl = document.getElementById('quotes-list');
+            listEl.innerHTML = `<div class="empty-state"><h3>Feature Coming Soon</h3><p>The ability to view and manage your quotes is under development.</p></div>`;
+        }
+
+        // --- RENDERING ---
+        function renderJobs(jobs) {
+            const listEl = document.getElementById('jobs-list');
+            if (!jobs || jobs.length === 0) {
+                listEl.innerHTML = `<div class="empty-state"><h3>No jobs found.</h3><p>There are currently no open projects. Check back later or post a new job.</p></div>`;
                 return;
             }
-            jobsList.innerHTML = appState.jobs.map(job => `
+            
+            listEl.innerHTML = jobs.map(job => `
                 <div class="job-card">
                     <div class="job-header">
                         <h3>${job.title}</h3>
                         <div class="job-budget">${job.budget}</div>
                     </div>
                     <p class="job-description">${job.description}</p>
-                    <div class="job-actions">
-                        <button class="btn btn-outline">View Quotes</button>
+                    <div class="job-meta">
+                        <div class="meta-item"><i class="fas fa-cogs"></i> <span>${job.skills.join(', ')}</span></div>
+                        <div class="meta-item"><i class="fas fa-calendar-alt"></i> <span>Deadline: ${new Date(job.deadline).toLocaleDateString()}</span></div>
                     </div>
+                    ${appState.currentUser.role === 'designer' ? 
+                    `<div class="job-actions">
+                        <button class="btn btn-primary"><i class="fas fa-file-alt"></i> Submit Quote</button>
+                    </div>` : ''
+                    }
                 </div>
             `).join('');
         }
+        
+        function showAlert(message, type = 'info') {
+            const container = document.getElementById('alerts-container');
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i> <span>${message}</span>`;
+            
+            container.appendChild(alertDiv);
+            
+            setTimeout(() => {
+                alertDiv.style.animation = 'slideOut 0.5s forwards';
+                setTimeout(() => alertDiv.remove(), 500);
+            }, 4000);
+        }
+        
+        // --- HTML TEMPLATES ---
+        function getLoginTemplate() {
+            return `
+            <section id="login-section" class="content-section active">
+                <div class="section-header" style="text-align: center;">
+                    <h2>Sign In to SteelConnect</h2>
+                    <p style="color: var(--text-gray);">Welcome back! Please sign in to your account.</p>
+                </div>
+                <form id="login-form" class="form-grid" style="max-width: 450px; margin: 40px auto 0;">
+                    <div class="form-group">
+                        <label class="form-label">Email Address</label>
+                        <input type="email" class="form-input" id="loginEmail" required placeholder="Enter your email">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Password</label>
+                        <input type="password" class="form-input" id="loginPassword" required placeholder="Enter your password">
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px;">Sign In</button>
+                    <div style="text-align: center; margin-top: 16px;">
+                        <span style="color: var(--text-gray);">Don't have an account? </span>
+                        <a href="#" onclick="showSection('register')" style="color: var(--primary-color); text-decoration: none; font-weight: 500;">Sign up here</a>
+                    </div>
+                </form>
+            </section>
+            `;
+        }
 
-        document.addEventListener('DOMContentLoaded', initializeApp);
+        function getRegisterTemplate() {
+            return `
+            <section id="register-section" class="content-section active">
+                <div class="section-header" style="text-align: center;">
+                    <h2>Join the SteelConnect Network</h2>
+                    <p style="color: var(--text-gray);">Create your professional account and start connecting.</p>
+                </div>
+                <form id="register-form" class="form-grid" style="max-width: 650px; margin: 40px auto 0;">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Full Name</label>
+                            <input type="text" class="form-input" id="regName" required placeholder="Enter your full name">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Username</label>
+                            <input type="text" class="form-input" id="regUsername" required placeholder="Choose a username">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Email Address</label>
+                            <input type="email" class="form-input" id="regEmail" required placeholder="Enter your email">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Password</label>
+                            <input type="password" class="form-input" id="regPassword" required placeholder="Create a password">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Professional Role</label>
+                        <select class="form-select" id="regRole" required>
+                            <option value="">Select your professional role</option>
+                            <option value="contractor">Client / Contractor (I post jobs)</option>
+                            <option value="designer">Designer / Engineer (I bid on jobs)</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px;">Create Account</button>
+                    <div style="text-align: center; margin-top: 16px;">
+                        <span style="color: var(--text-gray);">Already have an account? </span>
+                        <a href="#" onclick="showSection('login')" style="color: var(--primary-color); text-decoration: none; font-weight: 500;">Sign in here</a>
+                    </div>
+                </form>
+            </section>
+            `;
+        }
+        
+        function getJobsTemplate() {
+            const title = appState.currentUser.role === 'designer' ? 'Find a New Project' : 'My Posted Projects';
+            return `
+            <section id="jobs-section" class="content-section active">
+                <div class="section-header">
+                    <h2>${title}</h2>
+                </div>
+                <div id="jobs-list" class="jobs-grid">
+                    </div>
+            </section>
+            `;
+        }
+
+        function getPostJobTemplate() {
+            return `
+            <section id="post-job-section" class="content-section active">
+                <div class="section-header">
+                    <h2>Post a New Steel Project</h2>
+                </div>
+                <form id="post-job-form" class="form-grid">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Project Title</label>
+                            <input type="text" class="form-input" id="jobTitle" required placeholder="e.g., Structural Steel Design for a 5-Story Building">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Budget Range</label>
+                            <input type="text" class="form-input" id="jobBudget" required placeholder="$5,000 - $10,000">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Skills Required (comma-separated)</label>
+                            <input type="text" class="form-input" id="jobSkills" placeholder="AISC, Tekla Structures, AutoCAD">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Project Deadline</label>
+                            <input type="date" class="form-input" id="jobDeadline" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Project Description</label>
+                        <textarea class="form-textarea" id="jobDescription" required placeholder="Describe the project scope, deliverables, steel specifications, and any specific requirements..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="justify-self: start; padding: 12px 24px;">Post Project</button>
+                </form>
+            </section>
+            `;
+        }
+        
+        function getQuotesTemplate() {
+             return `
+            <section id="quotes-section" class="content-section active">
+                <div class="section-header">
+                    <h2>My Submitted Quotes</h2>
+                </div>
+                <div id="quotes-list" class="quotes-grid">
+                    </div>
+            </section>
+            `;
+        }
+
     </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
