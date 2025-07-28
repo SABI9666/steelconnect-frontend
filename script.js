@@ -25,7 +25,7 @@ function initializeApp() {
     document.querySelector('.logo').addEventListener('click', (e) => {
         e.preventDefault();
         if (appState.currentUser) {
-            renderAppSection('jobs'); // Go to default app view
+            renderAppSection('jobs');
         } else {
             showLandingPageView();
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -67,6 +67,7 @@ async function apiCall(endpoint, method, body = null, successMessage = null, cal
         }
 
         if (body) {
+            // This logic correctly handles both JSON and FormData
             if (body instanceof FormData) {
                 options.body = body;
             } else {
@@ -76,17 +77,10 @@ async function apiCall(endpoint, method, body = null, successMessage = null, cal
         }
 
         const response = await fetch(BACKEND_URL + endpoint, options);
-        const contentType = response.headers.get("content-type");
-        let data;
-
-        if (contentType && contentType.includes("application/json")) {
-            data = await response.json();
-        } else {
-            data = await response.text();
-        }
+        const data = await response.json();
 
         if (!response.ok) {
-            const errorMessage = (data && (data.error || data.message)) ? (data.error || data.message) : `Request failed with status ${response.status}`;
+            const errorMessage = data.error || data.message || `Request failed with status ${response.status}`;
             throw new Error(errorMessage);
         }
 
@@ -151,18 +145,16 @@ async function fetchAndRenderJobs() {
     const jobsListContainer = document.getElementById('jobs-list');
     if (!jobsListContainer) return;
 
-    jobsListContainer.innerHTML = '<p>Loading projects...</p>'; // Show a loading state
+    jobsListContainer.innerHTML = '<p>Loading projects...</p>';
 
     const user = appState.currentUser;
-    // Determine the correct API endpoint based on the user's role
-    const endpoint = user.role === 'designer' 
-        ? '/jobs' // Designers see all jobs
-        : `/jobs/user/${user.id}`; // Contractors see only their own jobs
+    const endpoint = user.role === 'designer' ? '/jobs' : `/jobs/user/${user.id}`;
 
-    await apiCall(endpoint, 'GET', null, null, (jobs) => {
-        appState.jobs = jobs; // Update the global state
+    await apiCall(endpoint, 'GET', null, null, (response) => {
+        const jobs = response.data || [];
+        appState.jobs = jobs;
 
-        if (!jobs || jobs.length === 0) {
+        if (jobs.length === 0) {
             const emptyMessage = user.role === 'designer'
                 ? `<div class="empty-state"><h3>No Projects Available</h3><p>Check back later for new opportunities.</p></div>`
                 : `<div class="empty-state"><h3>You haven't posted any projects.</h3><p>Click 'Post a Job' to get started.</p></div>`;
@@ -172,26 +164,24 @@ async function fetchAndRenderJobs() {
 
         let jobsHTML = '';
         jobs.forEach(job => {
-            // Determine which action buttons to show based on the user's role
             const actions = user.role === 'designer'
-                ? `<button class="btn btn-primary" onclick="showQuoteModal(${job.id})">Submit Quote</button>`
-                : `<button class="btn btn-outline" onclick="viewQuotes(${job.id})">View Quotes</button>
-                   <button class="btn btn-danger" onclick="deleteJob(${job.id})">Delete</button>`;
+                ? `<button class="btn btn-primary" onclick="showQuoteModal('${job.id}')">Submit Quote</button>`
+                : `<button class="btn btn-outline" onclick="viewQuotes('${job.id}')">View Quotes</button>
+                   <button class="btn btn-primary" onclick="deleteJob('${job.id}')">Delete Job</button>`;
             
             jobsHTML += `
                 <div class="job-card">
                     <div class="job-header">
                         <div>
                             <h3>${job.title}</h3>
-                            <p style="color: var(--text-gray); font-size: 14px;">Posted by: ${job.userFullName}</p>
+                            <p style="color: var(--text-gray); font-size: 14px;">Posted by: ${job.posterName || 'N/A'}</p>
                         </div>
                         <div class="job-budget">${job.budget}</div>
                     </div>
                     <p>${job.description}</p>
-                    ${job.skills && job.skills.length > 0 
-                        ? `<p style="margin-top: 12px;"><strong>Skills:</strong> ${job.skills.join(', ')}</p>` 
-                        : ''
-                    }
+                    ${job.skills && job.skills.length > 0 ? `<p style="margin-top: 12px;"><strong>Skills:</strong> ${job.skills.join(', ')}</p>` : ''}
+                    ${job.link ? `<p style="margin-top: 12px;"><strong>Link:</strong> <a href="${job.link}" target="_blank" rel="noopener noreferrer">${job.link}</a></p>` : ''}
+                    ${job.attachment ? `<p style="margin-top: 12px;"><strong>Attachment:</strong> <a href="${BACKEND_URL}${job.attachment}" target="_blank" rel="noopener noreferrer">View File</a></p>` : ''}
                     <div class="job-actions">
                         ${actions}
                     </div>
@@ -207,15 +197,20 @@ async function fetchAndRenderJobs() {
 async function handlePostJob(event) {
     event.preventDefault();
     const form = event.target;
-    const jobData = {
-        title: form.jobTitle.value,
-        description: form.jobDescription.value,
-        budget: form.jobBudget.value,
-        skills: (form.jobSkills.value || "").split(',').map(s => s.trim()).filter(Boolean),
-        userId: appState.currentUser.id,
-        userFullName: appState.currentUser.fullName,
-    };
-    await apiCall('/jobs', 'POST', jobData, 'Job posted successfully!', () => {
+
+    const formData = new FormData();
+    formData.append('title', form.jobTitle.value);
+    formData.append('description', form.jobDescription.value);
+    formData.append('budget', form.jobBudget.value);
+    formData.append('skills', (form.jobSkills.value || "").split(',').map(s => s.trim()).filter(Boolean));
+    formData.append('link', form.jobLink.value);
+
+    const fileInput = form.attachment;
+    if (fileInput.files.length > 0) {
+        formData.append('attachment', fileInput.files[0]);
+    }
+
+    await apiCall('/jobs', 'POST', formData, 'Job posted successfully!', () => {
         form.reset();
         renderAppSection('jobs');
     });
@@ -230,7 +225,8 @@ async function deleteJob(jobId) {
 
 // --- MODALS ---
 async function viewQuotes(jobId) {
-    await apiCall(`/quotes/job/${jobId}`, 'GET', null, null, (quotes) => {
+    await apiCall(`/quotes/${jobId}`, 'GET', null, null, (response) => {
+        const quotes = response.data || [];
         const modalContainer = document.getElementById('modal-container');
         let quotesHTML = '<h3>Received Quotes</h3>';
         if (quotes.length === 0) {
@@ -239,7 +235,7 @@ async function viewQuotes(jobId) {
             quotes.forEach(quote => {
                 quotesHTML += `
                     <div class="quote-card">
-                        <p><strong>From:</strong> ${quote.quoterName} | <strong>Amount:</strong> $${quote.amount}</p>
+                        <p><strong>From:</strong> ${quote.designerName} | <strong>Amount:</strong> $${quote.quoteAmount}</p>
                         <p>${quote.description}</p>
                     </div>`;
             });
@@ -264,11 +260,15 @@ function showQuoteModal(jobId) {
                 <form id="quote-form" class="form-grid">
                     <div class="form-group">
                         <label class="form-label">Quote Amount ($)</label>
-                        <input type="number" class="form-input" id="quoteAmount" required>
+                        <input type="number" class="form-input" name="quoteAmount" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Attachments (Optional, up to 5)</label>
+                        <input type="file" class="form-input" name="attachments" multiple>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Description / Cover Letter</label>
-                        <textarea class="form-textarea" style="min-height: 120px;" id="quoteDescription" required></textarea>
+                        <textarea class="form-textarea" style="min-height: 120px;" name="description" required></textarea>
                     </div>
                     <button type="submit" class="btn btn-primary">Submit Quote</button>
                 </form>
@@ -280,14 +280,20 @@ function showQuoteModal(jobId) {
 async function handleQuoteSubmit(event, jobId) {
     event.preventDefault();
     const form = event.target;
-    const quoteData = {
-        jobId: jobId,
-        amount: form.querySelector('#quoteAmount').value,
-        description: form.querySelector('#quoteDescription').value,
-        quoterId: appState.currentUser.id,
-        quoterName: appState.currentUser.fullName
-    };
-    await apiCall('/quotes', 'POST', quoteData, 'Quote submitted successfully!', closeModal);
+    
+    const formData = new FormData();
+    formData.append('jobId', jobId);
+    formData.append('quoteAmount', form.quoteAmount.value);
+    formData.append('description', form.description.value);
+
+    const fileInput = form.attachments;
+    if (fileInput.files.length > 0) {
+        for (let i = 0; i < fileInput.files.length; i++) {
+            formData.append('attachments', fileInput.files[i]);
+        }
+    }
+
+    await apiCall('/quotes', 'POST', formData, 'Quote submitted successfully!', closeModal);
 }
 
 function showAuthModal(view) {
@@ -323,22 +329,21 @@ function showAppView() {
     document.getElementById('landing-page-content').style.display = 'none';
     document.getElementById('app-content').style.display = 'flex';
     document.getElementById('auth-buttons-container').style.display = 'none';
-    document.getElementById('main-nav-menu').innerHTML = ''; // Clear landing page nav
+    document.getElementById('main-nav-menu').innerHTML = '';
 
     const user = appState.currentUser;
-    document.getElementById('userName').textContent = user.fullName;
-    document.getElementById('userType').textContent = user.role.charAt(0).toUpperCase() + user.role.slice(1);
-    document.getElementById('userAvatar').textContent = (user.fullName || "A").charAt(0).toUpperCase();
+    document.getElementById('userName').textContent = user.name || user.fullName;
+    document.getElementById('userType').textContent = user.type || user.role;
+    document.getElementById('userAvatar').textContent = ((user.name || user.fullName) || "A").charAt(0).toUpperCase();
 
     buildSidebarNav();
-    renderAppSection('jobs'); // Show default view for logged-in user
+    renderAppSection('jobs');
 }
 
 function showLandingPageView() {
     document.getElementById('landing-page-content').style.display = 'block';
     document.getElementById('app-content').style.display = 'none';
     document.getElementById('auth-buttons-container').style.display = 'flex';
-    // Restore landing page navigation
     document.getElementById('main-nav-menu').innerHTML = `
         <a href="#features" class="nav-link">Features</a>
         <a href="#showcase" class="nav-link">Showcase</a>
@@ -347,7 +352,7 @@ function showLandingPageView() {
 
 function buildSidebarNav() {
     const navContainer = document.getElementById('sidebar-nav-menu');
-    const role = appState.currentUser.role;
+    const role = appState.currentUser.type || appState.currentUser.role;
     let links = '';
 
     if (role === 'designer') {
@@ -374,8 +379,10 @@ function renderAppSection(sectionId) {
         link.classList.toggle('active', link.dataset.section === sectionId);
     });
 
+    const userRole = appState.currentUser.type || appState.currentUser.role;
+
     if (sectionId === 'jobs') {
-        const title = appState.currentUser.role === 'designer' ? 'Available Projects' : 'My Posted Projects';
+        const title = userRole === 'designer' ? 'Available Projects' : 'My Posted Projects';
         container.innerHTML = `<div class="section-header"><h2>${title}</h2></div><div id="jobs-list" class="jobs-grid"></div>`;
         fetchAndRenderJobs();
     } else if (sectionId === 'post-job') {
@@ -404,8 +411,8 @@ function getLoginTemplate() {
     return `
         <h2 style="text-align: center; margin-bottom: 24px;">Sign In</h2>
         <form id="login-form" class="form-grid">
-            <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" id="loginEmail" name="loginEmail" required></div>
-            <div class="form-group"><label class="form-label">Password</label><input type="password" class="form-input" id="loginPassword" name="loginPassword" required></div>
+            <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" name="loginEmail" required></div>
+            <div class="form-group"><label class="form-label">Password</label><input type="password" class="form-input" name="loginPassword" required></div>
             <button type="submit" class="btn btn-primary">Sign In</button>
         </form>
         <div class="modal-switch">Don't have an account? <a onclick="renderAuthForm('register')">Sign Up</a></div>`;
@@ -415,13 +422,13 @@ function getRegisterTemplate() {
     return `
         <h2 style="text-align: center; margin-bottom: 24px;">Create an Account</h2>
         <form id="register-form" class="form-grid">
-            <div class="form-group"><label class="form-label">Full Name</label><input type="text" class="form-input" id="regName" name="regName" required></div>
-            <div class="form-group"><label class="form-label">Username</label><input type="text" class="form-input" id="regUsername" name="regUsername" required></div>
-            <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" id="regEmail" name="regEmail" required></div>
-            <div class="form-group"><label class="form-label">Password</label><input type="password" class="form-input" id="regPassword" name="regPassword" required></div>
+            <div class="form-group"><label class="form-label">Full Name</label><input type="text" class="form-input" name="regName" required></div>
+            <div class="form-group"><label class="form-label">Username</label><input type="text" class="form-input" name="regUsername" required></div>
+            <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" name="regEmail" required></div>
+            <div class="form-group"><label class="form-label">Password</label><input type="password" class="form-input" name="regPassword" required></div>
             <div class="form-group">
                 <label class="form-label">I am a...</label>
-                <select class="form-select" id="regRole" name="regRole" required>
+                <select class="form-select" name="regRole" required>
                     <option value="">Select your role</option>
                     <option value="contractor">Client / Contractor</option>
                     <option value="designer">Designer / Engineer</option>
@@ -436,23 +443,40 @@ function getPostJobTemplate() {
     return `
         <div class="section-header"><h2>Post a New Project</h2></div>
         <form id="post-job-form" class="form-grid" style="max-width: 800px;">
-            <div class="form-group"><label class="form-label">Project Title</label><input type="text" class="form-input" id="jobTitle" name="jobTitle" required></div>
-            <div class="form-group"><label class="form-label">Budget Range (e.g., $500 - $1000)</label><input type="text" class="form-input" id="jobBudget" name="jobBudget" required></div>
-            <div class="form-group"><label class="form-label">Required Skills (comma-separated)</label><input type="text" class="form-input" id="jobSkills" name="jobSkills"></div>
-            <div class="form-group"><label class="form-label">Project Description</label><textarea class="form-input" style="min-height: 120px;" id="jobDescription" name="jobDescription" required></textarea></div>
+            <div class="form-group">
+                <label class="form-label">Project Title</label>
+                <input type="text" class="form-input" name="jobTitle" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Budget Range (e.g., $500 - $1000)</label>
+                <input type="text" class="form-input" name="jobBudget" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Required Skills (comma-separated)</label>
+                <input type="text" class="form-input" name="jobSkills">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Relevant Link (Optional)</label>
+                <input type="url" class="form-input" name="jobLink" placeholder="https://example.com/project-details">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Attachment (PDF, DOC, PNG, JPG - Optional)</label>
+                <input type="file" class="form-input" name="attachment">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Project Description</label>
+                <textarea class="form-input" style="min-height: 120px;" name="jobDescription" required></textarea>
+            </div>
             <button type="submit" class="btn btn-primary" style="justify-self: start;">Post Project</button>
         </form>`;
 }
 
-// This function is called by the `onclick` in the HTML. It works by toggling a CSS class.
 function toggleCard(card) {
     const isExpanded = card.classList.contains('expanded');
-    // This part closes any other open card before opening the new one
     document.querySelectorAll('.feature-card.expanded').forEach(otherCard => {
         if (otherCard !== card) {
             otherCard.classList.remove('expanded');
         }
     });
-    // This opens or closes the clicked card
     card.classList.toggle('expanded');
 }
