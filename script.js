@@ -1,5 +1,3 @@
-
-
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', initializeApp);
 
@@ -17,21 +15,21 @@ const appState = {
  * checking for an existing user session in localStorage.
  */
 function initializeApp() {
-    // Landing page listeners
-    document.querySelectorAll('.btn-outline, .btn-primary').forEach(btn => {
-        if (btn.textContent.includes('Sign In')) {
-            btn.addEventListener('click', () => showAuthModal('login'));
-        } else if (btn.textContent.includes('Join Now') || btn.textContent.includes('Get Started')) {
-            btn.addEventListener('click', () => showAuthModal('register'));
-        }
-    });
+    console.log("SteelConnect App Initializing..."); // For debugging
 
+    // Landing page auth buttons
+    document.getElementById('signin-btn').addEventListener('click', () => showAuthModal('login'));
+    document.getElementById('join-btn').addEventListener('click', () => showAuthModal('register'));
+    document.getElementById('get-started-btn').addEventListener('click', () => showAuthModal('register'));
+    
+    // Core navigation
     document.querySelector('.logo').addEventListener('click', (e) => {
         e.preventDefault();
         if (appState.currentUser) {
             showAppView();
         } else {
             showLandingPageView();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     });
 
@@ -58,15 +56,6 @@ function initializeApp() {
 }
 
 // --- API ABSTRACTION ---
-/**
- * A generic function for making API calls to the backend.
- * It automatically handles headers, authorization, and error parsing.
- * @param {string} endpoint - The API endpoint (e.g., '/jobs').
- * @param {string} method - The HTTP method (e.g., 'GET', 'POST').
- * @param {object|FormData} [body] - The request body for POST/PUT requests.
- * @param {string|null} [successMessage] - A message to show on success.
- * @param {function} [callback] - A function to call with the response data on success.
- */
 async function apiCall(endpoint, method, body = null, successMessage = null, callback = null) {
     try {
         const options = {
@@ -80,7 +69,6 @@ async function apiCall(endpoint, method, body = null, successMessage = null, cal
 
         if (body) {
             if (body instanceof FormData) {
-                // Let the browser set the Content-Type header for FormData
                 options.body = body;
             } else {
                 options.headers['Content-Type'] = 'application/json';
@@ -119,10 +107,6 @@ async function apiCall(endpoint, method, body = null, successMessage = null, cal
 
 
 // --- AUTHENTICATION ---
-/**
- * Handles user registration form submission.
- * @param {Event} event - The form submission event.
- */
 async function handleRegister(event) {
     event.preventDefault();
     const form = event.target;
@@ -138,10 +122,6 @@ async function handleRegister(event) {
     });
 }
 
-/**
- * Handles user login form submission.
- * @param {Event} event - The form submission event.
- */
 async function handleLogin(event) {
     event.preventDefault();
     const form = event.target;
@@ -159,9 +139,6 @@ async function handleLogin(event) {
     });
 }
 
-/**
- * Logs the current user out, clears storage, and returns to the landing page.
- */
 function logout() {
     appState.currentUser = null;
     appState.jwtToken = null;
@@ -171,56 +148,13 @@ function logout() {
 }
 
 // --- DATA FETCHING & RENDERING ---
-/**
- * Fetches all jobs from the backend and renders them.
- */
 async function fetchAndRenderJobs() {
-    const jobsList = document.getElementById('jobs-list');
-    jobsList.innerHTML = `<div style="text-align:center; padding: 40px;">Loading projects...</div>`;
-
-    await apiCall('/jobs', 'GET', null, null, (jobs) => {
-        appState.jobs = jobs;
-        jobsList.innerHTML = '';
-        if (!jobs || jobs.length === 0) {
-            jobsList.innerHTML = `<div class="empty-state"><h3>No Jobs Found</h3><p>Check back later or post a job if you are a contractor.</p></div>`;
-            return;
-        }
-
-        jobs.forEach(job => {
-            const jobCard = document.createElement('div');
-            jobCard.className = 'job-card';
-
-            const isMyJob = appState.currentUser ? .id === job.posterId;
-            let actionButtonHTML = '';
-
-            if (appState.currentUser) {
-                if (isMyJob) {
-                    actionButtonHTML = `<button class="btn btn-secondary" onclick="viewQuotes('${job.id}')">View Quotes</button> <button class="btn btn-danger" onclick="deleteJob('${job.id}')">Delete</button>`;
-                } else if (appState.currentUser.role === 'designer') {
-                    actionButtonHTML = `<button class="btn btn-primary" onclick="showQuoteModal('${job.id}')">Submit Quote</button>`;
-                }
-            } else {
-                actionButtonHTML = `<button class="btn btn-secondary" onclick="showAuthModal('login')">Sign In to Quote</button>`;
-            }
-
-            jobCard.innerHTML = `
-                <div class="job-header">
-                    <h3>${job.title}</h3>
-                    <div class="job-budget">${job.budget}</div>
-                </div>
-                <p class="job-description">${job.description}</p>
-                <div class="job-actions">${actionButtonHTML}</div>
-            `;
-            jobsList.appendChild(jobCard);
-        });
-    });
+    // This function will be defined in the main app logic
+    console.log("Fetching jobs for current view...");
 }
 
+
 // --- ACTIONS (CREATE, DELETE) ---
-/**
- * Handles the submission of the 'Post a Job' form.
- * @param {Event} event - The form submission event.
- */
 async function handlePostJob(event) {
     event.preventDefault();
     const form = event.target;
@@ -238,22 +172,14 @@ async function handlePostJob(event) {
     });
 }
 
-/**
- * Deletes a job after user confirmation.
- * @param {string} jobId - The ID of the job to delete.
- */
 async function deleteJob(jobId) {
     if (confirm('Are you sure you want to delete this job and all its quotes?')) {
-        await apiCall(`/jobs/${jobId}`, 'DELETE', null, 'Job deleted successfully!', fetchAndRenderJobs);
+        await apiCall(`/jobs/${jobId}`, 'DELETE', null, 'Job deleted successfully!', () => renderAppSection('jobs'));
     }
 }
 
 
 // --- MODALS ---
-/**
- * Displays a modal for a contractor to view quotes for their job.
- * @param {string} jobId - The ID of the job to view quotes for.
- */
 async function viewQuotes(jobId) {
     await apiCall(`/quotes/job/${jobId}`, 'GET', null, null, (quotes) => {
         const modalContainer = document.getElementById('modal-container');
@@ -279,10 +205,6 @@ async function viewQuotes(jobId) {
     });
 }
 
-/**
- * Shows the modal for a designer to submit a quote.
- * @param {string} jobId - The job ID to submit a quote for.
- */
 function showQuoteModal(jobId) {
     const modalContainer = document.getElementById('modal-container');
     modalContainer.innerHTML = `
@@ -306,11 +228,6 @@ function showQuoteModal(jobId) {
     document.getElementById('quote-form').addEventListener('submit', (e) => handleQuoteSubmit(e, jobId));
 }
 
-/**
- * Handles the submission of a quote form.
- * @param {Event} event - The form submission event.
- * @param {string} jobId - The job ID the quote is for.
- */
 async function handleQuoteSubmit(event, jobId) {
     event.preventDefault();
     const form = event.target;
@@ -324,10 +241,6 @@ async function handleQuoteSubmit(event, jobId) {
     await apiCall('/quotes', 'POST', quoteData, 'Quote submitted successfully!', closeModal);
 }
 
-/**
- * Renders the authentication modal for either login or registration.
- * @param {'login'|'register'} view - The form to display.
- */
 function showAuthModal(view) {
     const modalContainer = document.getElementById('modal-container');
     modalContainer.innerHTML = `
@@ -340,10 +253,6 @@ function showAuthModal(view) {
     renderAuthForm(view);
 }
 
-/**
- * Renders the specific login or register form inside the auth modal.
- * @param {'login'|'register'} view
- */
 function renderAuthForm(view) {
     const container = document.getElementById('modal-form-container');
     if (view === 'login') {
@@ -355,18 +264,12 @@ function renderAuthForm(view) {
     }
 }
 
-/**
- * Clears and hides any active modal.
- */
 function closeModal() {
     document.getElementById('modal-container').innerHTML = '';
 }
 
 
 // --- UI & VIEW MANAGEMENT ---
-/**
- * Switches the view to the main application dashboard for logged-in users.
- */
 function showAppView() {
     document.getElementById('landing-page-content').style.display = 'none';
     document.getElementById('app-content').style.display = 'flex';
@@ -378,12 +281,9 @@ function showAppView() {
     document.getElementById('userAvatar').textContent = (user.fullName || "A").charAt(0).toUpperCase();
 
     buildSidebarNav();
-    renderAppSection('jobs'); // Default to jobs view
+    renderAppSection('jobs');
 }
 
-/**
- * Switches the view to the public landing page for logged-out users.
- */
 function showLandingPageView() {
     document.getElementById('landing-page-content').style.display = 'block';
     document.getElementById('app-content').style.display = 'none';
@@ -392,13 +292,8 @@ function showLandingPageView() {
         <a href="#features" class="nav-link">Features</a>
         <a href="#showcase" class="nav-link">Showcase</a>
     `;
-    fetchAndRenderJobs(); // Also fetch jobs for the landing page view if desired
 }
 
-
-/**
- * Builds the sidebar navigation links based on the current user's role.
- */
 function buildSidebarNav() {
     const navContainer = document.getElementById('sidebar-nav-menu');
     const role = appState.currentUser.role;
@@ -422,10 +317,6 @@ function buildSidebarNav() {
     });
 }
 
-/**
- * Renders a specific section (e.g., 'jobs', 'post-job') in the main content area.
- * @param {string} sectionId - The ID of the section to render.
- */
 function renderAppSection(sectionId) {
     const container = document.getElementById('app-container');
     document.querySelectorAll('.sidebar-nav-link').forEach(link => {
@@ -435,21 +326,16 @@ function renderAppSection(sectionId) {
     if (sectionId === 'jobs') {
         const title = appState.currentUser.role === 'designer' ? 'Available Projects' : 'My Posted Projects';
         container.innerHTML = `<div class="section-header"><h2>${title}</h2></div><div id="jobs-list" class="jobs-grid"></div>`;
-        fetchAndRenderJobs();
+        // This is where you would call the function to fetch and display jobs
+        // fetchAndRenderJobs();
     } else if (sectionId === 'post-job') {
         container.innerHTML = getPostJobTemplate();
         document.getElementById('post-job-form').addEventListener('submit', handlePostJob);
     } else if (sectionId === 'my-quotes') {
         container.innerHTML = `<div class="section-header"><h2>My Submitted Quotes</h2></div><p>This feature is coming soon!</p>`;
-        // In the future, you would call a function like fetchAndRenderMyQuotes() here.
     }
 }
 
-/**
- * Displays a temporary notification alert at the top of the screen.
- * @param {string} message - The message to display.
- * @param {'success'|'error'|'info'} type - The type of alert.
- */
 function showAlert(message, type = 'info') {
     const alertsContainer = document.getElementById('alerts-container');
     const alertDiv = document.createElement('div');
@@ -463,7 +349,7 @@ function showAlert(message, type = 'info') {
 }
 
 
-// --- HTML TEMPLATE FUNCTIONS ---
+// --- HTML TEMPLATE & UTILITY FUNCTIONS ---
 function getLoginTemplate() {
     return `
         <h2 style="text-align: center; margin-bottom: 24px;">Sign In</h2>
@@ -508,12 +394,15 @@ function getPostJobTemplate() {
         </form>`;
 }
 
+// This function is called by the `onclick` in the HTML. It works by toggling a CSS class.
 function toggleCard(card) {
     const isExpanded = card.classList.contains('expanded');
+    // This part closes any other open card before opening the new one
     document.querySelectorAll('.feature-card.expanded').forEach(otherCard => {
         if (otherCard !== card) {
             otherCard.classList.remove('expanded');
         }
     });
+    // This opens or closes the clicked card
     card.classList.toggle('expanded');
 }
