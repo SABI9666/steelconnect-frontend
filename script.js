@@ -6,7 +6,9 @@ const appState = {
     currentUser: null,
     jwtToken: null,
     jobs: [],
-    myQuotes: []
+    myQuotes: [],
+    // Keep track of participants to show names in chat
+    participants: {} 
 };
 
 function initializeApp() {
@@ -150,9 +152,9 @@ async function fetchAndRenderMyQuotes() {
             return;
         }
         listContainer.innerHTML = quotes.map(quote => {
-            const job = appState.jobs.find(j => j.id === quote.jobId) || {};
+            const job = appState.jobs.find(j => j.id === quote.jobId) || { posterId: null };
             const attachmentLink = quote.attachment ? `<p><strong>Attachment:</strong> <a href="${quote.attachment}" target="_blank">View File</a></p>` : '';
-            const messageButton = quote.status === 'approved' ? `<button class="btn btn-primary" onclick="openConversation('${quote.jobId}', '${job.posterId}')">Message Contractor</button>` : '';
+            const messageButton = quote.status === 'approved' ? `<button class="btn btn-primary" onclick="openConversation('${quote.jobId}', '${job.posterId}', '${job.posterName}')">Message Contractor</button>` : '';
             const deleteButton = quote.status === 'pending' ? `<button class="btn btn-danger" onclick="deleteQuote('${quote.id}')">Delete Quote</button>` : '';
             return `
                 <div class="quote-card quote-status-${quote.status}">
@@ -194,7 +196,7 @@ async function viewQuotes(jobId) {
             quotesHTML += quotes.map(quote => {
                 const attachmentLink = quote.attachment ? `<p><strong>Attachment:</strong> <a href="${quote.attachment}" target="_blank">View File</a></p>` : '';
                 const approveButton = appState.currentUser.type === 'contractor' && quote.status === 'pending' ? `<button class="btn btn-primary" onclick="approveQuote('${quote.id}')">Approve</button>` : '';
-                const messageButton = appState.currentUser.type === 'contractor' ? `<button class="btn btn-outline" onclick="openConversation('${quote.jobId}', '${quote.quoterId}')">Message Designer</button>` : '';
+                const messageButton = appState.currentUser.type === 'contractor' ? `<button class="btn btn-outline" onclick="openConversation('${quote.jobId}', '${quote.quoterId}', '${quote.quoterName}')">Message Designer</button>` : '';
                 return `
                     <div class="quote-card quote-status-${quote.status}">
                         <p><strong>From:</strong> ${quote.quoterName} | <strong>Amount:</strong> $${quote.amount}</p>
@@ -271,21 +273,15 @@ function showAppView() {
     document.getElementById('landing-page-content').style.display = 'none';
     document.getElementById('app-content').style.display = 'flex';
     document.getElementById('auth-buttons-container').style.display = 'none';
-    
-    // --- FIX: Show the user info and logout button ---
     document.getElementById('user-info').style.display = 'flex';
-
     document.getElementById('main-nav-menu').innerHTML = '';
     const user = appState.currentUser;
     document.getElementById('userName').textContent = user.name;
     document.getElementById('userType').textContent = user.type;
     document.getElementById('userAvatar').textContent = (user.name || "A").charAt(0).toUpperCase();
-
-    // Also update the sidebar profile info
     document.getElementById('sidebarUserName').textContent = user.name;
     document.getElementById('sidebarUserType').textContent = user.type;
     document.getElementById('sidebarUserAvatar').textContent = (user.name || "A").charAt(0).toUpperCase();
-
     buildSidebarNav();
     renderAppSection('jobs');
 }
@@ -294,10 +290,7 @@ function showLandingPageView() {
     document.getElementById('landing-page-content').style.display = 'block';
     document.getElementById('app-content').style.display = 'none';
     document.getElementById('auth-buttons-container').style.display = 'flex';
-    
-    // --- FIX: Hide the user info when logged out ---
     document.getElementById('user-info').style.display = 'none';
-
     document.getElementById('main-nav-menu').innerHTML = `<a href="#features" class="nav-link">Features</a><a href="#showcase" class="nav-link">Showcase</a>`;
 }
 
@@ -356,7 +349,11 @@ function getPostJobTemplate() {
     return `<div class="section-header"><h2>Post a New Project</h2></div><form id="post-job-form" class="form-grid" style="max-width: 800px;"><div class="form-group"><label class="form-label">Project Title</label><input type="text" class="form-input" name="title" required></div><div class="form-group"><label class="form-label">Budget Range</label><input type="text" class="form-input" name="budget" required></div><div class="form-group"><label class="form-label">Deadline</label><input type="date" class="form-input" name="deadline" required></div><div class="form-group"><label class="form-label">Skills (comma-separated)</label><input type="text" class="form-input" name="skills"></div><div class="form-group"><label class="form-label">Relevant Link (Optional)</label><input type="url" class="form-input" name="link"></div><div class="form-group"><label class="form-label">Attachment (Optional)</label><input type="file" class="form-input" name="attachment"></div><div class="form-group"><label class="form-label">Project Description</label><textarea class="form-input" style="min-height: 120px;" name="description" required></textarea></div><button type="submit" class="btn btn-primary" style="justify-self: start;">Post Project</button></form>`;
 }
 
-async function openConversation(jobId, recipientId) {
+async function openConversation(jobId, recipientId, recipientName) {
+    appState.participants = {
+        [appState.currentUser.id]: appState.currentUser.name,
+        [recipientId]: recipientName
+    };
     await apiCall('/messages/find', 'POST', { jobId, recipientId }, null, async (conversationResponse) => {
         const conversation = conversationResponse.data;
         await apiCall(`/messages/${conversation.id}/messages`, 'GET', null, null, (messagesResponse) => {
@@ -367,19 +364,33 @@ async function openConversation(jobId, recipientId) {
 
 function showConversationModal(conversation, messages) {
     const messagesHTML = messages.map(msg => {
+        const sender = appState.participants[msg.senderId] || 'Unknown';
         const isMe = msg.senderId === appState.currentUser.id;
-        return `<div class="message ${isMe ? 'me' : 'them'}"><p>${msg.text}</p></div>`;
+        const time = new Date(msg.createdAt.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        return `
+            <div class="message-wrapper ${isMe ? 'me' : 'them'}">
+                <div class="message-avatar">${sender.charAt(0).toUpperCase()}</div>
+                <div>
+                    <div class="message-bubble ${isMe ? 'me' : 'them'}">
+                        <p>${msg.text}</p>
+                    </div>
+                    <div class="message-meta">
+                        <span>${isMe ? 'You' : sender}</span> • <span>${time}</span>
+                    </div>
+                </div>
+            </div>`;
     }).join('');
 
     const modalContent = `
-        <h3>Conversation</h3>
+        <div class="chat-header"><h3>Conversation</h3></div>
         <div id="message-list" class="message-container">${messagesHTML}</div>
         <form id="message-form" class="message-form">
             <input type="text" name="messageText" class="form-input" placeholder="Type a message..." required autocomplete="off">
             <button type="submit" class="btn btn-primary">Send</button>
         </form>`;
     
-    showGenericModal(modalContent, 'max-width: 600px;');
+    showGenericModal(modalContent, 'max-width: 600px; padding: 24px;');
     
     const messageList = document.getElementById('message-list');
     messageList.scrollTop = messageList.scrollHeight;
@@ -392,17 +403,27 @@ async function handleSendMessage(event, conversationId) {
     const form = event.target;
     const text = form.messageText.value.trim();
     if (!text) return;
-
     form.querySelector('button').disabled = true;
-
     await apiCall(`/messages/${conversationId}/messages`, 'POST', { text }, null, (newMessageResponse) => {
         form.reset();
         form.querySelector('button').disabled = false;
         
         const messageList = document.getElementById('message-list');
         if (messageList) {
-            const isMe = newMessageResponse.data.senderId === appState.currentUser.id;
-            messageList.innerHTML += `<div class="message ${isMe ? 'me' : 'them'}"><p>${newMessageResponse.data.text}</p></div>`;
+            const sender = appState.currentUser.name;
+            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            messageList.innerHTML += `
+                <div class="message-wrapper me">
+                    <div class="message-avatar">${sender.charAt(0).toUpperCase()}</div>
+                    <div>
+                        <div class="message-bubble me">
+                            <p>${newMessageResponse.data.text}</p>
+                        </div>
+                        <div class="message-meta">
+                            <span>You</span> • <span>${time}</span>
+                        </div>
+                    </div>
+                </div>`;
             messageList.scrollTop = messageList.scrollHeight;
         }
     });
