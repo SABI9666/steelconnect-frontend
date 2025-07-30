@@ -130,9 +130,9 @@ async function fetchAndRenderJobs() {
                         <div class="job-budget">${job.budget}</div>
                     </div>
                     <p>${job.description}</p>
-                    ${job.skills?.length > 0 ? `<p class="mt-3"><strong>Skills:</strong> ${job.skills.join(', ')}</p>` : ''}
-                    ${job.link ? `<p class="mt-3"><strong>Link:</strong> <a href="${job.link}" target="_blank" rel="noopener noreferrer">${job.link}</a></p>` : ''}
-                    ${job.attachment ? `<p class="mt-3"><strong>Attachment:</strong> <a href="${job.attachment}" target="_blank" rel="noopener noreferrer">View File</a></p>` : ''}
+                    ${job.skills?.length > 0 ? `<p style="margin-top: 12px;"><strong>Skills:</strong> ${job.skills.join(', ')}</p>` : ''}
+                    ${job.link ? `<p style="margin-top: 12px;"><strong>Link:</strong> <a href="${job.link}" target="_blank" rel="noopener noreferrer">${job.link}</a></p>` : ''}
+                    ${job.attachment ? `<p style="margin-top: 12px;"><strong>Attachment:</strong> <a href="${job.attachment}" target="_blank" rel="noopener noreferrer">View File</a></p>` : ''}
                     <div class="job-actions">${actions}</div>
                 </div>`;
         }).join('');
@@ -150,6 +150,7 @@ async function fetchAndRenderMyQuotes() {
             return;
         }
         listContainer.innerHTML = quotes.map(quote => {
+            // Find the job associated with the quote to get the contractor's ID
             const job = appState.jobs.find(j => j.id === quote.jobId) || {};
             const attachmentLink = quote.attachment ? `<p><strong>Attachment:</strong> <a href="${quote.attachment}" target="_blank">View File</a></p>` : '';
             const messageButton = quote.status === 'approved' ? `<button class="btn btn-primary" onclick="openConversation('${quote.jobId}', '${job.posterId}')">Message Contractor</button>` : '';
@@ -170,6 +171,7 @@ async function handlePostJob(event) {
     event.preventDefault();
     const form = event.target;
     const formData = new FormData();
+    // Use new names from the updated HTML template
     ['title', 'description', 'budget', 'deadline', 'skills', 'link'].forEach(field => formData.append(field, form[field]?.value));
     if (form.attachment.files.length > 0) formData.append('attachment', form.attachment.files[0]);
     await apiCall('/jobs', 'POST', formData, 'Job posted successfully!', () => {
@@ -201,7 +203,7 @@ async function viewQuotes(jobId) {
                         <p>${quote.description}</p>
                         ${attachmentLink}
                         <p><strong>Status:</strong> ${quote.status}</p>
-                        ${approveButton} ${messageButton}
+                        <div class="quote-actions">${approveButton} ${messageButton}</div>
                     </div>`;
             }).join('');
         }
@@ -291,8 +293,8 @@ function buildSidebarNav() {
     const navContainer = document.getElementById('sidebar-nav-menu');
     const role = appState.currentUser.type;
     let links = (role === 'designer')
-        ? `<a href="#" class="sidebar-nav-link" data-section="jobs"><span>Find Jobs</span></a><a href="#" class="sidebar-nav-link" data-section="my-quotes"><span>My Quotes</span></a>`
-        : `<a href="#" class="sidebar-nav-link" data-section="jobs"><span>My Projects</span></a><a href="#" class="sidebar-nav-link" data-section="post-job"><span>Post a Job</span></a>`;
+        ? `<a href="#" class="sidebar-nav-link" data-section="jobs"><i class="fas fa-briefcase"></i> <span>Find Jobs</span></a><a href="#" class="sidebar-nav-link" data-section="my-quotes"><i class="fas fa-file-invoice-dollar"></i> <span>My Quotes</span></a>`
+        : `<a href="#" class="sidebar-nav-link" data-section="jobs"><i class="fas fa-tasks"></i> <span>My Projects</span></a><a href="#" class="sidebar-nav-link" data-section="post-job"><i class="fas fa-plus-circle"></i> <span>Post a Job</span></a>`;
     navContainer.innerHTML = links;
     navContainer.querySelectorAll('.sidebar-nav-link').forEach(link => {
         link.addEventListener('click', (e) => {
@@ -322,7 +324,7 @@ function showAlert(message, type = 'info') {
     const alertsContainer = document.getElementById('alerts-container');
     const alertDiv = document.createElement('div');
     alertDiv.className = `alert alert-${type}`;
-    alertDiv.textContent = message;
+    alertDiv.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i> <span>${message}</span>`;
     alertsContainer.prepend(alertDiv);
     setTimeout(() => {
         alertDiv.style.opacity = '0';
@@ -331,28 +333,30 @@ function showAlert(message, type = 'info') {
 }
 
 function getLoginTemplate() {
-    return `<h2 class="text-center mb-6">Sign In</h2><form id="login-form" class="form-grid"><div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" name="loginEmail" required></div><div class="form-group"><label class="form-label">Password</label><input type="password" class="form-input" name="loginPassword" required></div><button type="submit" class="btn btn-primary">Sign In</button></form><div class="modal-switch">Don't have an account? <a onclick="renderAuthForm('register')">Sign Up</a></div>`;
+    return `<h2 style="text-align: center; margin-bottom: 24px;">Sign In</h2><form id="login-form" class="form-grid"><div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" name="loginEmail" required></div><div class="form-group"><label class="form-label">Password</label><input type="password" class="form-input" name="loginPassword" required></div><button type="submit" class="btn btn-primary">Sign In</button></form><div class="modal-switch">Don't have an account? <a onclick="renderAuthForm('register')">Sign Up</a></div>`;
 }
 
 function getRegisterTemplate() {
-    return `<h2 class="text-center mb-6">Create an Account</h2><form id="register-form" class="form-grid"><div class="form-group"><label class="form-label">Full Name</label><input type="text" class="form-input" name="regName" required></div><div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" name="regEmail" required></div><div class="form-group"><label class="form-label">Password</label><input type="password" class="form-input" name="regPassword" required></div><div class="form-group"><label class="form-label">I am a...</label><select class="form-select" name="regRole" required><option value="">Select role</option><option value="contractor">Client / Contractor</option><option value="designer">Designer / Engineer</option></select></div><button type="submit" class="btn btn-primary">Create Account</button></form><div class="modal-switch">Already have an account? <a onclick="renderAuthForm('login')">Sign In</a></div>`;
+    return `<h2 style="text-align: center; margin-bottom: 24px;">Create an Account</h2><form id="register-form" class="form-grid"><div class="form-group"><label class="form-label">Full Name</label><input type="text" class="form-input" name="regName" required></div><div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" name="regEmail" required></div><div class="form-group"><label class="form-label">Password</label><input type="password" class="form-input" name="regPassword" required></div><div class="form-group"><label class="form-label">I am a...</label><select class="form-select" name="regRole" required><option value="">Select your role</option><option value="contractor">Client / Contractor</option><option value="designer">Designer / Engineer</option></select></div><button type="submit" class="btn btn-primary">Create Account</button></form><div class="modal-switch">Already have an account? <a onclick="renderAuthForm('login')">Sign In</a></div>`;
 }
 
 function getPostJobTemplate() {
-    return `<div class="section-header"><h2>Post a New Project</h2></div><form id="post-job-form" class="form-grid" style="max-width: 800px;"><div class="form-group"><label class="form-label">Title</label><input type="text" class="form-input" name="title" required></div><div class="form-group"><label class="form-label">Budget</label><input type="text" class="form-input" name="budget" required></div><div class="form-group"><label class="form-label">Deadline</label><input type="date" class="form-input" name="deadline" required></div><div class="form-group"><label class="form-label">Skills (comma-separated)</label><input type="text" class="form-input" name="skills"></div><div class="form-group"><label class="form-label">Link</label><input type="url" class="form-input" name="link"></div><div class="form-group"><label class="form-label">Attachment</label><input type="file" class="form-input" name="attachment"></div><div class="form-group"><label class="form-label">Description</label><textarea class="form-input" style="min-height: 120px;" name="description" required></textarea></div><button type="submit" class="btn btn-primary" style="justify-self: start;">Post Project</button></form>`;
+    return `<div class="section-header"><h2>Post a New Project</h2></div><form id="post-job-form" class="form-grid" style="max-width: 800px;"><div class="form-group"><label class="form-label">Project Title</label><input type="text" class="form-input" name="title" required></div><div class="form-group"><label class="form-label">Budget Range</label><input type="text" class="form-input" name="budget" required></div><div class="form-group"><label class="form-label">Deadline</label><input type="date" class="form-input" name="deadline" required></div><div class="form-group"><label class="form-label">Skills (comma-separated)</label><input type="text" class="form-input" name="skills"></div><div class="form-group"><label class="form-label">Relevant Link (Optional)</label><input type="url" class="form-input" name="link"></div><div class="form-group"><label class="form-label">Attachment (Optional)</label><input type="file" class="form-input" name="attachment"></div><div class="form-group"><label class="form-label">Project Description</label><textarea class="form-input" style="min-height: 120px;" name="description" required></textarea></div><button type="submit" class="btn btn-primary" style="justify-self: start;">Post Project</button></form>`;
 }
 
 // --- NEW MESSAGING FUNCTIONS ---
 async function openConversation(jobId, recipientId) {
-    await apiCall('/messages/find', 'POST', { jobId, recipientId }, null, async (conversation) => {
-        const conversationId = conversation.data.id;
-        await apiCall(`/messages/${conversationId}/messages`, 'GET', null, null, (messages) => {
-            showConversationModal(conversationId, messages.data);
+    // Find or create a conversation between the current user and the recipient for a specific job
+    await apiCall('/messages/find', 'POST', { jobId, recipientId }, null, async (conversationResponse) => {
+        const conversation = conversationResponse.data;
+        // Fetch the messages for this conversation
+        await apiCall(`/messages/${conversation.id}/messages`, 'GET', null, null, (messagesResponse) => {
+            showConversationModal(conversation, messagesResponse.data);
         });
     });
 }
 
-function showConversationModal(conversationId, messages) {
+function showConversationModal(conversation, messages) {
     const messagesHTML = messages.map(msg => {
         const isMe = msg.senderId === appState.currentUser.id;
         return `<div class="message ${isMe ? 'me' : 'them'}"><p>${msg.text}</p></div>`;
@@ -362,30 +366,46 @@ function showConversationModal(conversationId, messages) {
         <h3>Conversation</h3>
         <div id="message-list" class="message-container">${messagesHTML}</div>
         <form id="message-form" class="message-form">
-            <input type="text" name="messageText" class="form-input" placeholder="Type a message..." required>
+            <input type="text" name="messageText" class="form-input" placeholder="Type a message..." required autocomplete="off">
             <button type="submit" class="btn btn-primary">Send</button>
         </form>`;
     
     showGenericModal(modalContent, 'max-width: 600px;');
     
     const messageList = document.getElementById('message-list');
-    messageList.scrollTop = messageList.scrollHeight; // Scroll to bottom
+    messageList.scrollTop = messageList.scrollHeight; // Scroll to the bottom of the messages
 
-    document.getElementById('message-form').addEventListener('submit', (e) => handleSendMessage(e, conversationId));
+    document.getElementById('message-form').addEventListener('submit', (e) => handleSendMessage(e, conversation.id));
 }
 
 async function handleSendMessage(event, conversationId) {
     event.preventDefault();
     const form = event.target;
-    const text = form.messageText.value;
+    const text = form.messageText.value.trim();
     if (!text) return;
 
-    await apiCall(`/messages/${conversationId}/messages`, 'POST', { text }, null, (newMessage) => {
+    form.querySelector('button').disabled = true; // Prevent double sending
+
+    await apiCall(`/messages/${conversationId}/messages`, 'POST', { text }, null, (newMessageResponse) => {
         form.reset();
-        // Add new message to the UI
+        form.querySelector('button').disabled = false;
+        
         const messageList = document.getElementById('message-list');
-        const isMe = newMessage.data.senderId === appState.currentUser.id;
-        messageList.innerHTML += `<div class="message ${isMe ? 'me' : 'them'}"><p>${newMessage.data.text}</p></div>`;
-        messageList.scrollTop = messageList.scrollHeight;
+        if (messageList) {
+            const isMe = newMessageResponse.data.senderId === appState.currentUser.id;
+            messageList.innerHTML += `<div class="message ${isMe ? 'me' : 'them'}"><p>${newMessageResponse.data.text}</p></div>`;
+            messageList.scrollTop = messageList.scrollHeight;
+        }
     });
+}
+
+// --- CARD TOGGLE FUNCTION ---
+function toggleCard(card) {
+    const isExpanded = card.classList.contains('expanded');
+    document.querySelectorAll('.feature-card.expanded').forEach(otherCard => {
+        if (otherCard !== card) {
+            otherCard.classList.remove('expanded');
+        }
+    });
+    card.classList.toggle('expanded');
 }
