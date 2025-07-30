@@ -3,19 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SteelConnect</title>
+    <title>SteelConnect - Professional Steel & Rebar Design Marketplace</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <script src="script.js" defer></script>
 </head>
 <body>
-
-    <header class="navbar">
-        <div class="container">
-            <a href="#" class="logo">SteelConnect</a>
-            <nav id="main-nav-menu">
+    <header class="header">
+        <div class="header-container">
+            <a href="#" class="logo">
+                <div class="logo-icon">SC</div>
+                SteelConnect
+            </a>
+            <nav id="main-nav-menu" class="nav-menu">
                 </nav>
-            <div id="auth-buttons-container">
+            <div id="auth-buttons-container" class="auth-buttons">
                 <button id="signin-btn" class="btn btn-outline">Sign In</button>
                 <button id="join-btn" class="btn btn-primary">Join Now</button>
             </div>
@@ -26,67 +27,117 @@
                         <div id="userName" class="user-name"></div>
                         <div id="userType" class="user-role"></div>
                     </div>
-                    <button id="logout-button" class="btn btn-outline">Logout</button>
                 </div>
             </div>
         </div>
     </header>
 
-    <main id="landing-page-content">
-        <section class="hero">
-            <div class="container">
-                <h1>Connecting Steel Contractors & Designers</h1>
-                <p>The premier platform for structural steel projects. Find jobs, submit quotes, and build the future.</p>
-                <button id="get-started-btn" class="btn btn-primary btn-large">Get Started</button>
-            </div>
-        </section>
+    <div id="alerts-container"></div>
+    <div id="modal-container"></div>
 
-        <section id="features" class="features-section">
-            <div class="container">
-                <h2>How It Works</h2>
-                <div class="features-grid">
-                    <div class="feature-card" onclick="toggleCard(this)">
-                        <h3>1. Post a Project</h3>
-                        <p>Contractors post detailed structural steel projects, including plans and specifications.</p>
-                    </div>
-                    <div class="feature-card" onclick="toggleCard(this)">
-                        <h3>2. Submit Quotes</h3>
-                        <p>Verified designers and engineers review projects and submit competitive quotes with their timelines.</p>
-                    </div>
-                    <div class="feature-card" onclick="toggleCard(this)">
-                        <h3>3. Collaborate</h3>
-                        <p>Once a quote is approved, contractors and designers can communicate directly to finalize details.</p>
+    <main>
+        <div id="landing-page-content">
+            <section class="hero">
+                <div class="hero-content">
+                    <div class="hero-text">
+                        <h1>Connecting Clients to Steel & Construction Professionals Who Deliver</h1>
+                        <p>Find top steel designers and contractors for your projects. Post jobs, submit quotes, and build your network.</p>
+                        <button id="get-started-btn" class="btn btn-primary" style="padding: 16px 32px; font-size: 16px;">
+                            Get Started Today <i class="fas fa-arrow-right"></i>
+                        </button>
                     </div>
                 </div>
-            </div>
-        </section>
-        
-        <section id="showcase">
-             </section>
-    </main>
+            </section>
 
-    <main id="app-content" style="display: none;">
-        <aside id="sidebar">
-            <div class="sidebar-profile">
-                <div id="sidebarUserAvatar" class="avatar large">S</div>
-                <h3 id="sidebarUserName">User Name</h3>
-                <p id="sidebarUserType">User Type</p>
+            <section id="features" class="landing-section">
+                <div class="landing-container">
+                    <h2 class="section-title">Why SteelConnect?</h2>
+                    <div class="features-grid">
+                        <div class="feature-card" onclick="toggleCard(this)">
+                            <div class="feature-icon"><i class="fas fa-globe-americas"></i></div>
+                            <h3>Connect to Global Experts</h3>
+                            <p>Access a worldwide network of freelance steel designers and engineering companies.</p>
+                            <div class="feature-expanded-content">
+                                <img src="https://images.unsplash.com/photo-1573164713714-d95e436ab8d6?q=80&w=2940&auto=format&fit=crop" alt="Global engineering team" class="professional-image">
+                                <p style="text-align: left; color: var(--text-gray);">Post your project once and receive multiple, qualified bids within hours from certified professionals in over 50 countries.</p>
+                            </div>
+                            <div class="expand-indicator"><i class="fas fa-chevron-down"></i></div>
+                        </div>
+                        <div class="feature-card" onclick="toggleCard(this)">
+                            <div class="feature-icon"><i class="fas fa-drafting-compass"></i></div>
+                            <h3>Advanced Engineering</h3>
+                            <p>From concept to construction with cutting-edge technology and software solutions.</p>
+                            <div class="feature-expanded-content">
+                                 <img src="https://images.unsplash.com/photo-1581092160562-40aa08e78837?q=80&w=2940&auto=format&fit=crop" alt="Steel engineering and CAD design" class="professional-image">
+                                 <p style="text-align: left; color: var(--text-gray);">Our professionals are proficient in industry-standard software like Tekla Structures, AutoCAD, Revit, and STAAD Pro to deliver precise designs.</p>
+                            </div>
+                            <div class="expand-indicator"><i class="fas fa-chevron-down"></i></div>
+                        </div>
+                        <div class="feature-card" onclick="toggleCard(this)">
+                            <div class="feature-icon"><i class="fas fa-certificate"></i></div>
+                            <h3>Certified Professionals</h3>
+                            <p>Connect with PE-licensed engineers and certified professionals across multiple jurisdictions.</p>
+                            <div class="feature-expanded-content">
+                                <img src="https://images.unsplash.com/photo-1556742502-ec7c0e9f34b1?q=80&w=2940&auto=format&fit=crop" alt="Professional with certifications" class="professional-image">
+                                <p style="text-align: left; color: var(--text-gray);">Ensure quality, safety, and compliance with access to a network of engineers holding certifications like PE (USA), CEng (UK), and EUR ING (Europe).</p>
+                            </div>
+                            <div class="expand-indicator"><i class="fas fa-chevron-down"></i></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <section id="showcase" class="landing-section" style="background: var(--bg-light);">
+                 <div class="landing-container">
+                    <h2 class="section-title">Industry Excellence Showcase</h2>
+                    <div class="showcase-grid">
+                        <div class="showcase-card">
+                            <img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2940&auto=format&fit=crop" alt="Modern skyscraper" class="showcase-image">
+                            <div class="showcase-content">
+                                <h3>High-Rise Construction</h3>
+                                <p>Structural steel design for towers and commercial buildings with advanced seismic engineering.</p>
+                            </div>
+                        </div>
+                        <div class="showcase-card">
+                            <img src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?q=80&w=2940&auto=format&fit=crop" alt="Steel bridge" class="showcase-image">
+                            <div class="showcase-content">
+                               <h3>Infrastructure Projects</h3>
+                               <p>Complex bridge design, highway infrastructure, and transportation networks.</p>
+                            </div>
+                        </div>
+                        <div class="showcase-card">
+                            <img src="https://images.unsplash.com/photo-1565008447742-97f6f38c985c?q=80&w=2940&auto=format&fit=crop" alt="Industrial facility" class="showcase-image">
+                            <div class="showcase-content">
+                                <h3>Industrial Facilities</h3>
+                                <p>Manufacturing plants, warehouses, and complexes with specialized steel frame solutions.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <div id="app-content" class="main-layout" style="display: none;">
+            <aside class="sidebar">
+                <div class="sidebar-user-profile">
+                    <div class="sidebar-avatar" id="sidebarUserAvatar"></div>
+                    <h3 id="sidebarUserName"></h3>
+                    <p id="sidebarUserType"></p>
+                </div>
+                <nav class="sidebar-nav" id="sidebar-nav-menu"></nav>
+                <div class="logout-btn-container">
+                    <a href="#" id="logout-button" class="sidebar-nav-link">
+                        <i class="fas fa-sign-out-alt"></i><span>Logout</span>
+                    </a>
+                </div>
+            </aside>
+            <div class="main-content">
+                <div id="app-container" class="main-container">
+                </div>
             </div>
-            <nav id="sidebar-nav-menu">
-                </nav>
-        </aside>
-        <div id="app-container">
-            </div>
+        </div>
     </main>
     
-    <div id="modal-container"></div>
-    <div id="alerts-container"></div>
-
-    <footer class="footer">
-        <div class="container">
-            <p>&copy; 2025 SteelConnect. All rights reserved.</p>
-        </div>
-    </footer>
-
+    <script src="script.js" defer></script>
 </body>
 </html>
