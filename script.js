@@ -150,7 +150,6 @@ async function fetchAndRenderMyQuotes() {
             return;
         }
         listContainer.innerHTML = quotes.map(quote => {
-            // Find the job associated with the quote to get the contractor's ID
             const job = appState.jobs.find(j => j.id === quote.jobId) || {};
             const attachmentLink = quote.attachment ? `<p><strong>Attachment:</strong> <a href="${quote.attachment}" target="_blank">View File</a></p>` : '';
             const messageButton = quote.status === 'approved' ? `<button class="btn btn-primary" onclick="openConversation('${quote.jobId}', '${job.posterId}')">Message Contractor</button>` : '';
@@ -171,7 +170,6 @@ async function handlePostJob(event) {
     event.preventDefault();
     const form = event.target;
     const formData = new FormData();
-    // Use new names from the updated HTML template
     ['title', 'description', 'budget', 'deadline', 'skills', 'link'].forEach(field => formData.append(field, form[field]?.value));
     if (form.attachment.files.length > 0) formData.append('attachment', form.attachment.files[0]);
     await apiCall('/jobs', 'POST', formData, 'Job posted successfully!', () => {
@@ -273,11 +271,21 @@ function showAppView() {
     document.getElementById('landing-page-content').style.display = 'none';
     document.getElementById('app-content').style.display = 'flex';
     document.getElementById('auth-buttons-container').style.display = 'none';
+    
+    // --- FIX: Show the user info and logout button ---
+    document.getElementById('user-info').style.display = 'flex';
+
     document.getElementById('main-nav-menu').innerHTML = '';
     const user = appState.currentUser;
     document.getElementById('userName').textContent = user.name;
     document.getElementById('userType').textContent = user.type;
     document.getElementById('userAvatar').textContent = (user.name || "A").charAt(0).toUpperCase();
+
+    // Also update the sidebar profile info
+    document.getElementById('sidebarUserName').textContent = user.name;
+    document.getElementById('sidebarUserType').textContent = user.type;
+    document.getElementById('sidebarUserAvatar').textContent = (user.name || "A").charAt(0).toUpperCase();
+
     buildSidebarNav();
     renderAppSection('jobs');
 }
@@ -286,6 +294,10 @@ function showLandingPageView() {
     document.getElementById('landing-page-content').style.display = 'block';
     document.getElementById('app-content').style.display = 'none';
     document.getElementById('auth-buttons-container').style.display = 'flex';
+    
+    // --- FIX: Hide the user info when logged out ---
+    document.getElementById('user-info').style.display = 'none';
+
     document.getElementById('main-nav-menu').innerHTML = `<a href="#features" class="nav-link">Features</a><a href="#showcase" class="nav-link">Showcase</a>`;
 }
 
@@ -344,12 +356,9 @@ function getPostJobTemplate() {
     return `<div class="section-header"><h2>Post a New Project</h2></div><form id="post-job-form" class="form-grid" style="max-width: 800px;"><div class="form-group"><label class="form-label">Project Title</label><input type="text" class="form-input" name="title" required></div><div class="form-group"><label class="form-label">Budget Range</label><input type="text" class="form-input" name="budget" required></div><div class="form-group"><label class="form-label">Deadline</label><input type="date" class="form-input" name="deadline" required></div><div class="form-group"><label class="form-label">Skills (comma-separated)</label><input type="text" class="form-input" name="skills"></div><div class="form-group"><label class="form-label">Relevant Link (Optional)</label><input type="url" class="form-input" name="link"></div><div class="form-group"><label class="form-label">Attachment (Optional)</label><input type="file" class="form-input" name="attachment"></div><div class="form-group"><label class="form-label">Project Description</label><textarea class="form-input" style="min-height: 120px;" name="description" required></textarea></div><button type="submit" class="btn btn-primary" style="justify-self: start;">Post Project</button></form>`;
 }
 
-// --- NEW MESSAGING FUNCTIONS ---
 async function openConversation(jobId, recipientId) {
-    // Find or create a conversation between the current user and the recipient for a specific job
     await apiCall('/messages/find', 'POST', { jobId, recipientId }, null, async (conversationResponse) => {
         const conversation = conversationResponse.data;
-        // Fetch the messages for this conversation
         await apiCall(`/messages/${conversation.id}/messages`, 'GET', null, null, (messagesResponse) => {
             showConversationModal(conversation, messagesResponse.data);
         });
@@ -373,7 +382,7 @@ function showConversationModal(conversation, messages) {
     showGenericModal(modalContent, 'max-width: 600px;');
     
     const messageList = document.getElementById('message-list');
-    messageList.scrollTop = messageList.scrollHeight; // Scroll to the bottom of the messages
+    messageList.scrollTop = messageList.scrollHeight;
 
     document.getElementById('message-form').addEventListener('submit', (e) => handleSendMessage(e, conversation.id));
 }
@@ -384,7 +393,7 @@ async function handleSendMessage(event, conversationId) {
     const text = form.messageText.value.trim();
     if (!text) return;
 
-    form.querySelector('button').disabled = true; // Prevent double sending
+    form.querySelector('button').disabled = true;
 
     await apiCall(`/messages/${conversationId}/messages`, 'POST', { text }, null, (newMessageResponse) => {
         form.reset();
@@ -399,7 +408,6 @@ async function handleSendMessage(event, conversationId) {
     });
 }
 
-// --- CARD TOGGLE FUNCTION ---
 function toggleCard(card) {
     const isExpanded = card.classList.contains('expanded');
     document.querySelectorAll('.feature-card.expanded').forEach(otherCard => {
