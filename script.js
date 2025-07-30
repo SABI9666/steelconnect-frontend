@@ -171,7 +171,7 @@ async function fetchAndRenderJobs() {
             const actions = user.type === 'designer'
                 ? `<button class="btn btn-primary" onclick="showQuoteModal('${job.id}')">Submit Quote</button>`
                 : `<button class="btn btn-outline" onclick="viewQuotes('${job.id}')">View Quotes</button>
-                   <button class="btn btn-primary" onclick="deleteJob('${job.id}')">Delete Job</button>`;
+                   <button class="btn btn-danger" onclick="deleteJob('${job.id}')">Delete Job</button>`;
             
             jobsHTML += `
                 <div class="job-card">
@@ -207,7 +207,8 @@ async function handlePostJob(event) {
     formData.append('description', form.jobDescription.value);
     formData.append('budget', form.jobBudget.value);
     formData.append('deadline', form.jobDeadline.value);
-    formData.append('skills', (form.jobSkills.value || "").split(',').map(s => s.trim()).filter(Boolean));
+    // FIX: Send skills as a simple string
+    formData.append('skills', form.jobSkills.value);
     formData.append('link', form.jobLink.value);
 
     const fileInput = form.attachment;
@@ -230,18 +231,23 @@ async function deleteJob(jobId) {
 
 // --- MODALS ---
 async function viewQuotes(jobId) {
-    await apiCall(`/quotes/${jobId}`, 'GET', null, null, (response) => {
-        const quotes = response.data || [];
+    await apiCall(`/quotes/job/${jobId}`, 'GET', null, null, (response) => {
+        const quotes = response || [];
         const modalContainer = document.getElementById('modal-container');
         let quotesHTML = '<h3>Received Quotes</h3>';
         if (quotes.length === 0) {
             quotesHTML += `<div class="empty-state"><p>No quotes yet.</p></div>`;
         } else {
             quotes.forEach(quote => {
+                const approveButton = appState.currentUser.type === 'contractor' && quote.status === 'pending'
+                    ? `<button class="btn btn-primary" onclick="approveQuote('${quote.id}')">Approve</button>`
+                    : '';
                 quotesHTML += `
-                    <div class="quote-card">
-                        <p><strong>From:</strong> ${quote.designerName} | <strong>Amount:</strong> $${quote.quoteAmount}</p>
+                    <div class="quote-card quote-status-${quote.status}">
+                        <p><strong>From:</strong> ${quote.quoterName} | <strong>Amount:</strong> $${quote.amount}</p>
                         <p>${quote.description}</p>
+                        <p><strong>Status:</strong> ${quote.status}</p>
+                        ${approveButton}
                     </div>`;
             });
         }
@@ -255,6 +261,15 @@ async function viewQuotes(jobId) {
     });
 }
 
+async function approveQuote(quoteId) {
+    if (confirm('Are you sure you want to approve this quote? This will reject all other quotes for this job.')) {
+        await apiCall(`/quotes/${quoteId}/approve`, 'PUT', null, 'Quote approved!', () => {
+            closeModal();
+        });
+    }
+}
+
+
 function showQuoteModal(jobId) {
     const modalContainer = document.getElementById('modal-container');
     modalContainer.innerHTML = `
@@ -263,9 +278,9 @@ function showQuoteModal(jobId) {
                 <button class="modal-close-button" onclick="closeModal()">✕</button>
                 <h3>Submit Your Quote</h3>
                 <form id="quote-form" class="form-grid">
-                    <div class="form-group"><label class="form-label">Quote Amount ($)</label><input type="number" class="form-input" name="quoteAmount" required></div>
+                    <div class="form-group"><label class="form-label">Quote Amount ($)</label><input type="number" class="form-input" name="amount" required></div>
                     <div class="form-group"><label class="form-label">Timeline (in days)</label><input type="number" class="form-input" name="timeline" required></div>
-                    <div class="form-group"><label class="form-label">Attachments (Optional)</label><input type="file" class="form-input" name="attachments" multiple></div>
+                    <div class="form-group"><label class="form-label">Attachments (Optional)</label><input type="file" class="form-input" name="attachment"></div>
                     <div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" style="min-height: 120px;" name="description" required></textarea></div>
                     <button type="submit" class="btn btn-primary">Submit Quote</button>
                 </form>
@@ -280,15 +295,16 @@ async function handleQuoteSubmit(event, jobId) {
     
     const formData = new FormData();
     formData.append('jobId', jobId);
-    formData.append('quoteAmount', form.quoteAmount.value);
+    formData.append('amount', form.amount.value);
     formData.append('timeline', form.timeline.value);
     formData.append('description', form.description.value);
+    formData.append('quoterId', appState.currentUser.id);
+    formData.append('quoterName', appState.currentUser.name);
 
-    const fileInput = form.attachments;
+
+    const fileInput = form.attachment;
     if (fileInput.files.length > 0) {
-        for (let i = 0; i < fileInput.files.length; i++) {
-            formData.append('attachments', fileInput.files[i]);
-        }
+        formData.append('attachment', fileInput.files[0]);
     }
 
     await apiCall('/quotes', 'POST', formData, 'Quote submitted successfully!', closeModal);
