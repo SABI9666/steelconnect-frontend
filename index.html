@@ -5,7 +5,591 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SteelConnect - Professional Steel & Rebar Design Marketplace</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <style>
+        /* --- GLOBAL STYLES & VARIABLES --- */
+        :root {
+            --primary-color: #1e40af;
+            --primary-hover: #1d4ed8;
+            --primary-light: #dbeafe;
+            --secondary-color: #0f766e;
+            --secondary-hover: #0d9488;
+            --accent-color: #0891b2;
+            --accent-light: #cffafe;
+            --gold-accent: #f59e0b;
+            --text-dark: #0f172a;
+            --text-gray: #64748b;
+            --text-light: #94a3b8;
+            --bg-white: #ffffff;
+            --bg-light: #f8fafc;
+            --bg-gray: #f1f5f9;
+            --bg-dark: #0f172a;
+            --border-color: #e2e8f0;
+            --border-light: #f1f5f9;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+            --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+        }
+        
+        html { scroll-behavior: smooth; }
+        body { 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            background-color: var(--bg-light); 
+            color: var(--text-dark); 
+            line-height: 1.6; 
+            margin: 0;
+            padding: 0;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        /* --- HEADER --- */
+        .header { 
+            background: rgba(248, 250, 252, 0.95); 
+            border-bottom: 1px solid var(--border-light); 
+            position: sticky; 
+            top: 0; 
+            z-index: 1000; 
+            backdrop-filter: blur(20px); 
+        }
+        .header-container { 
+            max-width: 1400px; 
+            margin: 0 auto; 
+            padding: 0 24px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+            height: 72px; 
+        }
+        .logo { 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            font-size: 28px; 
+            font-weight: 800; 
+            color: var(--text-dark); 
+            text-decoration: none; 
+            cursor: pointer; 
+        }
+        .logo-icon { 
+            width: 40px; 
+            height: 40px; 
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color)); 
+            border-radius: 12px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            color: white; 
+            font-weight: 700; 
+            box-shadow: var(--shadow-lg);
+        }
+        .nav-menu { 
+            flex-grow: 1; 
+            display: flex; 
+            justify-content: center; 
+            gap: 8px; 
+        }
+        .nav-link { 
+            padding: 12px 20px; 
+            border-radius: 8px; 
+            color: var(--text-gray); 
+            font-weight: 600; 
+            font-size: 15px; 
+            cursor: pointer; 
+            background: none; 
+            border: none; 
+            text-decoration: none; 
+            transition: all 0.3s ease;
+        }
+        .nav-link:hover { 
+            color: var(--primary-color); 
+            background: var(--accent-light);
+        }
+        .auth-buttons { 
+            display: flex; 
+            gap: 16px; 
+        }
+
+        /* --- BUTTONS --- */
+        .btn { 
+            padding: 14px 28px; 
+            border-radius: 12px; 
+            font-weight: 600; 
+            font-size: 16px; 
+            cursor: pointer; 
+            border: 2px solid transparent; 
+            display: inline-flex; 
+            align-items: center; 
+            gap: 10px; 
+            transition: all 0.3s ease; 
+            text-decoration: none;
+        }
+        .btn:hover { 
+            transform: translateY(-2px); 
+            box-shadow: var(--shadow-lg); 
+        }
+        .btn-outline { 
+            background: transparent; 
+            color: var(--primary-color); 
+            border-color: var(--primary-color); 
+        }
+        .btn-outline:hover { 
+            background: var(--primary-color); 
+            color: white; 
+        }
+        .btn-primary { 
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); 
+            color: white; 
+            box-shadow: var(--shadow-lg);
+        }
+        .btn-primary:hover { 
+            background: linear-gradient(135deg, var(--primary-hover), var(--secondary-hover)); 
+            box-shadow: var(--shadow-xl);
+            transform: translateY(-3px);
+        }
+
+        /* --- MODERN HERO SECTION --- */
+        .hero { 
+            position: relative;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 30%, #334155 70%, #475569 100%);
+            overflow: hidden;
+        }
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(30, 64, 175, 0.4) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(15, 118, 110, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(8, 145, 178, 0.2) 0%, transparent 50%);
+            z-index: 1;
+        }
+        .hero-background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('https://images.unsplash.com/photo-1565008447742-97f6f38c985c?q=80&w=2940&auto=format&fit=crop') center/cover;
+            opacity: 0.1;
+            z-index: 0;
+        }
+        .hero-content { 
+            position: relative;
+            z-index: 2;
+            max-width: 1200px; 
+            margin: 0 auto; 
+            padding: 0 24px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 80px;
+            align-items: center;
+        }
+        .hero-text {
+            color: white;
+        }
+        .hero-text h1 { 
+            font-size: 64px; 
+            font-weight: 900; 
+            line-height: 1.1; 
+            margin-bottom: 24px; 
+            background: linear-gradient(135deg, #ffffff, #e2e8f0, #cbd5e1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .hero-text p { 
+            font-size: 20px; 
+            opacity: 0.9; 
+            margin-bottom: 40px; 
+            color: #cbd5e1;
+        }
+        .hero-visual {
+            position: relative;
+            height: 500px;
+        }
+        .hero-image {
+            width: 100%;
+            height: 100%;
+            border-radius: 24px;
+            object-fit: cover;
+            box-shadow: var(--shadow-xl);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .floating-cards {
+            position: absolute;
+            top: 20px;
+            right: -20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .floating-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: var(--shadow-lg);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            animation: float 6s ease-in-out infinite;
+        }
+        .floating-card:nth-child(2) {
+            animation-delay: -2s;
+        }
+        .floating-card:nth-child(3) {
+            animation-delay: -4s;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+        .floating-card h4 {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--secondary-color);
+            margin-bottom: 8px;
+        }
+        .floating-card p {
+            font-size: 12px;
+            color: var(--text-gray);
+            margin: 0;
+        }
+
+        /* --- HOW IT WORKS SECTION --- */
+        .how-it-works {
+            padding: 120px 24px;
+            background: var(--bg-white);
+            position: relative;
+        }
+        .how-it-works::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 200px;
+            background: linear-gradient(180deg, var(--bg-light) 0%, var(--bg-white) 100%);
+        }
+        .section-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+        .section-title { 
+            font-size: 48px; 
+            font-weight: 900; 
+            text-align: center; 
+            margin-bottom: 20px; 
+            background: linear-gradient(135deg, var(--text-dark), var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .section-subtitle {
+            text-align: center;
+            font-size: 20px;
+            color: var(--text-gray);
+            margin-bottom: 80px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .steps-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 40px;
+            margin-bottom: 80px;
+        }
+        .step-card {
+            text-align: center;
+            padding: 40px 30px;
+            background: linear-gradient(135deg, var(--bg-white), var(--bg-gray));
+            border-radius: 20px;
+            border: 1px solid var(--border-light);
+            box-shadow: var(--shadow-lg);
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .step-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-color), var(--accent-color), var(--secondary-color));
+        }
+        .step-card:hover {
+            transform: translateY(-12px);
+            box-shadow: var(--shadow-2xl);
+            background: var(--bg-white);
+        }
+        .step-number {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0 auto 24px;
+            box-shadow: var(--shadow-lg);
+            border: 3px solid var(--accent-light);
+        }
+        .step-card h3 {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: var(--text-dark);
+        }
+        .step-card p {
+            color: var(--text-gray);
+            line-height: 1.6;
+        }
+
+        /* --- SLIDING CARDS SECTION --- */
+        .sliding-section {
+            padding: 120px 24px;
+            background: linear-gradient(135deg, var(--bg-light), var(--accent-light));
+        }
+        .slider-container {
+            position: relative;
+            overflow: hidden;
+            border-radius: 24px;
+            box-shadow: var(--shadow-xl);
+            background: var(--bg-white);
+        }
+        .slider-wrapper {
+            display: flex;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .slide {
+            min-width: 100%;
+            padding: 80px 60px;
+            display: flex;
+            align-items: center;
+            gap: 60px;
+        }
+        .slide-content h3 {
+            font-size: 36px;
+            font-weight: 800;
+            margin-bottom: 24px;
+            color: var(--text-dark);
+        }
+        .slide-content p {
+            font-size: 18px;
+            color: var(--text-gray);
+            line-height: 1.7;
+            margin-bottom: 32px;
+        }
+        .slide-features {
+            list-style: none;
+            padding: 0;
+        }
+        .slide-features li {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            font-size: 16px;
+            color: var(--text-dark);
+        }
+        .slide-features li i {
+            color: var(--secondary-color);
+            width: 20px;
+        }
+        .slide-visual {
+            flex: 1;
+            height: 400px;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: var(--shadow-lg);
+        }
+        .slide-visual img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .slider-controls {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-top: 40px;
+        }
+        .slider-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--border-color);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .slider-dot.active {
+            background: var(--secondary-color);
+            transform: scale(1.2);
+        }
+        .slider-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid var(--border-light);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 20px;
+            color: var(--primary-color);
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            box-shadow: var(--shadow-lg);
+        }
+        .slider-nav:hover {
+            background: var(--secondary-color);
+            color: white;
+            transform: translateY(-50%) scale(1.1);
+            box-shadow: var(--shadow-xl);
+        }
+        .slider-nav.prev {
+            left: 20px;
+        }
+        .slider-nav.next {
+            right: 20px;
+        }
+
+        /* --- SHOWCASE SECTION --- */
+        .showcase {
+            padding: 120px 24px;
+            background: linear-gradient(135deg, var(--bg-dark) 0%, #1e293b 50%, #334155 100%);
+            color: white;
+            position: relative;
+        }
+        .showcase::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 30% 20%, rgba(30, 64, 175, 0.2) 0%, transparent 50%),
+                radial-gradient(circle at 70% 80%, rgba(15, 118, 110, 0.2) 0%, transparent 50%);
+            pointer-events: none;
+        }
+        .showcase .section-title {
+            color: white;
+            background: linear-gradient(135deg, #ffffff, #e2e8f0, #cbd5e1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .showcase-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 40px;
+        }
+        .showcase-card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 20px;
+            overflow: hidden;
+            transition: all 0.4s ease;
+            position: relative;
+        }
+        .showcase-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-color), var(--secondary-color));
+        }
+        .showcase-card:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-2xl);
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(255, 255, 255, 0.25);
+        }
+        .showcase-image {
+            width: 100%;
+            height: 240px;
+            object-fit: cover;
+        }
+        .showcase-content {
+            padding: 32px;
+        }
+        .showcase-content h3 {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: white;
+        }
+        .showcase-content p {
+            color: rgba(255, 255, 255, 0.8);
+            line-height: 1.6;
+        }
+
+        /* --- RESPONSIVE DESIGN --- */
+        @media (max-width: 1024px) {
+            .hero-content {
+                grid-template-columns: 1fr;
+                gap: 60px;
+                text-align: center;
+            }
+            .hero-text h1 {
+                font-size: 48px;
+            }
+            .slide {
+                flex-direction: column;
+                text-align: center;
+                padding: 60px 40px;
+            }
+        }
+        @media (max-width: 768px) {
+            .header-container {
+                padding: 0 16px;
+                height: 64px;
+            }
+            .logo {
+                font-size: 24px;
+            }
+            .nav-menu {
+                display: none;
+            }
+            .hero-text h1 {
+                font-size: 36px;
+            }
+            .section-title {
+                font-size: 36px;
+            }
+            .steps-container {
+                grid-template-columns: 1fr;
+                gap: 30px;
+            }
+            .slide {
+                padding: 40px 24px;
+            }
+            .floating-cards {
+                display: none;
+            }
+        }
+    </style>
 </head>
 <body>
     <header class="header">
@@ -14,115 +598,260 @@
                 <div class="logo-icon">SC</div>
                 SteelConnect
             </a>
-            <nav id="main-nav-menu" class="nav-menu">
-                </nav>
-            <div id="auth-buttons-container" class="auth-buttons">
-                <button id="signin-btn" class="btn btn-outline">Sign In</button>
-                <button id="join-btn" class="btn btn-primary">Join Now</button>
-            </div>
-            <div id="user-info" style="display: none;">
-                <div class="user-profile-menu">
-                    <div id="userAvatar" class="avatar"></div>
-                    <div>
-                        <div id="userName" class="user-name"></div>
-                        <div id="userType" class="user-role"></div>
-                    </div>
-                </div>
+            <nav class="nav-menu">
+                <a href="#how-it-works" class="nav-link">How It Works</a>
+                <a href="#why-steelconnect" class="nav-link">Why Choose Us</a>
+                <a href="#showcase" class="nav-link">Showcase</a>
+            </nav>
+            <div class="auth-buttons">
+                <button class="btn btn-outline">Sign In</button>
+                <button class="btn btn-primary">Join Now</button>
             </div>
         </div>
     </header>
 
-    <div id="alerts-container"></div>
-    <div id="modal-container"></div>
-
     <main>
-        <div id="landing-page-content">
-            <section class="hero">
-                <div class="hero-content">
-                    <div class="hero-text">
-                        <h1>Connecting Clients to Steel & Construction Professionals Who Deliver</h1>
-                        <p>Find top steel designers and contractors for your projects. Post jobs, submit quotes, and build your network.</p>
-                        <button id="get-started-btn" class="btn btn-primary" style="padding: 16px 32px; font-size: 16px;">
-                            Get Started Today <i class="fas fa-arrow-right"></i>
-                        </button>
-                    </div>
+        <!-- Modern Hero Section -->
+        <section class="hero">
+            <div class="hero-background"></div>
+            <div class="hero-content">
+                <div class="hero-text">
+                    <h1>Connecting Clients to Steel & Construction Professionals Who Deliver</h1>
+                    <p>Find top steel designers and contractors for your projects. Post jobs, submit quotes, and build your professional network with confidence.</p>
+                    <button class="btn btn-primary" style="padding: 18px 36px; font-size: 18px;">
+                        Get Started Today <i class="fas fa-arrow-right"></i>
+                    </button>
                 </div>
-            </section>
-
-            <section id="features" class="landing-section">
-                <div class="landing-container">
-                    <h2 class="section-title">Why SteelConnect?</h2>
-                    <div class="features-grid">
-                        <div class="feature-card" onclick="toggleCard(this)">
-                            <div class="feature-icon"><i class="fas fa-globe-americas"></i></div>
-                            <h3>Connect to Global Experts</h3>
-                            <p>Access a worldwide network of freelance steel designers and engineering companies.</p>
+                <div class="hero-visual">
+                    <img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2940&auto=format&fit=crop" alt="Modern steel construction" class="hero-image">
+                    <div class="floating-cards">
+                        <div class="floating-card">
+                            <h4>500+ Projects</h4>
+                            <p>Completed Successfully</p>
                         </div>
-                        <div class="feature-card" onclick="toggleCard(this)">
-                            <div class="feature-icon"><i class="fas fa-drafting-compass"></i></div>
-                            <h3>Advanced Engineering</h3>
-                            <p>From concept to construction with cutting-edge technology and software solutions.</p>
+                        <div class="floating-card">
+                            <h4>PE Licensed</h4>
+                            <p>Certified Engineers</p>
                         </div>
-                        <div class="feature-card" onclick="toggleCard(this)">
-                            <div class="feature-icon"><i class="fas fa-certificate"></i></div>
-                            <h3>Certified Professionals</h3>
-                            <p>Connect with PE-licensed engineers and certified professionals across multiple jurisdictions.</p>
+                        <div class="floating-card">
+                            <h4>Global Network</h4>
+                            <p>Worldwide Reach</p>
                         </div>
                     </div>
-                </div>
-            </section>
-            
-            <section id="showcase" class="landing-section" style="background: var(--bg-light);">
-                 <div class="landing-container">
-                    <h2 class="section-title">Industry Excellence Showcase</h2>
-                    <div class="showcase-grid">
-                        <div class="showcase-card">
-                            <img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2940&auto=format&fit=crop" alt="Modern skyscraper" class="showcase-image">
-                            <div class="showcase-content">
-                                <h3>High-Rise Construction</h3>
-                                <p>Structural steel design for towers and commercial buildings with advanced seismic engineering.</p>
-                            </div>
-                        </div>
-                        <div class="showcase-card">
-                            <img src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?q=80&w=2940&auto=format&fit=crop" alt="Steel bridge" class="showcase-image">
-                            <div class="showcase-content">
-                               <h3>Infrastructure Projects</h3>
-                               <p>Complex bridge design, highway infrastructure, and transportation networks.</p>
-                            </div>
-                        </div>
-                        <div class="showcase-card">
-                            <img src="https://images.unsplash.com/photo-1565008447742-97f6f38c985c?q=80&w=2940&auto=format&fit=crop" alt="Industrial facility" class="showcase-image">
-                            <div class="showcase-content">
-                                <h3>Industrial Facilities</h3>
-                                <p>Manufacturing plants, warehouses, and complexes with specialized steel frame solutions.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-        </div>
-
-        <div id="app-content" class="main-layout" style="display: none;">
-            <aside class="sidebar">
-                <div class="sidebar-user-profile">
-                    <div class="sidebar-avatar" id="sidebarUserAvatar"></div>
-                    <h3 id="sidebarUserName"></h3>
-                    <p id="sidebarUserType"></p>
-                </div>
-                <nav class="sidebar-nav" id="sidebar-nav-menu"></nav>
-                <div class="logout-btn-container">
-                    <a href="#" id="logout-button" class="sidebar-nav-link">
-                        <i class="fas fa-sign-out-alt"></i><span>Logout</span>
-                    </a>
-                </div>
-            </aside>
-            <div class="main-content">
-                <div id="app-container" class="main-container">
                 </div>
             </div>
-        </div>
+        </section>
+
+        <!-- How It Works Section -->
+        <section id="how-it-works" class="how-it-works">
+            <div class="section-container">
+                <h2 class="section-title">How It Works</h2>
+                <p class="section-subtitle">Simple steps to connect with the right professionals for your steel construction needs</p>
+                
+                <div class="steps-container">
+                    <div class="step-card">
+                        <div class="step-number">1</div>
+                        <h3>Post Your Project</h3>
+                        <p>Describe your steel construction needs, set your budget, and specify required skills. Upload drawings or specifications for better quotes.</p>
+                    </div>
+                    <div class="step-card">
+                        <div class="step-number">2</div>
+                        <h3>Receive Quotes</h3>
+                        <p>Licensed professionals and certified engineers submit detailed proposals with timelines, costs, and their approach to your project.</p>
+                    </div>
+                    <div class="step-card">
+                        <div class="step-number">3</div>
+                        <h3>Collaborate & Deliver</h3>
+                        <p>Choose the best fit, communicate directly through our platform, and track progress from design to completion.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Why SteelConnect Sliding Section -->
+        <section id="why-steelconnect" class="sliding-section">
+            <div class="section-container">
+                <h2 class="section-title">Why SteelConnect?</h2>
+                <div class="slider-container">
+                    <div class="slider-wrapper" id="slider-wrapper">
+                        <div class="slide">
+                            <div class="slide-content">
+                                <h3>Global Network of Experts</h3>
+                                <p>Connect with a worldwide community of freelance steel designers, structural engineers, and certified professionals ready to tackle your most challenging projects.</p>
+                                <ul class="slide-features">
+                                    <li><i class="fas fa-check"></i> PE-licensed engineers across multiple jurisdictions</li>
+                                    <li><i class="fas fa-check"></i> Specialized expertise in seismic and wind engineering</li>
+                                    <li><i class="fas fa-check"></i> Multi-language support for international projects</li>
+                                    <li><i class="fas fa-check"></i> 24/7 availability across time zones</li>
+                                </ul>
+                            </div>
+                            <div class="slide-visual">
+                                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=2940&auto=format&fit=crop" alt="Global network" />
+                            </div>
+                        </div>
+                        <div class="slide">
+                            <div class="slide-content">
+                                <h3>Advanced Engineering Solutions</h3>
+                                <p>From initial concept to final construction drawings, our professionals use cutting-edge technology and industry-leading software to deliver precision engineering.</p>
+                                <ul class="slide-features">
+                                    <li><i class="fas fa-check"></i> Latest BIM and 3D modeling capabilities</li>
+                                    <li><i class="fas fa-check"></i> Advanced structural analysis software</li>
+                                    <li><i class="fas fa-check"></i> Code compliance across all major standards</li>
+                                    <li><i class="fas fa-check"></i> Sustainable design practices</li>
+                                </ul>
+                            </div>
+                            <div class="slide-visual">
+                                <img src="https://images.unsplash.com/photo-1581094794329-c8112a89af12?q=80&w=2940&auto=format&fit=crop" alt="Engineering solutions" />
+                            </div>
+                        </div>
+                        <div class="slide">
+                            <div class="slide-content">
+                                <h3>Proven Track Record</h3>
+                                <p>Our platform has facilitated thousands of successful projects, from residential developments to major infrastructure, with verified reviews and portfolio showcases.</p>
+                                <ul class="slide-features">
+                                    <li><i class="fas fa-check"></i> Verified professional credentials and licenses</li>
+                                    <li><i class="fas fa-check"></i> Comprehensive project portfolios</li>
+                                    <li><i class="fas fa-check"></i> Client reviews and ratings system</li>
+                                    <li><i class="fas fa-check"></i> Quality assurance and project insurance</li>
+                                </ul>
+                            </div>
+                            <div class="slide-visual">
+                                <img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2940&auto=format&fit=crop" alt="Proven results" />
+                            </div>
+                        </div>
+                    </div>
+                    <button class="slider-nav prev" onclick="changeSlide(-1)"><i class="fas fa-chevron-left"></i></button>
+                    <button class="slider-nav next" onclick="changeSlide(1)"><i class="fas fa-chevron-right"></i></button>
+                </div>
+                <div class="slider-controls">
+                    <span class="slider-dot active" onclick="goToSlide(0)"></span>
+                    <span class="slider-dot" onclick="goToSlide(1)"></span>
+                    <span class="slider-dot" onclick="goToSlide(2)"></span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Industry Showcase -->
+        <section id="showcase" class="showcase">
+            <div class="section-container">
+                <h2 class="section-title">Industry Excellence Showcase</h2>
+                <div class="showcase-grid">
+                    <div class="showcase-card">
+                        <img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2940&auto=format&fit=crop" alt="Modern skyscraper" class="showcase-image">
+                        <div class="showcase-content">
+                            <h3>High-Rise Construction</h3>
+                            <p>Structural steel design for towers and commercial buildings with advanced seismic engineering and wind load analysis.</p>
+                        </div>
+                    </div>
+                    <div class="showcase-card">
+                        <img src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?q=80&w=2940&auto=format&fit=crop" alt="Steel bridge" class="showcase-image">
+                        <div class="showcase-content">
+                           <h3>Infrastructure Projects</h3>
+                           <p>Complex bridge design, highway infrastructure, and transportation networks engineered for safety and longevity.</p>
+                        </div>
+                    </div>
+                    <div class="showcase-card">
+                        <img src="https://images.unsplash.com/photo-1565008447742-97f6f38c985c?q=80&w=2940&auto=format&fit=crop" alt="Industrial facility" class="showcase-image">
+                        <div class="showcase-content">
+                            <h3>Industrial Facilities</h3>
+                            <p>Manufacturing plants, warehouses, and industrial complexes with specialized steel frame solutions and heavy load engineering.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
     </main>
-    
-    <script src="script.js" defer></script>
+
+    <script>
+        // Slider functionality
+        let currentSlide = 0;
+        const totalSlides = 3;
+
+        function changeSlide(direction) {
+            const wrapper = document.getElementById('slider-wrapper');
+            const dots = document.querySelectorAll('.slider-dot');
+            
+            currentSlide += direction;
+            
+            if (currentSlide >= totalSlides) {
+                currentSlide = 0;
+            } else if (currentSlide < 0) {
+                currentSlide = totalSlides - 1;
+            }
+            
+            wrapper.style.transform = `translateX(-${currentSlide * 100}%)`;
+            
+            dots.forEach((dot, index) => {
+                dot.classList.toggle('active', index === currentSlide);
+            });
+        }
+
+        function goToSlide(slideIndex) {
+            const wrapper = document.getElementById('slider-wrapper');
+            const dots = document.querySelectorAll('.slider-dot');
+            
+            currentSlide = slideIndex;
+            wrapper.style.transform = `translateX(-${currentSlide * 100}%)`;
+            
+            dots.forEach((dot, index) => {
+                dot.classList.toggle('active', index === currentSlide);
+            });
+        }
+
+        // Auto-play slider
+        setInterval(() => {
+            changeSlide(1);
+        }, 8000);
+
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('href');
+                const targetSection = document.querySelector(targetId);
+                if (targetSection) {
+                    targetSection.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Intersection Observer for animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+
+        // Observe elements for animation
+        document.addEventListener('DOMContentLoaded', () => {
+            const animateElements = document.querySelectorAll('.step-card, .showcase-card');
+            animateElements.forEach(el => {
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(30px)';
+                el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+                observer.observe(el);
+            });
+        });
+
+        // Parallax effect for hero background
+        window.addEventListener('scroll', () => {
+            const scrolled = window.pageYOffset;
+            const heroBackground = document.querySelector('.hero-background');
+            if (heroBackground) {
+                heroBackground.style.transform = `translateY(${scrolled * 0.5}px)`;
+            }
+        });
+    </script>
 </body>
 </html>
