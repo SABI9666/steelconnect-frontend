@@ -5,8 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SteelConnect - Professional Steel & Rebar Design Marketplace</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
-        /* --- GLOBAL STYLES & VARIABLES --- */
+        /* --- GLOBAL STYLES & VARIABLES (From new index.html) --- */
         :root {
             --primary-color: #1e40af;
             --primary-hover: #1d4ed8;
@@ -43,7 +46,7 @@
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
-        /* --- HEADER --- */
+        /* --- HEADER (From new index.html) --- */
         .header { 
             background: rgba(248, 250, 252, 0.95); 
             border-bottom: 1px solid var(--border-light); 
@@ -110,7 +113,7 @@
             gap: 16px; 
         }
 
-        /* --- BUTTONS --- */
+        /* --- BUTTONS (From new index.html) --- */
         .btn { 
             padding: 14px 28px; 
             border-radius: 12px; 
@@ -147,8 +150,15 @@
             box-shadow: var(--shadow-xl);
             transform: translateY(-3px);
         }
+        .btn-danger {
+            background-color: #ef4444;
+            color: white;
+        }
+        .btn-danger:hover {
+            background-color: #dc2626;
+        }
 
-        /* --- MODERN HERO SECTION --- */
+        /* --- MODERN HERO SECTION (From new index.html) --- */
         .hero { 
             position: relative;
             min-height: 100vh;
@@ -239,12 +249,8 @@
             border: 1px solid rgba(255, 255, 255, 0.2);
             animation: float 6s ease-in-out infinite;
         }
-        .floating-card:nth-child(2) {
-            animation-delay: -2s;
-        }
-        .floating-card:nth-child(3) {
-            animation-delay: -4s;
-        }
+        .floating-card:nth-child(2) { animation-delay: -2s; }
+        .floating-card:nth-child(3) { animation-delay: -4s; }
         @keyframes float {
             0%, 100% { transform: translateY(0px); }
             50% { transform: translateY(-20px); }
@@ -261,7 +267,7 @@
             margin: 0;
         }
 
-        /* --- HOW IT WORKS SECTION --- */
+        /* --- HOW IT WORKS SECTION (From new index.html) --- */
         .how-it-works {
             padding: 120px 24px;
             background: var(--bg-white);
@@ -358,7 +364,7 @@
             line-height: 1.6;
         }
 
-        /* --- SLIDING CARDS SECTION --- */
+        /* --- SLIDING CARDS SECTION (From new index.html) --- */
         .sliding-section {
             padding: 120px 24px;
             background: linear-gradient(135deg, var(--bg-light), var(--accent-light));
@@ -393,10 +399,7 @@
             line-height: 1.7;
             margin-bottom: 32px;
         }
-        .slide-features {
-            list-style: none;
-            padding: 0;
-        }
+        .slide-features { list-style: none; padding: 0; }
         .slide-features li {
             display: flex;
             align-items: center;
@@ -405,10 +408,7 @@
             font-size: 16px;
             color: var(--text-dark);
         }
-        .slide-features li i {
-            color: var(--secondary-color);
-            width: 20px;
-        }
+        .slide-features li i { color: var(--secondary-color); width: 20px; }
         .slide-visual {
             flex: 1;
             height: 400px;
@@ -416,11 +416,7 @@
             overflow: hidden;
             box-shadow: var(--shadow-lg);
         }
-        .slide-visual img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
+        .slide-visual img { width: 100%; height: 100%; object-fit: cover; }
         .slider-controls {
             display: flex;
             justify-content: center;
@@ -464,14 +460,10 @@
             transform: translateY(-50%) scale(1.1);
             box-shadow: var(--shadow-xl);
         }
-        .slider-nav.prev {
-            left: 20px;
-        }
-        .slider-nav.next {
-            right: 20px;
-        }
+        .slider-nav.prev { left: 20px; }
+        .slider-nav.next { right: 20px; }
 
-        /* --- SHOWCASE SECTION --- */
+        /* --- SHOWCASE SECTION (From new index.html) --- */
         .showcase {
             padding: 120px 24px;
             background: linear-gradient(135deg, var(--bg-dark) 0%, #1e293b 50%, #334155 100%);
@@ -526,332 +518,627 @@
             background: rgba(255, 255, 255, 0.12);
             border-color: rgba(255, 255, 255, 0.25);
         }
-        .showcase-image {
-            width: 100%;
-            height: 240px;
-            object-fit: cover;
-        }
-        .showcase-content {
-            padding: 32px;
-        }
-        .showcase-content h3 {
-            font-size: 24px;
-            font-weight: 700;
-            margin-bottom: 16px;
-            color: white;
-        }
-        .showcase-content p {
-            color: rgba(255, 255, 255, 0.8);
-            line-height: 1.6;
-        }
+        .showcase-image { width: 100%; height: 240px; object-fit: cover; }
+        .showcase-content { padding: 32px; }
+        .showcase-content h3 { font-size: 24px; font-weight: 700; margin-bottom: 16px; color: white; }
+        .showcase-content p { color: rgba(255, 255, 255, 0.8); line-height: 1.6; }
+
+        /* --- MAIN APP VIEW STYLES (from original style.css, integrated for logged-in view) --- */
+        .user-profile-menu { display: flex; align-items: center; gap: 12px; }
+        .avatar { width: 40px; height: 40px; background-color: var(--primary-color); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; }
+        .user-name { font-weight: 600; }
+        .user-role { font-size: 14px; color: var(--text-gray); text-transform: capitalize; }
+        .main-layout { display: flex; }
+        .sidebar { width: 260px; background: var(--bg-white); border-right: 1px solid var(--border-color); padding: 24px; height: calc(100vh - 72px); position: sticky; top: 72px; display: flex; flex-direction: column; }
+        .main-content { flex-grow: 1; padding: 40px; }
+        .main-container { max-width: 1200px; margin: 0 auto; }
+        .sidebar-user-profile { text-align: center; margin-bottom: 30px; }
+        .sidebar-avatar { width: 80px; height: 80px; background: var(--primary-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 32px; margin: 0 auto 10px; }
+        .sidebar-user-profile h3 { font-size: 18px; font-weight: 600; }
+        .sidebar-user-profile p { color: var(--text-gray); font-size: 14px; text-transform: capitalize; }
+        .sidebar-nav { flex-grow: 1; display: flex; flex-direction: column; gap: 8px; }
+        .sidebar-nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 8px; color: var(--text-gray); font-weight: 500; font-size: 15px; cursor: pointer; text-decoration: none; transition: all 0.2s; }
+        .sidebar-nav-link:hover { background: var(--primary-light); color: var(--primary-color); }
+        .sidebar-nav-link.active { background: var(--primary-color); color: white; }
+        
+        /* --- MODALS, ALERTS, & OTHER COMPONENTS (from original style.css) --- */
+        .section-header { margin-bottom: 32px; padding-bottom: 16px; border-bottom: 1px solid var(--border-color); }
+        .section-header h2 { font-size: 28px; font-weight: 700; color: var(--text-dark); }
+        .form-grid { display: grid; gap: 20px; }
+        .form-group { display: flex; flex-direction: column; gap: 8px; }
+        .form-label { font-weight: 500; font-size: 14px; }
+        .form-input, .form-select, .form-textarea { padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 15px; width: 100%; }
+        .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.2); }
+        .jobs-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px; }
+        .job-card { background: var(--bg-white); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; transition: all 0.3s; display: flex; flex-direction: column; }
+        .job-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-4px); }
+        .job-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
+        .job-header h3 { font-size: 20px; font-weight: 600; }
+        .job-budget { background: var(--primary-light); color: var(--primary-color); padding: 6px 12px; border-radius: 20px; font-size: 14px; font-weight: 600; white-space: nowrap; }
+        .job-card p { flex-grow: 1; }
+        .job-actions { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 12px; }
+        #alerts-container { position: fixed; top: 80px; right: 24px; z-index: 2000; display: flex; flex-direction: column; gap: 12px; }
+        .alert { padding: 16px 20px; border-radius: 8px; font-weight: 500; display: flex; align-items: center; gap: 12px; min-width: 300px; box-shadow: var(--shadow-lg); animation: slideIn 0.5s forwards; border-left: 5px solid; }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
+        .alert-success { background: #d1fae5; color: #065f46; border-color: #10b981; }
+        .alert-error { background: #fee2e2; color: #991b1b; border-color: #ef4444; }
+        .alert-info { background: #e0f2fe; color: #075985; border-color: #0ea5e9; }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.7); display: flex; align-items: center; justify-content: center; z-index: 1100; backdrop-filter: blur(5px); }
+        .modal-content { background: var(--bg-white); padding: 40px; border-radius: 16px; max-width: 450px; width: 90%; position: relative; box-shadow: var(--shadow-lg); }
+        .modal-close-button { position: absolute; top: 16px; right: 16px; background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-gray); }
+        .modal-switch { text-align: center; margin-top: 16px; font-size: 14px; }
+        .modal-switch a { color: var(--primary-color); cursor: pointer; font-weight: 500; }
+        .empty-state { text-align: center; padding: 40px; background-color: var(--bg-gray); border-radius: 12px; }
+        .empty-state h3 { margin-bottom: 8px; color: var(--text-dark); }
+        .empty-state p { color: var(--text-gray); }
+        .quote-card { border: 1px solid var(--border-color); padding: 16px; border-radius: 8px; margin-bottom: 12px; }
+        .quote-actions { margin-top: 10px; display: flex; gap: 10px; justify-content: flex-end; }
+        .quote-status-pending { border-left: 4px solid #f59e0b; }
+        .quote-status-approved { border-left: 4px solid #10b981; }
+        .quote-status-rejected { border-left: 4px solid #ef4444; }
 
         /* --- RESPONSIVE DESIGN --- */
         @media (max-width: 1024px) {
-            .hero-content {
-                grid-template-columns: 1fr;
-                gap: 60px;
-                text-align: center;
-            }
-            .hero-text h1 {
-                font-size: 48px;
-            }
-            .slide {
-                flex-direction: column;
-                text-align: center;
-                padding: 60px 40px;
-            }
+            .hero-content { grid-template-columns: 1fr; gap: 60px; text-align: center; }
+            .hero-text h1 { font-size: 48px; }
+            .slide { flex-direction: column; text-align: center; padding: 60px 40px; }
         }
         @media (max-width: 768px) {
-            .header-container {
-                padding: 0 16px;
-                height: 64px;
-            }
-            .logo {
-                font-size: 24px;
-            }
-            .nav-menu {
-                display: none;
-            }
-            .hero-text h1 {
-                font-size: 36px;
-            }
-            .section-title {
-                font-size: 36px;
-            }
-            .steps-container {
-                grid-template-columns: 1fr;
-                gap: 30px;
-            }
-            .slide {
-                padding: 40px 24px;
-            }
-            .floating-cards {
-                display: none;
-            }
+            .header-container { padding: 0 16px; height: 64px; }
+            .logo { font-size: 24px; }
+            .nav-menu { display: none; }
+            .hero-text h1 { font-size: 36px; }
+            .section-title { font-size: 36px; }
+            .steps-container { grid-template-columns: 1fr; gap: 30px; }
+            .slide { padding: 40px 24px; }
+            .floating-cards { display: none; }
+            .main-layout { flex-direction: column; }
+            .sidebar { position: static; width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border-color); }
+            .main-content { padding: 24px; }
         }
     </style>
 </head>
 <body>
+    <!-- These containers are required by script.js to show alerts and modals -->
+    <div id="alerts-container"></div>
+    <div id="modal-container"></div>
+
     <header class="header">
         <div class="header-container">
             <a href="#" class="logo">
                 <div class="logo-icon">SC</div>
                 SteelConnect
             </a>
-            <nav class="nav-menu">
+            <!-- This nav menu will be updated by the script after login -->
+            <nav id="main-nav-menu" class="nav-menu">
                 <a href="#how-it-works" class="nav-link">How It Works</a>
                 <a href="#why-steelconnect" class="nav-link">Why Choose Us</a>
                 <a href="#showcase" class="nav-link">Showcase</a>
             </nav>
-            <div class="auth-buttons">
-                <button class="btn btn-outline">Sign In</button>
-                <button class="btn btn-primary">Join Now</button>
+            <!-- This container holds the login/join buttons and is hidden on login -->
+            <div id="auth-buttons-container" class="auth-buttons">
+                <!-- Added IDs for the script to find these buttons -->
+                <button id="signin-btn" class="btn btn-outline">Sign In</button>
+                <button id="join-btn" class="btn btn-primary">Join Now</button>
+            </div>
+            <!-- This container holds user info and is shown on login -->
+            <div id="user-info" class="user-profile-menu" style="display: none;">
+                 <div id="userAvatar" class="avatar"></div>
+                 <div>
+                     <div id="userName" class="user-name"></div>
+                     <div id="userType" class="user-role"></div>
+                 </div>
+                 <!-- Added ID for the script to find the logout button -->
+                 <button id="logout-button" class="btn btn-outline" style="padding: 10px 20px;">Logout</button>
             </div>
         </div>
     </header>
 
-    <main>
-        <!-- Modern Hero Section -->
-        <section class="hero">
-            <div class="hero-background"></div>
-            <div class="hero-content">
-                <div class="hero-text">
-                    <h1>Connecting Clients to Steel & Construction Professionals Who Deliver</h1>
-                    <p>Find top steel designers and contractors for your projects. Post jobs, submit quotes, and build your professional network with confidence.</p>
-                    <button class="btn btn-primary" style="padding: 18px 36px; font-size: 18px;">
-                        Get Started Today <i class="fas fa-arrow-right"></i>
-                    </button>
-                </div>
-                <div class="hero-visual">
-                    <img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2940&auto=format&fit=crop" alt="Modern steel construction" class="hero-image">
-                    <div class="floating-cards">
-                        <div class="floating-card">
-                            <h4>500+ Projects</h4>
-                            <p>Completed Successfully</p>
-                        </div>
-                        <div class="floating-card">
-                            <h4>PE Licensed</h4>
-                            <p>Certified Engineers</p>
-                        </div>
-                        <div class="floating-card">
-                            <h4>Global Network</h4>
-                            <p>Worldwide Reach</p>
+    <!-- This div wraps the entire landing page content. The script will hide it on login. -->
+    <div id="landing-page-content">
+        <main>
+            <section class="hero">
+                <div class="hero-background"></div>
+                <div class="hero-content">
+                    <div class="hero-text">
+                        <h1>Connecting Clients to Steel & Construction Professionals Who Deliver</h1>
+                        <p>Find top steel designers and contractors for your projects. Post jobs, submit quotes, and build your professional network with confidence.</p>
+                        <!-- Added ID for the script to find this button -->
+                        <button id="get-started-btn" class="btn btn-primary" style="padding: 18px 36px; font-size: 18px;">
+                            Get Started Today <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+                    <div class="hero-visual">
+                        <img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2940&auto=format&fit=crop" alt="Modern steel construction" class="hero-image" onerror="this.onerror=null;this.src='https://placehold.co/600x400/1e293b/ffffff?text=Steel+Building';">
+                        <div class="floating-cards">
+                            <div class="floating-card"><h4>500+ Projects</h4><p>Completed Successfully</p></div>
+                            <div class="floating-card"><h4>PE Licensed</h4><p>Certified Engineers</p></div>
+                            <div class="floating-card"><h4>Global Network</h4><p>Worldwide Reach</p></div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </section>
+            </section>
 
-        <!-- How It Works Section -->
-        <section id="how-it-works" class="how-it-works">
-            <div class="section-container">
-                <h2 class="section-title">How It Works</h2>
-                <p class="section-subtitle">Simple steps to connect with the right professionals for your steel construction needs</p>
-                
-                <div class="steps-container">
-                    <div class="step-card">
-                        <div class="step-number">1</div>
-                        <h3>Post Your Project</h3>
-                        <p>Describe your steel construction needs, set your budget, and specify required skills. Upload drawings or specifications for better quotes.</p>
-                    </div>
-                    <div class="step-card">
-                        <div class="step-number">2</div>
-                        <h3>Receive Quotes</h3>
-                        <p>Licensed professionals and certified engineers submit detailed proposals with timelines, costs, and their approach to your project.</p>
-                    </div>
-                    <div class="step-card">
-                        <div class="step-number">3</div>
-                        <h3>Collaborate & Deliver</h3>
-                        <p>Choose the best fit, communicate directly through our platform, and track progress from design to completion.</p>
+            <section id="how-it-works" class="how-it-works">
+                <div class="section-container">
+                    <h2 class="section-title">How It Works</h2>
+                    <p class="section-subtitle">Simple steps to connect with the right professionals for your steel construction needs</p>
+                    <div class="steps-container">
+                        <div class="step-card"><div class="step-number">1</div><h3>Post Your Project</h3><p>Describe your steel construction needs, set your budget, and specify required skills. Upload drawings or specifications for better quotes.</p></div>
+                        <div class="step-card"><div class="step-number">2</div><h3>Receive Quotes</h3><p>Licensed professionals and certified engineers submit detailed proposals with timelines, costs, and their approach to your project.</p></div>
+                        <div class="step-card"><div class="step-number">3</div><h3>Collaborate & Deliver</h3><p>Choose the best fit, communicate directly through our platform, and track progress from design to completion.</p></div>
                     </div>
                 </div>
-            </div>
-        </section>
+            </section>
 
-        <!-- Why SteelConnect Sliding Section -->
-        <section id="why-steelconnect" class="sliding-section">
-            <div class="section-container">
-                <h2 class="section-title">Why SteelConnect?</h2>
-                <div class="slider-container">
-                    <div class="slider-wrapper" id="slider-wrapper">
-                        <div class="slide">
-                            <div class="slide-content">
-                                <h3>Global Network of Experts</h3>
-                                <p>Connect with a worldwide community of freelance steel designers, structural engineers, and certified professionals ready to tackle your most challenging projects.</p>
-                                <ul class="slide-features">
-                                    <li><i class="fas fa-check"></i> PE-licensed engineers across multiple jurisdictions</li>
-                                    <li><i class="fas fa-check"></i> Specialized expertise in seismic and wind engineering</li>
-                                    <li><i class="fas fa-check"></i> Multi-language support for international projects</li>
-                                    <li><i class="fas fa-check"></i> 24/7 availability across time zones</li>
-                                </ul>
-                            </div>
-                            <div class="slide-visual">
-                                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=2940&auto=format&fit=crop" alt="Global network" />
-                            </div>
+            <section id="why-steelconnect" class="sliding-section">
+                <div class="section-container">
+                    <h2 class="section-title">Why SteelConnect?</h2>
+                    <div class="slider-container">
+                        <div class="slider-wrapper" id="slider-wrapper">
+                            <div class="slide"><div class="slide-content"><h3>Global Network of Experts</h3><p>Connect with a worldwide community of freelance steel designers, structural engineers, and certified professionals ready to tackle your most challenging projects.</p><ul class="slide-features"><li><i class="fas fa-check"></i> PE-licensed engineers across multiple jurisdictions</li><li><i class="fas fa-check"></i> Specialized expertise in seismic and wind engineering</li><li><i class="fas fa-check"></i> Multi-language support for international projects</li><li><i class="fas fa-check"></i> 24/7 availability across time zones</li></ul></div><div class="slide-visual"><img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=2940&auto=format&fit=crop" alt="Global network" onerror="this.onerror=null;this.src='https://placehold.co/600x400/0f766e/ffffff?text=Expert';"></div></div>
+                            <div class="slide"><div class="slide-content"><h3>Advanced Engineering Solutions</h3><p>From initial concept to final construction drawings, our professionals use cutting-edge technology and industry-leading software to deliver precision engineering.</p><ul class="slide-features"><li><i class="fas fa-check"></i> Latest BIM and 3D modeling capabilities</li><li><i class="fas fa-check"></i> Advanced structural analysis software</li><li><i class="fas fa-check"></i> Code compliance across all major standards</li><li><i class="fas fa-check"></i> Sustainable design practices</li></ul></div><div class="slide-visual"><img src="https://images.unsplash.com/photo-1581094794329-c8112a89af12?q=80&w=2940&auto=format&fit=crop" alt="Engineering solutions" onerror="this.onerror=null;this.src='https://placehold.co/600x400/0891b2/ffffff?text=Engineer';"></div></div>
+                            <div class="slide"><div class="slide-content"><h3>Proven Track Record</h3><p>Our platform has facilitated thousands of successful projects, from residential developments to major infrastructure, with verified reviews and portfolio showcases.</p><ul class="slide-features"><li><i class="fas fa-check"></i> Verified professional credentials and licenses</li><li><i class="fas fa-check"></i> Comprehensive project portfolios</li><li><i class="fas fa-check"></i> Client reviews and ratings system</li><li><i class="fas fa-check"></i> Quality assurance and project insurance</li></ul></div><div class="slide-visual"><img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2940&auto=format&fit=crop" alt="Proven results" onerror="this.onerror=null;this.src='https://placehold.co/600x400/1e40af/ffffff?text=Success';"></div></div>
                         </div>
-                        <div class="slide">
-                            <div class="slide-content">
-                                <h3>Advanced Engineering Solutions</h3>
-                                <p>From initial concept to final construction drawings, our professionals use cutting-edge technology and industry-leading software to deliver precision engineering.</p>
-                                <ul class="slide-features">
-                                    <li><i class="fas fa-check"></i> Latest BIM and 3D modeling capabilities</li>
-                                    <li><i class="fas fa-check"></i> Advanced structural analysis software</li>
-                                    <li><i class="fas fa-check"></i> Code compliance across all major standards</li>
-                                    <li><i class="fas fa-check"></i> Sustainable design practices</li>
-                                </ul>
-                            </div>
-                            <div class="slide-visual">
-                                <img src="https://images.unsplash.com/photo-1581094794329-c8112a89af12?q=80&w=2940&auto=format&fit=crop" alt="Engineering solutions" />
-                            </div>
-                        </div>
-                        <div class="slide">
-                            <div class="slide-content">
-                                <h3>Proven Track Record</h3>
-                                <p>Our platform has facilitated thousands of successful projects, from residential developments to major infrastructure, with verified reviews and portfolio showcases.</p>
-                                <ul class="slide-features">
-                                    <li><i class="fas fa-check"></i> Verified professional credentials and licenses</li>
-                                    <li><i class="fas fa-check"></i> Comprehensive project portfolios</li>
-                                    <li><i class="fas fa-check"></i> Client reviews and ratings system</li>
-                                    <li><i class="fas fa-check"></i> Quality assurance and project insurance</li>
-                                </ul>
-                            </div>
-                            <div class="slide-visual">
-                                <img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2940&auto=format&fit=crop" alt="Proven results" />
-                            </div>
-                        </div>
+                        <button class="slider-nav prev" onclick="changeSlide(-1)"><i class="fas fa-chevron-left"></i></button>
+                        <button class="slider-nav next" onclick="changeSlide(1)"><i class="fas fa-chevron-right"></i></button>
                     </div>
-                    <button class="slider-nav prev" onclick="changeSlide(-1)"><i class="fas fa-chevron-left"></i></button>
-                    <button class="slider-nav next" onclick="changeSlide(1)"><i class="fas fa-chevron-right"></i></button>
+                    <div class="slider-controls"><span class="slider-dot active" onclick="goToSlide(0)"></span><span class="slider-dot" onclick="goToSlide(1)"></span><span class="slider-dot" onclick="goToSlide(2)"></span></div>
                 </div>
-                <div class="slider-controls">
-                    <span class="slider-dot active" onclick="goToSlide(0)"></span>
-                    <span class="slider-dot" onclick="goToSlide(1)"></span>
-                    <span class="slider-dot" onclick="goToSlide(2)"></span>
-                </div>
-            </div>
-        </section>
+            </section>
 
-        <!-- Industry Showcase -->
-        <section id="showcase" class="showcase">
-            <div class="section-container">
-                <h2 class="section-title">Industry Excellence Showcase</h2>
-                <div class="showcase-grid">
-                    <div class="showcase-card">
-                        <img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2940&auto=format&fit=crop" alt="Modern skyscraper" class="showcase-image">
-                        <div class="showcase-content">
-                            <h3>High-Rise Construction</h3>
-                            <p>Structural steel design for towers and commercial buildings with advanced seismic engineering and wind load analysis.</p>
-                        </div>
-                    </div>
-                    <div class="showcase-card">
-                        <img src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?q=80&w=2940&auto=format&fit=crop" alt="Steel bridge" class="showcase-image">
-                        <div class="showcase-content">
-                           <h3>Infrastructure Projects</h3>
-                           <p>Complex bridge design, highway infrastructure, and transportation networks engineered for safety and longevity.</p>
-                        </div>
-                    </div>
-                    <div class="showcase-card">
-                        <img src="https://images.unsplash.com/photo-1565008447742-97f6f38c985c?q=80&w=2940&auto=format&fit=crop" alt="Industrial facility" class="showcase-image">
-                        <div class="showcase-content">
-                            <h3>Industrial Facilities</h3>
-                            <p>Manufacturing plants, warehouses, and industrial complexes with specialized steel frame solutions and heavy load engineering.</p>
-                        </div>
+            <section id="showcase" class="showcase">
+                <div class="section-container">
+                    <h2 class="section-title">Industry Excellence Showcase</h2>
+                    <div class="showcase-grid">
+                        <div class="showcase-card"><img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2940&auto=format&fit=crop" alt="Modern skyscraper" class="showcase-image" onerror="this.onerror=null;this.src='https://placehold.co/400x240/1e293b/ffffff?text=High-Rise';"><div class="showcase-content"><h3>High-Rise Construction</h3><p>Structural steel design for towers and commercial buildings with advanced seismic engineering and wind load analysis.</p></div></div>
+                        <div class="showcase-card"><img src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?q=80&w=2940&auto=format&fit=crop" alt="Steel bridge" class="showcase-image" onerror="this.onerror=null;this.src='https://placehold.co/400x240/1e293b/ffffff?text=Bridge';"><div class="showcase-content"><h3>Infrastructure Projects</h3><p>Complex bridge design, highway infrastructure, and transportation networks engineered for safety and longevity.</p></div></div>
+                        <div class="showcase-card"><img src="https://images.unsplash.com/photo-1565008447742-97f6f38c985c?q=80&w=2940&auto=format&fit=crop" alt="Industrial facility" class="showcase-image" onerror="this.onerror=null;this.src='https://placehold.co/400x240/1e293b/ffffff?text=Industrial';"><div class="showcase-content"><h3>Industrial Facilities</h3><p>Manufacturing plants, warehouses, and industrial complexes with specialized steel frame solutions and heavy load engineering.</p></div></div>
                     </div>
                 </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- This div wraps the main application view. It's hidden by default and shown on login. -->
+    <div id="app-content" class="main-layout" style="display: none;">
+        <aside class="sidebar">
+            <div class="sidebar-user-profile">
+                <!-- Elements for the script to populate user info -->
+                <div id="sidebarUserAvatar" class="sidebar-avatar"></div>
+                <h3 id="sidebarUserName"></h3>
+                <p id="sidebarUserType"></p>
             </div>
-        </section>
-    </main>
+            <!-- Container for the script to build the navigation menu -->
+            <nav id="sidebar-nav-menu" class="sidebar-nav"></nav>
+        </aside>
+        <main class="main-content">
+            <!-- The script will render different sections (jobs, post job, etc.) here -->
+            <div id="app-container" class="main-container"></div>
+        </main>
+    </div>
 
     <script>
-        // Slider functionality
+        // --- LANDING PAGE SCRIPT (for slider and animations) ---
         let currentSlide = 0;
         const totalSlides = 3;
 
         function changeSlide(direction) {
             const wrapper = document.getElementById('slider-wrapper');
+            if (!wrapper) return;
             const dots = document.querySelectorAll('.slider-dot');
-            
-            currentSlide += direction;
-            
-            if (currentSlide >= totalSlides) {
-                currentSlide = 0;
-            } else if (currentSlide < 0) {
-                currentSlide = totalSlides - 1;
-            }
-            
+            currentSlide = (currentSlide + direction + totalSlides) % totalSlides;
             wrapper.style.transform = `translateX(-${currentSlide * 100}%)`;
-            
-            dots.forEach((dot, index) => {
-                dot.classList.toggle('active', index === currentSlide);
-            });
+            dots.forEach((dot, index) => dot.classList.toggle('active', index === currentSlide));
         }
 
         function goToSlide(slideIndex) {
             const wrapper = document.getElementById('slider-wrapper');
+            if (!wrapper) return;
             const dots = document.querySelectorAll('.slider-dot');
-            
             currentSlide = slideIndex;
             wrapper.style.transform = `translateX(-${currentSlide * 100}%)`;
-            
-            dots.forEach((dot, index) => {
-                dot.classList.toggle('active', index === currentSlide);
-            });
+            dots.forEach((dot, index) => dot.classList.toggle('active', index === currentSlide));
         }
 
-        // Auto-play slider
-        setInterval(() => {
-            changeSlide(1);
-        }, 8000);
+        setInterval(() => changeSlide(1), 8000);
 
-        // Smooth scrolling for navigation links
-        document.querySelectorAll('.nav-link').forEach(link => {
+        document.querySelectorAll('.nav-link[href^="#"]').forEach(link => {
             link.addEventListener('click', function(e) {
                 e.preventDefault();
                 const targetId = this.getAttribute('href');
                 const targetSection = document.querySelector(targetId);
                 if (targetSection) {
-                    targetSection.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start'
-                    });
+                    targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
             });
         });
+        
+        // --- FULL APPLICATION SCRIPT (from script.js) ---
+        document.addEventListener('DOMContentLoaded', initializeApp);
 
-        // Intersection Observer for animations
-        const observerOptions = {
-            threshold: 0.1,
-            rootMargin: '0px 0px -50px 0px'
+        // --- CONSTANTS & STATE ---
+        const BACKEND_URL = 'https://steelconnect-backend.onrender.com';
+        const appState = {
+            currentUser: null,
+            jwtToken: null,
+            jobs: [],
+            myQuotes: [],
+            participants: {} 
         };
 
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.style.opacity = '1';
-                    entry.target.style.transform = 'translateY(0)';
+        function initializeApp() {
+            console.log("SteelConnect App Initializing...");
+            // Attach event listeners to the buttons now that they have IDs
+            document.getElementById('signin-btn').addEventListener('click', () => showAuthModal('login'));
+            document.getElementById('join-btn').addEventListener('click', () => showAuthModal('register'));
+            document.getElementById('get-started-btn').addEventListener('click', () => showAuthModal('register'));
+            document.querySelector('.logo').addEventListener('click', (e) => {
+                e.preventDefault();
+                if (appState.currentUser) renderAppSection('jobs');
+                else {
+                    showLandingPageView();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
                 }
             });
-        }, observerOptions);
-
-        // Observe elements for animation
-        document.addEventListener('DOMContentLoaded', () => {
-            const animateElements = document.querySelectorAll('.step-card, .showcase-card');
-            animateElements.forEach(el => {
-                el.style.opacity = '0';
-                el.style.transform = 'translateY(30px)';
-                el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
-                observer.observe(el);
+            document.getElementById('logout-button').addEventListener('click', (e) => {
+                e.preventDefault();
+                logout();
             });
-        });
 
-        // Parallax effect for hero background
-        window.addEventListener('scroll', () => {
-            const scrolled = window.pageYOffset;
-            const heroBackground = document.querySelector('.hero-background');
-            if (heroBackground) {
-                heroBackground.style.transform = `translateY(${scrolled * 0.5}px)`;
+            // Check for existing session
+            const token = localStorage.getItem('jwtToken');
+            const user = localStorage.getItem('currentUser');
+            if (token && user) {
+                try {
+                    appState.jwtToken = token;
+                    appState.currentUser = JSON.parse(user);
+                    showAppView();
+                } catch (error) {
+                    console.error("Error parsing user data from localStorage:", error);
+                    logout();
+                }
+            } else {
+                showLandingPageView();
             }
-        });
+        }
+
+        async function apiCall(endpoint, method, body = null, successMessage = null, callback = null) {
+            try {
+                const options = { method, headers: {} };
+                if (appState.jwtToken) options.headers['Authorization'] = `Bearer ${appState.jwtToken}`;
+                if (body) {
+                    if (body instanceof FormData) {
+                        options.body = body;
+                    } else {
+                        options.headers['Content-Type'] = 'application/json';
+                        options.body = JSON.stringify(body);
+                    }
+                }
+                const response = await fetch(BACKEND_URL + endpoint, options);
+                const contentType = response.headers.get("content-type");
+                const responseData = contentType?.includes("application/json") ? await response.json() : await response.text();
+
+                if (!response.ok) {
+                    throw new Error(responseData.message || responseData.error || `Request failed with status ${response.status}`);
+                }
+
+                if (successMessage) showAlert(successMessage, 'success');
+                if (callback) callback(responseData);
+
+            } catch (error) {
+                console.error(`API call to ${endpoint} failed:`, error);
+                showAlert(error.message, 'error');
+            }
+        }
+
+        async function handleRegister(event) {
+            event.preventDefault();
+            const form = event.target;
+            const userData = {
+                name: form.regName.value,
+                email: form.regEmail.value,
+                password: form.regPassword.value,
+                type: form.regRole.value,
+            };
+            await apiCall('/auth/register', 'POST', userData, 'Registration successful! Please sign in.', () => renderAuthForm('login'));
+        }
+
+        async function handleLogin(event) {
+            event.preventDefault();
+            const form = event.target;
+            const authData = { email: form.loginEmail.value, password: form.loginPassword.value };
+            await apiCall('/auth/login', 'POST', authData, null, (data) => {
+                showAlert('Login successful!', 'success');
+                appState.currentUser = data.user;
+                appState.jwtToken = data.token;
+                localStorage.setItem('currentUser', JSON.stringify(data.user));
+                localStorage.setItem('jwtToken', data.token);
+                closeModal();
+                showAppView();
+            });
+        }
+
+        function logout() {
+            appState.currentUser = null;
+            appState.jwtToken = null;
+            localStorage.clear();
+            showLandingPageView();
+            showAlert('You have been logged out.', 'info');
+        }
+
+        async function fetchAndRenderJobs() {
+            const jobsListContainer = document.getElementById('jobs-list');
+            if (!jobsListContainer) return;
+            jobsListContainer.innerHTML = '<p>Loading projects...</p>';
+            const user = appState.currentUser;
+            const endpoint = user.type === 'designer' ? '/jobs' : `/jobs/user/${user.id}`;
+            await apiCall(endpoint, 'GET', null, null, (response) => {
+                const jobs = response.data || [];
+                appState.jobs = jobs;
+                if (jobs.length === 0) {
+                    jobsListContainer.innerHTML = user.type === 'designer'
+                        ? `<div class="empty-state"><h3>No Projects Available</h3><p>Check back later for new opportunities.</p></div>`
+                        : `<div class="empty-state"><h3>You haven't posted any projects yet.</h3><p>Click 'Post a Job' to get started.</p></div>`;
+                    return;
+                }
+                jobsListContainer.innerHTML = jobs.map(job => {
+                    const actions = user.type === 'designer'
+                        ? `<button class="btn btn-primary" onclick="showQuoteModal('${job.id}')">Submit Quote</button>`
+                        : `<button class="btn btn-outline" onclick="viewQuotes('${job.id}')">View Quotes (${job.quotesCount || 0})</button>
+                           <button class="btn btn-danger" onclick="deleteJob('${job.id}')">Delete Job</button>`;
+                    return `
+                        <div class="job-card">
+                            <div class="job-header">
+                                <div><h3>${job.title}</h3><p class="text-gray" style="font-size: 14px;">Posted by: ${job.posterName || 'N/A'}</p></div>
+                                <div class="job-budget">${job.budget}</div>
+                            </div>
+                            <p>${job.description}</p>
+                            ${job.skills?.length > 0 ? `<p style="margin-top: 12px;"><strong>Skills:</strong> ${job.skills.join(', ')}</p>` : ''}
+                            ${job.link ? `<p style="margin-top: 12px;"><strong>Link:</strong> <a href="${job.link}" target="_blank" rel="noopener noreferrer">${job.link}</a></p>` : ''}
+                            ${job.attachment ? `<p style="margin-top: 12px;"><strong>Attachment:</strong> <a href="${BACKEND_URL}${job.attachment}" target="_blank" rel="noopener noreferrer">View File</a></p>` : ''}
+                            <div class="job-actions">${actions}</div>
+                        </div>`;
+                }).join('');
+            });
+        }
+
+        async function fetchAndRenderMyQuotes() {
+            const container = document.getElementById('app-container');
+            container.innerHTML = `<div class="section-header"><h2>My Submitted Quotes</h2></div><div id="my-quotes-list" class="jobs-grid"></div>`;
+            const listContainer = document.getElementById('my-quotes-list');
+            listContainer.innerHTML = '<p>Loading your quotes...</p>';
+            await apiCall(`/quotes/user/${appState.currentUser.id}`, 'GET', null, null, (response) => {
+                const quotes = response.data || [];
+                if (quotes.length === 0) {
+                    listContainer.innerHTML = `<div class="empty-state"><p>You have not submitted any quotes.</p></div>`;
+                    return;
+                }
+                listContainer.innerHTML = quotes.map(quote => {
+                    const job = quote.job || { title: 'Unknown Job', posterId: null, posterName: 'N/A' };
+                    const attachmentLink = quote.attachment ? `<p><strong>Attachment:</strong> <a href="${BACKEND_URL}${quote.attachment}" target="_blank">View File</a></p>` : '';
+                    const messageButton = quote.status === 'approved' ? `<button class="btn btn-primary" onclick="openConversation('${job.id}', '${job.posterId}', '${job.posterName}')">Message Client</button>` : '';
+                    const deleteButton = quote.status === 'pending' ? `<button class="btn btn-danger" onclick="deleteQuote('${quote.id}')">Delete Quote</button>` : '';
+                    return `
+                        <div class="job-card quote-status-${quote.status}">
+                            <div class="job-header">
+                                <div>
+                                    <h3>Quote for: ${job.title}</h3>
+                                    <p class="text-gray" style="font-size: 14px;">Amount: $${quote.amount}</p>
+                                </div>
+                                <div class="job-budget">Status: ${quote.status}</div>
+                            </div>
+                            <p>${quote.description}</p>
+                            ${attachmentLink}
+                            <div class="job-actions">${messageButton} ${deleteButton}</div>
+                        </div>`;
+                }).join('');
+            });
+        }
+
+        async function handlePostJob(event) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData();
+            ['title', 'description', 'budget', 'deadline', 'skills', 'link'].forEach(field => formData.append(field, form[field]?.value));
+            if (form.attachment.files.length > 0) formData.append('attachment', form.attachment.files[0]);
+            await apiCall('/jobs', 'POST', formData, 'Job posted successfully!', () => {
+                form.reset();
+                renderAppSection('jobs');
+            });
+        }
+
+        async function deleteJob(jobId) {
+            if (confirm('Are you sure you want to delete this job? This action cannot be undone.')) {
+                await apiCall(`/jobs/${jobId}`, 'DELETE', null, 'Job deleted.', () => renderAppSection('jobs'));
+            }
+        }
+
+        async function deleteQuote(quoteId) {
+            if (confirm('Are you sure you want to delete this quote?')) {
+                await apiCall(`/quotes/${quoteId}`, 'DELETE', null, 'Quote deleted.', () => fetchAndRenderMyQuotes());
+            }
+        }
+
+        async function viewQuotes(jobId) {
+            await apiCall(`/quotes/job/${jobId}`, 'GET', null, null, (response) => {
+                const quotes = response.data || [];
+                let quotesHTML = `<h3>Received Quotes</h3>`;
+                if (quotes.length === 0) {
+                    quotesHTML += `<div class="empty-state"><p>No quotes received yet.</p></div>`;
+                } else {
+                    quotesHTML += quotes.map(quote => {
+                        const attachmentLink = quote.attachment ? `<p><strong>Attachment:</strong> <a href="${BACKEND_URL}${quote.attachment}" target="_blank">View File</a></p>` : '';
+                        const approveButton = appState.currentUser.type === 'contractor' && quote.status === 'pending' ? `<button class="btn btn-primary" onclick="approveQuote('${quote.id}', '${jobId}')">Approve</button>` : '';
+                        const messageButton = appState.currentUser.type === 'contractor' ? `<button class="btn btn-outline" onclick="openConversation('${quote.jobId}', '${quote.quoterId}', '${quote.quoterName}')">Message Designer</button>` : '';
+                        return `
+                            <div class="quote-card quote-status-${quote.status}">
+                                <p><strong>From:</strong> ${quote.quoterName} | <strong>Amount:</strong> $${quote.amount}</p>
+                                <p>${quote.description}</p>
+                                ${attachmentLink}
+                                <p><strong>Status:</strong> ${quote.status}</p>
+                                <div class="quote-actions">${approveButton} ${messageButton}</div>
+                            </div>`;
+                    }).join('');
+                }
+                showGenericModal(quotesHTML);
+            });
+        }
+
+        async function approveQuote(quoteId, jobId) {
+            if (confirm('Are you sure you want to approve this quote? This will notify the designer.')) {
+                await apiCall(`/quotes/${quoteId}/approve`, 'PUT', null, 'Quote approved!', () => {
+                    closeModal();
+                    renderAppSection('jobs');
+                });
+            }
+        }
+
+        function showQuoteModal(jobId) {
+            const content = `
+                <h3>Submit Your Quote</h3>
+                <form id="quote-form" class="form-grid">
+                    <input type="hidden" name="jobId" value="${jobId}">
+                    <div class="form-group"><label class="form-label">Amount ($)</label><input type="number" class="form-input" name="amount" required></div>
+                    <div class="form-group"><label class="form-label">Timeline (in days)</label><input type="number" class="form-input" name="timeline" required></div>
+                    <div class="form-group"><label class="form-label">Description / Proposal</label><textarea class="form-textarea" name="description" required></textarea></div>
+                    <div class="form-group"><label class="form-label">Attachment (Optional)</label><input type="file" class="form-input" name="attachment"></div>
+                    <button type="submit" class="btn btn-primary">Submit Quote</button>
+                </form>`;
+            showGenericModal(content, 'max-width: 500px;');
+            document.getElementById('quote-form').addEventListener('submit', handleQuoteSubmit);
+        }
+
+        async function handleQuoteSubmit(event) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData();
+            ['jobId', 'amount', 'timeline', 'description'].forEach(field => formData.append(field, form[field]?.value));
+            if (form.attachment.files.length > 0) formData.append('attachment', form.attachment.files[0]);
+            
+            await apiCall('/quotes', 'POST', formData, 'Quote submitted successfully!', () => {
+                closeModal();
+                fetchAndRenderJobs();
+            });
+        }
+
+        function showAuthModal(view) {
+            const modalContainer = document.getElementById('modal-container');
+            modalContainer.innerHTML = `<div class="modal-overlay"><div class="modal-content" onclick="event.stopPropagation()"><button class="modal-close-button" onclick="closeModal()">&times;</button><div id="modal-form-container"></div></div></div>`;
+            // Add event listener to overlay to close modal
+            modalContainer.querySelector('.modal-overlay').addEventListener('click', closeModal);
+            renderAuthForm(view);
+        }
+
+        function renderAuthForm(view) {
+            const container = document.getElementById('modal-form-container');
+            if (!container) return;
+            container.innerHTML = view === 'login' ? getLoginTemplate() : getRegisterTemplate();
+            const formId = view === 'login' ? 'login-form' : 'register-form';
+            const handler = view === 'login' ? handleLogin : handleRegister;
+            document.getElementById(formId).addEventListener('submit', handler);
+        }
+
+        function showGenericModal(innerHTML, style = '') {
+            const modalContainer = document.getElementById('modal-container');
+            modalContainer.innerHTML = `<div class="modal-overlay"><div class="modal-content" style="${style}" onclick="event.stopPropagation()"><button class="modal-close-button" onclick="closeModal()">✕</button>${innerHTML}</div></div>`;
+            modalContainer.querySelector('.modal-overlay').addEventListener('click', closeModal);
+        }
+
+        function closeModal() {
+            const modalContainer = document.getElementById('modal-container');
+            if (modalContainer) modalContainer.innerHTML = '';
+        }
+
+        function showAppView() {
+            document.getElementById('landing-page-content').style.display = 'none';
+            document.getElementById('app-content').style.display = 'flex';
+            document.getElementById('auth-buttons-container').style.display = 'none';
+            document.getElementById('user-info').style.display = 'flex';
+            document.getElementById('main-nav-menu').innerHTML = ''; // Clear landing page nav
+            
+            const user = appState.currentUser;
+            document.getElementById('userName').textContent = user.name;
+            document.getElementById('userType').textContent = user.type;
+            document.getElementById('userAvatar').textContent = (user.name || "A").charAt(0).toUpperCase();
+            document.getElementById('sidebarUserName').textContent = user.name;
+            document.getElementById('sidebarUserType').textContent = user.type;
+            document.getElementById('sidebarUserAvatar').textContent = (user.name || "A").charAt(0).toUpperCase();
+            
+            buildSidebarNav();
+            renderAppSection('jobs');
+        }
+
+        function showLandingPageView() {
+            document.getElementById('landing-page-content').style.display = 'block';
+            document.getElementById('app-content').style.display = 'none';
+            document.getElementById('auth-buttons-container').style.display = 'flex';
+            document.getElementById('user-info').style.display = 'none';
+            // Restore landing page nav
+            document.getElementById('main-nav-menu').innerHTML = `
+                <a href="#how-it-works" class="nav-link">How It Works</a>
+                <a href="#why-steelconnect" class="nav-link">Why Choose Us</a>
+                <a href="#showcase" class="nav-link">Showcase</a>`;
+        }
+
+        function buildSidebarNav() {
+            const navContainer = document.getElementById('sidebar-nav-menu');
+            const role = appState.currentUser.type;
+            let links = (role === 'designer')
+                ? `<a href="#" class="sidebar-nav-link" data-section="jobs"><i class="fas fa-briefcase fa-fw"></i> <span>Find Jobs</span></a>
+                   <a href="#" class="sidebar-nav-link" data-section="my-quotes"><i class="fas fa-file-invoice-dollar fa-fw"></i> <span>My Quotes</span></a>`
+                : `<a href="#" class="sidebar-nav-link" data-section="jobs"><i class="fas fa-tasks fa-fw"></i> <span>My Projects</span></a>
+                   <a href="#" class="sidebar-nav-link" data-section="post-job"><i class="fas fa-plus-circle fa-fw"></i> <span>Post a Job</span></a>`;
+            navContainer.innerHTML = links;
+            navContainer.querySelectorAll('.sidebar-nav-link').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    renderAppSection(link.dataset.section);
+                });
+            });
+        }
+
+        function renderAppSection(sectionId) {
+            const container = document.getElementById('app-container');
+            document.querySelectorAll('.sidebar-nav-link').forEach(link => {
+                link.classList.toggle('active', link.dataset.section === sectionId);
+            });
+            const userRole = appState.currentUser.type;
+            if (sectionId === 'jobs') {
+                const title = userRole === 'designer' ? 'Available Projects' : 'My Posted Projects';
+                container.innerHTML = `<div class="section-header"><h2>${title}</h2></div><div id="jobs-list" class="jobs-grid"></div>`;
+                fetchAndRenderJobs();
+            } else if (sectionId === 'post-job') {
+                container.innerHTML = getPostJobTemplate();
+                document.getElementById('post-job-form').addEventListener('submit', handlePostJob);
+            } else if (sectionId === 'my-quotes') {
+                fetchAndRenderMyQuotes();
+            }
+        }
+
+        function showAlert(message, type = 'info') {
+            const alertsContainer = document.getElementById('alerts-container');
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i> <span>${message}</span>`;
+            alertsContainer.prepend(alertDiv);
+            setTimeout(() => {
+                alertDiv.style.opacity = '0';
+                setTimeout(() => alertDiv.remove(), 500);
+            }, 4000);
+        }
+
+        function getLoginTemplate() {
+            return `<h2 style="text-align: center; margin-bottom: 24px;">Sign In</h2><form id="login-form" class="form-grid"><div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" name="loginEmail" required></div><div class="form-group"><label class="form-label">Password</label><input type="password" class="form-input" name="loginPassword" required></div><button type="submit" class="btn btn-primary" style="width: 100%;">Sign In</button></form><div class="modal-switch">Don't have an account? <a onclick="renderAuthForm('register')">Sign Up</a></div>`;
+        }
+
+        function getRegisterTemplate() {
+            return `<h2 style="text-align: center; margin-bottom: 24px;">Create an Account</h2><form id="register-form" class="form-grid"><div class="form-group"><label class="form-label">Full Name</label><input type="text" class="form-input" name="regName" required></div><div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" name="regEmail" required></div><div class="form-group"><label class="form-label">Password</label><input type="password" class="form-input" name="regPassword" required></div><div class="form-group"><label class="form-label">I am a...</label><select class="form-select" name="regRole" required><option value="" disabled selected>Select your role</option><option value="contractor">Client / Contractor</option><option value="designer">Designer / Engineer</option></select></div><button type="submit" class="btn btn-primary" style="width: 100%;">Create Account</button></form><div class="modal-switch">Already have an account? <a onclick="renderAuthForm('login')">Sign In</a></div>`;
+        }
+
+        function getPostJobTemplate() {
+            return `<div class="section-header"><h2>Post a New Project</h2></div><form id="post-job-form" class="form-grid" style="max-width: 800px;"><div class="form-group"><label class="form-label">Project Title</label><input type="text" class="form-input" name="title" required placeholder="e.g., Structural Steel Design for Warehouse"></div><div class="form-group"><label class="form-label">Budget Range</label><input type="text" class="form-input" name="budget" required placeholder="e.g., $5,000 - $10,000"></div><div class="form-group"><label class="form-label">Deadline</label><input type="date" class="form-input" name="deadline" required></div><div class="form-group"><label class="form-label">Required Skills (comma-separated)</label><input type="text" class="form-input" name="skills" placeholder="e.g., AutoCAD, Revit, Structural Analysis"></div><div class="form-group"><label class="form-label">Relevant Link (Optional)</label><input type="url" class="form-input" name="link" placeholder="https://example.com/project-details"></div><div class="form-group"><label class="form-label">Attachment (PDF, DWG, etc.)</label><input type="file" class="form-input" name="attachment"></div><div class="form-group"><label class="form-label">Project Description</label><textarea class="form-input" style="min-height: 120px;" name="description" required placeholder="Provide a detailed description of the project requirements..."></textarea></div><button type="submit" class="btn btn-primary" style="justify-self: start;">Post Project</button></form>`;
+        }
     </script>
 </body>
 </html>
