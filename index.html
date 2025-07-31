@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
-        /* --- GLOBAL STYLES & VARIABLES (From new index.html) --- */
+        /* --- GLOBAL STYLES & VARIABLES --- */
         :root {
             --primary-color: #1e40af;
             --primary-hover: #1d4ed8;
@@ -46,7 +46,7 @@
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
-        /* --- HEADER (From new index.html) --- */
+        /* --- HEADER --- */
         .header { 
             background: rgba(248, 250, 252, 0.95); 
             border-bottom: 1px solid var(--border-light); 
@@ -113,7 +113,7 @@
             gap: 16px; 
         }
 
-        /* --- BUTTONS (From new index.html) --- */
+        /* --- BUTTONS --- */
         .btn { 
             padding: 14px 28px; 
             border-radius: 12px; 
@@ -153,12 +153,14 @@
         .btn-danger {
             background-color: #ef4444;
             color: white;
+            border-color: #ef4444;
         }
         .btn-danger:hover {
             background-color: #dc2626;
+            border-color: #dc2626;
         }
 
-        /* --- MODERN HERO SECTION (From new index.html) --- */
+        /* --- MODERN HERO SECTION --- */
         .hero { 
             position: relative;
             min-height: 100vh;
@@ -186,7 +188,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: url('https://images.unsplash.com/photo-1565008447742-97f6f38c985c?q=80&w=2940&auto=format&fit=crop') center/cover;
+            background: url('https://images.unsplash.com/photo-1600880292203-757bb62b4baf?q=80&w=2940&auto=format&fit=crop') center/cover;
             opacity: 0.1;
             z-index: 0;
         }
@@ -235,7 +237,7 @@
         .floating-cards {
             position: absolute;
             top: 20px;
-            right: -20px;
+            left: -120px; /* Moved even further left for better aesthetics */
             display: flex;
             flex-direction: column;
             gap: 16px;
@@ -267,7 +269,7 @@
             margin: 0;
         }
 
-        /* --- HOW IT WORKS SECTION (From new index.html) --- */
+        /* --- HOW IT WORKS SECTION --- */
         .how-it-works {
             padding: 120px 24px;
             background: var(--bg-white);
@@ -364,7 +366,7 @@
             line-height: 1.6;
         }
 
-        /* --- SLIDING CARDS SECTION (From new index.html) --- */
+        /* --- SLIDING CARDS SECTION --- */
         .sliding-section {
             padding: 120px 24px;
             background: linear-gradient(135deg, var(--bg-light), var(--accent-light));
@@ -463,7 +465,7 @@
         .slider-nav.prev { left: 20px; }
         .slider-nav.next { right: 20px; }
 
-        /* --- SHOWCASE SECTION (From new index.html) --- */
+        /* --- SHOWCASE SECTION --- */
         .showcase {
             padding: 120px 24px;
             background: linear-gradient(135deg, var(--bg-dark) 0%, #1e293b 50%, #334155 100%);
@@ -523,14 +525,14 @@
         .showcase-content h3 { font-size: 24px; font-weight: 700; margin-bottom: 16px; color: white; }
         .showcase-content p { color: rgba(255, 255, 255, 0.8); line-height: 1.6; }
 
-        /* --- MAIN APP VIEW STYLES (from original style.css, integrated for logged-in view) --- */
+        /* --- MAIN APP VIEW STYLES --- */
         .user-profile-menu { display: flex; align-items: center; gap: 12px; }
         .avatar { width: 40px; height: 40px; background-color: var(--primary-color); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; }
         .user-name { font-weight: 600; }
         .user-role { font-size: 14px; color: var(--text-gray); text-transform: capitalize; }
         .main-layout { display: flex; }
         .sidebar { width: 260px; background: var(--bg-white); border-right: 1px solid var(--border-color); padding: 24px; height: calc(100vh - 72px); position: sticky; top: 72px; display: flex; flex-direction: column; }
-        .main-content { flex-grow: 1; padding: 40px; }
+        .main-content { flex-grow: 1; padding: 40px; background-color: var(--bg-light); }
         .main-container { max-width: 1200px; margin: 0 auto; }
         .sidebar-user-profile { text-align: center; margin-bottom: 30px; }
         .sidebar-avatar { width: 80px; height: 80px; background: var(--primary-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 32px; margin: 0 auto 10px; }
@@ -541,13 +543,13 @@
         .sidebar-nav-link:hover { background: var(--primary-light); color: var(--primary-color); }
         .sidebar-nav-link.active { background: var(--primary-color); color: white; }
         
-        /* --- MODALS, ALERTS, & OTHER COMPONENTS (from original style.css) --- */
+        /* --- MODALS, ALERTS, & OTHER COMPONENTS --- */
         .section-header { margin-bottom: 32px; padding-bottom: 16px; border-bottom: 1px solid var(--border-color); }
         .section-header h2 { font-size: 28px; font-weight: 700; color: var(--text-dark); }
         .form-grid { display: grid; gap: 20px; }
         .form-group { display: flex; flex-direction: column; gap: 8px; }
         .form-label { font-weight: 500; font-size: 14px; }
-        .form-input, .form-select, .form-textarea { padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 15px; width: 100%; }
+        .form-input, .form-select, .form-textarea { padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 15px; width: 100%; transition: all 0.2s ease; }
         .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.2); }
         .jobs-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px; }
         .job-card { background: var(--bg-white); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; transition: all 0.3s; display: flex; flex-direction: column; }
@@ -576,6 +578,22 @@
         .quote-status-pending { border-left: 4px solid #f59e0b; }
         .quote-status-approved { border-left: 4px solid #10b981; }
         .quote-status-rejected { border-left: 4px solid #ef4444; }
+
+        /* --- AESTHETIC MESSAGING STYLES --- */
+        .chat-modal-content { display: flex; flex-direction: column; height: 70vh; max-height: 600px; width: 100%; }
+        .chat-header { padding: 16px 24px; border-bottom: 1px solid var(--border-color); }
+        .message-container { flex-grow: 1; overflow-y: auto; padding: 16px 24px; display: flex; flex-direction: column; gap: 16px; }
+        .message-wrapper { display: flex; gap: 12px; max-width: 75%; }
+        .message-wrapper.me { align-self: flex-end; flex-direction: row-reverse; }
+        .message-wrapper.them { align-self: flex-start; }
+        .message-avatar { width: 40px; height: 40px; border-radius: 50%; background-color: var(--text-gray); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; flex-shrink: 0; }
+        .message-bubble { padding: 12px 16px; border-radius: 18px; line-height: 1.5; word-wrap: break-word; }
+        .message-bubble.me { background-color: var(--primary-color); color: white; border-bottom-right-radius: 4px; }
+        .message-bubble.them { background-color: var(--bg-gray); color: var(--text-dark); border-bottom-left-radius: 4px; }
+        .message-meta { font-size: 12px; color: var(--text-gray); margin-top: 6px; padding: 0 4px; }
+        .message-wrapper.me .message-meta { text-align: right; }
+        .message-form { display: flex; gap: 12px; padding: 16px 24px; border-top: 1px solid var(--border-color); }
+        .message-form input { flex-grow: 1; }
 
         /* --- RESPONSIVE DESIGN --- */
         @media (max-width: 1024px) {
@@ -609,51 +627,44 @@
                 <div class="logo-icon">SC</div>
                 SteelConnect
             </a>
-            <!-- This nav menu will be updated by the script after login -->
             <nav id="main-nav-menu" class="nav-menu">
                 <a href="#how-it-works" class="nav-link">How It Works</a>
                 <a href="#why-steelconnect" class="nav-link">Why Choose Us</a>
                 <a href="#showcase" class="nav-link">Showcase</a>
             </nav>
-            <!-- This container holds the login/join buttons and is hidden on login -->
             <div id="auth-buttons-container" class="auth-buttons">
-                <!-- Added IDs for the script to find these buttons -->
                 <button id="signin-btn" class="btn btn-outline">Sign In</button>
                 <button id="join-btn" class="btn btn-primary">Join Now</button>
             </div>
-            <!-- This container holds user info and is shown on login -->
             <div id="user-info" class="user-profile-menu" style="display: none;">
                  <div id="userAvatar" class="avatar"></div>
                  <div>
                      <div id="userName" class="user-name"></div>
                      <div id="userType" class="user-role"></div>
                  </div>
-                 <!-- Added ID for the script to find the logout button -->
                  <button id="logout-button" class="btn btn-outline" style="padding: 10px 20px;">Logout</button>
             </div>
         </div>
     </header>
 
-    <!-- This div wraps the entire landing page content. The script will hide it on login. -->
     <div id="landing-page-content">
         <main>
             <section class="hero">
                 <div class="hero-background"></div>
                 <div class="hero-content">
                     <div class="hero-text">
-                        <h1>Connecting Clients to Steel & Construction Professionals Who Deliver</h1>
-                        <p>Find top steel designers and contractors for your projects. Post jobs, submit quotes, and build your professional network with confidence.</p>
-                        <!-- Added ID for the script to find this button -->
+                        <h1>SteelConnect: The Premier Platform Connecting Designers & Contractors</h1>
+                        <p>Join the leading marketplace where steel designers, structural engineers, and contractors collaborate seamlessly. Build your professional network, showcase expertise, and deliver exceptional projects together.</p>
                         <button id="get-started-btn" class="btn btn-primary" style="padding: 18px 36px; font-size: 18px;">
                             Get Started Today <i class="fas fa-arrow-right"></i>
                         </button>
                     </div>
                     <div class="hero-visual">
-                        <img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2940&auto=format&fit=crop" alt="Modern steel construction" class="hero-image" onerror="this.onerror=null;this.src='https://placehold.co/600x400/1e293b/ffffff?text=Steel+Building';">
+                        <img src="https://images.unsplash.com/photo-1600880292203-757bb62b4baf?q=80&w=2940&auto=format&fit=crop" alt="Professional network collaboration" class="hero-image" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1557804506-669a67965ba0?q=80&w=2940&auto=format&fit=crop';">
                         <div class="floating-cards">
-                            <div class="floating-card"><h4>500+ Projects</h4><p>Completed Successfully</p></div>
-                            <div class="floating-card"><h4>PE Licensed</h4><p>Certified Engineers</p></div>
-                            <div class="floating-card"><h4>Global Network</h4><p>Worldwide Reach</p></div>
+                            <div class="floating-card"><h4>1000+ Professionals</h4><p>Verified Network</p></div>
+                            <div class="floating-card"><h4>Global Marketplace</h4><p>Connect Worldwide</p></div>
+                            <div class="floating-card"><h4>Trusted Platform</h4><p>Secure Collaboration</p></div>
                         </div>
                     </div>
                 </div>
@@ -704,22 +715,19 @@
     <div id="app-content" class="main-layout" style="display: none;">
         <aside class="sidebar">
             <div class="sidebar-user-profile">
-                <!-- Elements for the script to populate user info -->
                 <div id="sidebarUserAvatar" class="sidebar-avatar"></div>
                 <h3 id="sidebarUserName"></h3>
                 <p id="sidebarUserType"></p>
             </div>
-            <!-- Container for the script to build the navigation menu -->
             <nav id="sidebar-nav-menu" class="sidebar-nav"></nav>
         </aside>
         <main class="main-content">
-            <!-- The script will render different sections (jobs, post job, etc.) here -->
             <div id="app-container" class="main-container"></div>
         </main>
     </div>
 
     <script>
-        // --- LANDING PAGE SCRIPT (for slider and animations) ---
+        // --- LANDING PAGE SCRIPT ---
         let currentSlide = 0;
         const totalSlides = 3;
 
@@ -754,7 +762,7 @@
             });
         });
         
-        // --- FULL APPLICATION SCRIPT (from script.js) ---
+        // --- FULL APPLICATION SCRIPT ---
         document.addEventListener('DOMContentLoaded', initializeApp);
 
         // --- CONSTANTS & STATE ---
@@ -769,14 +777,14 @@
 
         function initializeApp() {
             console.log("SteelConnect App Initializing...");
-            // Attach event listeners to the buttons now that they have IDs
             document.getElementById('signin-btn').addEventListener('click', () => showAuthModal('login'));
             document.getElementById('join-btn').addEventListener('click', () => showAuthModal('register'));
             document.getElementById('get-started-btn').addEventListener('click', () => showAuthModal('register'));
             document.querySelector('.logo').addEventListener('click', (e) => {
                 e.preventDefault();
-                if (appState.currentUser) renderAppSection('jobs');
-                else {
+                if (appState.currentUser) {
+                    renderAppSection('jobs');
+                } else {
                     showLandingPageView();
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                 }
@@ -786,7 +794,6 @@
                 logout();
             });
 
-            // Check for existing session
             const token = localStorage.getItem('jwtToken');
             const user = localStorage.getItem('currentUser');
             if (token && user) {
@@ -969,7 +976,7 @@
                 } else {
                     quotesHTML += quotes.map(quote => {
                         const attachmentLink = quote.attachment ? `<p><strong>Attachment:</strong> <a href="${BACKEND_URL}${quote.attachment}" target="_blank">View File</a></p>` : '';
-                        const approveButton = appState.currentUser.type === 'contractor' && quote.status === 'pending' ? `<button class="btn btn-primary" onclick="approveQuote('${quote.id}', '${jobId}')">Approve</button>` : '';
+                        const approveButton = appState.currentUser.type === 'contractor' && quote.status === 'pending' ? `<button class="btn btn-primary" onclick="approveQuote('${quote.id}')">Approve</button>` : '';
                         const messageButton = appState.currentUser.type === 'contractor' ? `<button class="btn btn-outline" onclick="openConversation('${quote.jobId}', '${quote.quoterId}', '${quote.quoterName}')">Message Designer</button>` : '';
                         return `
                             <div class="quote-card quote-status-${quote.status}">
@@ -981,11 +988,11 @@
                             </div>`;
                     }).join('');
                 }
-                showGenericModal(quotesHTML);
+                showGenericModal(quotesHTML, 'max-width: 650px;');
             });
         }
 
-        async function approveQuote(quoteId, jobId) {
+        async function approveQuote(quoteId) {
             if (confirm('Are you sure you want to approve this quote? This will notify the designer.')) {
                 await apiCall(`/quotes/${quoteId}/approve`, 'PUT', null, 'Quote approved!', () => {
                     closeModal();
@@ -1003,7 +1010,7 @@
                     <div class="form-group"><label class="form-label">Timeline (in days)</label><input type="number" class="form-input" name="timeline" required></div>
                     <div class="form-group"><label class="form-label">Description / Proposal</label><textarea class="form-textarea" name="description" required></textarea></div>
                     <div class="form-group"><label class="form-label">Attachment (Optional)</label><input type="file" class="form-input" name="attachment"></div>
-                    <button type="submit" class="btn btn-primary">Submit Quote</button>
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">Submit Quote</button>
                 </form>`;
             showGenericModal(content, 'max-width: 500px;');
             document.getElementById('quote-form').addEventListener('submit', handleQuoteSubmit);
@@ -1014,18 +1021,18 @@
             const form = event.target;
             const formData = new FormData();
             ['jobId', 'amount', 'timeline', 'description'].forEach(field => formData.append(field, form[field]?.value));
+            formData.append('quoterId', appState.currentUser.id);
+            formData.append('quoterName', appState.currentUser.name);
             if (form.attachment.files.length > 0) formData.append('attachment', form.attachment.files[0]);
             
             await apiCall('/quotes', 'POST', formData, 'Quote submitted successfully!', () => {
                 closeModal();
-                fetchAndRenderJobs();
             });
         }
 
         function showAuthModal(view) {
             const modalContainer = document.getElementById('modal-container');
             modalContainer.innerHTML = `<div class="modal-overlay"><div class="modal-content" onclick="event.stopPropagation()"><button class="modal-close-button" onclick="closeModal()">&times;</button><div id="modal-form-container"></div></div></div>`;
-            // Add event listener to overlay to close modal
             modalContainer.querySelector('.modal-overlay').addEventListener('click', closeModal);
             renderAuthForm(view);
         }
@@ -1055,7 +1062,7 @@
             document.getElementById('app-content').style.display = 'flex';
             document.getElementById('auth-buttons-container').style.display = 'none';
             document.getElementById('user-info').style.display = 'flex';
-            document.getElementById('main-nav-menu').innerHTML = ''; // Clear landing page nav
+            document.getElementById('main-nav-menu').innerHTML = '';
             
             const user = appState.currentUser;
             document.getElementById('userName').textContent = user.name;
@@ -1074,7 +1081,6 @@
             document.getElementById('app-content').style.display = 'none';
             document.getElementById('auth-buttons-container').style.display = 'flex';
             document.getElementById('user-info').style.display = 'none';
-            // Restore landing page nav
             document.getElementById('main-nav-menu').innerHTML = `
                 <a href="#how-it-works" class="nav-link">How It Works</a>
                 <a href="#why-steelconnect" class="nav-link">Why Choose Us</a>
@@ -1126,6 +1132,90 @@
                 alertDiv.style.opacity = '0';
                 setTimeout(() => alertDiv.remove(), 500);
             }, 4000);
+        }
+
+        async function openConversation(jobId, recipientId, recipientName) {
+            appState.participants = {
+                [appState.currentUser.id]: appState.currentUser.name,
+                [recipientId]: recipientName
+            };
+            await apiCall('/messages/find', 'POST', { jobId, recipientId }, null, async (conversationResponse) => {
+                const conversation = conversationResponse.data;
+                await apiCall(`/messages/${conversation.id}/messages`, 'GET', null, null, (messagesResponse) => {
+                    showConversationModal(conversation, messagesResponse.data);
+                });
+            });
+        }
+
+        function showConversationModal(conversation, messages) {
+            const messagesHTML = messages.map(msg => {
+                const senderName = appState.participants[msg.senderId] || 'Unknown';
+                const isMe = msg.senderId === appState.currentUser.id;
+                const time = new Date(msg.createdAt.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                return `
+                    <div class="message-wrapper ${isMe ? 'me' : 'them'}">
+                        <div class="message-avatar">${senderName.charAt(0).toUpperCase()}</div>
+                        <div class="message-content-wrapper">
+                            <div class="message-bubble">
+                                <p>${msg.text}</p>
+                            </div>
+                            <div class="message-meta">
+                                <span>${isMe ? 'You' : senderName}</span> • <span>${time}</span>
+                            </div>
+                        </div>
+                    </div>`;
+            }).join('');
+
+            const modalContent = `
+                <div class="chat-modal-content">
+                    <div class="chat-header"><h3>Conversation: ${conversation.jobTitle || 'Project'}</h3></div>
+                    <div id="message-list" class="message-container">${messagesHTML}</div>
+                    <form id="message-form" class="message-form">
+                        <input type="text" name="messageText" class="form-input" placeholder="Type a message..." required autocomplete="off">
+                        <button type="submit" class="btn btn-primary" style="padding: 10px 20px;">Send</button>
+                    </form>
+                </div>`;
+            
+            showGenericModal(modalContent, 'max-width: 600px; padding: 0; display: flex; flex-direction: column;');
+            
+            const messageList = document.getElementById('message-list');
+            messageList.scrollTop = messageList.scrollHeight;
+
+            document.getElementById('message-form').addEventListener('submit', (e) => handleSendMessage(e, conversation.id));
+        }
+
+        async function handleSendMessage(event, conversationId) {
+            event.preventDefault();
+            const form = event.target;
+            const text = form.messageText.value.trim();
+            if (!text) return;
+            form.querySelector('button').disabled = true;
+
+            await apiCall(`/messages/${conversationId}/messages`, 'POST', { text }, null, (newMessageResponse) => {
+                form.reset();
+                form.querySelector('button').disabled = false;
+                
+                const messageList = document.getElementById('message-list');
+                if (messageList) {
+                    const senderName = appState.currentUser.name;
+                    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    const newMessageHTML = `
+                        <div class="message-wrapper me">
+                            <div class="message-avatar">${senderName.charAt(0).toUpperCase()}</div>
+                            <div class="message-content-wrapper">
+                                <div class="message-bubble">
+                                    <p>${newMessageResponse.data.text}</p>
+                                </div>
+                                <div class="message-meta">
+                                    <span>You</span> • <span>${time}</span>
+                                </div>
+                            </div>
+                        </div>`;
+                    messageList.innerHTML += newMessageHTML;
+                    messageList.scrollTop = messageList.scrollHeight;
+                }
+            });
         }
 
         function getLoginTemplate() {
