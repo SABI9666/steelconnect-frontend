@@ -111,17 +111,14 @@ async function apiCall(endpoint, method, body = null, successMessage = null) {
             showAlert(successMessage, 'success');
         }
         
-        // Return the successful data for the caller to use
         return responseData;
 
     } catch (error) {
         console.error(`API call to ${endpoint} failed:`, error);
         showAlert(error.message, 'error');
-        // Propagate the error so the caller knows the request failed
         throw error;
     }
 }
-
 
 async function handleRegister(event) {
     event.preventDefault();
@@ -134,7 +131,7 @@ async function handleRegister(event) {
     };
     await apiCall('/auth/register', 'POST', userData, 'Registration successful! Please sign in.')
         .then(() => renderAuthForm('login'))
-        .catch(() => {}); // Catch block to prevent unhandled promise rejection errors
+        .catch(() => {});
 }
 
 async function handleLogin(event) {
@@ -151,7 +148,7 @@ async function handleLogin(event) {
         closeModal();
         showAppView();
     } catch(error) {
-        // Error is already shown by apiCall, just preventing crash
+        // Error is already shown by apiCall
     }
 }
 
@@ -169,7 +166,6 @@ async function fetchAndRenderJobs() {
     jobsListContainer.innerHTML = '<p>Loading projects...</p>';
     
     const user = appState.currentUser;
-    // For designers, get all jobs. For contractors, get their own jobs.
     const endpoint = user.type === 'designer' ? '/jobs' : `/jobs/user/${user.id}`;
     
     try {
@@ -189,6 +185,9 @@ async function fetchAndRenderJobs() {
                 ? `<button class="btn btn-primary" onclick="showQuoteModal('${job.id}')">Submit Quote</button>`
                 : `<button class="btn btn-outline" onclick="viewQuotes('${job.id}')">View Quotes (${job.quotesCount || 0})</button>
                    <button class="btn btn-danger" onclick="deleteJob('${job.id}')">Delete Job</button>`;
+            
+            const attachmentLink = job.attachment ? `<p style="margin-top: 12px;"><strong>Attachment:</strong> <a href="${job.attachment}" target="_blank" rel="noopener noreferrer">View File</a></p>` : '';
+            
             return `
                 <div class="job-card">
                     <div class="job-header">
@@ -198,7 +197,7 @@ async function fetchAndRenderJobs() {
                     <p>${job.description}</p>
                     ${job.skills?.length > 0 ? `<p style="margin-top: 12px;"><strong>Skills:</strong> ${job.skills.join(', ')}</p>` : ''}
                     ${job.link ? `<p style="margin-top: 12px;"><strong>Link:</strong> <a href="${job.link}" target="_blank" rel="noopener noreferrer">${job.link}</a></p>` : ''}
-                    ${job.attachment ? `<p style="margin-top: 12px;"><strong>Attachment:</strong> <a href="${job.attachment}" target="_blank" rel="noopener noreferrer">View File</a></p>` : ''}
+                    ${attachmentLink}
                     <div class="job-actions">${actions}</div>
                 </div>`;
         }).join('');
@@ -223,11 +222,9 @@ async function fetchAndRenderMyQuotes() {
         }
         
         listContainer.innerHTML = quotes.map(quote => {
-            // --- FIX: Correctly handle the 'attachments' array ---
             const attachments = quote.attachments || [];
             let attachmentLink = '';
             if (attachments.length > 0) {
-                // For simplicity, link to the first attachment. Can be modified to show all.
                 attachmentLink = `<p><strong>Attachment:</strong> <a href="${attachments[0]}" target="_blank">View File</a></p>`;
             }
 
@@ -342,7 +339,7 @@ function showQuoteModal(jobId) {
             <div class="form-group"><label class="form-label">Amount ($)</label><input type="number" class="form-input" name="amount" required></div>
             <div class="form-group"><label class="form-label">Timeline (in days)</label><input type="number" class="form-input" name="timeline" required></div>
             <div class="form-group"><label class="form-label">Proposal / Description</label><textarea class="form-textarea" name="description" required></textarea></div>
-            <div class="form-group"><label class="form-label">Attachment (Optional)</label><input type="file" class="form-input" name="attachment"></div>
+            <div class="form-group"><label class="form-label">Attachments (Optional)</label><input type="file" class="form-input" name="attachment" multiple></div>
             <button type="submit" class="btn btn-primary" style="width: 100%;">Submit Quote</button>
         </form>`;
     showGenericModal(content, 'max-width: 500px;');
@@ -351,26 +348,27 @@ function showQuoteModal(jobId) {
 
 async function handleQuoteSubmit(event) {
     event.preventDefault();
-    const form = event.target;
-    const formData = new FormData();
-
-    // --- FIX: Correctly map form fields to what the backend expects ---
-    formData.append('jobId', form['jobId'].value);
-    formData.append('quoteAmount', form['amount'].value); // Maps 'amount' to 'quoteAmount'
-    formData.append('timeline', form['timeline'].value);
-    formData.append('description', form['description'].value);
-
-    // No need to manually add quoterId or quoterName; the backend gets this from the authenticated user token.
-
-    if (form.attachment.files.length > 0) {
-        formData.append('attachment', form.attachment.files[0]);
-    }
-    
     try {
+        const form = event.target;
+        const formData = new FormData();
+
+        formData.append('jobId', form['jobId'].value);
+        formData.append('quoteAmount', form['amount'].value);
+        formData.append('timeline', form['timeline'].value);
+        formData.append('description', form['description'].value);
+
+        if (form.attachment.files.length > 0) {
+            for (let i = 0; i < form.attachment.files.length; i++) {
+                formData.append('attachments', form.attachment.files[i]);
+            }
+        }
+        
         await apiCall('/quotes', 'POST', formData, 'Quote submitted successfully!');
+        
         closeModal();
+
     } catch (error) {
-        // Error already shown by apiCall
+        console.error("Quote submission failed:", error);
     }
 }
 
@@ -490,7 +488,6 @@ function showAlert(message, type = 'info') {
 }
 
 async function openConversation(jobId, recipientId) {
-    // This function can be expanded later
     showAlert('Messaging feature is under development.', 'info');
 }
 
