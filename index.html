@@ -11,73 +11,649 @@
     <style>
         /* --- GLOBAL STYLES & VARIABLES --- */
         :root {
-            --primary-color: #005a9c; /* Professional Blue */
-            --primary-hover: #004a80;
-            --primary-light: #e6f0f7;
-            --text-dark: #1f2937;
-            --text-gray: #6b7280;
+            --primary-color: #1e40af;
+            --primary-hover: #1d4ed8;
+            --primary-light: #dbeafe;
+            --secondary-color: #0f766e;
+            --secondary-hover: #0d9488;
+            --accent-color: #0891b2;
+            --accent-light: #cffafe;
+            --gold-accent: #f59e0b;
+            --text-dark: #0f172a;
+            --text-gray: #64748b;
+            --text-light: #94a3b8;
             --bg-white: #ffffff;
-            --bg-light: #f9fafb;
-            --border-color: #e5e7eb;
+            --bg-light: #f8fafc;
+            --bg-gray: #f1f5f9;
+            --bg-dark: #0f172a;
+            --border-color: #e2e8f0;
+            --border-light: #f1f5f9;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
             --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
             --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+            --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
         }
+        
         html { scroll-behavior: smooth; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: var(--bg-light); color: var(--text-dark); line-height: 1.6; }
+        body { 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            background-color: var(--bg-light); 
+            color: var(--text-dark); 
+            line-height: 1.6; 
+            margin: 0;
+            padding: 0;
+        }
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
-        /* --- HEADER / NAVBAR --- */
-        .header { background: rgba(255,255,255,0.8); border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 1000; backdrop-filter: blur(10px); }
-        .header-container { max-width: 1400px; margin: 0 auto; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; height: 64px; }
-        .logo { display: flex; align-items: center; gap: 8px; font-size: 24px; font-weight: 700; color: var(--text-dark); text-decoration: none; cursor: pointer; }
-        .logo-icon { width: 32px; height: 32px; background: var(--primary-color); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; }
-        .nav-menu { flex-grow: 1; display: flex; justify-content: center; gap: 4px; }
-        .nav-link { padding: 8px 16px; border-radius: 6px; color: var(--text-gray); font-weight: 500; font-size: 14px; cursor: pointer; background: none; border: none; text-decoration: none; }
-        .nav-link:hover { color: var(--primary-color); }
-        .auth-buttons { display: flex; gap: 12px; }
+        /* --- HEADER --- */
+        .header { 
+            background: rgba(248, 250, 252, 0.95); 
+            border-bottom: 1px solid var(--border-light); 
+            position: sticky; 
+            top: 0; 
+            z-index: 1000; 
+            backdrop-filter: blur(20px); 
+        }
+        .header-container { 
+            max-width: 1400px; 
+            margin: 0 auto; 
+            padding: 0 24px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+            height: 72px; 
+        }
+        .logo { 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            font-size: 28px; 
+            font-weight: 800; 
+            color: var(--text-dark); 
+            text-decoration: none; 
+            cursor: pointer; 
+        }
+        .logo-icon { 
+            width: 40px; 
+            height: 40px; 
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color)); 
+            border-radius: 12px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            color: white; 
+            font-weight: 700; 
+            box-shadow: var(--shadow-lg);
+        }
+        .nav-menu { 
+            flex-grow: 1; 
+            display: flex; 
+            justify-content: center; 
+            gap: 8px; 
+        }
+        .nav-link { 
+            padding: 12px 20px; 
+            border-radius: 8px; 
+            color: var(--text-gray); 
+            font-weight: 600; 
+            font-size: 15px; 
+            cursor: pointer; 
+            background: none; 
+            border: none; 
+            text-decoration: none; 
+            transition: all 0.3s ease;
+        }
+        .nav-link:hover { 
+            color: var(--primary-color); 
+            background: var(--accent-light);
+        }
+        .auth-buttons { 
+            display: flex; 
+            gap: 16px; 
+        }
+
+        /* --- BUTTONS --- */
+        .btn { 
+            padding: 14px 28px; 
+            border-radius: 12px; 
+            font-weight: 600; 
+            font-size: 16px; 
+            cursor: pointer; 
+            border: 2px solid transparent; 
+            display: inline-flex; 
+            align-items: center; 
+            gap: 10px; 
+            transition: all 0.3s ease; 
+            text-decoration: none;
+        }
+        .btn:hover { 
+            transform: translateY(-2px); 
+            box-shadow: var(--shadow-lg); 
+        }
+        .btn-outline { 
+            background: transparent; 
+            color: var(--primary-color); 
+            border-color: var(--primary-color); 
+        }
+        .btn-outline:hover { 
+            background: var(--primary-color); 
+            color: white; 
+        }
+        .btn-primary { 
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); 
+            color: white; 
+            box-shadow: var(--shadow-lg);
+        }
+        .btn-primary:hover { 
+            background: linear-gradient(135deg, var(--primary-hover), var(--secondary-hover)); 
+            box-shadow: var(--shadow-xl);
+            transform: translateY(-3px);
+        }
+        .btn-danger {
+            background-color: #ef4444;
+            color: white;
+            border-color: #ef4444;
+        }
+        .btn-danger:hover {
+            background-color: #dc2626;
+            border-color: #dc2626;
+        }
+
+        /* --- ENHANCED HERO SECTION --- */
+        .hero { 
+            position: relative;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 30%, #334155 70%, #475569 100%);
+            overflow: hidden;
+        }
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(30, 64, 175, 0.4) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(15, 118, 110, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(8, 145, 178, 0.2) 0%, transparent 50%);
+            z-index: 1;
+        }
+        .hero-background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('https://images.unsplash.com/photo-1541888946425-d81bb19240f5?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3') center/cover;
+            opacity: 0.2;
+            z-index: 0;
+        }
+        .hero-content { 
+            position: relative;
+            z-index: 2;
+            max-width: 1400px; 
+            margin: 0 auto; 
+            padding: 0 24px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 80px;
+            align-items: center;
+        }
+        .hero-text {
+            color: white;
+        }
+        .hero-text h1 { 
+            font-size: 68px; 
+            font-weight: 900; 
+            line-height: 1.1; 
+            margin-bottom: 32px; 
+            background: linear-gradient(135deg, #ffffff 0%, #e2e8f0 50%, #f59e0b 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        .hero-text .highlight {
+            background: linear-gradient(135deg, #f59e0b, #eab308);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .hero-text p { 
+            font-size: 22px; 
+            opacity: 0.95; 
+            margin-bottom: 48px; 
+            color: #e2e8f0;
+            line-height: 1.7;
+        }
+        .hero-cta {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .hero-cta .btn-primary {
+            padding: 20px 40px;
+            font-size: 18px;
+            font-weight: 700;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #f59e0b 0%, #eab308 50%, #d97706 100%);
+            box-shadow: 0 8px 24px rgba(245, 158, 11, 0.4);
+            animation: pulse-glow 2s infinite;
+        }
+        .hero-cta .btn-primary:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 32px rgba(245, 158, 11, 0.6);
+        }
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 8px 24px rgba(245, 158, 11, 0.4); }
+            50% { box-shadow: 0 8px 32px rgba(245, 158, 11, 0.6); }
+        }
+        .hero-stats {
+            display: flex;
+            gap: 32px;
+            margin-top: 40px;
+        }
+        .hero-stat {
+            text-align: center;
+        }
+        .hero-stat-number {
+            font-size: 32px;
+            font-weight: 900;
+            color: #f59e0b;
+            display: block;
+        }
+        .hero-stat-label {
+            font-size: 14px;
+            color: #cbd5e1;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 4px;
+        }
+        .hero-visual {
+            position: relative;
+            height: 600px;
+        }
+        .hero-image-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 24px 64px rgba(0, 0, 0, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+        }
+        .hero-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.6s ease;
+        }
+        .hero-image-container:hover .hero-image {
+            transform: scale(1.05);
+        }
+        .hero-image-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+            padding: 32px;
+            color: white;
+        }
+        .hero-image-overlay h3 {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .hero-image-overlay p {
+            opacity: 0.9;
+            font-size: 16px;
+        }
+        .floating-cards {
+            position: absolute;
+            top: 20px;
+            right: -180px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            z-index: 3;
+        }
+        .floating-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.88));
+            backdrop-filter: blur(20px);
+            padding: 16px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            animation: float 6s ease-in-out infinite;
+            min-width: 180px;
+            max-width: 200px;
+            transition: all 0.3s ease;
+        }
+        .floating-card:hover {
+            transform: translateY(-8px) scale(1.05);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.92));
+        }
+        .floating-card-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 16px;
+            margin-bottom: 10px;
+            box-shadow: 0 4px 12px rgba(30, 64, 175, 0.3);
+        }
+        .floating-card h4 {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 4px;
+            line-height: 1.3;
+        }
+        .floating-card p {
+            font-size: 12px;
+            color: var(--text-gray);
+            margin: 0;
+            line-height: 1.4;
+        }
+        .floating-card-number {
+            font-size: 20px;
+            font-weight: 900;
+            color: var(--secondary-color);
+            display: block;
+            margin-bottom: 2px;
+        }
+        .floating-card.connection-card {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.95), rgba(234, 179, 8, 0.88));
+            color: white;
+            border: 1px solid rgba(245, 158, 11, 0.4);
+        }
+        .floating-card.connection-card .floating-card-icon {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.7));
+            color: var(--gold-accent);
+        }
+        .floating-card.connection-card h4,
+        .floating-card.connection-card p {
+            color: white;
+        }
+        .floating-card.connection-card .floating-card-number {
+            color: white;
+        }
+
+        /* --- HOW IT WORKS SECTION --- */
+        .how-it-works {
+            padding: 120px 24px;
+            background: var(--bg-white);
+            position: relative;
+        }
+        .how-it-works::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 200px;
+            background: linear-gradient(180deg, var(--bg-light) 0%, var(--bg-white) 100%);
+        }
+        .section-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+        .section-title { 
+            font-size: 48px; 
+            font-weight: 900; 
+            text-align: center; 
+            margin-bottom: 20px; 
+            background: linear-gradient(135deg, var(--text-dark), var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .section-subtitle {
+            text-align: center;
+            font-size: 20px;
+            color: var(--text-gray);
+            margin-bottom: 80px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .steps-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 40px;
+            margin-bottom: 80px;
+        }
+        .step-card {
+            text-align: center;
+            padding: 40px 30px;
+            background: linear-gradient(135deg, var(--bg-white), var(--bg-gray));
+            border-radius: 20px;
+            border: 1px solid var(--border-light);
+            box-shadow: var(--shadow-lg);
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .step-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-color), var(--accent-color), var(--secondary-color));
+        }
+        .step-card:hover {
+            transform: translateY(-12px);
+            box-shadow: var(--shadow-2xl);
+            background: var(--bg-white);
+        }
+        .step-number {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0 auto 24px;
+            box-shadow: var(--shadow-lg);
+            border: 3px solid var(--accent-light);
+        }
+        .step-card h3 {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: var(--text-dark);
+        }
+        .step-card p {
+            color: var(--text-gray);
+            line-height: 1.6;
+        }
+
+        /* --- SLIDING CARDS SECTION --- */
+        .sliding-section {
+            padding: 120px 24px;
+            background: linear-gradient(135deg, var(--bg-light), var(--accent-light));
+        }
+        .slider-container {
+            position: relative;
+            overflow: hidden;
+            border-radius: 24px;
+            box-shadow: var(--shadow-xl);
+            background: var(--bg-white);
+        }
+        .slider-wrapper {
+            display: flex;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .slide {
+            min-width: 100%;
+            padding: 80px 60px;
+            display: flex;
+            align-items: center;
+            gap: 60px;
+        }
+        .slide-content h3 {
+            font-size: 36px;
+            font-weight: 800;
+            margin-bottom: 24px;
+            color: var(--text-dark);
+        }
+        .slide-content p {
+            font-size: 18px;
+            color: var(--text-gray);
+            line-height: 1.7;
+            margin-bottom: 32px;
+        }
+        .slide-features { list-style: none; padding: 0; }
+        .slide-features li {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            font-size: 16px;
+            color: var(--text-dark);
+        }
+        .slide-features li i { color: var(--secondary-color); width: 20px; }
+        .slide-visual {
+            flex: 1;
+            height: 400px;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: var(--shadow-lg);
+        }
+        .slide-visual img { width: 100%; height: 100%; object-fit: cover; }
+        .slider-controls {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-top: 40px;
+        }
+        .slider-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--border-color);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .slider-dot.active {
+            background: var(--secondary-color);
+            transform: scale(1.2);
+        }
+        .slider-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid var(--border-light);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 20px;
+            color: var(--primary-color);
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            box-shadow: var(--shadow-lg);
+        }
+        .slider-nav:hover {
+            background: var(--secondary-color);
+            color: white;
+            transform: translateY(-50%) scale(1.1);
+            box-shadow: var(--shadow-xl);
+        }
+        .slider-nav.prev { left: 20px; }
+        .slider-nav.next { right: 20px; }
+
+        /* --- SHOWCASE SECTION --- */
+        .showcase {
+            padding: 120px 24px;
+            background: linear-gradient(135deg, var(--bg-dark) 0%, #1e293b 50%, #334155 100%);
+            color: white;
+            position: relative;
+        }
+        .showcase::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 30% 20%, rgba(30, 64, 175, 0.2) 0%, transparent 50%),
+                radial-gradient(circle at 70% 80%, rgba(15, 118, 110, 0.2) 0%, transparent 50%);
+            pointer-events: none;
+        }
+        .showcase .section-title {
+            color: white;
+            background: linear-gradient(135deg, #ffffff, #e2e8f0, #cbd5e1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .showcase-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 40px;
+        }
+        .showcase-card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 20px;
+            overflow: hidden;
+            transition: all 0.4s ease;
+            position: relative;
+        }
+        .showcase-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-color), var(--secondary-color));
+        }
+        .showcase-card:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-2xl);
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(255, 255, 255, 0.25);
+        }
+        .showcase-image { width: 100%; height: 240px; object-fit: cover; }
+        .showcase-content { padding: 32px; }
+        .showcase-content h3 { font-size: 24px; font-weight: 700; margin-bottom: 16px; color: white; }
+        .showcase-content p { color: rgba(255, 255, 255, 0.8); line-height: 1.6; }
+
+        /* --- MAIN APP VIEW STYLES --- */
         .user-profile-menu { display: flex; align-items: center; gap: 12px; }
         .avatar { width: 40px; height: 40px; background-color: var(--primary-color); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; }
         .user-name { font-weight: 600; }
         .user-role { font-size: 14px; color: var(--text-gray); text-transform: capitalize; }
-
-        /* --- BUTTONS --- */
-        .btn { padding: 10px 20px; border-radius: 8px; font-weight: 600; font-size: 15px; cursor: pointer; border: 1px solid transparent; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s; }
-        .btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
-        .btn-outline { background: var(--bg-white); color: var(--primary-color); border-color: var(--primary-color); }
-        .btn-outline:hover { background: var(--primary-color); color: white; }
-        .btn-primary { background: var(--primary-color); color: white; }
-        .btn-primary:hover { background: var(--primary-hover); }
-
-        /* --- LANDING PAGE --- */
-        .hero { color: white; padding: 120px 24px; text-align: center; background: linear-gradient(135deg, #1e3a8a, #005a9c); }
-        .hero-content { max-width: 900px; margin: 0 auto; }
-        .hero-text h1 { font-size: 52px; font-weight: 800; line-height: 1.1; margin-bottom: 24px; }
-        .hero-text p { font-size: 18px; opacity: 0.9; max-width: 700px; margin: 0 auto 32px; }
-        .landing-section { background: var(--bg-white); padding: 100px 24px; }
-        .landing-container { max-width: 1200px; margin: 0 auto; }
-        .section-title { font-size: 36px; font-weight: 800; text-align: center; margin-bottom: 50px; color: var(--text-dark); }
-        .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 30px; }
-        .feature-card { text-align: center; padding: 40px 30px; background: var(--bg-white); border-radius: 16px; transition: all 0.4s; border: 1px solid var(--border-color); box-shadow: var(--shadow-md); cursor: pointer; position: relative; overflow: hidden; }
-        .feature-card:hover { transform: translateY(-8px); box-shadow: var(--shadow-lg); }
-        .feature-icon { font-size: 36px; color: var(--primary-color); margin-bottom: 20px; }
-        .feature-card h3 { font-size: 22px; margin-bottom: 15px; color: var(--text-dark); }
-        .feature-expanded-content { max-height: 0; overflow: hidden; transition: max-height 0.5s ease, padding 0.5s ease, opacity 0.5s ease; opacity: 0; }
-        .feature-card.expanded .feature-expanded-content { max-height: 600px; opacity: 1; padding-top: 20px; border-top: 1px solid var(--border-color); margin-top: 20px; }
-        .expand-indicator { position: absolute; bottom: 20px; right: 20px; width: 30px; height: 30px; background: var(--primary-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--primary-color); font-size: 14px; transition: all 0.3s ease; }
-        .feature-card.expanded .expand-indicator { transform: rotate(180deg); }
-        .professional-image { width: 100%; height: auto; border-radius: 12px; margin-bottom: 20px; }
-        .showcase-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; }
-        .showcase-card { background: var(--bg-white); border-radius: 16px; border: 1px solid var(--border-color); overflow: hidden; transition: all 0.3s ease; }
-        .showcase-card:hover { transform: translateY(-8px); box-shadow: var(--shadow-lg); }
-        .showcase-image { width: 100%; height: 200px; object-fit: cover; }
-        .showcase-content { padding: 24px; }
-        .showcase-content h3 { font-size: 20px; margin-bottom: 10px; }
-        .showcase-content p { color: var(--text-gray); }
-
-        /* --- MAIN APP VIEW --- */
         .main-layout { display: flex; }
-        .sidebar { width: 260px; background: var(--bg-white); border-right: 1px solid var(--border-color); padding: 24px; height: calc(100vh - 64px); position: sticky; top: 64px; display: flex; flex-direction: column; }
-        .main-content { flex-grow: 1; padding: 40px; }
+        .sidebar { width: 260px; background: var(--bg-white); border-right: 1px solid var(--border-color); padding: 24px; height: calc(100vh - 72px); position: sticky; top: 72px; display: flex; flex-direction: column; }
+        .main-content { flex-grow: 1; padding: 40px; background-color: var(--bg-light); }
         .main-container { max-width: 1200px; margin: 0 auto; }
         .sidebar-user-profile { text-align: center; margin-bottom: 30px; }
         .sidebar-avatar { width: 80px; height: 80px; background: var(--primary-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 32px; margin: 0 auto 10px; }
@@ -87,23 +663,23 @@
         .sidebar-nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 8px; color: var(--text-gray); font-weight: 500; font-size: 15px; cursor: pointer; text-decoration: none; transition: all 0.2s; }
         .sidebar-nav-link:hover { background: var(--primary-light); color: var(--primary-color); }
         .sidebar-nav-link.active { background: var(--primary-color); color: white; }
-        .logout-btn-container { margin-top: auto; padding-top: 20px; }
-
+        
         /* --- MODALS, ALERTS, & OTHER COMPONENTS --- */
         .section-header { margin-bottom: 32px; padding-bottom: 16px; border-bottom: 1px solid var(--border-color); }
         .section-header h2 { font-size: 28px; font-weight: 700; color: var(--text-dark); }
         .form-grid { display: grid; gap: 20px; }
         .form-group { display: flex; flex-direction: column; gap: 8px; }
         .form-label { font-weight: 500; font-size: 14px; }
-        .form-input, .form-select, .form-textarea { padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 15px; width: 100%; }
-        .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(0, 90, 156, 0.1); }
-        .jobs-grid { display: grid; gap: 24px; }
-        .job-card { background: var(--bg-white); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; transition: all 0.3s; }
-        .job-card:hover { box-shadow: var(--shadow-lg); }
+        .form-input, .form-select, .form-textarea { padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 15px; width: 100%; transition: all 0.2s ease; }
+        .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.2); }
+        .jobs-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px; }
+        .job-card { background: var(--bg-white); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; transition: all 0.3s; display: flex; flex-direction: column; }
+        .job-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-4px); }
         .job-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
         .job-header h3 { font-size: 20px; font-weight: 600; }
         .job-budget { background: var(--primary-light); color: var(--primary-color); padding: 6px 12px; border-radius: 20px; font-size: 14px; font-weight: 600; white-space: nowrap; }
-        .job-actions { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-color); text-align: right; }
+        .job-card p { flex-grow: 1; }
+        .job-actions { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 12px; }
         #alerts-container { position: fixed; top: 80px; right: 24px; z-index: 2000; display: flex; flex-direction: column; gap: 12px; }
         .alert { padding: 16px 20px; border-radius: 8px; font-weight: 500; display: flex; align-items: center; gap: 12px; min-width: 300px; box-shadow: var(--shadow-lg); animation: slideIn 0.5s forwards; border-left: 5px solid; }
         @keyframes slideIn { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
@@ -115,103 +691,51 @@
         .modal-close-button { position: absolute; top: 16px; right: 16px; background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-gray); }
         .modal-switch { text-align: center; margin-top: 16px; font-size: 14px; }
         .modal-switch a { color: var(--primary-color); cursor: pointer; font-weight: 500; }
-        .empty-state { text-align: center; padding: 40px; background-color: var(--bg-light); border-radius: 12px; }
+        .empty-state { text-align: center; padding: 40px; background-color: var(--bg-gray); border-radius: 12px; }
         .empty-state h3 { margin-bottom: 8px; color: var(--text-dark); }
         .empty-state p { color: var(--text-gray); }
         .quote-card { border: 1px solid var(--border-color); padding: 16px; border-radius: 8px; margin-bottom: 12px; }
+        .quote-actions { margin-top: 10px; display: flex; gap: 10px; justify-content: flex-end; }
+        .quote-status-pending { border-left: 4px solid #f59e0b; }
+        .quote-status-approved { border-left: 4px solid #10b981; }
+        .quote-status-rejected { border-left: 4px solid #ef4444; }
 
         /* --- AESTHETIC MESSAGING STYLES --- */
-        .chat-modal-content {
-            display: flex;
-            flex-direction: column;
-            height: 70vh;
-            max-height: 600px;
-        }
-        .chat-header {
-            padding-bottom: 16px;
-            margin-bottom: 16px;
-            border-bottom: 1px solid var(--border-color);
-        }
-        .message-container {
-            flex-grow: 1;
-            overflow-y: auto;
-            padding: 10px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-        .message-wrapper {
-            display: flex;
-            max-width: 75%;
-        }
-        .message-wrapper.me {
-            align-self: flex-end;
-            flex-direction: row-reverse;
-        }
-        .message-wrapper.them {
-            align-self: flex-start;
-        }
-        .message-avatar {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background-color: var(--text-gray);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 600;
-            margin: 0 8px;
-            flex-shrink: 0;
-        }
-        .message-bubble {
-            padding: 10px 15px;
-            border-radius: 18px;
-            line-height: 1.4;
-            word-wrap: break-word;
-        }
-        .message-bubble.me {
-            background-color: var(--primary-color);
-            color: white;
-            border-bottom-right-radius: 4px;
-        }
-        .message-bubble.them {
-            background-color: var(--bg-light);
-            border: 1px solid var(--border-color);
-            color: var(--text-dark);
-            border-bottom-left-radius: 4px;
-        }
-        .message-meta {
-            font-size: 12px;
-            color: var(--text-gray);
-            margin-top: 4px;
-        }
-        .message-wrapper.me .message-meta {
-            text-align: right;
-        }
-        .message-form {
-            display: flex;
-            gap: 10px;
-            padding-top: 16px;
-            border-top: 1px solid var(--border-color);
-        }
-        .message-form input {
-            flex-grow: 1;
-        }
-        .quote-actions {
-            margin-top: 10px;
-            display: flex;
-            gap: 10px;
-            justify-content: flex-end;
-        }
+        .chat-modal-content { display: flex; flex-direction: column; height: 70vh; max-height: 600px; width: 100%; }
+        .chat-header { padding: 16px 24px; border-bottom: 1px solid var(--border-color); }
+        .message-container { flex-grow: 1; overflow-y: auto; padding: 16px 24px; display: flex; flex-direction: column; gap: 16px; }
+        .message-wrapper { display: flex; gap: 12px; max-width: 75%; }
+        .message-wrapper.me { align-self: flex-end; flex-direction: row-reverse; }
+        .message-wrapper.them { align-self: flex-start; }
+        .message-avatar { width: 40px; height: 40px; border-radius: 50%; background-color: var(--text-gray); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; flex-shrink: 0; }
+        .message-bubble { padding: 12px 16px; border-radius: 18px; line-height: 1.5; word-wrap: break-word; }
+        .message-bubble.me { background-color: var(--primary-color); color: white; border-bottom-right-radius: 4px; }
+        .message-bubble.them { background-color: var(--bg-gray); color: var(--text-dark); border-bottom-left-radius: 4px; }
+        .message-meta { font-size: 12px; color: var(--text-gray); margin-top: 6px; padding: 0 4px; }
+        .message-wrapper.me .message-meta { text-align: right; }
+        .message-form { display: flex; gap: 12px; padding: 16px 24px; border-top: 1px solid var(--border-color); }
+        .message-form input { flex-grow: 1; }
 
         /* --- RESPONSIVE DESIGN --- */
-        @media (max-width: 992px) { 
-            .header-container { padding: 0 16px; }
+        @media (max-width: 1024px) {
+            .hero-content { grid-template-columns: 1fr; gap: 60px; text-align: center; }
+            .hero-text h1 { font-size: 48px; }
+            .floating-cards { position: static; margin-top: 40px; flex-direction: row; justify-content: center; }
+            .slide { flex-direction: column; text-align: center; padding: 60px 40px; }
         }
-        @media (max-width: 768px) { 
-            .nav-menu { display: none; } 
+        @media (max-width: 768px) {
+            .header-container { padding: 0 16px; height: 64px; }
+            .logo { font-size: 24px; }
+            .nav-menu { display: none; }
             .hero-text h1 { font-size: 36px; }
+            .hero-stats { justify-content: center; }
+            .section-title { font-size: 36px; }
+            .steps-container { grid-template-columns: 1fr; gap: 30px; }
+            .slide { padding: 40px 24px; }
+            .floating-cards { flex-direction: column; align-items: center; }
+            .main-layout { flex-direction: column; }
+            .sidebar { position: static; width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border-color); }
+            .main-content { padding: 24px; }
         }
     </style>
 </head>
@@ -220,28 +744,196 @@
     <div id="modal-container"></div>
 
     <header class="header">
-        </header>
+        <div class="header-container">
+            <a href="#" class="logo">
+                <div class="logo-icon">SC</div>
+                SteelConnect
+            </a>
+            <nav id="main-nav-menu" class="nav-menu">
+                <a href="#how-it-works" class="nav-link">How It Works</a>
+                <a href="#why-steelconnect" class="nav-link">Why Choose Us</a>
+                <a href="#showcase" class="nav-link">Showcase</a>
+            </nav>
+            <div id="auth-buttons-container" class="auth-buttons">
+                <button id="signin-btn" class="btn btn-outline">Sign In</button>
+                <button id="join-btn" class="btn btn-primary">Join Now</button>
+            </div>
+            <div id="user-info" class="user-profile-menu" style="display: none;">
+                 <div id="userAvatar" class="avatar"></div>
+                 <div>
+                     <div id="userName" class="user-name"></div>
+                     <div id="userType" class="user-role"></div>
+                 </div>
+                 <button id="logout-button" class="btn btn-outline" style="padding: 10px 20px;">Logout</button>
+            </div>
+        </div>
+    </header>
 
     <div id="landing-page-content">
-        </div>
+        <main>
+            <section class="hero">
+                <div class="hero-background"></div>
+                <div class="hero-content">
+                    <div class="hero-text">
+                        <h1>SteelConnect: The <span class="highlight">Premier Platform</span> Connecting Designers & Contractors</h1>
+                        <p>Join the leading marketplace where steel designers, structural engineers, and contractors collaborate seamlessly. Build your professional network, showcase expertise, and deliver exceptional projects together.</p>
+                        <div class="hero-cta">
+                            <button id="get-started-btn" class="btn btn-primary">
+                                Start Building Today <i class="fas fa-rocket"></i>
+                            </button>
+                        </div>
+                        <div class="hero-stats">
+                            <div class="hero-stat">
+                                <span class="hero-stat-number">2,500+</span>
+                                <span class="hero-stat-label">Professionals</span>
+                            </div>
+                            <div class="hero-stat">
+                                <span class="hero-stat-number">850+</span>
+                                <span class="hero-stat-label">Projects</span>
+                            </div>
+                            <div class="hero-stat">
+                                <span class="hero-stat-number">50+</span>
+                                <span class="hero-stat-label">Countries</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="hero-visual">
+                        <div class="hero-image-container">
+                            <img src="https://images.unsplash.com/photo-1504307651254-35680f356dfd?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3" alt="Steel construction professionals at work" class="hero-image" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2940&auto=format&fit=crop';">
+                            <div class="hero-image-overlay">
+                                <h3>Professional Excellence</h3>
+                                <p>Connecting top-tier engineers and contractors worldwide</p>
+                            </div>
+                        </div>
+                        <div class="floating-cards">
+                            <div class="floating-card">
+                                <div class="floating-card-icon"><i class="fas fa-handshake"></i></div>
+                                <h4>Active Connections</h4>
+                                <span class="floating-card-number">1,200+</span>
+                                <p>Designer-contractor partnerships</p>
+                            </div>
+                            <div class="floating-card connection-card">
+                                <div class="floating-card-icon"><i class="fas fa-network-wired"></i></div>
+                                <h4>SteelConnect Network</h4>
+                                <span class="floating-card-number">Live</span>
+                                <p>Real-time collaboration platform</p>
+                            </div>
+                            <div class="floating-card">
+                                <div class="floating-card-icon"><i class="fas fa-award"></i></div>
+                                <h4>Success Rate</h4>
+                                <span class="floating-card-number">99.8%</span>
+                                <p>Completed project satisfaction</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="how-it-works" class="how-it-works">
+                <div class="section-container">
+                    <h2 class="section-title">How It Works</h2>
+                    <p class="section-subtitle">Simple steps to connect with the right professionals for your steel construction needs</p>
+                    <div class="steps-container">
+                        <div class="step-card"><div class="step-number">1</div><h3>Post Your Project</h3><p>Describe your steel construction needs, set your budget, and specify required skills. Upload drawings or specifications for better quotes.</p></div>
+                        <div class="step-card"><div class="step-number">2</div><h3>Receive Quotes</h3><p>Licensed professionals and certified engineers submit detailed proposals with timelines, costs, and their approach to your project.</p></div>
+                        <div class="step-card"><div class="step-number">3</div><h3>Collaborate & Deliver</h3><p>Choose the best fit, communicate directly through our platform, and track progress from design to completion.</p></div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="why-steelconnect" class="sliding-section">
+                <div class="section-container">
+                    <h2 class="section-title">Why SteelConnect?</h2>
+                    <div class="slider-container">
+                        <div class="slider-wrapper" id="slider-wrapper">
+                            <div class="slide"><div class="slide-content"><h3>Global Network of Experts</h3><p>Connect with a worldwide community of freelance steel designers, structural engineers, and certified professionals ready to tackle your most challenging projects.</p><ul class="slide-features"><li><i class="fas fa-check"></i> PE-licensed engineers across multiple jurisdictions</li><li><i class="fas fa-check"></i> Specialized expertise in seismic and wind engineering</li><li><i class="fas fa-check"></i> Multi-language support for international projects</li><li><i class="fas fa-check"></i> 24/7 availability across time zones</li></ul></div><div class="slide-visual"><img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=2940&auto=format&fit=crop" alt="Global network" onerror="this.onerror=null;this.src='https://placehold.co/600x400/0f766e/ffffff?text=Expert';"></div></div>
+                            <div class="slide"><div class="slide-content"><h3>Advanced Engineering Solutions</h3><p>From initial concept to final construction drawings, our professionals use cutting-edge technology and industry-leading software to deliver precision engineering.</p><ul class="slide-features"><li><i class="fas fa-check"></i> Latest BIM and 3D modeling capabilities</li><li><i class="fas fa-check"></i> Advanced structural analysis software</li><li><i class="fas fa-check"></i> Code compliance across all major standards</li><li><i class="fas fa-check"></i> Sustainable design practices</li></ul></div><div class="slide-visual"><img src="https://images.unsplash.com/photo-1581094794329-c8112a89af12?q=80&w=2940&auto=format&fit=crop" alt="Engineering solutions" onerror="this.onerror=null;this.src='https://placehold.co/600x400/0891b2/ffffff?text=Engineer';"></div></div>
+                            <div class="slide"><div class="slide-content"><h3>Proven Track Record</h3><p>Our platform has facilitated thousands of successful projects, from residential developments to major infrastructure, with verified reviews and portfolio showcases.</p><ul class="slide-features"><li><i class="fas fa-check"></i> Verified professional credentials and licenses</li><li><i class="fas fa-check"></i> Comprehensive project portfolios</li><li><i class="fas fa-check"></i> Client reviews and ratings system</li><li><i class="fas fa-check"></i> Quality assurance and project insurance</li></ul></div><div class="slide-visual"><img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2940&auto=format&fit=crop" alt="Proven results" onerror="this.onerror=null;this.src='https://placehold.co/600x400/1e40af/ffffff?text=Success';"></div></div>
+                        </div>
+                        <button class="slider-nav prev" onclick="changeSlide(-1)"><i class="fas fa-chevron-left"></i></button>
+                        <button class="slider-nav next" onclick="changeSlide(1)"><i class="fas fa-chevron-right"></i></button>
+                    </div>
+                    <div class="slider-controls"><span class="slider-dot active" onclick="goToSlide(0)"></span><span class="slider-dot" onclick="goToSlide(1)"></span><span class="slider-dot" onclick="goToSlide(2)"></span></div>
+                </div>
+            </section>
+
+            <section id="showcase" class="showcase">
+                <div class="section-container">
+                    <h2 class="section-title">Industry Excellence Showcase</h2>
+                    <div class="showcase-grid">
+                        <div class="showcase-card"><img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2940&auto=format&fit=crop" alt="Modern skyscraper" class="showcase-image" onerror="this.onerror=null;this.src='https://placehold.co/400x240/1e293b/ffffff?text=High-Rise';"><div class="showcase-content"><h3>High-Rise Construction</h3><p>Structural steel design for towers and commercial buildings with advanced seismic engineering and wind load analysis.</p></div></div>
+                        <div class="showcase-card"><img src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?q=80&w=2940&auto=format&fit=crop" alt="Steel bridge" class="showcase-image" onerror="this.onerror=null;this.src='https://placehold.co/400x240/1e293b/ffffff?text=Bridge';"><div class="showcase-content"><h3>Infrastructure Projects</h3><p>Complex bridge design, highway infrastructure, and transportation networks engineered for safety and longevity.</p></div></div>
+                        <div class="showcase-card"><img src="https://images.unsplash.com/photo-1565008447742-97f6f38c985c?q=80&w=2940&auto=format&fit=crop" alt="Industrial facility" class="showcase-image" onerror="this.onerror=null;this.src='https://placehold.co/400x240/1e293b/ffffff?text=Industrial';"><div class="showcase-content"><h3>Industrial Facilities</h3><p>Manufacturing plants, warehouses, and industrial complexes with specialized steel frame solutions and heavy load engineering.</p></div></div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
 
     <div id="app-content" class="main-layout" style="display: none;">
-        </div>
+        <aside class="sidebar">
+            <div class="sidebar-user-profile">
+                <div id="sidebarUserAvatar" class="sidebar-avatar"></div>
+                <h3 id="sidebarUserName"></h3>
+                <p id="sidebarUserType"></p>
+            </div>
+            <nav id="sidebar-nav-menu" class="sidebar-nav"></nav>
+        </aside>
+        <main class="main-content">
+            <div id="app-container" class="main-container"></div>
+        </main>
+    </div>
 
     <script>
+        // --- LANDING PAGE SCRIPT ---
+        let currentSlide = 0;
+        const totalSlides = 3;
+
+        function changeSlide(direction) {
+            const wrapper = document.getElementById('slider-wrapper');
+            if (!wrapper) return;
+            const dots = document.querySelectorAll('.slider-dot');
+            currentSlide = (currentSlide + direction + totalSlides) % totalSlides;
+            wrapper.style.transform = `translateX(-${currentSlide * 100}%)`;
+            dots.forEach((dot, index) => dot.classList.toggle('active', index === currentSlide));
+        }
+
+        function goToSlide(slideIndex) {
+            const wrapper = document.getElementById('slider-wrapper');
+            if (!wrapper) return;
+            const dots = document.querySelectorAll('.slider-dot');
+            currentSlide = slideIndex;
+            wrapper.style.transform = `translateX(-${currentSlide * 100}%)`;
+            dots.forEach((dot, index) => dot.classList.toggle('active', index === currentSlide));
+        }
+
+        setInterval(() => changeSlide(1), 8000);
+
+        document.querySelectorAll('.nav-link[href^="#"]').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('href');
+                const targetSection = document.querySelector(targetId);
+                if (targetSection) {
+                    targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+        
+        // --- FULL APPLICATION SCRIPT (MERGED AND UPDATED) ---
         document.addEventListener('DOMContentLoaded', initializeApp);
 
-        // --- CONSTANTS & STATE ---
-        const BACKEND_URL = 'https://steelconnect-backend.onrender.com/api'; // Correct API path
+        // --- CONSTANTS & STATE (Updated) ---
+        const BACKEND_URL = 'https://steelconnect-backend.onrender.com/api'; // Corrected URL
         const appState = {
             currentUser: null,
             jwtToken: null,
             jobs: [],
             myQuotes: [],
-            participants: {}
+            participants: {} 
         };
-
-        // --- INACTIVITY LOGOUT LOGIC ---
+        
+        // --- INACTIVITY LOGOUT LOGIC (Added) ---
         let inactivityTimer;
 
         function logoutDueToInactivity() {
@@ -254,46 +946,46 @@
         }
 
         function setupInactivityListeners() {
+            resetInactivityTimer();
             const events = ['mousemove', 'mousedown', 'keypress', 'scroll', 'touchstart'];
             events.forEach(event => window.addEventListener(event, resetInactivityTimer, true));
         }
 
         function clearInactivityListeners() {
+            clearTimeout(inactivityTimer);
             const events = ['mousemove', 'mousedown', 'keypress', 'scroll', 'touchstart'];
             events.forEach(event => window.removeEventListener(event, resetInactivityTimer, true));
         }
-
+        
+        // --- HELPER FUNCTION (Added) ---
         const getAttachmentUrl = (path) => {
             if (!path) return '#';
             if (path.startsWith('http')) {
                 return path;
             }
-            // For any relative paths, use the base URL without /api
-            return `${BACKEND_URL.replace('/api', '')}${path}`;
+            const baseUrl = BACKEND_URL.replace('/api', '');
+            return `${baseUrl}${path}`;
         };
 
-
         function initializeApp() {
-            // --- Event Listeners Setup ---
-            // Note: The original HTML file has elements with these IDs.
-            // We assume they will be rendered before these listeners are needed.
-            const setupLandingPageListeners = () => {
-                const signinBtn = document.getElementById('signin-btn');
-                const joinBtn = document.getElementById('join-btn');
-                const getStartedBtn = document.getElementById('get-started-btn');
-                if(signinBtn) signinBtn.addEventListener('click', () => showAuthModal('login'));
-                if(joinBtn) joinBtn.addEventListener('click', () => showAuthModal('register'));
-                if(getStartedBtn) getStartedBtn.addEventListener('click', () => showAuthModal('register'));
-            };
-            
-            // Initial setup for the logo which is always in the header
+            console.log("SteelConnect App Initializing...");
+            document.getElementById('signin-btn').addEventListener('click', () => showAuthModal('login'));
+            document.getElementById('join-btn').addEventListener('click', () => showAuthModal('register'));
+            document.getElementById('get-started-btn').addEventListener('click', () => showAuthModal('register'));
             document.querySelector('.logo').addEventListener('click', (e) => {
                 e.preventDefault();
-                if (appState.currentUser) renderAppSection('jobs');
-                else showLandingPageView();
+                if (appState.currentUser) {
+                    renderAppSection('jobs');
+                } else {
+                    showLandingPageView();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            });
+            document.getElementById('logout-button').addEventListener('click', (e) => {
+                e.preventDefault();
+                logout();
             });
 
-            // --- Session Check ---
             const token = localStorage.getItem('jwtToken');
             const user = localStorage.getItem('currentUser');
             if (token && user) {
@@ -302,24 +994,18 @@
                     appState.currentUser = JSON.parse(user);
                     showAppView();
                 } catch (error) {
+                    console.error("Error parsing user data from localStorage:", error);
                     logout();
                 }
             } else {
                 showLandingPageView();
-                // We need to ensure landing page content is rendered before setting up listeners
-                // This can be done inside showLandingPageView or by calling a setup function after rendering
             }
         }
 
         async function apiCall(endpoint, method, body = null, successMessage = null, callback = null) {
             try {
-                const options = {
-                    method,
-                    headers: {}
-                };
-                if (appState.jwtToken) {
-                    options.headers['Authorization'] = `Bearer ${appState.jwtToken}`;
-                }
+                const options = { method, headers: {} };
+                if (appState.jwtToken) options.headers['Authorization'] = `Bearer ${appState.jwtToken}`;
                 if (body) {
                     if (body instanceof FormData) {
                         options.body = body;
@@ -329,33 +1015,40 @@
                     }
                 }
                 const response = await fetch(BACKEND_URL + endpoint, options);
-                const responseData = await response.json();
+                const contentType = response.headers.get("content-type");
+                const responseData = contentType?.includes("application/json") ? await response.json() : await response.text();
 
                 if (!response.ok) {
-                    throw new Error(responseData.message || 'An API error occurred.');
+                    const errorMessage = responseData.message || responseData.error || responseData || `Request failed with status ${response.status}`;
+                    throw new Error(errorMessage);
                 }
 
                 if (successMessage) showAlert(successMessage, 'success');
                 if (callback) callback(responseData);
 
             } catch (error) {
+                console.error(`API call to ${endpoint} failed:`, error);
                 showAlert(error.message, 'error');
             }
         }
 
-        // --- User Authentication Functions ---
         async function handleRegister(event) {
             event.preventDefault();
             const form = event.target;
-            const userData = { name: form.regName.value, email: form.regEmail.value, password: form.regPassword.value, type: form.regRole.value };
-            apiCall('/auth/register', 'POST', userData, 'Registration successful! Please sign in.', () => renderAuthForm('login'));
+            const userData = {
+                name: form.regName.value,
+                email: form.regEmail.value,
+                password: form.regPassword.value,
+                type: form.regRole.value,
+            };
+            await apiCall('/auth/register', 'POST', userData, 'Registration successful! Please sign in.', () => renderAuthForm('login'));
         }
 
         async function handleLogin(event) {
             event.preventDefault();
             const form = event.target;
             const authData = { email: form.loginEmail.value, password: form.loginPassword.value };
-            apiCall('/auth/login', 'POST', authData, null, (data) => {
+            await apiCall('/auth/login', 'POST', authData, null, (data) => {
                 showAlert('Login successful!', 'success');
                 appState.currentUser = data.user;
                 appState.jwtToken = data.token;
@@ -368,44 +1061,37 @@
 
         function logout(reason = null) {
             clearInactivityListeners();
-            clearTimeout(inactivityTimer);
-            localStorage.clear();
             appState.currentUser = null;
             appState.jwtToken = null;
+            localStorage.clear();
             showLandingPageView();
             const message = reason === 'inactive' ? 'You have been logged out due to inactivity.' : 'You have been logged out.';
             showAlert(message, 'info');
         }
 
-        // --- Core App Logic Functions (Jobs & Quotes) ---
         async function fetchAndRenderJobs() {
             const jobsListContainer = document.getElementById('jobs-list');
-            if(!jobsListContainer) return;
+            if (!jobsListContainer) return;
             jobsListContainer.innerHTML = '<p>Loading projects...</p>';
             const user = appState.currentUser;
             const endpoint = user.type === 'designer' ? '/jobs' : `/jobs/user/${user.id}`;
-
-            apiCall(endpoint, 'GET', null, null, (response) => {
+            await apiCall(endpoint, 'GET', null, null, (response) => {
                 const jobs = response.data || [];
                 appState.jobs = jobs;
-
                 if (jobs.length === 0) {
                     jobsListContainer.innerHTML = user.type === 'designer'
-                        ? `<div class="empty-state"><h3>No Projects Available</h3><p>Check back for new opportunities.</p></div>`
-                        : `<div class="empty-state"><h3>You haven't posted any projects.</h3><p>Click 'Post a Job' to get started.</p></div>`;
+                        ? `<div class="empty-state"><h3>No Projects Available</h3><p>Check back later for new opportunities.</p></div>`
+                        : `<div class="empty-state"><h3>You haven't posted any projects yet.</h3><p>Click 'Post a Job' to get started.</p></div>`;
                     return;
                 }
-
                 jobsListContainer.innerHTML = jobs.map(job => {
                     const actions = user.type === 'designer'
                         ? `<button class="btn btn-primary" onclick="showQuoteModal('${job.id}')">Submit Quote</button>`
                         : `<button class="btn btn-outline" onclick="viewQuotes('${job.id}')">View Quotes (${job.quotesCount || 0})</button>
                            <button class="btn btn-danger" onclick="deleteJob('${job.id}')">Delete Job</button>`;
-
                     const attachmentLink = job.attachment
                         ? `<p style="margin-top: 12px;"><strong>Attachment:</strong> <a href="${getAttachmentUrl(job.attachment)}" target="_blank" rel="noopener noreferrer">View File</a></p>`
                         : '';
-
                     return `
                         <div class="job-card">
                             <div class="job-header">
@@ -414,6 +1100,7 @@
                             </div>
                             <p>${job.description}</p>
                             ${job.skills?.length > 0 ? `<p style="margin-top: 12px;"><strong>Skills:</strong> ${job.skills.join(', ')}</p>` : ''}
+                            ${job.link ? `<p style="margin-top: 12px;"><strong>Link:</strong> <a href="${job.link}" target="_blank" rel="noopener noreferrer">${job.link}</a></p>` : ''}
                             ${attachmentLink}
                             <div class="job-actions">${actions}</div>
                         </div>`;
@@ -422,284 +1109,324 @@
         }
 
         async function fetchAndRenderMyQuotes() {
+            const container = document.getElementById('app-container');
+            container.innerHTML = `<div class="section-header"><h2>My Submitted Quotes</h2></div><div id="my-quotes-list" class="jobs-grid"></div>`;
             const listContainer = document.getElementById('my-quotes-list');
-            if(!listContainer) return;
             listContainer.innerHTML = '<p>Loading your quotes...</p>';
-
-            apiCall(`/quotes/user/${appState.currentUser.id}`, 'GET', null, null, (response) => {
+            await apiCall(`/quotes/user/${appState.currentUser.id}`, 'GET', null, null, (response) => {
                 const quotes = response.data || [];
-
                 if (quotes.length === 0) {
                     listContainer.innerHTML = `<div class="empty-state"><p>You have not submitted any quotes.</p></div>`;
                     return;
                 }
-
                 listContainer.innerHTML = quotes.map(quote => {
-                    const attachmentLink = quote.attachments && quote.attachments[0]
-                        ? `<p><strong>Attachment:</strong> <a href="${getAttachmentUrl(quote.attachments[0])}" target="_blank">View File</a></p>` : '';
-                    
-                    const messageButton = quote.status === 'approved' 
-                        ? `<button class="btn btn-primary" onclick="openConversation('${quote.jobId}', '${quote.contractorId}', 'Client')">Message Client</button>` : '';
-
+                    const attachmentLink = quote.attachment ? `<p><strong>Attachment:</strong> <a href="${getAttachmentUrl(quote.attachment)}" target="_blank">View File</a></p>` : '';
+                    const messageButton = quote.status === 'approved' ? `<button class="btn btn-primary" onclick="openConversation('${quote.jobId}', '${quote.contractorId}', 'Client')">Message Client</button>` : '';
+                    const deleteButton = quote.status === 'pending' ? `<button class="btn btn-danger" onclick="deleteQuote('${quote.id}')">Delete Quote</button>` : '';
                     return `
                         <div class="job-card quote-status-${quote.status}">
                             <div class="job-header">
-                                <div><h3>Quote for: ${quote.jobTitle}</h3><p>Amount: $${quote.quoteAmount}</p></div>
+                                <div>
+                                    <h3>Quote for: ${quote.jobTitle || 'Unknown Job'}</h3>
+                                    <p class="text-gray" style="font-size: 14px;">Amount: $${quote.amount || quote.quoteAmount}</p>
+                                </div>
                                 <div class="job-budget">Status: ${quote.status}</div>
                             </div>
                             <p>${quote.description}</p>
                             ${attachmentLink}
-                            <div class="job-actions">${messageButton}</div>
+                            <div class="job-actions">${messageButton} ${deleteButton}</div>
                         </div>`;
                 }).join('');
             });
         }
-        
-        // --- UI Rendering Functions (Templates) ---
-        // (These functions are necessary for the app to work but were not included in the provided files.
-        // They are created here based on the function calls seen in the logic.)
 
-        function renderHeader() {
-            const header = document.querySelector('.header');
-            const user = appState.currentUser;
-            const buttonsHTML = user 
-                ? `
-                    <div class="user-profile-menu">
-                        <div class="avatar">${user.name.charAt(0)}</div>
-                        <div>
-                            <div class="user-name">${user.name}</div>
-                            <div class="user-role">${user.type}</div>
-                        </div>
-                    </div>
-                `
-                : `
-                    <div class="auth-buttons">
-                        <button id="signin-btn" class="btn btn-outline">Sign In</button>
-                        <button id="join-btn" class="btn btn-primary">Join Now</button>
-                    </div>
-                `;
+        async function handlePostJob(event) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData();
+            ['title', 'description', 'budget', 'deadline', 'skills', 'link'].forEach(field => formData.append(field, form[field]?.value));
+            if (form.attachment.files.length > 0) formData.append('attachment', form.attachment.files[0]);
+            await apiCall('/jobs', 'POST', formData, 'Job posted successfully!', () => {
+                form.reset();
+                renderAppSection('jobs');
+            });
+        }
 
-            header.innerHTML = `
-                <div class="header-container">
-                    <a href="#" class="logo">
-                        <div class="logo-icon">S</div> SteelConnect
-                    </a>
-                    <nav class="nav-menu">
-                        <a href="#features" class="nav-link">Features</a>
-                        <a href="#showcase" class="nav-link">Showcase</a>
-                    </nav>
-                    ${buttonsHTML}
-                </div>
-            `;
-            // Re-attach listeners for dynamically created elements
-            if (!user) {
-                document.getElementById('signin-btn').addEventListener('click', () => showAuthModal('login'));
-                document.getElementById('join-btn').addEventListener('click', () => showAuthModal('register'));
+        async function deleteJob(jobId) {
+            if (confirm('Are you sure you want to delete this job? This action cannot be undone.')) {
+                await apiCall(`/jobs/${jobId}`, 'DELETE', null, 'Job deleted.', () => renderAppSection('jobs'));
             }
         }
-        
-        function showLandingPageView() {
-            renderHeader();
-            const landingPage = document.getElementById('landing-page-content');
-            const appContent = document.getElementById('app-content');
-            landingPage.style.display = 'block';
-            appContent.style.display = 'none';
 
-            landingPage.innerHTML = `
-                <section class="hero">
-                    <div class="hero-content">
-                        <div class="hero-text">
-                            <h1>The Premier Marketplace for Steel & Rebar Design</h1>
-                            <p>Connecting innovative structural engineers and designers with construction firms looking for top-tier talent.</p>
-                            <button id="get-started-btn" class="btn btn-primary">Get Started Today</button>
-                        </div>
-                    </div>
-                </section>
-                <section id="features" class="landing-section">
-                    <div class="landing-container">
-                        <h2 class="section-title">Why SteelConnect?</h2>
-                        <div class="features-grid">
-                            </div>
-                    </div>
-                </section>
-                <section id="showcase" class="landing-section" style="background: var(--bg-light);">
-                    <div class="landing-container">
-                        <h2 class="section-title">Featured Projects</h2>
-                        <div class="showcase-grid">
-                            </div>
-                    </div>
-                </section>
-            `;
-            // Re-attach listener for the get-started button
-             document.getElementById('get-started-btn').addEventListener('click', () => showAuthModal('register'));
+        async function deleteQuote(quoteId) {
+            if (confirm('Are you sure you want to delete this quote?')) {
+                await apiCall(`/quotes/${quoteId}`, 'DELETE', null, 'Quote deleted.', () => fetchAndRenderMyQuotes());
+            }
+        }
+
+        async function viewQuotes(jobId) {
+            await apiCall(`/quotes/job/${jobId}`, 'GET', null, null, (response) => {
+                const quotes = response.data || [];
+                let quotesHTML = `<h3>Received Quotes</h3>`;
+                if (quotes.length === 0) {
+                    quotesHTML += `<div class="empty-state"><p>No quotes received yet.</p></div>`;
+                } else {
+                    quotesHTML += quotes.map(quote => {
+                        const attachmentLink = quote.attachment ? `<p><strong>Attachment:</strong> <a href="${getAttachmentUrl(quote.attachment)}" target="_blank">View File</a></p>` : '';
+                        const approveButton = appState.currentUser.type === 'contractor' && quote.status === 'pending' ? `<button class="btn btn-primary" onclick="approveQuote('${quote.id}')">Approve</button>` : '';
+                        const messageButton = appState.currentUser.type === 'contractor' ? `<button class="btn btn-outline" onclick="openConversation('${quote.jobId}', '${quote.quoterId}', '${quote.quoterName}')">Message Designer</button>` : '';
+                        return `
+                            <div class="quote-card quote-status-${quote.status}">
+                                <p><strong>From:</strong> ${quote.quoterName} | <strong>Amount:</strong> $${quote.amount}</p>
+                                <p>${quote.description}</p>
+                                ${attachmentLink}
+                                <p><strong>Status:</strong> ${quote.status}</p>
+                                <div class="quote-actions">${approveButton} ${messageButton}</div>
+                            </div>`;
+                    }).join('');
+                }
+                showGenericModal(quotesHTML, 'max-width: 650px;');
+            });
+        }
+
+        async function approveQuote(quoteId) {
+            if (confirm('Are you sure you want to approve this quote? This will notify the designer.')) {
+                await apiCall(`/quotes/${quoteId}/approve`, 'PUT', null, 'Quote approved!', () => {
+                    closeModal();
+                    renderAppSection('jobs');
+                });
+            }
+        }
+
+        function showQuoteModal(jobId) {
+            const content = `
+                <h3>Submit Your Quote</h3>
+                <form id="quote-form" class="form-grid">
+                    <input type="hidden" name="jobId" value="${jobId}">
+                    <div class="form-group"><label class="form-label">Amount ($)</label><input type="number" class="form-input" name="amount" required></div>
+                    <div class="form-group"><label class="form-label">Timeline (in days)</label><input type="number" class="form-input" name="timeline" required></div>
+                    <div class="form-group"><label class="form-label">Description / Proposal</label><textarea class="form-textarea" name="description" required></textarea></div>
+                    <div class="form-group"><label class="form-label">Attachment (Optional)</label><input type="file" class="form-input" name="attachment"></div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">Submit Quote</button>
+                </form>`;
+            showGenericModal(content, 'max-width: 500px;');
+            document.getElementById('quote-form').addEventListener('submit', handleQuoteSubmit);
+        }
+
+        async function handleQuoteSubmit(event) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData();
+            ['jobId', 'amount', 'timeline', 'description'].forEach(field => formData.append(field, form[field]?.value));
+            formData.append('quoterId', appState.currentUser.id);
+            formData.append('quoterName', appState.currentUser.name);
+            if (form.attachment.files.length > 0) formData.append('attachment', form.attachment.files[0]);
+            
+            await apiCall('/quotes', 'POST', formData, 'Quote submitted successfully!', () => {
+                closeModal();
+            });
+        }
+
+        function showAuthModal(view) {
+            const modalContainer = document.getElementById('modal-container');
+            modalContainer.innerHTML = `<div class="modal-overlay"><div class="modal-content" onclick="event.stopPropagation()"><button class="modal-close-button" onclick="closeModal()">&times;</button><div id="modal-form-container"></div></div></div>`;
+            modalContainer.querySelector('.modal-overlay').addEventListener('click', closeModal);
+            renderAuthForm(view);
+        }
+
+        function renderAuthForm(view) {
+            const container = document.getElementById('modal-form-container');
+            if (!container) return;
+            container.innerHTML = view === 'login' ? getLoginTemplate() : getRegisterTemplate();
+            const formId = view === 'login' ? 'login-form' : 'register-form';
+            const handler = view === 'login' ? handleLogin : handleRegister;
+            document.getElementById(formId).addEventListener('submit', handler);
+        }
+
+        function showGenericModal(innerHTML, style = '') {
+            const modalContainer = document.getElementById('modal-container');
+            modalContainer.innerHTML = `<div class="modal-overlay"><div class="modal-content" style="${style}" onclick="event.stopPropagation()"><button class="modal-close-button" onclick="closeModal()">✕</button>${innerHTML}</div></div>`;
+            modalContainer.querySelector('.modal-overlay').addEventListener('click', closeModal);
+        }
+
+        function closeModal() {
+            const modalContainer = document.getElementById('modal-container');
+            if (modalContainer) modalContainer.innerHTML = '';
         }
 
         function showAppView() {
-            renderHeader();
-            const landingPage = document.getElementById('landing-page-content');
-            const appContent = document.getElementById('app-content');
-            landingPage.style.display = 'none';
-            appContent.style.display = 'flex';
-            setupInactivityListeners();
-            resetInactivityTimer();
-            renderAppSection('jobs'); // Default to jobs view
-        }
-        
-        function renderAppSection(sectionName) {
-            const appContent = document.getElementById('app-content');
+            document.getElementById('landing-page-content').style.display = 'none';
+            document.getElementById('app-content').style.display = 'flex';
+            document.getElementById('auth-buttons-container').style.display = 'none';
+            document.getElementById('user-info').style.display = 'flex';
+            document.getElementById('main-nav-menu').innerHTML = '';
+            
             const user = appState.currentUser;
-            const sidebarHTML = `
-                <aside class="sidebar">
-                    <div class="sidebar-user-profile">
-                        <div class="sidebar-avatar">${user.name.charAt(0)}</div>
-                        <h3>${user.name}</h3>
-                        <p>${user.type}</p>
-                    </div>
-                    <nav class="sidebar-nav">
-                        <a href="#" class="sidebar-nav-link ${sectionName === 'jobs' ? 'active' : ''}" data-section="jobs">
-                            <i class="fa-solid fa-briefcase"></i> Browse Projects
-                        </a>
-                        ${user.type === 'designer' ? `
-                        <a href="#" class="sidebar-nav-link ${sectionName === 'my-quotes' ? 'active' : ''}" data-section="my-quotes">
-                            <i class="fa-solid fa-file-invoice-dollar"></i> My Quotes
-                        </a>
-                        ` : `
-                        <a href="#" class="sidebar-nav-link" onclick="showPostJobModal()">
-                            <i class="fa-solid fa-plus-circle"></i> Post a Job
-                        </a>`}
-                    </nav>
-                    <div class="logout-btn-container">
-                        <button id="logout-button" class="btn btn-outline" style="width: 100%;">
-                            <i class="fa-solid fa-right-from-bracket"></i> Logout
-                        </button>
-                    </div>
-                </aside>
-            `;
-
-            let mainContentHTML = '';
-            if (sectionName === 'jobs') {
-                mainContentHTML = `
-                    <div class="section-header"><h2>Available Projects</h2></div>
-                    <div id="jobs-list" class="jobs-grid"></div>
-                `;
-            } else if (sectionName === 'my-quotes') {
-                mainContentHTML = `
-                    <div class="section-header"><h2>My Submitted Quotes</h2></div>
-                    <div id="my-quotes-list" class="jobs-grid"></div>
-                `;
-            }
+            document.getElementById('userName').textContent = user.name;
+            document.getElementById('userType').textContent = user.type;
+            document.getElementById('userAvatar').textContent = (user.name || "A").charAt(0).toUpperCase();
+            document.getElementById('sidebarUserName').textContent = user.name;
+            document.getElementById('sidebarUserType').textContent = user.type;
+            document.getElementById('sidebarUserAvatar').textContent = (user.name || "A").charAt(0).toUpperCase();
             
-            appContent.innerHTML = `
-                ${sidebarHTML}
-                <main class="main-content">
-                    <div class="main-container">
-                        ${mainContentHTML}
-                    </div>
-                </main>
-            `;
-            
-            // Fetch content for the rendered section
-            if (sectionName === 'jobs') fetchAndRenderJobs();
-            if (sectionName === 'my-quotes') fetchAndRenderMyQuotes();
+            buildSidebarNav();
+            renderAppSection('jobs');
+            setupInactivityListeners();
+        }
 
-            // Add event listeners for new elements
-            document.getElementById('logout-button').addEventListener('click', (e) => { e.preventDefault(); logout(); });
-            document.querySelectorAll('.sidebar-nav-link').forEach(link => {
-                if(link.dataset.section) {
-                    link.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        renderAppSection(link.dataset.section);
-                    });
-                }
+        function showLandingPageView() {
+            document.getElementById('landing-page-content').style.display = 'block';
+            document.getElementById('app-content').style.display = 'none';
+            document.getElementById('auth-buttons-container').style.display = 'flex';
+            document.getElementById('user-info').style.display = 'none';
+            document.getElementById('main-nav-menu').innerHTML = `
+                <a href="#how-it-works" class="nav-link">How It Works</a>
+                <a href="#why-steelconnect" class="nav-link">Why Choose Us</a>
+                <a href="#showcase" class="nav-link">Showcase</a>`;
+        }
+
+        function buildSidebarNav() {
+            const navContainer = document.getElementById('sidebar-nav-menu');
+            const role = appState.currentUser.type;
+            let links = (role === 'designer')
+                ? `<a href="#" class="sidebar-nav-link" data-section="jobs"><i class="fas fa-briefcase fa-fw"></i> <span>Find Jobs</span></a>
+                   <a href="#" class="sidebar-nav-link" data-section="my-quotes"><i class="fas fa-file-invoice-dollar fa-fw"></i> <span>My Quotes</span></a>`
+                : `<a href="#" class="sidebar-nav-link" data-section="jobs"><i class="fas fa-tasks fa-fw"></i> <span>My Projects</span></a>
+                   <a href="#" class="sidebar-nav-link" data-section="post-job"><i class="fas fa-plus-circle fa-fw"></i> <span>Post a Job</span></a>`;
+            navContainer.innerHTML = links;
+            navContainer.querySelectorAll('.sidebar-nav-link').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    renderAppSection(link.dataset.section);
+                });
             });
         }
-        
-        function showAuthModal(type) {
-            const modalContainer = document.getElementById('modal-container');
-            modalContainer.innerHTML = `
-                <div class="modal-overlay">
-                    <div class="modal-content" id="auth-modal-content">
-                        </div>
-                </div>
-            `;
-            renderAuthForm(type);
-        }
-        
-        function renderAuthForm(type) {
-            const modalContent = document.getElementById('auth-modal-content');
-            if(!modalContent) return;
-            const isLogin = type === 'login';
-            modalContent.innerHTML = `
-                <button class="modal-close-button" onclick="closeModal()">×</button>
-                <h2>${isLogin ? 'Sign In' : 'Create Account'}</h2>
-                <form id="${isLogin ? 'login-form' : 'register-form'}" class="form-grid" style="margin-top: 20px;">
-                    ${isLogin ? `
-                        <div class="form-group">
-                            <label for="loginEmail" class="form-label">Email</label>
-                            <input type="email" id="loginEmail" name="loginEmail" class="form-input" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="loginPassword" class="form-label">Password</label>
-                            <input type="password" id="loginPassword" name="loginPassword" class="form-input" required>
-                        </div>
-                    ` : `
-                        <div class="form-group">
-                            <label for="regName" class="form-label">Full Name</label>
-                            <input type="text" id="regName" name="regName" class="form-input" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="regEmail" class="form-label">Email</label>
-                            <input type="email" id="regEmail" name="regEmail" class="form-input" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="regPassword" class="form-label">Password</label>
-                            <input type="password" id="regPassword" name="regPassword" class="form-input" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="regRole" class="form-label">I am a...</label>
-                            <select id="regRole" name="regRole" class="form-select" required>
-                                <option value="designer">Designer / Engineer</option>
-                                <option value="contractor">Contractor / Firm</option>
-                            </select>
-                        </div>
-                    `}
-                    <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">${isLogin ? 'Sign In' : 'Register'}</button>
-                </form>
-                <div class="modal-switch">
-                    ${isLogin ? `Don't have an account? <a onclick="renderAuthForm('register')">Register</a>` : `Already have an account? <a onclick="renderAuthForm('login')">Sign In</a>`}
-                </div>
-            `;
-            
-            if(isLogin) {
-                document.getElementById('login-form').addEventListener('submit', handleLogin);
-            } else {
-                document.getElementById('register-form').addEventListener('submit', handleRegister);
+
+        function renderAppSection(sectionId) {
+            const container = document.getElementById('app-container');
+            document.querySelectorAll('.sidebar-nav-link').forEach(link => {
+                link.classList.toggle('active', link.dataset.section === sectionId);
+            });
+            const userRole = appState.currentUser.type;
+            if (sectionId === 'jobs') {
+                const title = userRole === 'designer' ? 'Available Projects' : 'My Posted Projects';
+                container.innerHTML = `<div class="section-header"><h2>${title}</h2></div><div id="jobs-list" class="jobs-grid"></div>`;
+                fetchAndRenderJobs();
+            } else if (sectionId === 'post-job') {
+                container.innerHTML = getPostJobTemplate();
+                document.getElementById('post-job-form').addEventListener('submit', handlePostJob);
+            } else if (sectionId === 'my-quotes') {
+                fetchAndRenderMyQuotes();
             }
-        }
-        
-        function closeModal() {
-            const modalContainer = document.getElementById('modal-container');
-            modalContainer.innerHTML = '';
         }
 
         function showAlert(message, type = 'info') {
-            const container = document.getElementById('alerts-container');
+            const alertsContainer = document.getElementById('alerts-container');
             const alertDiv = document.createElement('div');
             alertDiv.className = `alert alert-${type}`;
-            alertDiv.textContent = message;
-            container.appendChild(alertDiv);
+            alertDiv.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i> <span>${message}</span>`;
+            alertsContainer.prepend(alertDiv);
             setTimeout(() => {
-                alertDiv.remove();
-            }, 5000);
+                alertDiv.style.opacity = '0';
+                setTimeout(() => alertDiv.remove(), 500);
+            }, 4000);
         }
-        
-        // Dummy functions for actions until they are fully implemented
-        function showPostJobModal() { showAlert('Post Job modal not implemented yet.', 'info'); }
-        function showQuoteModal(jobId) { showAlert(`Submit Quote for job ${jobId} not implemented yet.`, 'info'); }
-        function viewQuotes(jobId) { showAlert(`View Quotes for job ${jobId} not implemented yet.`, 'info'); }
-        function deleteJob(jobId) { showAlert(`Delete Job ${jobId} not implemented yet.`, 'info'); }
-        function openConversation(jobId, contractorId, clientName) { showAlert('Messaging not implemented yet.', 'info');}
 
+        async function openConversation(jobId, recipientId, recipientName) {
+            appState.participants = {
+                [appState.currentUser.id]: appState.currentUser.name,
+                [recipientId]: recipientName
+            };
+            await apiCall('/messages/find', 'POST', { jobId, recipientId }, null, async (conversationResponse) => {
+                const conversation = conversationResponse.data;
+                await apiCall(`/messages/${conversation.id}/messages`, 'GET', null, null, (messagesResponse) => {
+                    showConversationModal(conversation, messagesResponse.data);
+                });
+            });
+        }
+
+        function showConversationModal(conversation, messages) {
+            const messagesHTML = messages.map(msg => {
+                const senderName = appState.participants[msg.senderId] || 'Unknown';
+                const isMe = msg.senderId === appState.currentUser.id;
+                const time = new Date(msg.createdAt.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                return `
+                    <div class="message-wrapper ${isMe ? 'me' : 'them'}">
+                        <div class="message-avatar">${senderName.charAt(0).toUpperCase()}</div>
+                        <div class="message-content-wrapper">
+                            <div class="message-bubble">
+                                <p>${msg.text}</p>
+                            </div>
+                            <div class="message-meta">
+                                <span>${isMe ? 'You' : senderName}</span> • <span>${time}</span>
+                            </div>
+                        </div>
+                    </div>`;
+            }).join('');
+
+            const modalContent = `
+                <div class="chat-modal-content">
+                    <div class="chat-header"><h3>Conversation: ${conversation.jobTitle || 'Project'}</h3></div>
+                    <div id="message-list" class="message-container">${messagesHTML}</div>
+                    <form id="message-form" class="message-form">
+                        <input type="text" name="messageText" class="form-input" placeholder="Type a message..." required autocomplete="off">
+                        <button type="submit" class="btn btn-primary" style="padding: 10px 20px;">Send</button>
+                    </form>
+                </div>`;
+            
+            showGenericModal(modalContent, 'max-width: 600px; padding: 0; display: flex; flex-direction: column;');
+            
+            const messageList = document.getElementById('message-list');
+            messageList.scrollTop = messageList.scrollHeight;
+
+            document.getElementById('message-form').addEventListener('submit', (e) => handleSendMessage(e, conversation.id));
+        }
+
+        async function handleSendMessage(event, conversationId) {
+            event.preventDefault();
+            const form = event.target;
+            const text = form.messageText.value.trim();
+            if (!text) return;
+            form.querySelector('button').disabled = true;
+
+            await apiCall(`/messages/${conversationId}/messages`, 'POST', { text }, null, (newMessageResponse) => {
+                form.reset();
+                form.querySelector('button').disabled = false;
+                
+                const messageList = document.getElementById('message-list');
+                if (messageList) {
+                    const senderName = appState.currentUser.name;
+                    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    const newMessageHTML = `
+                        <div class="message-wrapper me">
+                            <div class="message-avatar">${senderName.charAt(0).toUpperCase()}</div>
+                            <div class="message-content-wrapper">
+                                <div class="message-bubble">
+                                    <p>${newMessageResponse.data.text}</p>
+                                </div>
+                                <div class="message-meta">
+                                    <span>You</span> • <span>${time}</span>
+                                </div>
+                            </div>
+                        </div>`;
+                    messageList.innerHTML += newMessageHTML;
+                    messageList.scrollTop = messageList.scrollHeight;
+                }
+            });
+        }
+
+        function getLoginTemplate() {
+            return `<h2 style="text-align: center; margin-bottom: 24px;">Sign In</h2><form id="login-form" class="form-grid"><div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" name="loginEmail" required></div><div class="form-group"><label class="form-label">Password</label><input type="password" class="form-input" name="loginPassword" required></div><button type="submit" class="btn btn-primary" style="width: 100%;">Sign In</button></form><div class="modal-switch">Don't have an account? <a onclick="renderAuthForm('register')">Sign Up</a></div>`;
+        }
+
+        function getRegisterTemplate() {
+            return `<h2 style="text-align: center; margin-bottom: 24px;">Create an Account</h2><form id="register-form" class="form-grid"><div class="form-group"><label class="form-label">Full Name</label><input type="text" class="form-input" name="regName" required></div><div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" name="regEmail" required></div><div class="form-group"><label class="form-label">Password</label><input type="password" class="form-input" name="regPassword" required></div><div class="form-group"><label class="form-label">I am a...</label><select class="form-select" name="regRole" required><option value="" disabled selected>Select your role</option><option value="contractor">Client / Contractor</option><option value="designer">Designer / Engineer</option></select></div><button type="submit" class="btn btn-primary" style="width: 100%;">Create Account</button></form><div class="modal-switch">Already have an account? <a onclick="renderAuthForm('login')">Sign In</a></div>`;
+        }
+
+        function getPostJobTemplate() {
+            return `<div class="section-header"><h2>Post a New Project</h2></div><form id="post-job-form" class="form-grid" style="max-width: 800px;"><div class="form-group"><label class="form-label">Project Title</label><input type="text" class="form-input" name="title" required placeholder="e.g., Structural Steel Design for Warehouse"></div><div class="form-group"><label class="form-label">Budget Range</label><input type="text" class="form-input" name="budget" required placeholder="e.g., $5,000 - $10,000"></div><div class="form-group"><label class="form-label">Deadline</label><input type="date" class="form-input" name="deadline" required></div><div class="form-group"><label class="form-label">Required Skills (comma-separated)</label><input type="text" class="form-input" name="skills" placeholder="e.g., AutoCAD, Revit, Structural Analysis"></div><div class="form-group"><label class="form-label">Relevant Link (Optional)</label><input type="url" class="form-input" name="link" placeholder="https://example.com/project-details"></div><div class="form-group"><label class="form-label">Attachment (PDF, DWG, etc.)</label><input type="file" class="form-input" name="attachment"></div><div class="form-group"><label class="form-label">Project Description</label><textarea class="form-input" style="min-height: 120px;" name="description" required placeholder="Provide a detailed description of the project requirements..."></textarea></div><button type="submit" class="btn btn-primary" style="justify-self: start;">Post Project</button></form>`;
+        }
     </script>
 </body>
 </html>
