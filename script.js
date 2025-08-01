@@ -44,11 +44,33 @@ const appState = {
     jwtToken: null,
     jobs: [],
     myQuotes: [],
-    participants: {}
+    participants: {},
+    jobsPage: 1, // State for job pagination
+    hasMoreJobs: true, // State to track if more jobs are available
 };
+
+// --- INACTIVITY TIMER FOR AUTO-LOGOUT ---
+let inactivityTimer;
+
+function resetInactivityTimer() {
+    clearTimeout(inactivityTimer);
+    inactivityTimer = setTimeout(() => {
+        // Only logout if a user is actually logged in
+        if (appState.currentUser) {
+            showAlert('You have been logged out due to inactivity.', 'info');
+            logout();
+        }
+    }, 300000); // 5 minutes (5 * 60 * 1000)
+}
+
 
 function initializeApp() {
     console.log("SteelConnect App Initializing...");
+    // Setup inactivity listeners to reset the timer
+    window.addEventListener('mousemove', resetInactivityTimer);
+    window.addEventListener('keydown', resetInactivityTimer);
+    window.addEventListener('click', resetInactivityTimer);
+
     document.getElementById('signin-btn').addEventListener('click', () => showAuthModal('login'));
     document.getElementById('join-btn').addEventListener('click', () => showAuthModal('register'));
     document.getElementById('get-started-btn').addEventListener('click', () => showAuthModal('register'));
@@ -76,6 +98,7 @@ function initializeApp() {
             appState.jwtToken = token;
             appState.currentUser = JSON.parse(user);
             showAppView();
+            resetInactivityTimer(); // Start the timer on initial load
         } catch (error) {
             console.error("Error parsing user data from localStorage:", error);
             logout();
@@ -101,6 +124,18 @@ async function apiCall(endpoint, method, body = null, successMessage = null) {
         }
         
         const response = await fetch(BACKEND_URL + endpoint, options);
+
+        // Handle responses with no content (e.g., successful DELETE)
+        if (response.status === 204 || response.headers.get("content-length") === "0") {
+             if (!response.ok) {
+                // Try to get error message from headers if available
+                const errorMsg = response.headers.get('X-Error-Message') || `Request failed with status ${response.status}`;
+                throw new Error(errorMsg);
+             }
+             if (successMessage) showAlert(successMessage, 'success');
+             return { success: true }; // Return a generic success object
+        }
+
         const responseData = await response.json();
 
         if (!response.ok) {
@@ -156,31 +191,58 @@ function logout() {
     appState.currentUser = null;
     appState.jwtToken = null;
     localStorage.clear();
+    clearTimeout(inactivityTimer); // Stop the timer on logout
     showLandingPageView();
-    showAlert('You have been logged out.', 'info');
+    // No alert needed here as it's often user-initiated, but you can add one
 }
 
-async function fetchAndRenderJobs() {
+async function fetchAndRenderJobs(loadMore = false) {
     const jobsListContainer = document.getElementById('jobs-list');
-    if (!jobsListContainer) return;
-    jobsListContainer.innerHTML = '<p>Loading projects...</p>';
-    
+    const loadMoreContainer = document.getElementById('load-more-container');
+
+    if (!loadMore) {
+        // Reset state for a fresh view or when switching sections
+        appState.jobs = [];
+        appState.jobsPage = 1;
+        appState.hasMoreJobs = true;
+        if (jobsListContainer) jobsListContainer.innerHTML = '<p>Loading projects...</p>';
+    }
+
+    if (!jobsListContainer || !appState.hasMoreJobs) {
+        if(loadMoreContainer) loadMoreContainer.innerHTML = ''; // Hide button if no more jobs
+        return;
+    }
+
     const user = appState.currentUser;
-    const endpoint = user.type === 'designer' ? '/jobs' : `/jobs/user/${user.id}`;
+    // For designers, fetch paginated jobs. For contractors, get all their jobs at once.
+    const endpoint = user.type === 'designer' 
+        ? `/jobs?page=${appState.jobsPage}&limit=6` 
+        : `/jobs/user/${user.id}`;
     
+    if(loadMoreContainer) loadMoreContainer.innerHTML = `<button class="btn" disabled>Loading...</button>`;
+
     try {
         const response = await apiCall(endpoint, 'GET');
-        const jobs = response.data || [];
-        appState.jobs = jobs;
+        const newJobs = response.data || [];
+        appState.jobs.push(...newJobs);
         
-        if (jobs.length === 0) {
+        // Update pagination state only for designers
+        if (user.type === 'designer') {
+            appState.hasMoreJobs = response.pagination.hasNext;
+            appState.jobsPage += 1;
+        } else {
+            appState.hasMoreJobs = false; // Contractors get all jobs at once
+        }
+        
+        if (appState.jobs.length === 0) {
             jobsListContainer.innerHTML = user.type === 'designer'
                 ? `<div class="empty-state"><h3>No Projects Available</h3><p>Check back later for new opportunities.</p></div>`
                 : `<div class="empty-state"><h3>You haven't posted any projects yet.</h3><p>Click 'Post a Job' to get started.</p></div>`;
+            if (loadMoreContainer) loadMoreContainer.innerHTML = '';
             return;
         }
 
-        jobsListContainer.innerHTML = jobs.map(job => {
+        const jobsHTML = appState.jobs.map(job => {
             const actions = user.type === 'designer'
                 ? `<button class="btn btn-primary" onclick="showQuoteModal('${job.id}')">Submit Quote</button>`
                 : `<button class="btn btn-outline" onclick="viewQuotes('${job.id}')">View Quotes (${job.quotesCount || 0})</button>
@@ -201,6 +263,19 @@ async function fetchAndRenderJobs() {
                     <div class="job-actions">${actions}</div>
                 </div>`;
         }).join('');
+
+        jobsListContainer.innerHTML = jobsHTML;
+
+        // Update the "Load More" button for designers
+        if (loadMoreContainer) {
+            if (user.type === 'designer' && appState.hasMoreJobs) {
+                loadMoreContainer.innerHTML = `<button class="btn btn-primary" id="load-more-btn">Load More</button>`;
+                document.getElementById('load-more-btn').addEventListener('click', () => fetchAndRenderJobs(true));
+            } else {
+                loadMoreContainer.innerHTML = ''; // No more jobs, so remove the button
+            }
+        }
+
     } catch(error) {
         jobsListContainer.innerHTML = '<p>Error loading jobs. Please try again later.</p>';
     }
@@ -215,6 +290,7 @@ async function fetchAndRenderMyQuotes() {
     try {
         const response = await apiCall(`/quotes/user/${appState.currentUser.id}`, 'GET');
         const quotes = response.data || [];
+        appState.myQuotes = quotes; // Store quotes in state
         
         if (quotes.length === 0) {
             listContainer.innerHTML = `<div class="empty-state"><p>You have not submitted any quotes.</p></div>`;
@@ -223,13 +299,14 @@ async function fetchAndRenderMyQuotes() {
         
         listContainer.innerHTML = quotes.map(quote => {
             const attachments = quote.attachments || [];
-            let attachmentLink = '';
-            if (attachments.length > 0) {
-                attachmentLink = `<p><strong>Attachment:</strong> <a href="${attachments[0]}" target="_blank">View File</a></p>`;
-            }
+            let attachmentLink = attachments.length > 0
+                ? `<p><strong>Attachment:</strong> <a href="${attachments[0]}" target="_blank">View File</a></p>`
+                : '';
 
+            // A designer can only delete a quote if it's still 'submitted' (or 'pending')
+            const canDelete = quote.status === 'submitted';
             const messageButton = quote.status === 'approved' ? `<button class="btn btn-primary" onclick="openConversation('${quote.jobId}', '${quote.contractorId}')">Message Client</button>` : '';
-            const deleteButton = quote.status === 'submitted' ? `<button class="btn btn-danger" onclick="deleteQuote('${quote.id}')">Delete Quote</button>` : '';
+            const deleteButton = canDelete ? `<button class="btn btn-danger" onclick="deleteQuote('${quote.id}')">Delete Quote</button>` : '';
             
             return `
                 <div class="job-card quote-status-${quote.status}">
@@ -271,17 +348,19 @@ async function handlePostJob(event) {
 }
 
 async function deleteJob(jobId) {
-    if (confirm('Are you sure you want to delete this job? This action cannot be undone.')) {
-        await apiCall(`/jobs/${jobId}`, 'DELETE', 'Job deleted.')
-            .then(() => renderAppSection('jobs'))
+    if (confirm('Are you sure you want to delete this job? This will also delete all associated quotes and cannot be undone.')) {
+        // FIX: Passed null for body and used the 4th argument for the success message.
+        await apiCall(`/jobs/${jobId}`, 'DELETE', null, 'Job deleted successfully.')
+            .then(() => fetchAndRenderJobs()) // Re-fetch jobs list
             .catch(() => {});
     }
 }
 
 async function deleteQuote(quoteId) {
     if (confirm('Are you sure you want to delete this quote?')) {
-        await apiCall(`/quotes/${quoteId}`, 'DELETE', 'Quote deleted.')
-            .then(() => fetchAndRenderMyQuotes())
+        // FIX: Passed null for body and used the 4th argument for the success message.
+        await apiCall(`/quotes/${quoteId}`, 'DELETE', null, 'Quote deleted successfully.')
+            .then(() => fetchAndRenderMyQuotes()) // Re-fetch quotes list
             .catch(() => {});
     }
 }
@@ -293,15 +372,22 @@ async function viewQuotes(jobId) {
         
         let quotesHTML = `<h3>Received Quotes</h3>`;
         if (quotes.length === 0) {
-            quotesHTML += `<div class="empty-state"><p>No quotes received yet.</p></div>`;
+            quotesHTML += `<div class="empty-state"><p>No quotes received for this project yet.</p></div>`;
         } else {
+            const job = appState.jobs.find(j => j.id === jobId); // Get job status
             quotesHTML += quotes.map(quote => {
                 const attachments = quote.attachments || [];
-                let attachmentLink = '';
-                if (attachments.length > 0) {
-                    attachmentLink = `<p><strong>Attachment:</strong> <a href="${attachments[0]}" target="_blank">View File</a></p>`;
+                let attachmentLink = attachments.length > 0 ? `<p><strong>Attachment:</strong> <a href="${attachments[0]}" target="_blank">View File</a></p>`: '';
+                
+                // Allow approval only if the job is 'open' and the quote is 'submitted'
+                const canApprove = job && job.status === 'open' && quote.status === 'submitted';
+                let approveButton = '';
+                if(canApprove) {
+                    approveButton = `<button class="btn btn-primary" onclick="approveQuote('${quote.id}', '${jobId}')">Approve</button>`;
+                } else if (quote.status === 'approved') {
+                    approveButton = `<span class="status-approved">Approved</span>`;
                 }
-                const approveButton = appState.currentUser.type === 'contractor' && quote.status === 'submitted' ? `<button class="btn btn-primary" onclick="approveQuote('${quote.id}')">Approve</button>` : '';
+
                 const messageButton = `<button class="btn btn-outline" onclick="openConversation('${quote.jobId}', '${quote.designerId}')">Message Designer</button>`;
                 
                 return `
@@ -316,16 +402,16 @@ async function viewQuotes(jobId) {
         }
         showGenericModal(quotesHTML, 'max-width: 650px;');
     } catch (error) {
-        showGenericModal('<h3>Error</h3><p>Could not load quotes. You may not have permission to view them.</p>');
+        showGenericModal('<h3>Error</h3><p>Could not load quotes for this project.</p>');
     }
 }
 
-async function approveQuote(quoteId) {
-    if (confirm('Are you sure you want to approve this quote? This will notify the designer.')) {
-        await apiCall(`/quotes/${quoteId}/approve`, 'PUT', 'Quote approved!')
+async function approveQuote(quoteId, jobId) {
+    if (confirm('Are you sure you want to approve this quote? This will assign the job to the designer and reject other quotes.')) {
+        await apiCall(`/quotes/${quoteId}/approve`, 'PUT', { jobId }, 'Quote approved successfully!')
             .then(() => {
                 closeModal();
-                renderAppSection('jobs');
+                fetchAndRenderJobs(); // Refresh the jobs list to show the new 'assigned' status
             })
             .catch(() => {});
     }
@@ -339,7 +425,7 @@ function showQuoteModal(jobId) {
             <div class="form-group"><label class="form-label">Amount ($)</label><input type="number" class="form-input" name="amount" required></div>
             <div class="form-group"><label class="form-label">Timeline (in days)</label><input type="number" class="form-input" name="timeline" required></div>
             <div class="form-group"><label class="form-label">Proposal / Description</label><textarea class="form-textarea" name="description" required></textarea></div>
-            <div class="form-group"><label class="form-label">Attachments (Optional)</label><input type="file" class="form-input" name="attachment" multiple></div>
+            <div class="form-group"><label class="form-label">Attachments (Optional, max 5)</label><input type="file" class="form-input" name="attachments" multiple></div>
             <button type="submit" class="btn btn-primary" style="width: 100%;">Submit Quote</button>
         </form>`;
     showGenericModal(content, 'max-width: 500px;');
@@ -357,9 +443,9 @@ async function handleQuoteSubmit(event) {
         formData.append('timeline', form['timeline'].value);
         formData.append('description', form['description'].value);
 
-        if (form.attachment.files.length > 0) {
-            for (let i = 0; i < form.attachment.files.length; i++) {
-                formData.append('attachments', form.attachment.files[i]);
+        if (form.attachments.files.length > 0) {
+            for (let i = 0; i < form.attachments.files.length; i++) {
+                formData.append('attachments', form.attachments.files[i]);
             }
         }
         
@@ -446,6 +532,8 @@ function buildSidebarNav() {
         : `<a href="#" class="sidebar-nav-link" data-section="jobs"><i class="fas fa-tasks fa-fw"></i> <span>My Projects</span></a>
            <a href="#" class="sidebar-nav-link" data-section="post-job"><i class="fas fa-plus-circle fa-fw"></i> <span>Post a Job</span></a>`;
     
+    links += `<a href="#" class="sidebar-nav-link" data-section="messages"><i class="fas fa-comments fa-fw"></i> <span>Messages</span></a>`;
+
     navContainer.innerHTML = links;
     navContainer.querySelectorAll('.sidebar-nav-link').forEach(link => {
         link.addEventListener('click', (e) => {
@@ -464,15 +552,19 @@ function renderAppSection(sectionId) {
     const userRole = appState.currentUser.type;
     if (sectionId === 'jobs') {
         const title = userRole === 'designer' ? 'Available Projects' : 'My Posted Projects';
-        container.innerHTML = `<div class="section-header"><h2>${title}</h2></div><div id="jobs-list" class="jobs-grid"></div>`;
+        // Add a container for the "Load More" button
+        container.innerHTML = `<div class="section-header"><h2>${title}</h2></div><div id="jobs-list" class="jobs-grid"></div><div id="load-more-container" style="text-align: center; margin-top: 20px;"></div>`;
         fetchAndRenderJobs();
     } else if (sectionId === 'post-job') {
         container.innerHTML = getPostJobTemplate();
         document.getElementById('post-job-form').addEventListener('submit', handlePostJob);
     } else if (sectionId === 'my-quotes') {
         fetchAndRenderMyQuotes();
+    } else if (sectionId === 'messages') {
+        container.innerHTML = `<div class="section-header"><h2>Messages</h2></div><p>Messaging feature is currently in development.</p>`;
     }
 }
+
 
 function showAlert(message, type = 'info') {
     const alertsContainer = document.getElementById('alerts-container');
