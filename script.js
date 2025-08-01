@@ -1,4 +1,3 @@
-// --- LANDING PAGE SCRIPT ---
 let currentSlide = 0;
 const sliderWrapper = document.getElementById('slider-wrapper');
 const sliderDots = document.querySelectorAll('.slider-dot');
@@ -45,7 +44,8 @@ const appState = {
     jwtToken: null,
     jobs: [],
     myQuotes: [],
-    conversations: [], // State for conversations
+    approvedJobs: [],
+    conversations: [],
     participants: {},
     jobsPage: 1,
     hasMoreJobs: true,
@@ -249,17 +249,30 @@ async function fetchAndRenderJobs(loadMore = false) {
         }
 
         const jobsHTML = appState.jobs.map(job => {
-            const actions = user.type === 'designer'
+            // Prevent quote submission on assigned/completed jobs for designers
+            const canQuote = user.type === 'designer' && job.status === 'open';
+            const quoteButton = canQuote 
                 ? `<button class="btn btn-primary" onclick="showQuoteModal('${job.id}')">Submit Quote</button>`
+                : user.type === 'designer' && job.status === 'assigned'
+                ? `<span class="job-status-assigned">Job Assigned</span>`
+                : '';
+
+            const actions = user.type === 'designer'
+                ? quoteButton
                 : `<button class="btn btn-outline" onclick="viewQuotes('${job.id}')">View Quotes (${job.quotesCount || 0})</button>
                    <button class="btn btn-danger" onclick="deleteJob('${job.id}')">Delete Job</button>`;
             
+            const statusBadge = job.status !== 'open' ? `<span class="job-status job-status-${job.status}">${job.status.charAt(0).toUpperCase() + job.status.slice(1)}</span>` : '';
             const attachmentLink = job.attachment ? `<p style="margin-top: 12px;"><strong>Attachment:</strong> <a href="${job.attachment}" target="_blank" rel="noopener noreferrer">View File</a></p>` : '';
             
             return `
                 <div class="job-card">
                     <div class="job-header">
-                        <div><h3>${job.title}</h3><p class="text-gray" style="font-size: 14px;">Posted by: ${job.posterName || 'N/A'}</p></div>
+                        <div>
+                            <h3>${job.title} ${statusBadge}</h3>
+                            <p class="text-gray" style="font-size: 14px;">Posted by: ${job.posterName || 'N/A'}</p>
+                            ${job.assignedToName ? `<p class="text-gray" style="font-size: 14px;">Assigned to: ${job.assignedToName}</p>` : ''}
+                        </div>
                         <div class="job-budget">${job.budget}</div>
                     </div>
                     <p>${job.description}</p>
@@ -286,6 +299,60 @@ async function fetchAndRenderJobs(loadMore = false) {
     }
 }
 
+async function fetchAndRenderApprovedJobs() {
+    const container = document.getElementById('app-container');
+    container.innerHTML = `<div class="section-header"><h2>Approved Projects</h2></div><div id="approved-jobs-list" class="jobs-grid"></div>`;
+    const listContainer = document.getElementById('approved-jobs-list');
+    listContainer.innerHTML = '<p>Loading approved projects...</p>';
+    
+    try {
+        // Fetch jobs where status is 'assigned' and user is the contractor
+        const response = await apiCall(`/jobs/user/${appState.currentUser.id}`, 'GET');
+        const allJobs = response.data || [];
+        const approvedJobs = allJobs.filter(job => job.status === 'assigned');
+        appState.approvedJobs = approvedJobs;
+        
+        if (approvedJobs.length === 0) {
+            listContainer.innerHTML = `<div class="empty-state"><h3>No Approved Projects</h3><p>Approved projects will appear here once you accept quotes.</p></div>`;
+            return;
+        }
+        
+        listContainer.innerHTML = approvedJobs.map(job => {
+            const attachmentLink = job.attachment ? `<p style="margin-top: 12px;"><strong>Attachment:</strong> <a href="${job.attachment}" target="_blank" rel="noopener noreferrer">View File</a></p>` : '';
+            
+            return `
+                <div class="job-card job-approved">
+                    <div class="job-header">
+                        <div>
+                            <h3>${job.title}</h3>
+                            <p class="text-gray" style="font-size: 14px;">Assigned to: ${job.assignedToName}</p>
+                            <p class="text-success" style="font-size: 14px; font-weight: 600;">Approved Amount: $${job.approvedAmount}</p>
+                        </div>
+                        <span class="job-status job-status-assigned">Assigned</span>
+                    </div>
+                    <p>${job.description}</p>
+                    ${job.skills?.length > 0 ? `<p style="margin-top: 12px;"><strong>Skills:</strong> ${job.skills.join(', ')}</p>` : ''}
+                    ${job.link ? `<p style="margin-top: 12px;"><strong>Link:</strong> <a href="${job.link}" target="_blank" rel="noopener noreferrer">${job.link}</a></p>` : ''}
+                    ${attachmentLink}
+                    <div class="job-actions">
+                        <button class="btn btn-primary" onclick="openConversation('${job.id}', '${job.assignedTo}')">Message Designer</button>
+                        <button class="btn btn-outline" onclick="markJobCompleted('${job.id}')">Mark as Completed</button>
+                    </div>
+                </div>`;
+        }).join('');
+    } catch(error) {
+        listContainer.innerHTML = '<p>Error loading approved projects. Please try again later.</p>';
+    }
+}
+
+async function markJobCompleted(jobId) {
+    if (confirm('Are you sure you want to mark this job as completed?')) {
+        await apiCall(`/jobs/${jobId}`, 'PUT', { status: 'completed' }, 'Job marked as completed successfully!')
+            .then(() => fetchAndRenderApprovedJobs())
+            .catch(() => {});
+    }
+}
+
 async function fetchAndRenderMyQuotes() {
     const container = document.getElementById('app-container');
     container.innerHTML = `<div class="section-header"><h2>My Submitted Quotes</h2></div><div id="my-quotes-list" class="jobs-grid"></div>`;
@@ -309,7 +376,9 @@ async function fetchAndRenderMyQuotes() {
                 : '';
 
             const canDelete = quote.status === 'submitted';
+            const canEdit = quote.status === 'submitted';
             const messageButton = quote.status === 'approved' ? `<button class="btn btn-primary" onclick="openConversation('${quote.jobId}', '${quote.contractorId}')">Message Client</button>` : '';
+            const editButton = canEdit ? `<button class="btn btn-outline" onclick="editQuote('${quote.id}')">Edit Quote</button>` : '';
             const deleteButton = canDelete ? `<button class="btn btn-danger" onclick="deleteQuote('${quote.id}')">Delete Quote</button>` : '';
             
             return `
@@ -318,16 +387,64 @@ async function fetchAndRenderMyQuotes() {
                         <div>
                             <h3>Quote for: ${quote.jobTitle || 'Unknown Job'}</h3>
                             <p class="text-gray" style="font-size: 14px;">Amount: $${quote.quoteAmount}</p>
+                            ${quote.timeline ? `<p class="text-gray" style="font-size: 14px;">Timeline: ${quote.timeline} days</p>` : ''}
                         </div>
                         <div class="job-budget">Status: ${quote.status}</div>
                     </div>
                     <p>${quote.description}</p>
                     ${attachmentLink}
-                    <div class="job-actions">${messageButton} ${deleteButton}</div>
+                    <div class="job-actions">${messageButton} ${editButton} ${deleteButton}</div>
                 </div>`;
         }).join('');
     } catch(error) {
         listContainer.innerHTML = '<p>Error loading your quotes. Please try again later.</p>';
+    }
+}
+
+async function editQuote(quoteId) {
+    try {
+        const response = await apiCall(`/quotes/${quoteId}`, 'GET');
+        const quote = response.data;
+        
+        const content = `
+            <h3>Edit Your Quote</h3>
+            <form id="edit-quote-form" class="form-grid">
+                <input type="hidden" name="quoteId" value="${quote.id}">
+                <div class="form-group"><label class="form-label">Amount ($)</label><input type="number" class="form-input" name="amount" value="${quote.quoteAmount}" required></div>
+                <div class="form-group"><label class="form-label">Timeline (in days)</label><input type="number" class="form-input" name="timeline" value="${quote.timeline || ''}" required></div>
+                <div class="form-group"><label class="form-label">Proposal / Description</label><textarea class="form-textarea" name="description" required>${quote.description}</textarea></div>
+                <div class="form-group"><label class="form-label">Attachments (Optional, max 5)</label><input type="file" class="form-input" name="attachments" multiple></div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Update Quote</button>
+            </form>`;
+        showGenericModal(content, 'max-width: 500px;');
+        document.getElementById('edit-quote-form').addEventListener('submit', handleQuoteEdit);
+    } catch (error) {
+        // Error handled by apiCall
+    }
+}
+
+async function handleQuoteEdit(event) {
+    event.preventDefault();
+    try {
+        const form = event.target;
+        const formData = new FormData();
+
+        formData.append('quoteAmount', form['amount'].value);
+        formData.append('timeline', form['timeline'].value);
+        formData.append('description', form['description'].value);
+
+        if (form.attachments.files.length > 0) {
+            for (let i = 0; i < form.attachments.files.length; i++) {
+                formData.append('attachments', form.attachments.files[i]);
+            }
+        }
+        
+        await apiCall(`/quotes/${form['quoteId'].value}`, 'PUT', formData, 'Quote updated successfully!');
+        closeModal();
+        fetchAndRenderMyQuotes();
+
+    } catch (error) {
+        console.error("Quote edit failed:", error);
     }
 }
 
@@ -386,14 +503,15 @@ async function viewQuotes(jobId) {
                 if(canApprove) {
                     approveButton = `<button class="btn btn-primary" onclick="approveQuote('${quote.id}', '${jobId}')">Approve</button>`;
                 } else if (quote.status === 'approved') {
-                    approveButton = `<span class="status-approved">Approved</span>`;
+                    approveButton = `<span class="status-approved">✓ Approved</span>`;
                 }
 
                 const messageButton = `<button class="btn btn-outline" onclick="openConversation('${quote.jobId}', '${quote.designerId}')">Message Designer</button>`;
                 
                 return `
                     <div class="quote-card quote-status-${quote.status}">
-                        <p><strong>From:</strong> ${quote.designerName} | <strong>Amount:</strong> $${quote.quoteAmount}</p>
+                        <p><strong>From:</strong> ${quote.designerName} | <strong>Amount:</strong> ${quote.quoteAmount}</p>
+                        ${quote.timeline ? `<p><strong>Timeline:</strong> ${quote.timeline} days</p>` : ''}
                         <p>${quote.description}</p>
                         ${attachmentLink}
                         <p><strong>Status:</strong> ${quote.status}</p>
@@ -451,8 +569,8 @@ async function handleQuoteSubmit(event) {
         }
         
         await apiCall('/quotes', 'POST', formData, 'Quote submitted successfully!');
-        
         closeModal();
+        fetchAndRenderJobs(); // Refresh to show updated job status
 
     } catch (error) {
         console.error("Quote submission failed:", error);
@@ -476,40 +594,64 @@ async function openConversation(jobId, recipientId) {
 
 async function fetchAndRenderConversations() {
     const container = document.getElementById('app-container');
-    container.innerHTML = `<div class="section-header"><h2>Messages</h2></div><div id="conversations-list"></div>`;
+    container.innerHTML = `
+        <div class="section-header">
+            <h2>Messages</h2>
+        </div>
+        <div id="conversations-list" class="conversations-container"></div>`;
     const listContainer = document.getElementById('conversations-list');
-    listContainer.innerHTML = `<p>Loading conversations...</p>`;
+    listContainer.innerHTML = `<div class="loading-state"><p>Loading conversations...</p></div>`;
 
     try {
         const response = await apiCall('/messages', 'GET');
         appState.conversations = response.data || [];
 
         if (appState.conversations.length === 0) {
-            listContainer.innerHTML = `<div class="empty-state"><p>You have no active conversations.</p></div>`;
+            listContainer.innerHTML = `<div class="empty-state">
+                <div class="empty-icon"><i class="fas fa-comments"></i></div>
+                <h3>No Conversations Yet</h3>
+                <p>Start collaborating with professionals by messaging them from job quotes.</p>
+            </div>`;
             return;
         }
 
         const conversationsHTML = appState.conversations.map(convo => {
             const otherParticipant = convo.participants.find(p => p.id !== appState.currentUser.id);
             const otherParticipantName = otherParticipant ? otherParticipant.name : 'Unknown User';
-            const lastMessage = convo.lastMessage ? convo.lastMessage.substring(0, 50) + '...' : 'No messages yet.';
+            const lastMessage = convo.lastMessage ? convo.lastMessage.substring(0, 60) + '...' : 'No messages yet.';
+            const timeAgo = getTimeAgo(convo.updatedAt);
 
             return `
                 <div class="conversation-card" onclick="renderConversationView('${convo.id}')">
                     <div class="convo-avatar">${otherParticipantName.charAt(0).toUpperCase()}</div>
                     <div class="convo-details">
-                        <h4>${otherParticipantName}</h4>
-                        <p><strong>Project:</strong> ${convo.jobTitle}</p>
-                        <p class="text-gray">${lastMessage}</p>
+                        <div class="convo-header">
+                            <h4>${otherParticipantName}</h4>
+                            <span class="convo-time">${timeAgo}</span>
+                        </div>
+                        <p class="convo-project"><strong>Project:</strong> ${convo.jobTitle}</p>
+                        <p class="convo-preview">${lastMessage}</p>
                     </div>
+                    <div class="convo-arrow"><i class="fas fa-chevron-right"></i></div>
                 </div>
             `;
         }).join('');
 
         listContainer.innerHTML = conversationsHTML;
     } catch (error) {
-        listContainer.innerHTML = `<p>Error loading conversations.</p>`;
+        listContainer.innerHTML = `<div class="error-state"><p>Error loading conversations.</p></div>`;
     }
+}
+
+function getTimeAgo(timestamp) {
+    const now = new Date();
+    const time = timestamp?.toDate ? timestamp.toDate() : new Date(timestamp);
+    const diffInMinutes = Math.floor((now - time) / (1000 * 60));
+    
+    if (diffInMinutes < 1) return 'Just now';
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
+    return `${Math.floor(diffInMinutes / 1440)}d ago`;
 }
 
 async function renderConversationView(conversationOrId) {
@@ -536,17 +678,29 @@ async function renderConversationView(conversationOrId) {
     container.innerHTML = `
         <div class="chat-container">
             <div class="chat-header">
-                <button onclick="renderAppSection('messages')" class="back-btn">&larr; Back to Messages</button>
-                <h3>${otherParticipant ? otherParticipant.name : 'Conversation'}</h3>
-                <p>${conversation.jobTitle || ''}</p>
+                <button onclick="renderAppSection('messages')" class="back-btn">
+                    <i class="fas fa-arrow-left"></i> Back to Messages
+                </button>
+                <div class="chat-header-info">
+                    <div class="chat-avatar">${otherParticipant ? otherParticipant.name.charAt(0).toUpperCase() : '?'}</div>
+                    <div class="chat-details">
+                        <h3>${otherParticipant ? otherParticipant.name : 'Conversation'}</h3>
+                        <p class="chat-project">${conversation.jobTitle || ''}</p>
+                    </div>
+                </div>
+                <div class="chat-actions">
+                    <span class="participant-type">${otherParticipant ? otherParticipant.type : ''}</span>
+                </div>
             </div>
             <div class="chat-messages" id="chat-messages-container">
-                <p>Loading messages...</p>
+                <div class="loading-messages"><p>Loading messages...</p></div>
             </div>
             <div class="chat-input-area">
-                <form id="send-message-form">
-                    <input type="text" id="message-text-input" placeholder="Type a message..." required autocomplete="off">
-                    <button type="submit" class="btn btn-primary">Send</button>
+                <form id="send-message-form" class="message-form">
+                    <input type="text" id="message-text-input" placeholder="Type your message..." required autocomplete="off">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
                 </form>
             </div>
         </div>
@@ -563,24 +717,33 @@ async function renderConversationView(conversationOrId) {
         const messages = response.data || [];
         
         if (messages.length === 0) {
-            messagesContainer.innerHTML = `<p class="text-center text-gray">No messages yet. Say hello!</p>`;
+            messagesContainer.innerHTML = `
+                <div class="empty-messages">
+                    <div class="empty-icon"><i class="fas fa-comment-dots"></i></div>
+                    <p>No messages yet. Start the conversation!</p>
+                </div>`;
         } else {
             messagesContainer.innerHTML = messages.map(msg => {
                 const isMine = msg.senderId === appState.currentUser.id;
-                const messageClass = isMine ? 'my-message' : 'their-message';
-                const time = msg.createdAt.seconds ? new Date(msg.createdAt.seconds * 1000) : new Date(msg.createdAt);
+                const time = msg.createdAt?.toDate ? msg.createdAt.toDate() : new Date(msg.createdAt);
                 return `
-                    <div class="message-bubble ${messageClass}">
-                        <div class="message-sender">${isMine ? 'You' : msg.senderName}</div>
-                        <div class="message-text">${msg.text}</div>
-                        <div class="message-time">${time.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                    <div class="message-wrapper ${isMine ? 'me' : 'them'}">
+                        <div class="message-avatar">${msg.senderName.charAt(0).toUpperCase()}</div>
+                        <div class="message-content">
+                            <div class="message-bubble ${isMine ? 'me' : 'them'}">
+                                ${msg.text}
+                            </div>
+                            <div class="message-meta">
+                                ${time.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                            </div>
+                        </div>
                     </div>
                 `;
             }).join('');
         }
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
     } catch (error) {
-        messagesContainer.innerHTML = `<p>Error loading messages.</p>`;
+        messagesContainer.innerHTML = `<div class="error-messages"><p>Error loading messages.</p></div>`;
     }
 }
 
@@ -595,17 +758,27 @@ async function handleSendMessage(conversationId) {
         
         const messagesContainer = document.getElementById('chat-messages-container');
         const newMessage = response.data;
-        const messageBubble = document.createElement('div');
-        messageBubble.className = 'message-bubble my-message';
-        const time = newMessage.createdAt.seconds ? new Date(newMessage.createdAt.seconds * 1000) : new Date(newMessage.createdAt);
-        messageBubble.innerHTML = `
-            <div class="message-sender">You</div>
-            <div class="message-text">${newMessage.text}</div>
-            <div class="message-time">${time.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
-        `;
-        if(messagesContainer.querySelector('p')) {
+        
+        // Remove empty state if it exists
+        if(messagesContainer.querySelector('.empty-messages')) {
             messagesContainer.innerHTML = '';
         }
+        
+        const messageBubble = document.createElement('div');
+        messageBubble.className = 'message-wrapper me';
+        const time = newMessage.createdAt?.toDate ? newMessage.createdAt.toDate() : new Date(newMessage.createdAt);
+        messageBubble.innerHTML = `
+            <div class="message-avatar">${newMessage.senderName.charAt(0).toUpperCase()}</div>
+            <div class="message-content">
+                <div class="message-bubble me">
+                    ${newMessage.text}
+                </div>
+                <div class="message-meta">
+                    ${time.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                </div>
+            </div>
+        `;
+        
         messagesContainer.appendChild(messageBubble);
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
     } catch(error) {
@@ -683,9 +856,10 @@ function buildSidebarNav() {
     const navContainer = document.getElementById('sidebar-nav-menu');
     const role = appState.currentUser.type;
     let links = (role === 'designer')
-        ? `<a href="#" class="sidebar-nav-link" data-section="jobs"><i class="fas fa-briefcase fa-fw"></i> <span>Find Jobs</span></a>
+        ? `<a href="#" class="sidebar-nav-link" data-section="jobs"><i class="fas fa-search fa-fw"></i> <span>Find Jobs</span></a>
            <a href="#" class="sidebar-nav-link" data-section="my-quotes"><i class="fas fa-file-invoice-dollar fa-fw"></i> <span>My Quotes</span></a>`
         : `<a href="#" class="sidebar-nav-link" data-section="jobs"><i class="fas fa-tasks fa-fw"></i> <span>My Projects</span></a>
+           <a href="#" class="sidebar-nav-link" data-section="approved-jobs"><i class="fas fa-check-circle fa-fw"></i> <span>Approved Projects</span></a>
            <a href="#" class="sidebar-nav-link" data-section="post-job"><i class="fas fa-plus-circle fa-fw"></i> <span>Post a Job</span></a>`;
     
     links += `<a href="#" class="sidebar-nav-link" data-section="messages"><i class="fas fa-comments fa-fw"></i> <span>Messages</span></a>`;
@@ -715,6 +889,8 @@ function renderAppSection(sectionId) {
         document.getElementById('post-job-form').addEventListener('submit', handlePostJob);
     } else if (sectionId === 'my-quotes') {
         fetchAndRenderMyQuotes();
+    } else if (sectionId === 'approved-jobs') {
+        fetchAndRenderApprovedJobs();
     } else if (sectionId === 'messages') {
         fetchAndRenderConversations();
     }
@@ -726,7 +902,7 @@ function showAlert(message, type = 'info') {
     if (!alertsContainer) return;
     const alertDiv = document.createElement('div');
     alertDiv.className = `alert alert-${type}`;
-    alertDiv.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i> <span>${message}</span>`;
+    alertDiv.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-triangle' : 'fa-info-circle'}"></i> <span>${message}</span>`;
     alertsContainer.prepend(alertDiv);
     
     setTimeout(() => {
