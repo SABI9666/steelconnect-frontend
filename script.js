@@ -66,7 +66,6 @@ function resetInactivityTimer() {
 function initializeApp() {
     console.log("SteelConnect App Initializing...");
     
-    // Create notification container if it doesn't exist
     if (!document.getElementById('notification-container')) {
         const notificationContainer = document.createElement('div');
         notificationContainer.id = 'notification-container';
@@ -74,12 +73,10 @@ function initializeApp() {
         document.body.appendChild(notificationContainer);
     }
     
-    // Setup inactivity listeners
     window.addEventListener('mousemove', resetInactivityTimer);
     window.addEventListener('keydown', resetInactivityTimer);
     window.addEventListener('click', resetInactivityTimer);
 
-    // FIX: Safely attach event listeners to prevent script errors
     const signInBtn = document.getElementById('signin-btn');
     if (signInBtn) signInBtn.addEventListener('click', () => showAuthModal('login'));
 
@@ -110,7 +107,6 @@ function initializeApp() {
         });
     }
 
-    // Check for existing user session
     const token = localStorage.getItem('jwtToken');
     const user = localStorage.getItem('currentUser');
     
@@ -202,7 +198,6 @@ async function handleLogin(event) {
         closeModal();
         showAppView();
         
-        // Load user's submitted quotes to track them
         if (data.user.type === 'designer') {
             loadUserQuotes();
         }
@@ -221,7 +216,6 @@ function logout() {
     showNotification('You have been logged out successfully.', 'info');
 }
 
-// Load user's submitted quotes to track them
 async function loadUserQuotes() {
     if (appState.currentUser.type !== 'designer') return;
     
@@ -725,11 +719,10 @@ async function editQuote(quoteId) {
 
 async function handleQuoteEdit(event) {
     event.preventDefault();
+    const form = event.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
     try {
-        const form = event.target;
-        const submitBtn = form.querySelector('button[type="submit"]');
-        const originalText = submitBtn.innerHTML;
-        
         submitBtn.innerHTML = '<div class="btn-spinner"></div> Updating...';
         submitBtn.disabled = true;
         
@@ -751,7 +744,6 @@ async function handleQuoteEdit(event) {
     } catch (error) {
         console.error("Quote edit failed:", error);
     } finally {
-        const submitBtn = form.querySelector('button[type="submit"]');
         if (submitBtn) {
             submitBtn.innerHTML = originalText;
             submitBtn.disabled = false;
@@ -804,127 +796,6 @@ async function deleteQuote(quoteId) {
                 loadUserQuotes(); // Refresh the submitted quotes tracking
             })
             .catch(() => {});
-    }
-}
-
-async function viewQuotes(jobId) {
-    try {
-        const response = await apiCall(`/quotes/job/${jobId}`, 'GET');
-        const quotes = response.data || [];
-        
-        let quotesHTML = `
-            <div class="modal-header">
-                <h3><i class="fas fa-file-invoice-dollar"></i> Received Quotes</h3>
-                <p class="modal-subtitle">Review and manage quotes for this project</p>
-            </div>`;
-            
-        if (quotes.length === 0) {
-            quotesHTML += `
-                <div class="empty-state">
-                    <div class="empty-icon"><i class="fas fa-file-invoice"></i></div>
-                    <h3>No Quotes Received</h3>
-                    <p>No quotes have been submitted for this project yet. Check back later.</p>
-                </div>`;
-        } else {
-            const job = appState.jobs.find(j => j.id === jobId);
-            quotesHTML += `<div class="quotes-list">`;
-            
-            quotesHTML += quotes.map(quote => {
-                const attachments = quote.attachments || [];
-                let attachmentLink = attachments.length > 0 
-                    ? `<div class="quote-attachment">
-                         <i class="fas fa-paperclip"></i>
-                         <a href="${attachments[0]}" target="_blank" rel="noopener noreferrer">View Attachment</a>
-                       </div>`
-                    : '';
-                
-                const canApprove = job && job.status === 'open' && quote.status === 'submitted';
-                let actionButtons = '';
-                
-                const messageButton = `
-                    <button class="btn btn-outline btn-sm" onclick="openConversation('${quote.jobId}', '${quote.designerId}')">
-                        <i class="fas fa-comments"></i> Message
-                    </button>
-                `;
-                
-                if(canApprove) {
-                    actionButtons = `
-                        <button class="btn btn-success btn-sm" onclick="approveQuote('${quote.id}', '${jobId}')">
-                            <i class="fas fa-check"></i> Approve Quote
-                        </button>
-                        ${messageButton}
-                    `;
-                } else if (quote.status === 'approved') {
-                    actionButtons = `
-                        <span class="status-approved">
-                            <i class="fas fa-check-circle"></i> Approved
-                        </span>
-                        ${messageButton}
-                    `;
-                } else {
-                    actionButtons = messageButton;
-                }
-
-                const statusClass = quote.status;
-                const statusIcon = {
-                    'submitted': 'fa-clock',
-                    'approved': 'fa-check-circle',
-                    'rejected': 'fa-times-circle'
-                }[quote.status] || 'fa-question-circle';
-                
-                return `
-                    <div class="quote-item quote-status-${statusClass}">
-                        <div class="quote-item-header">
-                            <div class="designer-info">
-                                <div class="designer-avatar">${quote.designerName.charAt(0).toUpperCase()}</div>
-                                <div class="designer-details">
-                                    <h4>${quote.designerName}</h4>
-                                    <span class="quote-status-badge ${statusClass}">
-                                        <i class="fas ${statusIcon}"></i> ${quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}
-                                    </span>
-                                </div>
-                            </div>
-                            <div class="quote-amount">
-                                <span class="amount-label">Quote</span>
-                                <span class="amount-value">${quote.quoteAmount}</span>
-                            </div>
-                        </div>
-                        
-                        <div class="quote-details">
-                            ${quote.timeline ? `
-                                <div class="quote-meta-item">
-                                    <i class="fas fa-calendar-alt"></i>
-                                    <span>Timeline: <strong>${quote.timeline} days</strong></span>
-                                </div>
-                            ` : ''}
-                            
-                            <div class="quote-description">
-                                <p>${quote.description}</p>
-                            </div>
-                            
-                            ${attachmentLink}
-                        </div>
-                        
-                        <div class="quote-actions">
-                            ${actionButtons}
-                        </div>
-                    </div>
-                `;
-            }).join('');
-            
-            quotesHTML += `</div>`;
-        }
-        
-        showGenericModal(quotesHTML, 'max-width: 800px;');
-    } catch (error) {
-        showGenericModal(`
-            <div class="modal-header">
-                <h3><i class="fas fa-exclamation-triangle"></i> Error</h3>
-            </div>
-            <div class="error-state">
-                <p>Could not load quotes for this project. Please try again later.</p>
-            </div>
-        `);
     }
 }
 
@@ -993,11 +864,10 @@ function showQuoteModal(jobId) {
 
 async function handleQuoteSubmit(event) {
     event.preventDefault();
+    const form = event.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
     try {
-        const form = event.target;
-        const submitBtn = form.querySelector('button[type="submit"]');
-        const originalText = submitBtn.innerHTML;
-        
         submitBtn.innerHTML = '<div class="btn-spinner"></div> Submitting...';
         submitBtn.disabled = true;
         
@@ -1015,20 +885,430 @@ async function handleQuoteSubmit(event) {
         
         await apiCall('/quotes', 'POST', formData, 'Quote submitted successfully!');
         
-        // Add to submitted quotes tracking
         appState.userSubmittedQuotes.add(form['jobId'].value);
         
         closeModal();
-        fetchAndRenderJobs(); // Refresh to show updated job status
+        fetchAndRenderJobs(); 
         showNotification('Your quote has been submitted! You can track its status in "My Quotes".', 'success');
 
     } catch (error) {
         console.error("Quote submission failed:", error);
+    } finally {
+        if(submitBtn){
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        }
     }
 }
 
-// --- ENHANCED MESSAGING SYSTEM ---
+// --- START: AI QUOTE ANALYSIS FUNCTIONS ---
+async function analyzeQuote(quoteId, jobId) {
+    try {
+        showNotification('Analyzing quote with AI insights...', 'info');
+        const response = await apiCall(`/quotes/${quoteId}/analyze`, 'POST', { jobId });
+        if (response.success) {
+            showQuoteAnalysisModal(response.data);
+        }
+    } catch (error) {
+        // Error is already shown by apiCall
+        showNotification('Failed to retrieve AI analysis. Please try again.', 'error');
+    }
+}
 
+function showQuoteAnalysisModal(analysisData) {
+    const { quote, job, analysis } = analysisData;
+    const content = `
+        <div class="modal-header analysis-header">
+            <h3><i class="fas fa-chart-line"></i> AI Quote Analysis</h3>
+            <p class="modal-subtitle">Comprehensive analysis for ${quote.designerName}'s quote</p>
+        </div>
+        <div class="analysis-container">
+            <div class="analysis-section">
+                <div class="analysis-card overview-card">
+                    <div class="card-header">
+                        <h4><i class="fas fa-info-circle"></i> Quote Overview</h4>
+                    </div>
+                    <div class="quote-summary">
+                        <div class="summary-item">
+                            <span class="label">Designer:</span>
+                            <span class="value">${quote.designerName}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="label">Quote Amount:</span>
+                            <span class="value quote-amount">$${quote.quoteAmount}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="label">Timeline:</span>
+                            <span class="value">${quote.timeline} days</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="label">Project Budget:</span>
+                            <span class="value">${job.budget}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="analysis-section">
+                <div class="analysis-card ai-insights-card">
+                    <div class="card-header">
+                        <h4><i class="fas fa-robot"></i> AI Insights</h4>
+                        <div class="confidence-score">
+                            <span class="confidence-label">Analysis Confidence:</span>
+                            <div class="confidence-bar">
+                                <div class="confidence-fill" style="width: ${analysis.confidence}%"></div>
+                            </div>
+                            <span class="confidence-value">${analysis.confidence}%</span>
+                        </div>
+                    </div>
+                    <div class="recommendation-section">
+                        <div class="recommendation-badge ${analysis.recommendation.toLowerCase()}">
+                            <i class="fas ${getRecommendationIcon(analysis.recommendation)}"></i>
+                            ${analysis.recommendation.replace('_', ' ')}
+                        </div>
+                        <p class="recommendation-text">${analysis.summary}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="analysis-grid">
+                <div class="analysis-card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-dollar-sign"></i> Cost Analysis</h5>
+                    </div>
+                    <div class="analysis-content">
+                        <div class="score-indicator">
+                            <div class="score-circle ${getCostScoreClass(analysis.costAnalysis.score)}">
+                                ${analysis.costAnalysis.score}/10
+                            </div>
+                            <span class="score-label">Cost Score</span>
+                        </div>
+                        <div class="analysis-details">
+                            <p><strong>Budget Fit:</strong> ${analysis.costAnalysis.budgetFit}</p>
+                            <p><strong>Market Rate:</strong> ${analysis.costAnalysis.marketComparison}</p>
+                            <p><strong>Value Assessment:</strong> ${analysis.costAnalysis.valueAssessment}</p>
+                        </div>
+                        ${analysis.costAnalysis.redFlags && analysis.costAnalysis.redFlags.length > 0 ? `
+                            <div class="red-flags">
+                                <h6><i class="fas fa-exclamation-triangle"></i> Cost Concerns:</h6>
+                                <ul>
+                                    ${analysis.costAnalysis.redFlags.map(flag => `<li>${flag}</li>`).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+                <div class="analysis-card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-clock"></i> Timeline Analysis</h5>
+                    </div>
+                    <div class="analysis-content">
+                        <div class="score-indicator">
+                            <div class="score-circle ${getTimelineScoreClass(analysis.timelineAnalysis.score)}">
+                                ${analysis.timelineAnalysis.score}/10
+                            </div>
+                            <span class="score-label">Timeline Score</span>
+                        </div>
+                        <div class="analysis-details">
+                            <p><strong>Realistic Assessment:</strong> ${analysis.timelineAnalysis.realistic}</p>
+                            <p><strong>Compared to Deadline:</strong> ${analysis.timelineAnalysis.deadlineComparison}</p>
+                            <p><strong>Industry Standard:</strong> ${analysis.timelineAnalysis.industryComparison}</p>
+                        </div>
+                        ${analysis.timelineAnalysis.concerns && analysis.timelineAnalysis.concerns.length > 0 ? `
+                            <div class="concerns">
+                                <h6><i class="fas fa-exclamation-circle"></i> Timeline Concerns:</h6>
+                                <ul>
+                                    ${analysis.timelineAnalysis.concerns.map(concern => `<li>${concern}</li>`).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+                <div class="analysis-card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-cogs"></i> Technical Assessment</h5>
+                    </div>
+                    <div class="analysis-content">
+                        <div class="score-indicator">
+                            <div class="score-circle ${getTechnicalScoreClass(analysis.technicalAnalysis.score)}">
+                                ${analysis.technicalAnalysis.score}/10
+                            </div>
+                            <span class="score-label">Technical Score</span>
+                        </div>
+                        <div class="analysis-details">
+                            <p><strong>Approach Quality:</strong> ${analysis.technicalAnalysis.approachQuality}</p>
+                            <p><strong>Completeness:</strong> ${analysis.technicalAnalysis.completeness}</p>
+                            <p><strong>Expertise Level:</strong> ${analysis.technicalAnalysis.expertiseLevel}</p>
+                        </div>
+                        ${analysis.technicalAnalysis.strengths && analysis.technicalAnalysis.strengths.length > 0 ? `
+                            <div class="strengths">
+                                <h6><i class="fas fa-check-circle"></i> Technical Strengths:</h6>
+                                <ul>
+                                    ${analysis.technicalAnalysis.strengths.map(strength => `<li>${strength}</li>`).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+                <div class="analysis-card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-shield-alt"></i> Risk Assessment</h5>
+                    </div>
+                    <div class="analysis-content">
+                        <div class="risk-level ${analysis.riskAnalysis.level.toLowerCase()}">
+                            <i class="fas ${getRiskIcon(analysis.riskAnalysis.level)}"></i>
+                            ${analysis.riskAnalysis.level} Risk
+                        </div>
+                        <div class="analysis-details">
+                            <p><strong>Overall Risk:</strong> ${analysis.riskAnalysis.overall}</p>
+                            ${analysis.riskAnalysis.factors.length > 0 ? `
+                                <div class="risk-factors">
+                                    <h6>Risk Factors:</h6>
+                                    <ul>
+                                        ${analysis.riskAnalysis.factors.map(factor => `<li>${factor}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            ` : ''}
+                            ${analysis.riskAnalysis.mitigation ? `
+                                <div class="mitigation">
+                                    <h6>Risk Mitigation:</h6>
+                                    <p>${analysis.riskAnalysis.mitigation}</p>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="analysis-section">
+                <div class="analysis-card recommendations-card">
+                    <div class="card-header">
+                        <h4><i class="fas fa-lightbulb"></i> AI Recommendations</h4>
+                    </div>
+                    <div class="recommendations-content">
+                        ${analysis.recommendations.map((rec, index) => `
+                            <div class="recommendation-item">
+                                <div class="rec-icon ${rec.type}">
+                                    <i class="fas ${getRecIcon(rec.type)}"></i>
+                                </div>
+                                <div class="rec-content">
+                                    <h6>${rec.title}</h6>
+                                    <p>${rec.description}</p>
+                                    ${rec.action ? `<div class="rec-action">${rec.action}</div>` : ''}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
+            ${analysis.questionsToAsk && analysis.questionsToAsk.length > 0 ? `
+                <div class="analysis-section">
+                    <div class="analysis-card questions-card">
+                        <div class="card-header">
+                            <h4><i class="fas fa-question-circle"></i> Suggested Questions</h4>
+                            <p class="card-subtitle">Important questions to ask this designer</p>
+                        </div>
+                        <div class="questions-list">
+                            ${analysis.questionsToAsk.map((question, index) => `
+                                <div class="question-item">
+                                    <div class="question-number">${index + 1}</div>
+                                    <div class="question-text">${question}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            ` : ''}
+        </div>
+        <div class="analysis-actions">
+            <button class="btn btn-secondary" onclick="closeModal()">Close Analysis</button>
+            <div class="action-buttons">
+                <button class="btn btn-outline" onclick="openConversation('${job.id}', '${quote.designerId}')">
+                    <i class="fas fa-comments"></i> Message Designer
+                </button>
+                <button class="btn btn-success" onclick="approveQuote('${quote.id}', '${job.id}')">
+                    <i class="fas fa-check"></i> Approve Quote
+                </button>
+            </div>
+        </div>
+    `;
+    showGenericModal(content, 'max-width: 1200px; max-height: 90vh;');
+    const modalContent = document.querySelector('.modern-modal');
+    if (modalContent) {
+        modalContent.style.overflowY = 'auto';
+    }
+}
+
+function getRecommendationIcon(recommendation) {
+    const icons = {
+        'HIGHLY_RECOMMENDED': 'fa-thumbs-up',
+        'RECOMMENDED': 'fa-check-circle',
+        'PROCEED_WITH_CAUTION': 'fa-exclamation-triangle',
+        'NOT_RECOMMENDED': 'fa-thumbs-down'
+    };
+    return icons[recommendation.toUpperCase()] || 'fa-question-circle';
+}
+
+function getCostScoreClass(score) {
+    if (score >= 8) return 'excellent';
+    if (score >= 6) return 'good';
+    if (score >= 4) return 'fair';
+    return 'poor';
+}
+
+function getTimelineScoreClass(score) {
+    return getCostScoreClass(score);
+}
+
+function getTechnicalScoreClass(score) {
+    return getCostScoreClass(score);
+}
+
+function getRiskIcon(level) {
+    const icons = {
+        'LOW': 'fa-shield-alt',
+        'MEDIUM': 'fa-exclamation-triangle',
+        'HIGH': 'fa-exclamation-circle'
+    };
+    return icons[level.toUpperCase()] || 'fa-question-circle';
+}
+
+function getRecIcon(type) {
+    const icons = {
+        'positive': 'fa-thumbs-up',
+        'warning': 'fa-exclamation-triangle',
+        'suggestion': 'fa-lightbulb',
+        'action': 'fa-tasks'
+    };
+    return icons[type.toLowerCase()] || 'fa-info-circle';
+}
+
+async function viewQuotes(jobId) {
+    try {
+        const response = await apiCall(`/quotes/job/${jobId}`, 'GET');
+        const quotes = response.data || [];
+
+        let quotesHTML = `
+            <div class="modal-header">
+                <h3><i class="fas fa-file-invoice-dollar"></i> Received Quotes</h3>
+                <p class="modal-subtitle">Review and manage quotes for this project</p>
+            </div>`;
+
+        if (quotes.length === 0) {
+            quotesHTML += `
+                <div class="empty-state">
+                    <div class="empty-icon"><i class="fas fa-file-invoice"></i></div>
+                    <h3>No Quotes Received</h3>
+                    <p>No quotes have been submitted for this project yet. Check back later.</p>
+                </div>`;
+        } else {
+            const job = appState.jobs.find(j => j.id === jobId);
+            quotesHTML += `<div class="quotes-list">`;
+
+            quotesHTML += quotes.map(quote => {
+                const attachments = quote.attachments || [];
+                let attachmentLink = attachments.length > 0
+                    ? `<div class="quote-attachment">
+                         <i class="fas fa-paperclip"></i>
+                         <a href="${attachments[0]}" target="_blank" rel="noopener noreferrer">View Attachment</a>
+                       </div>`
+                    : '';
+
+                const canApprove = job && job.status === 'open' && quote.status === 'submitted';
+                let actionButtons = '';
+
+                const messageButton = `
+                    <button class="btn btn-outline btn-sm" onclick="openConversation('${quote.jobId}', '${quote.designerId}')">
+                        <i class="fas fa-comments"></i> Message
+                    </button>
+                `;
+                const analyzeButton = `
+                    <button class="btn btn-primary btn-sm" onclick="analyzeQuote('${quote.id}', '${jobId}')" title="Get AI-powered quote analysis">
+                        <i class="fas fa-chart-line"></i> AI Analysis
+                    </button>
+                `;
+
+                if(canApprove) {
+                    actionButtons = `
+                        ${analyzeButton}
+                        <button class="btn btn-success btn-sm" onclick="approveQuote('${quote.id}', '${jobId}')">
+                            <i class="fas fa-check"></i> Approve Quote
+                        </button>
+                        ${messageButton}
+                    `;
+                } else if (quote.status === 'approved') {
+                    actionButtons = `
+                        ${analyzeButton}
+                        <span class="status-approved">
+                            <i class="fas fa-check-circle"></i> Approved
+                        </span>
+                        ${messageButton}
+                    `;
+                } else {
+                    actionButtons = `${analyzeButton} ${messageButton}`;
+                }
+                const statusClass = quote.status;
+                const statusIcon = {
+                    'submitted': 'fa-clock',
+                    'approved': 'fa-check-circle',
+                    'rejected': 'fa-times-circle'
+                }[quote.status] || 'fa-question-circle';
+
+                return `
+                    <div class="quote-item quote-status-${statusClass}">
+                        <div class="quote-item-header">
+                            <div class="designer-info">
+                                <div class="designer-avatar">${quote.designerName.charAt(0).toUpperCase()}</div>
+                                <div class="designer-details">
+                                    <h4>${quote.designerName}</h4>
+                                    <span class="quote-status-badge ${statusClass}">
+                                        <i class="fas ${statusIcon}"></i> ${quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="quote-amount">
+                                <span class="amount-label">Quote</span>
+                                <span class="amount-value">$${quote.quoteAmount}</span>
+                            </div>
+                        </div>
+
+                        <div class="quote-details">
+                            ${quote.timeline ? `
+                                <div class="quote-meta-item">
+                                    <i class="fas fa-calendar-alt"></i>
+                                    <span>Timeline: <strong>${quote.timeline} days</strong></span>
+                                </div>
+                            ` : ''}
+
+                            <div class="quote-description">
+                                <p>${quote.description}</p>
+                            </div>
+
+                            ${attachmentLink}
+                        </div>
+
+                        <div class="quote-actions">
+                            ${actionButtons}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            quotesHTML += `</div>`;
+        }
+
+        showGenericModal(quotesHTML, 'max-width: 800px;');
+    } catch (error) {
+        showGenericModal(`
+            <div class="modal-header">
+                <h3><i class="fas fa-exclamation-triangle"></i> Error</h3>
+            </div>
+            <div class="error-state">
+                <p>Could not load quotes for this project. Please try again later.</p>
+            </div>
+        `);
+    }
+}
+// --- END: AI QUOTE ANALYSIS FUNCTIONS ---
+
+// --- ENHANCED MESSAGING SYSTEM ---
 async function openConversation(jobId, recipientId) {
     try {
         showNotification('Opening conversation...', 'info');
@@ -1150,12 +1430,17 @@ async function renderConversationView(conversationOrId) {
     }
     
     if (!conversation.participants) {
-        const response = await apiCall('/messages', 'GET');
-        appState.conversations = response.data || [];
-        conversation = appState.conversations.find(c => c.id === conversation.id);
-        if(!conversation) {
-            showNotification('Conversation not found.', 'error');
-            return;
+        try {
+            const response = await apiCall('/messages', 'GET');
+            appState.conversations = response.data || [];
+            conversation = appState.conversations.find(c => c.id === conversation.id);
+            if(!conversation) {
+                showNotification('Conversation not found.', 'error');
+                return;
+            }
+        } catch(e) {
+             showNotification('Conversation not found.', 'error');
+             return;
         }
     }
 
@@ -1271,7 +1556,6 @@ async function handleSendMessage(conversationId) {
     const text = input.value.trim();
     if (!text) return;
 
-    // Disable input and show sending state
     input.disabled = true;
     sendBtn.disabled = true;
     sendBtn.innerHTML = '<div class="btn-spinner"></div>';
@@ -1283,7 +1567,6 @@ async function handleSendMessage(conversationId) {
         const messagesContainer = document.getElementById('chat-messages-container');
         const newMessage = response.data;
         
-        // Remove empty state if it exists
         if(messagesContainer.querySelector('.empty-messages')) {
             messagesContainer.innerHTML = '';
         }
@@ -1310,13 +1593,11 @@ async function handleSendMessage(conversationId) {
         messagesContainer.appendChild(messageBubble);
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
         
-        // Show success notification
         showNotification('Message sent!', 'success', 2000);
         
     } catch(error) {
         // Error handled by apiCall
     } finally {
-        // Re-enable input
         input.disabled = false;
         sendBtn.disabled = false;
         sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
@@ -1324,8 +1605,7 @@ async function handleSendMessage(conversationId) {
     }
 }
 
-// --- ENHANCED UI & MODAL FUNCTIONS ---
-
+// --- UI & MODAL FUNCTIONS ---
 function showAuthModal(view) {
     const modalContainer = document.getElementById('modal-container');
     modalContainer.innerHTML = `
@@ -1389,7 +1669,6 @@ function showAppView() {
     buildSidebarNav();
     renderAppSection('jobs');
     
-    // Load user quotes for tracking if designer
     if (user.type === 'designer') {
         loadUserQuotes();
     }
@@ -1481,7 +1760,6 @@ function renderAppSection(sectionId) {
     }
 }
 
-// Enhanced notification system
 function showNotification(message, type = 'info', duration = 4000) {
     const notificationContainer = document.getElementById('notification-container');
     if (!notificationContainer) return;
@@ -1508,7 +1786,6 @@ function showNotification(message, type = 'info', duration = 4000) {
     
     notificationContainer.appendChild(notification);
     
-    // Auto-remove after duration
     setTimeout(() => {
         if (notification.parentElement) {
             notification.style.opacity = '0';
@@ -1518,13 +1795,7 @@ function showNotification(message, type = 'info', duration = 4000) {
     }, duration);
 }
 
-// Legacy function for compatibility
-function showAlert(message, type = 'info') {
-    showNotification(message, type);
-}
-
 // --- TEMPLATE GETTERS ---
-
 function getLoginTemplate() {
     return `
         <div class="auth-header">
