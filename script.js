@@ -544,6 +544,11 @@ async function fetchAndRenderMyQuotes() {
             <div class="header-content">
                 <h2><i class="fas fa-file-invoice-dollar"></i> My Submitted Quotes</h2>
                 <p class="header-subtitle">Track your quote submissions and manage communications</p>
+                <div style="margin-top: 16px;">
+                    <button class="btn btn-outline" onclick="analyzeDesignerStats()">
+                        <i class="fas fa-user-chart"></i> View My Stats
+                    </button>
+                </div>
             </div>
         </div>
         <div id="my-quotes-list" class="jobs-grid"></div>`;
@@ -816,6 +821,11 @@ async function viewQuotes(jobId) {
             <div class="modal-header">
                 <h3><i class="fas fa-file-invoice-dollar"></i> Received Quotes</h3>
                 <p class="modal-subtitle">Review and manage quotes for this project</p>
+                <div class="modal-actions" style="margin-top: 16px;">
+                    <button class="btn btn-primary" onclick="analyzeJobQuotes('${jobId}')">
+                        <i class="fas fa-chart-bar"></i> Analyze All Quotes
+                    </button>
+                </div>
             </div>`;
             
         if (quotes.length === 0) {
@@ -1686,3 +1696,114 @@ function getPostJobTemplate() {
             </form>
         </div>`;
 }
+
+// --- NEW QUOTE ANALYSIS FUNCTIONS ---
+async function analyzeJobQuotes(jobId) {
+    try {
+        showNotification('Analyzing quotes, please wait...', 'info');
+        const response = await apiCall(`/analysis/job/${jobId}`, 'GET');
+        const analysis = response.data;
+        
+        const analysisHtml = `
+            <div class="modal-header">
+                <h3><i class="fas fa-chart-bar"></i> Quote Analysis</h3>
+                <p class="modal-subtitle">Analysis for project: <strong>${analysis.jobTitle}</strong></p>
+            </div>
+            <div class="analysis-results" style="padding: 0 32px 32px;">
+                <div class="analysis-stat">
+                    <span>Total Quotes Received</span>
+                    <strong>${analysis.totalQuotes}</strong>
+                </div>
+                <hr>
+                <h4>Quote Amount Analysis</h4>
+                <div class="analysis-stat">
+                    <span>Average Quote</span>
+                    <strong>$${analysis.averageAmount}</strong>
+                </div>
+                <div class="analysis-stat">
+                    <span>Lowest Quote</span>
+                    <strong style="color: #10B981;">$${analysis.lowestAmount}</strong>
+                </div>
+                <div class="analysis-stat">
+                    <span>Highest Quote</span>
+                    <strong style="color: #EF4444;">$${analysis.highestAmount}</strong>
+                </div>
+                 <hr>
+                <h4>Timeline Analysis (Days)</h4>
+                <div class="analysis-stat">
+                    <span>Average Delivery Time</span>
+                    <strong>${analysis.averageDeliveryTime} days</strong>
+                </div>
+                <div class="analysis-stat">
+                    <span>Shortest Delivery Time</span>
+                    <strong>${analysis.shortestDeliveryTime} days</strong>
+                </div>
+                <div class="analysis-stat">
+                    <span>Longest Delivery Time</span>
+                    <strong>${analysis.longestDeliveryTime} days</strong>
+                </div>
+            </div>
+        `;
+        
+        showGenericModal(analysisHtml, 'max-width: 600px;');
+
+    } catch (error) {
+        // Error is handled by apiCall
+    }
+}
+
+async function analyzeDesignerStats() {
+    try {
+        showNotification('Fetching your stats...', 'info');
+        const response = await apiCall('/analysis/designer/stats', 'GET');
+        const stats = response.data;
+
+        const statsHtml = `
+            <div class="modal-header">
+                <h3><i class="fas fa-user-chart"></i> Your Designer Stats</h3>
+                <p class="modal-subtitle">An overview of your quoting activity on SteelConnect.</p>
+            </div>
+            <div class="analysis-results" style="padding: 0 32px 32px;">
+                <div class="analysis-stat">
+                    <span>Total Quotes Submitted</span>
+                    <strong>${stats.totalQuotes}</strong>
+                </div>
+                 <hr>
+                <div class="analysis-stat">
+                    <span>Accepted Quotes</span>
+                    <strong style="color: #10B981;">${stats.acceptedQuotes}</strong>
+                </div>
+                <div class="analysis-stat">
+                    <span>Pending Quotes</span>
+                    <strong>${stats.pendingQuotes}</strong>
+                </div>
+                <div class="analysis-stat">
+                    <span>Rejected Quotes</span>
+                    <strong style="color: #EF4444;">${stats.rejectedQuotes}</strong>
+                </div>
+                 <hr>
+                <div class="analysis-stat">
+                    <span>Average Quote Amount</span>
+                    <strong>$${stats.averageQuoteAmount}</strong>
+                </div>
+                <div class="analysis-stat">
+                    <span>Quote Acceptance Rate</span>
+                    <strong style="color: #3B82F6;">${stats.acceptanceRate}%</strong>
+                </div>
+            </div>
+        `;
+        showGenericModal(statsHtml, 'max-width: 500px;');
+    } catch (error) {
+        // Error is handled by apiCall
+    }
+}
+
+
+
+
+
+
+
+
+
+
