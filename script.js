@@ -905,8 +905,57 @@ async function analyzeJobQuotes(jobId) {
     try {
         const response = await apiCall(`/analysis/job/${jobId}`, 'GET');
         const analysis = response.data;
-        const analysisHtml = `<div class="modal-header"><h3><i class="fas fa-chart-bar"></i> Quote Analysis</h3><p class="modal-subtitle">For: <strong>${analysis.jobTitle}</strong></p></div><div class="analysis-results" style="padding:0 32px 32px;"><div class="analysis-stat"><span>Total Quotes</span><strong>${analysis.totalQuotes}</strong></div><hr><h4>Quote Amount</h4><div class="analysis-stat"><span>Average</span><strong>$${analysis.averageAmount}</strong></div><div class="analysis-stat"><span>Lowest</span><strong style="color:#10B981;">$${analysis.lowestAmount}</strong></div><div class="analysis-stat"><span>Highest</span><strong style="color:#EF4444;">$${analysis.highestAmount}</strong></div><hr><h4>Timeline (Days)</h4><div class="analysis-stat"><span>Average</span><strong>${analysis.averageDeliveryTime} days</strong></div></div>`;
-        showGenericModal(analysisHtml, 'max-width: 600px;');
+
+        // Calculate bar widths for visualization
+        const maxAmount = analysis.highestAmount;
+        const lowWidth = (analysis.lowestAmount / maxAmount) * 100;
+        const avgWidth = (analysis.averageAmount / maxAmount) * 100;
+
+        const analysisHtml = `
+            <div class="modal-header">
+                <h3><i class="fas fa-chart-bar"></i> Quote Analysis</h3>
+                <p class="modal-subtitle">For: <strong>${analysis.jobTitle}</strong></p>
+            </div>
+            <div class="analysis-results">
+                <div class="analysis-grid">
+                    <div class="analysis-stat-card">
+                        <div class="stat-icon"><i class="fas fa-file-invoice-dollar"></i></div>
+                        <div class="stat-value">${analysis.totalQuotes}</div>
+                        <div class="stat-label">Total Quotes</div>
+                    </div>
+                    <div class="analysis-stat-card">
+                        <div class="stat-icon"><i class="fas fa-calendar-alt"></i></div>
+                        <div class="stat-value">${analysis.averageDeliveryTime}</div>
+                        <div class="stat-label">Avg. Timeline (Days)</div>
+                    </div>
+                </div>
+
+                <div class="analysis-chart">
+                    <h4>Quote Amount Distribution</h4>
+                    <div class="chart-bar-group">
+                        <div class="bar-label">Lowest</div>
+                        <div class="bar-container">
+                            <div class="bar" style="width: ${lowWidth}%; background-color: var(--success-500);"></div>
+                        </div>
+                        <div class="bar-value">$${analysis.lowestAmount}</div>
+                    </div>
+                    <div class="chart-bar-group">
+                        <div class="bar-label">Average</div>
+                        <div class="bar-container">
+                            <div class="bar" style="width: ${avgWidth}%; background-color: var(--primary-500);"></div>
+                        </div>
+                        <div class="bar-value">$${analysis.averageAmount}</div>
+                    </div>
+                    <div class="chart-bar-group">
+                        <div class="bar-label">Highest</div>
+                        <div class="bar-container">
+                            <div class="bar" style="width: 100%; background-color: var(--error-500);"></div>
+                        </div>
+                        <div class="bar-value">$${analysis.highestAmount}</div>
+                    </div>
+                </div>
+            </div>`;
+        showGenericModal(analysisHtml, 'max-width: 650px;');
     } catch (error) {}
 }
 
@@ -914,7 +963,40 @@ async function analyzeDesignerStats() {
     try {
         const response = await apiCall('/analysis/designer/stats', 'GET');
         const stats = response.data;
-        const statsHtml = `<div class="modal-header"><h3><i class="fas fa-user-chart"></i> Your Stats</h3></div><div class="analysis-results" style="padding:0 32px 32px;"><div class="analysis-stat"><span>Total Quotes</span><strong>${stats.totalQuotes}</strong></div><hr><div class="analysis-stat"><span>Accepted</span><strong style="color:#10B981;">${stats.acceptedQuotes}</strong></div><div class="analysis-stat"><span>Pending</span><strong>${stats.pendingQuotes}</strong></div><hr><div class="analysis-stat"><span>Acceptance Rate</span><strong style="color:#3B82F6;">${stats.acceptanceRate}%</strong></div></div>`;
-        showGenericModal(statsHtml, 'max-width: 500px;');
+        const statsHtml = `
+            <div class="modal-header">
+                <h3><i class="fas fa-user-chart"></i> Your Designer Stats</h3>
+                <p class="modal-subtitle">Performance at a glance</p>
+            </div>
+            <div class="analysis-results">
+                <div class="analysis-grid">
+                     <div class="analysis-stat-card">
+                        <div class="stat-icon"><i class="fas fa-file-alt"></i></div>
+                        <div class="stat-value">${stats.totalQuotes}</div>
+                        <div class="stat-label">Total Quotes</div>
+                    </div>
+                    <div class="analysis-stat-card">
+                        <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+                        <div class="stat-value">${stats.acceptedQuotes}</div>
+                        <div class="stat-label">Accepted</div>
+                    </div>
+                     <div class="analysis-stat-card">
+                        <div class="stat-icon"><i class="fas fa-clock"></i></div>
+                        <div class="stat-value">${stats.pendingQuotes}</div>
+                        <div class="stat-label">Pending</div>
+                    </div>
+                </div>
+                <div class="analysis-progress-chart">
+                    <h4>Acceptance Rate</h4>
+                    <div class="progress-circle-container">
+                        <svg class="progress-ring" width="120" height="120">
+                           <circle class="progress-ring-circle-bg" stroke-width="12" fill="transparent" r="54" cx="60" cy="60"/>
+                           <circle class="progress-ring-circle" stroke-width="12" fill="transparent" r="54" cx="60" cy="60" style="stroke-dasharray: 339.29; stroke-dashoffset: calc(339.29 - (339.29 * ${stats.acceptanceRate}) / 100);"/>
+                        </svg>
+                        <div class="progress-text">${stats.acceptanceRate}%</div>
+                    </div>
+                </div>
+            </div>`;
+        showGenericModal(statsHtml, 'max-width: 650px;');
     } catch (error) {}
 }
