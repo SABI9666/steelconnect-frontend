@@ -346,7 +346,7 @@ async function fetchAndRenderJobs(loadMore = false) {
                 : '';
             
             return `
-                <div class="job-card modern-card" data-job-id="${job.id}">
+                <div class="job-card" data-job-id="${job.id}">
                     <div class="job-header">
                         <div class="job-title-section">
                             <h3 class="job-title">${job.title}</h3>
@@ -470,7 +470,7 @@ async function fetchAndRenderApprovedJobs() {
                 : '';
             
             return `
-                <div class="job-card modern-card approved-job">
+                <div class="job-card approved-job">
                     <div class="job-header">
                         <div class="job-title-section">
                             <h3 class="job-title">${job.title}</h3>
@@ -546,7 +546,7 @@ async function fetchAndRenderMyQuotes() {
                 <p class="header-subtitle">Track your quote submissions and manage communications</p>
                 <div style="margin-top: 16px;">
                     <button class="btn btn-outline" onclick="analyzeDesignerStats()">
-                        <i class="fas fa-user-chart"></i> View My Stats
+                        <i class="fas fa-chart-bar"></i> View My Stats
                     </button>
                 </div>
             </div>
@@ -619,7 +619,7 @@ async function fetchAndRenderMyQuotes() {
             }
             
             return `
-                <div class="quote-card modern-card quote-status-${statusClass}">
+                <div class="quote-card quote-status-${statusClass}">
                     <div class="quote-header">
                         <div class="quote-title-section">
                             <h3 class="quote-title">Quote for: ${quote.jobTitle || 'Unknown Job'}</h3>
@@ -1091,7 +1091,7 @@ async function fetchAndRenderConversations() {
             const isUnread = convo.lastMessageBy && convo.lastMessageBy !== appState.currentUser.name;
 
             return `
-                <div class="conversation-card modern-card ${isUnread ? 'unread' : ''}" onclick="renderConversationView('${convo.id}')">
+                <div class="conversation-card ${isUnread ? 'unread' : ''}" onclick="renderConversationView('${convo.id}')">
                     <div class="convo-avatar" style="background-color: ${avatarColor}">
                         ${otherParticipantName.charAt(0).toUpperCase()}
                         ${isUnread ? '<div class="unread-indicator"></div>' : ''}
@@ -1174,7 +1174,7 @@ async function renderConversationView(conversationOrId) {
     const avatarColor = getAvatarColor(otherParticipant ? otherParticipant.name : 'Unknown');
     
     container.innerHTML = `
-        <div class="chat-container modern-chat">
+        <div class="chat-container">
             <div class="chat-header">
                 <button onclick="renderAppSection('messages')" class="back-btn">
                     <i class="fas fa-arrow-left"></i>
@@ -1207,13 +1207,11 @@ async function renderConversationView(conversationOrId) {
             </div>
             
             <div class="chat-input-area">
-                <form id="send-message-form" class="message-form">
-                    <div class="message-input-container">
-                        <input type="text" id="message-text-input" placeholder="Type your message..." required autocomplete="off">
-                        <button type="submit" class="send-button" title="Send message">
-                            <i class="fas fa-paper-plane"></i>
-                        </button>
-                    </div>
+                <form id="send-message-form">
+                    <input type="text" id="message-text-input" placeholder="Type your message..." required autocomplete="off">
+                    <button type="submit" class="send-button" title="Send message">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
                 </form>
             </div>
         </div>
@@ -1340,7 +1338,7 @@ function showAuthModal(view) {
     const modalContainer = document.getElementById('modal-container');
     modalContainer.innerHTML = `
         <div class="modal-overlay">
-            <div class="modal-content modern-modal" onclick="event.stopPropagation()">
+            <div class="modal-content" onclick="event.stopPropagation()">
                 <button class="modal-close-button" onclick="closeModal()">
                     <i class="fas fa-times"></i>
                 </button>
@@ -1364,7 +1362,7 @@ function showGenericModal(innerHTML, style = '') {
     const modalContainer = document.getElementById('modal-container');
     modalContainer.innerHTML = `
         <div class="modal-overlay">
-            <div class="modal-content modern-modal" style="${style}" onclick="event.stopPropagation()">
+            <div class="modal-content" style="${style}" onclick="event.stopPropagation()">
                 <button class="modal-close-button" onclick="closeModal()">
                     <i class="fas fa-times"></i>
                 </button>
@@ -1465,12 +1463,63 @@ function renderAppSection(sectionId) {
         link.classList.toggle('active', link.dataset.section === sectionId);
     });
     
-    const userRole = appState.currentUser.type;
+    const user = appState.currentUser;
+    const userRole = user.type;
+
     if (sectionId === 'jobs') {
         const title = userRole === 'designer' ? 'Available Projects' : 'My Posted Projects';
         const subtitle = userRole === 'designer' ? 'Browse and submit quotes for engineering projects' : 'Manage your project listings and review quotes';
+        
+        let welcomeDashboardHTML = '';
+        // If the user is a contractor, show the new welcome dashboard
+        if (userRole === 'contractor') {
+            welcomeDashboardHTML = `
+            <div class="welcome-dashboard">
+                <div class="welcome-header">
+                    <h2>Welcome back, ${user.name}</h2>
+                    <p>Select an action below to manage your projects and connect with professionals.</p>
+                </div>
+                <div class="quick-actions-slider">
+                    <div class="action-card card-post" onclick="renderAppSection('post-job')">
+                        <div class="action-card-icon"><i class="fas fa-plus-circle"></i></div>
+                        <div class="action-card-content">
+                            <h3>Post a New Project</h3>
+                            <p>Get quotes from top-tier engineering talent.</p>
+                            <span class="action-card-link">Start Now <i class="fas fa-arrow-right"></i></span>
+                        </div>
+                    </div>
+                    <div class="action-card card-manage" onclick="renderAppSection('jobs')">
+                        <div class="action-card-icon"><i class="fas fa-tasks"></i></div>
+                        <div class="action-card-content">
+                            <h3>Manage My Projects</h3>
+                            <p>View quotes and track your open projects.</p>
+                            <span class="action-card-link">View Dashboard <i class="fas fa-arrow-right"></i></span>
+                        </div>
+                    </div>
+                    <div class="action-card card-approved" onclick="renderAppSection('approved-jobs')">
+                        <div class="action-card-icon"><i class="fas fa-check-circle"></i></div>
+                        <div class="action-card-content">
+                            <h3>Approved Projects</h3>
+                            <p>Collaborate with your assigned designers.</p>
+                            <span class="action-card-link">View Active Jobs <i class="fas fa-arrow-right"></i></span>
+                        </div>
+                    </div>
+                     <div class="action-card card-messages" onclick="renderAppSection('messages')">
+                        <div class="action-card-icon"><i class="fas fa-comments"></i></div>
+                        <div class="action-card-content">
+                            <h3>Messages</h3>
+                            <p>Communicate directly with professionals.</p>
+                            <span class="action-card-link">Open Inbox <i class="fas fa-arrow-right"></i></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            `;
+        }
+
         container.innerHTML = `
-            <div class="section-header modern-header">
+            ${welcomeDashboardHTML} 
+            <div class="section-header modern-header" style="margin-top: ${userRole === 'contractor' ? 'var(--space-12)' : '0'};">
                 <div class="header-content">
                     <h2><i class="fas ${userRole === 'designer' ? 'fa-search' : 'fa-tasks'}"></i> ${title}</h2>
                     <p class="header-subtitle">${subtitle}</p>
@@ -1479,6 +1528,7 @@ function renderAppSection(sectionId) {
             <div id="jobs-list" class="jobs-grid"></div>
             <div id="load-more-container" class="load-more-section"></div>`;
         fetchAndRenderJobs();
+
     } else if (sectionId === 'post-job') {
         container.innerHTML = getPostJobTemplate();
         document.getElementById('post-job-form').addEventListener('submit', handlePostJob);
@@ -1493,11 +1543,11 @@ function renderAppSection(sectionId) {
 
 // Enhanced notification system
 function showNotification(message, type = 'info', duration = 4000) {
-    const notificationContainer = document.getElementById('notification-container');
+    const notificationContainer = document.getElementById('alerts-container');
     if (!notificationContainer) return;
     
     const notification = document.createElement('div');
-    notification.className = `notification notification-${type}`;
+    notification.className = `alert notification-${type}`;
     
     const icons = {
         success: 'fa-check-circle',
@@ -1797,13 +1847,3 @@ async function analyzeDesignerStats() {
         // Error is handled by apiCall
     }
 }
-
-
-
-
-
-
-
-
-
-
