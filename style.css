@@ -1,4 +1,4 @@
-/* Premium SteelConnect Portal - Ultra-Modern Design [CORRECTED FOR YOUR PROJECT] */
+/* Premium SteelConnect Portal - Ultra-Modern Design [FINAL VERSION] */
 
 /* --- PREMIUM VARIABLES & FOUNDATIONS --- */
 :root {
@@ -316,9 +316,10 @@ body {
     .modal-content { max-width: calc(100% - 2rem); }
 }
 
-/* --- PREMIUM WELCOME DASHBOARD & SLIDING CARDS --- */
+/* --- PREMIUM WELCOME CAROUSEL --- */
 .welcome-dashboard {
     margin-bottom: var(--space-12);
+    position: relative;
 }
 
 .welcome-header h2 {
@@ -335,43 +336,41 @@ body {
     font-size: 1.125rem;
     color: var(--neutral-600);
     max-width: 600px;
+    margin-bottom: var(--space-8);
 }
 
-.quick-actions-slider {
-    display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: minmax(320px, 1fr);
-    gap: var(--space-8);
-    overflow-x: auto;
-    padding: var(--space-8) 0;
-    scroll-snap-type: x mandatory;
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
-}
-
-.quick-actions-slider::-webkit-scrollbar {
-    display: none; /* Chrome, Safari and Opera */
+.welcome-carousel {
+    position: relative;
+    height: 250px;
+    overflow: hidden;
+    border-radius: var(--radius-2xl);
 }
 
 .action-card {
-    scroll-snap-align: start;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     border-radius: var(--radius-2xl);
     padding: var(--space-8);
     color: white;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    min-height: 220px;
     box-shadow: var(--shadow-xl);
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: pointer;
-    position: relative;
-    overflow: hidden;
+    opacity: 0;
+    transform: translateX(30px) scale(0.98);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+    visibility: hidden;
 }
 
-.action-card:hover {
-    transform: translateY(-8px) scale(1.02);
-    box-shadow: 0 32px 64px -12px rgba(0, 0, 0, 0.3);
+.action-card.active {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+    visibility: visible;
+    z-index: 10;
 }
 
 .action-card-icon {
@@ -391,6 +390,7 @@ body {
     font-size: 1.5rem;
     font-weight: 700;
     margin: 0 0 var(--space-2) 0;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
 .action-card-content p {
@@ -400,19 +400,34 @@ body {
     margin: 0;
 }
 
-.action-card-link {
-    font-weight: 600;
-    margin-top: var(--space-6);
-    display: inline-block;
-    background: rgba(0,0,0,0.2);
-    padding: var(--space-2) var(--space-4);
-    border-radius: var(--radius-full);
-    transition: background 0.3s ease;
+.carousel-dots {
+    position: absolute;
+    bottom: var(--space-4);
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: var(--space-3);
+    z-index: 20;
 }
 
-.action-card:hover .action-card-link {
-    background: rgba(0,0,0,0.4);
+.carousel-dots .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    transition: all 0.3s ease;
 }
+
+.carousel-dots .dot:hover {
+    background: rgba(255, 255, 255, 0.8);
+}
+
+.carousel-dots .dot.active {
+    background: white;
+    transform: scale(1.2);
+}
+
 
 /* Card Specific Gradients */
 .action-card.card-post {
