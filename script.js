@@ -1,47 +1,112 @@
-// SteelConnect Premium Portal - Professional Script
+// --- LANDING PAGE SLIDER LOGIC ---
+let currentSlide = 0;
+const sliderWrapper = document.getElementById('slider-wrapper');
+const sliderDots = document.querySelectorAll('.slider-dot');
+const totalSlides = sliderWrapper ? sliderWrapper.children.length : 0;
 
+function changeSlide(direction) {
+    if (!sliderWrapper) return;
+    currentSlide = (currentSlide + direction + totalSlides) % totalSlides;
+    goToSlide(currentSlide);
+}
+
+function goToSlide(slideIndex) {
+    if (!sliderWrapper) return;
+    sliderWrapper.style.transform = `translateX(-${slideIndex * 100}%)`;
+    sliderDots.forEach((dot, index) => {
+        dot.classList.toggle('active', index === slideIndex);
+    });
+    currentSlide = slideIndex;
+}
+
+if (totalSlides > 0) {
+    setInterval(() => changeSlide(1), 8000);
+}
+
+document.querySelectorAll('.nav-link[href^="#"]').forEach(link => {
+    link.addEventListener('click', function(e) {
+        e.preventDefault();
+        const targetId = this.getAttribute('href');
+        const targetSection = document.querySelector(targetId);
+        if (targetSection) {
+            targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    });
+});
+
+// --- FULL APPLICATION SCRIPT ---
 document.addEventListener('DOMContentLoaded', initializeApp);
 
-// --- A. STATE & CONSTANTS ---
+// --- CONSTANTS & STATE ---
 const BACKEND_URL = 'https://steelconnect-backend.onrender.com/api';
 const appState = {
     currentUser: null,
     jwtToken: null,
     jobs: [],
     myQuotes: [],
+    approvedJobs: [],
+    conversations: [],
+    participants: {},
+    jobsPage: 1,
+    hasMoreJobs: true,
+    userSubmittedQuotes: new Set(),
 };
-let inactivityTimer;
-let carouselInterval;
 
-// --- B. INITIALIZATION & CORE APP FLOW ---
+// --- INACTIVITY TIMER FOR AUTO-LOGOUT ---
+let inactivityTimer;
+function resetInactivityTimer() {
+    clearTimeout(inactivityTimer);
+    inactivityTimer = setTimeout(() => {
+        if (appState.currentUser) {
+            showNotification('You have been logged out due to inactivity.', 'info');
+            logout();
+        }
+    }, 300000); // 5 minutes
+}
 
 function initializeApp() {
-    console.log("SteelConnect Premium App Initializing...");
-    setupEventListeners();
-    checkSession();
-}
-
-function setupEventListeners() {
-    // Inactivity listeners
-    ['mousemove', 'keydown', 'click'].forEach(evt => window.addEventListener(evt, resetInactivityTimer, false));
+    console.log("SteelConnect App Initializing...");
     
-    // UI listeners
-    document.getElementById('signin-btn')?.addEventListener('click', () => showAuthModal('login'));
-    document.getElementById('join-btn')?.addEventListener('click', () => showAuthModal('register'));
-    document.getElementById('logout-button')?.addEventListener('click', logout);
-    document.querySelector('.logo')?.addEventListener('click', (e) => {
-        e.preventDefault();
-        if (appState.currentUser) {
-            renderAppSection('jobs');
-        } else {
-            showLandingPageView();
-        }
-    });
-}
+    // Setup inactivity listeners
+    window.addEventListener('mousemove', resetInactivityTimer);
+    window.addEventListener('keydown', resetInactivityTimer);
+    window.addEventListener('click', resetInactivityTimer);
 
-function checkSession() {
+    // Attach event listeners
+    const signInBtn = document.getElementById('signin-btn');
+    if (signInBtn) signInBtn.addEventListener('click', () => showAuthModal('login'));
+
+    const joinBtn = document.getElementById('join-btn');
+    if (joinBtn) joinBtn.addEventListener('click', () => showAuthModal('register'));
+    
+    const getStartedBtn = document.getElementById('get-started-btn');
+    if (getStartedBtn) getStartedBtn.addEventListener('click', () => showAuthModal('register'));
+    
+    const logo = document.querySelector('.logo');
+    if (logo) {
+        logo.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (appState.currentUser) {
+                renderAppSection('jobs');
+            } else {
+                showLandingPageView();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        });
+    }
+    
+    const logoutBtn = document.getElementById('logout-button');
+    if(logoutBtn) {
+        logoutBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            logout();
+        });
+    }
+
+    // Check for existing user session
     const token = localStorage.getItem('jwtToken');
     const user = localStorage.getItem('currentUser');
+    
     if (token && user) {
         try {
             appState.jwtToken = token;
@@ -57,204 +122,46 @@ function checkSession() {
     }
 }
 
-function resetInactivityTimer() {
-    clearTimeout(inactivityTimer);
-    inactivityTimer = setTimeout(() => {
-        if (appState.currentUser) {
-            showNotification('You have been logged out due to inactivity.', 'info');
-            logout();
-        }
-    }, 300000); // 5 minutes
-}
-
-// --- C. VIEW MANAGEMENT ---
-
-function showAppView() {
-    document.getElementById('landing-page-content').style.display = 'none';
-    document.getElementById('app-content').style.display = 'flex';
-    document.getElementById('auth-buttons-container').style.display = 'none';
-    document.getElementById('user-info').style.display = 'flex';
-    
-    updateUserInfo();
-    buildSidebarNav();
-    renderAppSection('jobs');
-}
-
-function showLandingPageView() {
-    document.getElementById('landing-page-content').style.display = 'block';
-    document.getElementById('app-content').style.display = 'none';
-    document.getElementById('auth-buttons-container').style.display = 'flex';
-    document.getElementById('user-info').style.display = 'none';
-    // Dynamically create landing page if it doesn't exist for SPA feel
-    if (!document.getElementById('hero-section')) {
-        const landingPage = document.getElementById('landing-page-content');
-        landingPage.innerHTML = getLandingPageTemplate();
-         // Re-attach listener for the dynamically added button
-        document.getElementById('get-started-btn')?.addEventListener('click', () => showAuthModal('register'));
-    }
-}
-
-function renderAppSection(sectionId) {
-    const container = document.getElementById('app-container');
-    document.querySelectorAll('.sidebar-nav-link').forEach(link => {
-        link.classList.toggle('active', link.dataset.section === sectionId);
-    });
-
-    const userRole = appState.currentUser.type;
-    if (sectionId === 'jobs') {
-        const title = userRole === 'designer' ? 'Premium Project Opportunities' : 'Premium Project Dashboard';
-        const subtitle = userRole === 'designer' ? 'Exclusive high-value projects' : 'Manage your premium project portfolio';
-        
-        let dashboardHTML = '';
-        if (userRole === 'contractor') {
-            dashboardHTML = getWelcomeDashboardTemplate(appState.currentUser.name);
-        }
-
-        container.innerHTML = `
-            ${dashboardHTML} 
-            <div class="section-header" style="margin-top: ${userRole === 'contractor' ? '48px' : '0'};">
-                <h2>${title}</h2>
-                <p class="header-subtitle">${subtitle}</p>
-            </div>
-            <div id="jobs-list" class="jobs-grid"></div>`;
-        
-        if (userRole === 'contractor') {
-            initializeWelcomeCarousel();
-        }
-        fetchAndRenderJobs();
-    }
-    // Implement other sections like 'post-job', 'my-quotes' etc. here
-}
-
-function updateUserInfo() {
-    const user = appState.currentUser;
-    document.getElementById('userName').textContent = user.name;
-    document.getElementById('userType').textContent = user.type + ' - Premium';
-    document.getElementById('userAvatar').textContent = (user.name || "A").charAt(0).toUpperCase();
-    document.getElementById('sidebarUserName').textContent = user.name;
-    document.getElementById('sidebarUserType').textContent = user.type + ' - Premium';
-    document.getElementById('sidebarUserAvatar').textContent = (user.name || "A").charAt(0).toUpperCase();
-}
-
-function buildSidebarNav() {
-    const navContainer = document.getElementById('sidebar-nav-menu');
-    const role = appState.currentUser.type;
-    const links = (role === 'designer')
-        ? `<a href="#" class="sidebar-nav-link" data-section="jobs"><i class="fas fa-search fa-fw"></i> <span>Premium Projects</span></a>
-           <a href="#" class="sidebar-nav-link" data-section="my-quotes"><i class="fas fa-file-invoice-dollar fa-fw"></i> <span>My Proposals</span></a>`
-        : `<a href="#" class="sidebar-nav-link" data-section="jobs"><i class="fas fa-crown fa-fw"></i> <span>Premium Dashboard</span></a>
-           <a href="#" class="sidebar-nav-link" data-section="approved-jobs"><i class="fas fa-check-circle fa-fw"></i> <span>Active Projects</span></a>
-           <a href="#" class="sidebar-nav-link" data-section="post-job"><i class="fas fa-plus-circle fa-fw"></i> <span>Post Project</span></a>`;
-    
-    navContainer.innerHTML = links + `<a href="#" class="sidebar-nav-link" data-section="messages"><i class="fas fa-comments fa-fw"></i> <span>VIP Messages</span></a>`;
-    navContainer.querySelectorAll('.sidebar-nav-link').forEach(link => {
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-            renderAppSection(link.dataset.section);
-        });
-    });
-}
-
-// --- D. API & DATA HANDLING ---
-
-async function apiCall(endpoint, method, body = null) {
-    // This is a placeholder for your actual API call logic.
-    // To make this demonstration work without a backend, we return mock data.
-    console.log(`Mock API Call: ${method} ${endpoint}`);
-    if (endpoint.includes('/jobs')) {
-        return getMockJobs();
-    }
-    return { success: true, data: {} };
-}
-
-async function fetchAndRenderJobs() {
-    const jobsListContainer = document.getElementById('jobs-list');
-    jobsListContainer.innerHTML = `<div class="loading-spinner"><div class="spinner"></div><p>Loading premium projects...</p></div>`;
-    
-    try {
-        const response = await apiCall('/jobs', 'GET');
-        appState.jobs = response.data;
-
-        if (appState.jobs.length === 0) {
-            jobsListContainer.innerHTML = `<div class="empty-state"><h3>No Premium Projects Found</h3><p>Check back soon for exclusive opportunities.</p></div>`;
-            return;
-        }
-
-        jobsListContainer.innerHTML = appState.jobs.map(getJobCardTemplate).join('');
-    } catch (error) {
-        jobsListContainer.innerHTML = `<div class="empty-state"><h3>Error Loading Projects</h3><p>Please try again later.</p></div>`;
-        console.error("Failed to fetch jobs:", error);
-    }
-}
-
-// --- E. AUTHENTICATION ---
-
-async function handleLogin(event) {
-    event.preventDefault();
-    // This is a mock login for demonstration.
-    const form = event.target;
-    const email = form.loginEmail.value;
-    const name = email.split('@')[0].replace(/\./g, ' ').replace(/(^\w|\s\w)/g, m => m.toUpperCase());
-
-    appState.currentUser = { name, email, type: 'contractor' }; // Default to contractor for demo
-    appState.jwtToken = 'mock-premium-token';
-    localStorage.setItem('currentUser', JSON.stringify(appState.currentUser));
-    localStorage.setItem('jwtToken', appState.jwtToken);
-    
-    showNotification(`Welcome back, ${name}!`, 'success');
-    closeModal();
-    showAppView();
-}
-
-function logout() {
-    appState.currentUser = null;
-    appState.jwtToken = null;
-    localStorage.clear();
-    clearTimeout(inactivityTimer);
-    showLandingPageView();
-    showNotification('You have been logged out.', 'info');
-}
-
-// --- F. PREMIUM CAROUSEL LOGIC ---
-
+// --- NEW: AUTOMATIC WELCOME CAROUSEL ---
+let carouselInterval;
 function initializeWelcomeCarousel() {
     const carousel = document.querySelector('.welcome-carousel');
     if (!carousel) return;
 
     const slides = carousel.querySelectorAll('.action-card');
-    const dotsContainer = document.createElement('div');
-    dotsContainer.className = 'carousel-dots';
-    carousel.appendChild(dotsContainer);
-
+    const dotsContainer = carousel.querySelector('.carousel-dots');
     let currentSlideIndex = 0;
-    if (slides.length <= 1) return;
 
+    if (slides.length === 0) return;
+
+    // Create dots
+    dotsContainer.innerHTML = '';
     slides.forEach((_, index) => {
         const dot = document.createElement('div');
-        dot.className = 'dot';
+        dot.classList.add('dot');
         dot.addEventListener('click', () => {
             goToCarouselSlide(index);
             resetCarouselInterval();
         });
         dotsContainer.appendChild(dot);
     });
-    
     const dots = dotsContainer.querySelectorAll('.dot');
 
     function goToCarouselSlide(index) {
         slides.forEach(slide => slide.classList.remove('active'));
         dots.forEach(dot => dot.classList.remove('active'));
+
         currentSlideIndex = index;
-        slides[currentSlideIndex].classList.add('active');
-        dots[currentSlideIndex].classList.add('active');
+        if (slides[currentSlideIndex]) slides[currentSlideIndex].classList.add('active');
+        if (dots[currentSlideIndex]) dots[currentSlideIndex].classList.add('active');
     }
 
     function nextSlide() {
-        goToCarouselSlide((currentSlideIndex + 1) % slides.length);
+        const newIndex = (currentSlideIndex + 1) % slides.length;
+        goToCarouselSlide(newIndex);
     }
 
     function startCarousel() {
-        clearInterval(carouselInterval);
         carouselInterval = setInterval(nextSlide, 5000); // Change slide every 5 seconds
     }
 
@@ -270,128 +177,744 @@ function initializeWelcomeCarousel() {
     startCarousel();
 }
 
-// --- G. UI COMPONENTS & MODALS ---
 
-function showAuthModal(view) {
-    const modalContent = view === 'login' ? getPremiumLoginTemplate() : getPremiumRegisterTemplate();
-    const modal = document.createElement('div');
-    modal.className = 'modal-overlay';
-    modal.innerHTML = `<div class="modal-content"><button class="modal-close-button" onclick="closeModal()">&times;</button>${modalContent}</div>`;
-    
-    const modalContainer = document.getElementById('modal-container');
-    modalContainer.innerHTML = ''; // Clear previous modals
-    modalContainer.appendChild(modal);
+async function apiCall(endpoint, method, body = null, successMessage = null) {
+    try {
+        const options = { method, headers: {} };
+        if (appState.jwtToken) {
+            options.headers['Authorization'] = `Bearer ${appState.jwtToken}`;
+        }
+        if (body) {
+            if (body instanceof FormData) {
+                options.body = body;
+            } else {
+                options.headers['Content-Type'] = 'application/json';
+                options.body = JSON.stringify(body);
+            }
+        }
+        
+        const response = await fetch(BACKEND_URL + endpoint, options);
 
-    modal.addEventListener('click', closeModal, { once: true });
-    modal.querySelector('.modal-content').addEventListener('click', e => e.stopPropagation());
-    
-    document.getElementById(view === 'login' ? 'login-form' : 'register-form').addEventListener('submit', handleLogin); // Mocked for now
+        if (response.status === 204 || response.headers.get("content-length") === "0") {
+             if (!response.ok) {
+                const errorMsg = response.headers.get('X-Error-Message') || `Request failed with status ${response.status}`;
+                throw new Error(errorMsg);
+             }
+             if (successMessage) showNotification(successMessage, 'success');
+             return { success: true };
+        }
+
+        const responseData = await response.json();
+
+        if (!response.ok) {
+            throw new Error(responseData.message || responseData.error || `Request failed with status ${response.status}`);
+        }
+
+        if (successMessage) {
+            showNotification(successMessage, 'success');
+        }
+        
+        return responseData;
+
+    } catch (error) {
+        console.error(`API call to ${endpoint} failed:`, error);
+        showNotification(error.message, 'error');
+        throw error;
+    }
 }
 
+async function handleRegister(event) {
+    event.preventDefault();
+    const form = event.target;
+    const userData = {
+        name: form.regName.value,
+        email: form.regEmail.value,
+        password: form.regPassword.value,
+        type: form.regRole.value,
+    };
+    await apiCall('/auth/register', 'POST', userData, 'Registration successful! Please sign in.')
+        .then(() => renderAuthForm('login'))
+        .catch(() => {});
+}
+
+async function handleLogin(event) {
+    event.preventDefault();
+    const form = event.target;
+    const authData = { email: form.loginEmail.value, password: form.loginPassword.value };
+    try {
+        const data = await apiCall('/auth/login', 'POST', authData);
+        showNotification('Welcome back to SteelConnect!', 'success');
+        appState.currentUser = data.user;
+        appState.jwtToken = data.token;
+        localStorage.setItem('currentUser', JSON.stringify(data.user));
+        localStorage.setItem('jwtToken', data.token);
+        closeModal();
+        showAppView();
+        
+        if (data.user.type === 'designer') {
+            loadUserQuotes();
+        }
+    } catch(error) {
+        // Error is already shown by apiCall
+    }
+}
+
+function logout() {
+    appState.currentUser = null;
+    appState.jwtToken = null;
+    appState.userSubmittedQuotes.clear();
+    localStorage.clear();
+    clearTimeout(inactivityTimer);
+    showLandingPageView();
+    showNotification('You have been logged out successfully.', 'info');
+}
+
+async function loadUserQuotes() {
+    if (appState.currentUser.type !== 'designer') return;
+    try {
+        const response = await apiCall(`/quotes/user/${appState.currentUser.id}`, 'GET');
+        const quotes = response.data || [];
+        appState.userSubmittedQuotes.clear();
+        quotes.forEach(quote => {
+            if (quote.status === 'submitted') {
+                appState.userSubmittedQuotes.add(quote.jobId);
+            }
+        });
+    } catch (error) {
+        console.error('Error loading user quotes:', error);
+    }
+}
+
+async function fetchAndRenderJobs(loadMore = false) {
+    const jobsListContainer = document.getElementById('jobs-list');
+    const loadMoreContainer = document.getElementById('load-more-container');
+
+    if (!loadMore) {
+        appState.jobs = [];
+        appState.jobsPage = 1;
+        appState.hasMoreJobs = true;
+        if (jobsListContainer) jobsListContainer.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Loading projects...</p></div>';
+    }
+
+    if (!jobsListContainer || !appState.hasMoreJobs) {
+        if(loadMoreContainer) loadMoreContainer.innerHTML = '';
+        return;
+    }
+
+    const user = appState.currentUser;
+    const endpoint = user.type === 'designer' 
+        ? `/jobs?page=${appState.jobsPage}&limit=6` 
+        : `/jobs/user/${user.id}`;
+    
+    if(loadMoreContainer) loadMoreContainer.innerHTML = `<button class="btn btn-loading" disabled><div class="btn-spinner"></div>Loading...</button>`;
+
+    try {
+        const response = await apiCall(endpoint, 'GET');
+        const newJobs = response.data || [];
+        appState.jobs.push(...newJobs);
+        
+        if (user.type === 'designer') {
+            appState.hasMoreJobs = response.pagination.hasNext;
+            appState.jobsPage += 1;
+        } else {
+            appState.hasMoreJobs = false;
+        }
+        
+        if (appState.jobs.length === 0) {
+            jobsListContainer.innerHTML = user.type === 'designer'
+                ? `<div class="empty-state">
+                     <div class="empty-icon"><i class="fas fa-briefcase"></i></div>
+                     <h3>No Projects Available</h3>
+                     <p>Check back later for new opportunities.</p>
+                   </div>`
+                : `<div class="empty-state">
+                     <div class="empty-icon"><i class="fas fa-plus-circle"></i></div>
+                     <h3>You haven't posted any projects yet</h3>
+                     <p>Click the "Post a New Project" card above to get started.</p>
+                   </div>`;
+            if (loadMoreContainer) loadMoreContainer.innerHTML = '';
+            return;
+        }
+
+        const jobsHTML = appState.jobs.map(job => {
+            const hasUserQuoted = appState.userSubmittedQuotes.has(job.id);
+            const canQuote = user.type === 'designer' && job.status === 'open' && !hasUserQuoted;
+            const quoteButton = canQuote 
+                ? `<button class="btn btn-primary btn-submit-quote" onclick="showQuoteModal('${job.id}')"><i class="fas fa-file-invoice-dollar"></i> Submit Quote</button>`
+                : user.type === 'designer' && hasUserQuoted
+                ? `<button class="btn btn-outline btn-submitted" disabled><i class="fas fa-check-circle"></i> Quote Submitted</button>`
+                : user.type === 'designer' && job.status === 'assigned'
+                ? `<span class="job-status-badge assigned"><i class="fas fa-user-check"></i> Job Assigned</span>`
+                : '';
+
+            const actions = user.type === 'designer'
+                ? quoteButton
+                : `<div class="job-actions-group">
+                     <button class="btn btn-outline" onclick="viewQuotes('${job.id}')"><i class="fas fa-eye"></i> View Quotes (${job.quotesCount || 0})</button>
+                     <button class="btn btn-danger" onclick="deleteJob('${job.id}')"><i class="fas fa-trash"></i> Delete</button>
+                   </div>`;
+            
+            const statusBadge = job.status !== 'open' 
+                ? `<span class="job-status-badge ${job.status}"><i class="fas ${job.status === 'assigned' ? 'fa-user-check' : 'fa-check-circle'}"></i> ${job.status.charAt(0).toUpperCase() + job.status.slice(1)}</span>` 
+                : `<span class="job-status-badge open"><i class="fas fa-clock"></i> Open</span>`;
+            
+            const attachmentLink = job.attachment ? `<div class="job-attachment"><i class="fas fa-paperclip"></i> <a href="${job.attachment}" target="_blank" rel="noopener noreferrer">View Attachment</a></div>` : '';
+            const skillsDisplay = job.skills?.length > 0 ? `<div class="job-skills"><i class="fas fa-tools"></i> <span>Skills:</span><div class="skills-tags">${job.skills.map(skill => `<span class="skill-tag">${skill}</span>`).join('')}</div></div>` : '';
+            
+            return `
+                <div class="job-card" data-job-id="${job.id}">
+                    <div class="job-header">
+                        <div class="job-title-section">
+                            <h3 class="job-title">${job.title}</h3>
+                            ${statusBadge}
+                        </div>
+                        <div class="job-budget-section">
+                            <span class="budget-label">Budget</span>
+                            <span class="budget-amount">${job.budget}</span>
+                        </div>
+                    </div>
+                    <div class="job-meta">
+                        <div class="job-meta-item"><i class="fas fa-user"></i> <span>Posted by: <strong>${job.posterName || 'N/A'}</strong></span></div>
+                        ${job.assignedToName ? `<div class="job-meta-item"><i class="fas fa-user-check"></i> <span>Assigned to: <strong>${job.assignedToName}</strong></span></div>` : ''}
+                        ${job.deadline ? `<div class="job-meta-item"><i class="fas fa-calendar-alt"></i> <span>Deadline: <strong>${new Date(job.deadline).toLocaleDateString()}</strong></span></div>` : ''}
+                    </div>
+                    <div class="job-description"><p>${job.description}</p></div>
+                    ${skillsDisplay}
+                    ${job.link ? `<div class="job-link"><i class="fas fa-external-link-alt"></i> <a href="${job.link}" target="_blank" rel="noopener noreferrer">View Project Link</a></div>` : ''}
+                    ${attachmentLink}
+                    <div class="job-actions">${actions}</div>
+                </div>`;
+        }).join('');
+
+        jobsListContainer.innerHTML = jobsHTML;
+
+        if (loadMoreContainer) {
+            if (user.type === 'designer' && appState.hasMoreJobs) {
+                loadMoreContainer.innerHTML = `<button class="btn btn-outline btn-load-more" id="load-more-btn"><i class="fas fa-chevron-down"></i> Load More Projects</button>`;
+                document.getElementById('load-more-btn').addEventListener('click', () => fetchAndRenderJobs(true));
+            } else {
+                loadMoreContainer.innerHTML = '';
+            }
+        }
+
+    } catch(error) {
+        jobsListContainer.innerHTML = `<div class="error-state"><div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div><h3>Error Loading Projects</h3><p>We encountered an issue loading the projects. Please try again.</p><button class="btn btn-primary" onclick="fetchAndRenderJobs()">Retry</button></div>`;
+    }
+}
+
+async function fetchAndRenderApprovedJobs() {
+    const container = document.getElementById('app-container');
+    container.innerHTML = `
+        <div class="section-header modern-header">
+            <div class="header-content">
+                <h2><i class="fas fa-check-circle"></i> Approved Projects</h2>
+                <p class="header-subtitle">Manage your approved projects and communicate with designers</p>
+            </div>
+        </div>
+        <div id="approved-jobs-list" class="jobs-grid"></div>`;
+    
+    const listContainer = document.getElementById('approved-jobs-list');
+    listContainer.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Loading approved projects...</p></div>';
+    
+    try {
+        const response = await apiCall(`/jobs/user/${appState.currentUser.id}`, 'GET');
+        const allJobs = response.data || [];
+        const approvedJobs = allJobs.filter(job => job.status === 'assigned');
+        appState.approvedJobs = approvedJobs;
+        
+        if (approvedJobs.length === 0) {
+            listContainer.innerHTML = `<div class="empty-state"><div class="empty-icon"><i class="fas fa-clipboard-check"></i></div><h3>No Approved Projects</h3><p>Your approved projects will appear here once you accept quotes from designers.</p><button class="btn btn-primary" onclick="renderAppSection('jobs')">View My Projects</button></div>`;
+            return;
+        }
+        
+        listContainer.innerHTML = approvedJobs.map(job => {
+            const attachmentLink = job.attachment ? `<div class="job-attachment"><i class="fas fa-paperclip"></i> <a href="${job.attachment}" target="_blank" rel="noopener noreferrer">View Attachment</a></div>` : '';
+            const skillsDisplay = job.skills?.length > 0 ? `<div class="job-skills"><i class="fas fa-tools"></i> <span>Skills:</span><div class="skills-tags">${job.skills.map(skill => `<span class="skill-tag">${skill}</span>`).join('')}</div></div>` : '';
+            
+            return `
+                <div class="job-card approved-job">
+                    <div class="job-header">
+                        <div class="job-title-section">
+                            <h3 class="job-title">${job.title}</h3>
+                            <span class="job-status-badge assigned"><i class="fas fa-user-check"></i> Assigned</span>
+                        </div>
+                        <div class="approved-amount">
+                            <span class="amount-label">Approved Amount</span>
+                            <span class="amount-value">$${job.approvedAmount}</span>
+                        </div>
+                    </div>
+                    <div class="job-meta"><div class="job-meta-item"><i class="fas fa-user-cog"></i> <span>Assigned to: <strong>${job.assignedToName}</strong></span></div></div>
+                    <div class="job-description"><p>${job.description}</p></div>
+                    ${skillsDisplay}
+                    ${job.link ? `<div class="job-link"><i class="fas fa-external-link-alt"></i> <a href="${job.link}" target="_blank" rel="noopener noreferrer">View Project Link</a></div>` : ''}
+                    ${attachmentLink}
+                    <div class="job-actions">
+                        <div class="job-actions-group">
+                            <button class="btn btn-primary" onclick="openConversation('${job.id}', '${job.assignedTo}')"><i class="fas fa-comments"></i> Message Designer</button>
+                            <button class="btn btn-success" onclick="markJobCompleted('${job.id}')"><i class="fas fa-check-double"></i> Mark Completed</button>
+                        </div>
+                    </div>
+                </div>`;
+        }).join('');
+    } catch(error) {
+        listContainer.innerHTML = `<div class="error-state"><div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div><h3>Error Loading Approved Projects</h3><p>Please try again later.</p><button class="btn btn-primary" onclick="fetchAndRenderApprovedJobs()">Retry</button></div>`;
+    }
+}
+
+async function markJobCompleted(jobId) {
+    if (confirm('Are you sure you want to mark this job as completed? This action cannot be undone.')) {
+        await apiCall(`/jobs/${jobId}`, 'PUT', { status: 'completed' }, 'Project marked as completed successfully!')
+            .then(() => fetchAndRenderApprovedJobs())
+            .catch(() => {});
+    }
+}
+
+async function fetchAndRenderMyQuotes() {
+    const container = document.getElementById('app-container');
+    container.innerHTML = `
+        <div class="section-header modern-header">
+            <div class="header-content">
+                <h2><i class="fas fa-file-invoice-dollar"></i> My Submitted Quotes</h2>
+                <p class="header-subtitle">Track your quote submissions and manage communications</p>
+                <div style="margin-top: 16px;"><button class="btn btn-outline" onclick="analyzeDesignerStats()"><i class="fas fa-chart-bar"></i> View My Stats</button></div>
+            </div>
+        </div>
+        <div id="my-quotes-list" class="jobs-grid"></div>`;
+    
+    const listContainer = document.getElementById('my-quotes-list');
+    listContainer.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Loading your quotes...</p></div>';
+    
+    try {
+        const response = await apiCall(`/quotes/user/${appState.currentUser.id}`, 'GET');
+        const quotes = response.data || [];
+        appState.myQuotes = quotes;
+        
+        if (quotes.length === 0) {
+            listContainer.innerHTML = `<div class="empty-state"><div class="empty-icon"><i class="fas fa-file-invoice"></i></div><h3>No Quotes Submitted</h3><p>You haven't submitted any quotes yet. Browse available projects to get started.</p><button class="btn btn-primary" onclick="renderAppSection('jobs')">Find Projects</button></div>`;
+            return;
+        }
+        
+        listContainer.innerHTML = quotes.map(quote => {
+            const attachments = quote.attachments || [];
+            let attachmentLink = attachments.length > 0 ? `<div class="quote-attachment"><i class="fas fa-paperclip"></i><a href="${attachments[0]}" target="_blank" rel="noopener noreferrer">View Attachment</a></div>` : '';
+            const statusIcon = {'submitted': 'fa-clock', 'approved': 'fa-check-circle', 'rejected': 'fa-times-circle'}[quote.status] || 'fa-question-circle';
+            const actionButtons = [];
+            if (quote.status === 'approved') actionButtons.push(`<button class="btn btn-primary" onclick="openConversation('${quote.jobId}', '${quote.contractorId}')"><i class="fas fa-comments"></i> Message Client</button>`);
+            if (quote.status === 'submitted') {
+                actionButtons.push(`<button class="btn btn-outline" onclick="editQuote('${quote.id}')"><i class="fas fa-edit"></i> Edit Quote</button>`);
+                actionButtons.push(`<button class="btn btn-danger" onclick="deleteQuote('${quote.id}')"><i class="fas fa-trash"></i> Delete</button>`);
+            }
+            
+            return `
+                <div class="quote-card quote-status-${quote.status}">
+                    <div class="quote-header">
+                        <div class="quote-title-section"><h3 class="quote-title">Quote for: ${quote.jobTitle || 'Unknown Job'}</h3><span class="quote-status-badge ${quote.status}"><i class="fas ${statusIcon}"></i> ${quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}</span></div>
+                        <div class="quote-amount-section"><span class="amount-label">Quote Amount</span><span class="amount-value">$${quote.quoteAmount}</span></div>
+                    </div>
+                    <div class="quote-meta">
+                        ${quote.timeline ? `<div class="quote-meta-item"><i class="fas fa-calendar-alt"></i><span>Timeline: <strong>${quote.timeline} days</strong></span></div>` : ''}
+                        <div class="quote-meta-item"><i class="fas fa-clock"></i><span>Submitted: <strong>${new Date(quote.createdAt?.toDate ? quote.createdAt.toDate() : quote.createdAt).toLocaleDateString()}</strong></span></div>
+                    </div>
+                    <div class="quote-description"><p>${quote.description}</p></div>
+                    ${attachmentLink}
+                    <div class="quote-actions"><div class="quote-actions-group">${actionButtons.join('')}</div></div>
+                </div>`;
+        }).join('');
+    } catch(error) {
+        listContainer.innerHTML = `<div class="error-state"><div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div><h3>Error Loading Quotes</h3><p>Please try again later.</p><button class="btn btn-primary" onclick="fetchAndRenderMyQuotes()">Retry</button></div>`;
+    }
+}
+
+async function editQuote(quoteId) {
+    try {
+        const response = await apiCall(`/quotes/${quoteId}`, 'GET');
+        const quote = response.data;
+        
+        const content = `
+            <div class="modal-header"><h3><i class="fas fa-edit"></i> Edit Your Quote</h3><p class="modal-subtitle">Update your quote details for: <strong>${quote.jobTitle}</strong></p></div>
+            <form id="edit-quote-form" class="modern-form"><input type="hidden" name="quoteId" value="${quote.id}"><div class="form-row"><div class="form-group"><label class="form-label"><i class="fas fa-dollar-sign"></i> Quote Amount ($)</label><input type="number" class="form-input" name="amount" value="${quote.quoteAmount}" required min="1" step="0.01"></div><div class="form-group"><label class="form-label"><i class="fas fa-calendar-alt"></i> Timeline (days)</label><input type="number" class="form-input" name="timeline" value="${quote.timeline || ''}" required min="1"></div></div><div class="form-group"><label class="form-label"><i class="fas fa-file-alt"></i> Proposal Description</label><textarea class="form-textarea" name="description" required placeholder="Describe your approach...">${quote.description}</textarea></div><div class="form-group"><label class="form-label"><i class="fas fa-paperclip"></i> Attachments</label><input type="file" class="form-input file-input" name="attachments" multiple><small class="form-help">Supported formats: PDF, DOC, DWG, Images</small></div><div class="form-actions"><button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button><button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Update Quote</button></div></form>`;
+        showGenericModal(content, 'max-width: 600px;');
+        document.getElementById('edit-quote-form').addEventListener('submit', handleQuoteEdit);
+    } catch (error) {}
+}
+
+async function handleQuoteEdit(event) {
+    event.preventDefault();
+    const form = event.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    try {
+        submitBtn.innerHTML = '<div class="btn-spinner"></div> Updating...';
+        submitBtn.disabled = true;
+        const formData = new FormData(form);
+        await apiCall(`/quotes/${form['quoteId'].value}`, 'PUT', formData, 'Quote updated successfully!');
+        closeModal();
+        fetchAndRenderMyQuotes();
+    } catch (error) {
+        console.error("Quote edit failed:", error);
+    } finally {
+        if (submitBtn) { submitBtn.innerHTML = originalText; submitBtn.disabled = false; }
+    }
+}
+
+async function handlePostJob(event) {
+    event.preventDefault();
+    const form = event.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<div class="btn-spinner"></div> Posting...';
+    submitBtn.disabled = true;
+    try {
+        const formData = new FormData(form);
+        await apiCall('/jobs', 'POST', formData, 'Project posted successfully!');
+        form.reset();
+        renderAppSection('jobs');
+    } catch(error) {
+    } finally {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    }
+}
+
+async function deleteJob(jobId) {
+    if (confirm('Are you sure you want to delete this project? This cannot be undone.')) {
+        await apiCall(`/jobs/${jobId}`, 'DELETE', null, 'Project deleted successfully.')
+            .then(() => fetchAndRenderJobs())
+            .catch(() => {});
+    }
+}
+
+async function deleteQuote(quoteId) {
+    if (confirm('Are you sure you want to delete this quote?')) {
+        await apiCall(`/quotes/${quoteId}`, 'DELETE', null, 'Quote deleted successfully.')
+            .then(() => {
+                fetchAndRenderMyQuotes();
+                loadUserQuotes();
+            })
+            .catch(() => {});
+    }
+}
+
+async function viewQuotes(jobId) {
+    try {
+        const response = await apiCall(`/quotes/job/${jobId}`, 'GET');
+        const quotes = response.data || [];
+        
+        let quotesHTML = `<div class="modal-header"><h3><i class="fas fa-file-invoice-dollar"></i> Received Quotes</h3><p class="modal-subtitle">Review quotes for this project</p><div class="modal-actions" style="margin-top: 16px;"><button class="btn btn-primary" onclick="analyzeJobQuotes('${jobId}')"><i class="fas fa-chart-bar"></i> Analyze All Quotes</button></div></div>`;
+            
+        if (quotes.length === 0) {
+            quotesHTML += `<div class="empty-state"><div class="empty-icon"><i class="fas fa-file-invoice"></i></div><h3>No Quotes Received</h3><p>No quotes have been submitted for this project yet.</p></div>`;
+        } else {
+            const job = appState.jobs.find(j => j.id === jobId);
+            quotesHTML += `<div class="quotes-list">${quotes.map(quote => {
+                const attachments = quote.attachments || [];
+                let attachmentLink = attachments.length > 0 ? `<div class="quote-attachment"><i class="fas fa-paperclip"></i> <a href="${attachments[0]}" target="_blank" rel="noopener noreferrer">View Attachment</a></div>` : '';
+                const canApprove = job && job.status === 'open' && quote.status === 'submitted';
+                const messageButton = `<button class="btn btn-outline btn-sm" onclick="openConversation('${quote.jobId}', '${quote.designerId}')"><i class="fas fa-comments"></i> Message</button>`;
+                let actionButtons = messageButton;
+                if(canApprove) {
+                    actionButtons = `<button class="btn btn-success btn-sm" onclick="approveQuote('${quote.id}', '${jobId}')"><i class="fas fa-check"></i> Approve Quote</button>${messageButton}`;
+                } else if (quote.status === 'approved') {
+                    actionButtons = `<span class="status-approved"><i class="fas fa-check-circle"></i> Approved</span>${messageButton}`;
+                }
+                const statusIcon = {'submitted': 'fa-clock', 'approved': 'fa-check-circle', 'rejected': 'fa-times-circle'}[quote.status] || 'fa-question-circle';
+                
+                return `<div class="quote-item quote-status-${quote.status}"><div class="quote-item-header"><div class="designer-info"><div class="designer-avatar">${quote.designerName.charAt(0).toUpperCase()}</div><div class="designer-details"><h4>${quote.designerName}</h4><span class="quote-status-badge ${quote.status}"><i class="fas ${statusIcon}"></i> ${quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}</span></div></div><div class="quote-amount"><span class="amount-label">Quote</span><span class="amount-value">${quote.quoteAmount}</span></div></div><div class="quote-details">${quote.timeline ? `<div class="quote-meta-item"><i class="fas fa-calendar-alt"></i> <span>Timeline: <strong>${quote.timeline} days</strong></span></div>` : ''}<div class="quote-description"><p>${quote.description}</p></div>${attachmentLink}</div><div class="quote-actions">${actionButtons}</div></div>`;
+            }).join('')}</div>`;
+        }
+        showGenericModal(quotesHTML, 'max-width: 800px;');
+    } catch (error) {}
+}
+
+async function approveQuote(quoteId, jobId) {
+    if (confirm('Are you sure you want to approve this quote? This will assign the job and reject others.')) {
+        await apiCall(`/quotes/${quoteId}/approve`, 'PUT', { jobId }, 'Quote approved successfully!')
+            .then(() => {
+                closeModal();
+                fetchAndRenderJobs();
+                showNotification('Project has been assigned!', 'success');
+            })
+            .catch(() => {});
+    }
+}
+
+function showQuoteModal(jobId) {
+    const content = `<div class="modal-header"><h3><i class="fas fa-file-invoice-dollar"></i> Submit Your Quote</h3><p class="modal-subtitle">Provide your best proposal</p></div><form id="quote-form" class="modern-form"><input type="hidden" name="jobId" value="${jobId}"><div class="form-row"><div class="form-group"><label class="form-label"><i class="fas fa-dollar-sign"></i> Quote Amount ($)</label><input type="number" class="form-input" name="amount" required min="1" step="0.01"></div><div class="form-group"><label class="form-label"><i class="fas fa-calendar-alt"></i> Timeline (days)</label><input type="number" class="form-input" name="timeline" required min="1"></div></div><div class="form-group"><label class="form-label"><i class="fas fa-file-alt"></i> Proposal Description</label><textarea class="form-textarea" name="description" required placeholder="Describe your approach..."></textarea></div><div class="form-group"><label class="form-label"><i class="fas fa-paperclip"></i> Attachments</label><input type="file" class="form-input file-input" name="attachments" multiple><small class="form-help">Upload relevant documents</small></div><div class="form-actions"><button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button><button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane"></i> Submit Quote</button></div></form>`;
+    showGenericModal(content, 'max-width: 600px;');
+    document.getElementById('quote-form').addEventListener('submit', handleQuoteSubmit);
+}
+
+async function handleQuoteSubmit(event) {
+    event.preventDefault();
+    const form = event.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    try {
+        submitBtn.innerHTML = '<div class="btn-spinner"></div> Submitting...';
+        submitBtn.disabled = true;
+        const formData = new FormData(form);
+        await apiCall('/quotes', 'POST', formData, 'Quote submitted successfully!');
+        appState.userSubmittedQuotes.add(form['jobId'].value);
+        closeModal();
+        fetchAndRenderJobs();
+        showNotification('Your quote has been submitted!', 'success');
+    } catch (error) {}
+}
+
+// --- MESSAGING SYSTEM ---
+
+async function openConversation(jobId, recipientId) {
+    try {
+        const response = await apiCall('/messages/find', 'POST', { jobId, recipientId });
+        if (response.success) {
+            renderConversationView(response.data);
+        }
+    } catch (error) {}
+}
+
+async function fetchAndRenderConversations() {
+    const container = document.getElementById('app-container');
+    container.innerHTML = `<div class="section-header modern-header"><h2><i class="fas fa-comments"></i> Messages</h2><p class="header-subtitle">Communicate with clients and designers</p></div><div id="conversations-list" class="conversations-container"></div>`;
+    const listContainer = document.getElementById('conversations-list');
+    listContainer.innerHTML = `<div class="loading-spinner"><div class="spinner"></div><p>Loading conversations...</p></div>`;
+
+    try {
+        const response = await apiCall('/messages', 'GET');
+        appState.conversations = response.data || [];
+
+        if (appState.conversations.length === 0) {
+            listContainer.innerHTML = `<div class="empty-state"><div class="empty-icon"><i class="fas fa-comments"></i></div><h3>No Conversations Yet</h3><p>Start collaborating by messaging professionals from job quotes.</p><button class="btn btn-primary" onclick="renderAppSection('jobs')">Browse Projects</button></div>`;
+            return;
+        }
+
+        listContainer.innerHTML = appState.conversations.map(convo => {
+            const otherParticipant = convo.participants.find(p => p.id !== appState.currentUser.id) || {};
+            const lastMessage = convo.lastMessage ? (convo.lastMessage.length > 60 ? convo.lastMessage.substring(0, 60) + '...' : convo.lastMessage) : 'No messages yet.';
+            const avatarColor = getAvatarColor(otherParticipant.name || 'U');
+            
+            return `<div class="conversation-card" onclick="renderConversationView('${convo.id}')"><div class="convo-avatar" style="background-color: ${avatarColor}">${(otherParticipant.name || 'U').charAt(0).toUpperCase()}</div><div class="convo-details"><div class="convo-header"><h4>${otherParticipant.name || 'Unknown'}</h4></div><p class="convo-project"><i class="fas fa-briefcase"></i> <strong>${convo.jobTitle}</strong></p><p class="convo-preview">${lastMessage}</p></div></div>`;
+        }).join('');
+    } catch (error) {}
+}
+
+function getAvatarColor(name) {
+    const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
+    const index = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
+    return colors[index];
+}
+
+async function renderConversationView(conversationOrId) {
+    let conversation = (typeof conversationOrId === 'string') ? (appState.conversations.find(c => c.id === conversationOrId) || { id: conversationOrId }) : conversationOrId;
+    if (!conversation.participants) {
+        const response = await apiCall('/messages', 'GET');
+        appState.conversations = response.data || [];
+        conversation = appState.conversations.find(c => c.id === conversation.id);
+        if(!conversation) return showNotification('Conversation not found.', 'error');
+    }
+
+    const container = document.getElementById('app-container');
+    const otherParticipant = conversation.participants.find(p => p.id !== appState.currentUser.id) || {};
+    container.innerHTML = `<div class="chat-container"><div class="chat-header"><button onclick="renderAppSection('messages')" class="back-btn"><i class="fas fa-arrow-left"></i></button><div class="chat-details"><h3>${otherParticipant.name || 'Conversation'}</h3><p class="chat-project"><i class="fas fa-briefcase"></i> ${conversation.jobTitle || ''}</p></div></div><div class="chat-messages" id="chat-messages-container"></div><div class="chat-input-area"><form id="send-message-form"><input type="text" id="message-text-input" placeholder="Type your message..." required autocomplete="off"><button type="submit" class="send-button" title="Send message"><i class="fas fa-paper-plane"></i></button></form></div></div>`;
+    document.getElementById('send-message-form').addEventListener('submit', (e) => { e.preventDefault(); handleSendMessage(conversation.id); });
+
+    const messagesContainer = document.getElementById('chat-messages-container');
+    try {
+        const response = await apiCall(`/messages/${conversation.id}/messages`, 'GET');
+        messagesContainer.innerHTML = (response.data || []).map(msg => `<div class="message-wrapper ${msg.senderId === appState.currentUser.id ? 'me' : 'them'}"><div class="message-bubble ${msg.senderId === appState.currentUser.id ? 'me' : 'them'}">${msg.text}</div></div>`).join('');
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    } catch (error) {}
+}
+
+async function handleSendMessage(conversationId) {
+    const input = document.getElementById('message-text-input');
+    const text = input.value.trim();
+    if (!text) return;
+    input.disabled = true;
+    try {
+        await apiCall(`/messages/${conversationId}/messages`, 'POST', { text });
+        input.value = '';
+        renderConversationView(conversationId); // Re-render to show new message
+    } catch(error) {
+    } finally {
+        input.disabled = false;
+        input.focus();
+    }
+}
+
+// --- UI & MODAL FUNCTIONS ---
+
+function showAuthModal(view) {
+    const modalContainer = document.getElementById('modal-container');
+    modalContainer.innerHTML = `<div class="modal-overlay"><div class="modal-content" onclick="event.stopPropagation()"><button class="modal-close-button" onclick="closeModal()"><i class="fas fa-times"></i></button><div id="modal-form-container"></div></div></div>`;
+    modalContainer.querySelector('.modal-overlay').addEventListener('click', closeModal);
+    renderAuthForm(view);
+}
+
+function renderAuthForm(view) {
+    const container = document.getElementById('modal-form-container');
+    if (!container) return;
+    container.innerHTML = view === 'login' ? getLoginTemplate() : getRegisterTemplate();
+    document.getElementById(view === 'login' ? 'login-form' : 'register-form').addEventListener('submit', view === 'login' ? handleLogin : handleRegister);
+}
+
+function showGenericModal(innerHTML, style = '') {
+    const modalContainer = document.getElementById('modal-container');
+    modalContainer.innerHTML = `<div class="modal-overlay"><div class="modal-content" style="${style}" onclick="event.stopPropagation()"><button class="modal-close-button" onclick="closeModal()"><i class="fas fa-times"></i></button>${innerHTML}</div></div>`;
+    modalContainer.querySelector('.modal-overlay').addEventListener('click', closeModal);
+}
 
 function closeModal() {
-    document.getElementById('modal-container').innerHTML = '';
+    const modalContainer = document.getElementById('modal-container');
+    if (modalContainer) modalContainer.innerHTML = '';
+}
+
+function showAppView() {
+    document.getElementById('landing-page-content').style.display = 'none';
+    document.getElementById('app-content').style.display = 'flex';
+    document.getElementById('auth-buttons-container').style.display = 'none';
+    document.getElementById('user-info').style.display = 'flex';
+    
+    const user = appState.currentUser;
+    document.getElementById('userName').textContent = user.name;
+    document.getElementById('userType').textContent = user.type;
+    document.getElementById('userAvatar').textContent = (user.name || "A").charAt(0).toUpperCase();
+    document.getElementById('sidebarUserName').textContent = user.name;
+    document.getElementById('sidebarUserType').textContent = user.type;
+    document.getElementById('sidebarUserAvatar').textContent = (user.name || "A").charAt(0).toUpperCase();
+    
+    buildSidebarNav();
+    renderAppSection('jobs');
+    
+    if (user.type === 'designer') loadUserQuotes();
+}
+
+function showLandingPageView() {
+    document.getElementById('landing-page-content').style.display = 'block';
+    document.getElementById('app-content').style.display = 'none';
+    document.getElementById('auth-buttons-container').style.display = 'flex';
+    document.getElementById('user-info').style.display = 'none';
+}
+
+function buildSidebarNav() {
+    const navContainer = document.getElementById('sidebar-nav-menu');
+    const role = appState.currentUser.type;
+    let links = (role === 'designer')
+        ? `<a href="#" class="sidebar-nav-link" data-section="jobs"><i class="fas fa-search fa-fw"></i> <span>Find Projects</span></a><a href="#" class="sidebar-nav-link" data-section="my-quotes"><i class="fas fa-file-invoice-dollar fa-fw"></i> <span>My Quotes</span></a>`
+        : `<a href="#" class="sidebar-nav-link" data-section="jobs"><i class="fas fa-tasks fa-fw"></i> <span>My Projects</span></a><a href="#" class="sidebar-nav-link" data-section="approved-jobs"><i class="fas fa-check-circle fa-fw"></i> <span>Approved Projects</span></a><a href="#" class="sidebar-nav-link" data-section="post-job"><i class="fas fa-plus-circle fa-fw"></i> <span>Post Project</span></a>`;
+    links += `<a href="#" class="sidebar-nav-link" data-section="messages"><i class="fas fa-comments fa-fw"></i> <span>Messages</span></a>`;
+    navContainer.innerHTML = links;
+    navContainer.querySelectorAll('.sidebar-nav-link').forEach(link => link.addEventListener('click', (e) => { e.preventDefault(); renderAppSection(link.dataset.section); }));
+}
+
+function renderAppSection(sectionId) {
+    const container = document.getElementById('app-container');
+    document.querySelectorAll('.sidebar-nav-link').forEach(link => {
+        link.classList.toggle('active', link.dataset.section === sectionId);
+    });
+    
+    const user = appState.currentUser;
+    const userRole = user.type;
+
+    if (sectionId === 'jobs') {
+        const title = userRole === 'designer' ? 'Available Projects' : 'My Posted Projects';
+        const subtitle = userRole === 'designer' ? 'Browse and submit quotes' : 'Manage your project listings';
+        
+        let welcomeDashboardHTML = '';
+        if (userRole === 'contractor') {
+            welcomeDashboardHTML = `
+            <div class="welcome-dashboard">
+                <div class="welcome-header">
+                    <h2>Welcome back, ${user.name}</h2>
+                    <p>Select an action below to manage your projects and connect with professionals.</p>
+                </div>
+                <div class="welcome-carousel">
+                    <div class="action-card card-post" onclick="renderAppSection('post-job')">
+                        <div class="action-card-icon"><i class="fas fa-plus-circle"></i></div>
+                        <div class="action-card-content"><h3>Post a New Project</h3><p>Get quotes from top-tier engineering talent.</p></div>
+                    </div>
+                    <div class="action-card card-manage" onclick="renderAppSection('jobs')">
+                        <div class="action-card-icon"><i class="fas fa-tasks"></i></div>
+                        <div class="action-card-content"><h3>Manage My Projects</h3><p>View quotes and track your open projects.</p></div>
+                    </div>
+                    <div class="action-card card-approved" onclick="renderAppSection('approved-jobs')">
+                        <div class="action-card-icon"><i class="fas fa-check-circle"></i></div>
+                        <div class="action-card-content"><h3>Approved Projects</h3><p>Collaborate with your assigned designers.</p></div>
+                    </div>
+                    <div class="action-card card-messages" onclick="renderAppSection('messages')">
+                        <div class="action-card-icon"><i class="fas fa-comments"></i></div>
+                        <div class="action-card-content"><h3>Messages</h3><p>Communicate directly with professionals.</p></div>
+                    </div>
+                    <div class="carousel-dots"></div>
+                </div>
+            </div>`;
+        }
+
+        container.innerHTML = `
+            ${welcomeDashboardHTML} 
+            <div class="section-header modern-header" style="margin-top: ${userRole === 'contractor' ? 'var(--space-12)' : '0'};">
+                <div class="header-content"><h2><i class="fas ${userRole === 'designer' ? 'fa-search' : 'fa-tasks'}"></i> ${title}</h2><p class="header-subtitle">${subtitle}</p></div>
+            </div>
+            <div id="jobs-list" class="jobs-grid"></div>
+            <div id="load-more-container" class="load-more-section"></div>`;
+        
+        if (userRole === 'contractor') {
+            initializeWelcomeCarousel();
+        }
+        fetchAndRenderJobs();
+
+    } else if (sectionId === 'post-job') {
+        container.innerHTML = getPostJobTemplate();
+        document.getElementById('post-job-form').addEventListener('submit', handlePostJob);
+    } else if (sectionId === 'my-quotes') {
+        fetchAndRenderMyQuotes();
+    } else if (sectionId === 'approved-jobs') {
+        fetchAndRenderApprovedJobs();
+    } else if (sectionId === 'messages') {
+        fetchAndRenderConversations();
+    }
 }
 
 function showNotification(message, type = 'info', duration = 4000) {
     const container = document.getElementById('alerts-container');
+    if (!container) return;
     const notification = document.createElement('div');
     notification.className = `alert alert-${type}`;
-    notification.innerHTML = `<span>${message}</span>`;
+    const icons = { success: 'fa-check-circle', error: 'fa-exclamation-triangle', info: 'fa-info-circle' };
+    notification.innerHTML = `<div class="notification-content"><i class="fas ${icons[type]}"></i><span>${message}</span></div><button class="notification-close" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>`;
     container.appendChild(notification);
-    setTimeout(() => notification.remove(), duration);
+    setTimeout(() => { if (notification.parentElement) notification.remove(); }, duration);
 }
 
-// --- H. TEMPLATE GENERATORS ---
+function showAlert(message, type = 'info') { showNotification(message, type); }
 
-function getWelcomeDashboardTemplate(userName) {
-    return `
-    <div class="welcome-dashboard">
-        <div class="welcome-header">
-            <h2>Welcome to SteelConnect Premium, ${userName}</h2>
-            <p>Experience the ultimate in professional steel construction services</p>
-        </div>
-        <div class="welcome-carousel">
-            <div class="action-card" onclick="renderAppSection('post-job')">
-                <div class="action-card-icon"><i class="fas fa-rocket"></i></div>
-                <div class="action-card-content">
-                    <h3>Launch Premium Project</h3>
-                    <p>Access top-tier talent with priority matching and dedicated support.</p>
-                </div>
-            </div>
-            <div class="action-card" onclick="renderAppSection('jobs')">
-                <div class="action-card-icon"><i class="fas fa-chart-line"></i></div>
-                <div class="action-card-content">
-                    <h3>Project Analytics</h3>
-                    <p>Advanced insights and performance metrics for your projects.</p>
-                </div>
-            </div>
-            <div class="action-card" onclick="renderAppSection('approved-jobs')">
-                <div class="action-card-icon"><i class="fas fa-shield-alt"></i></div>
-                <div class="action-card-content">
-                    <h3>Active Collaborations</h3>
-                    <p>Work directly with certified professionals on approved projects.</p>
-                </div>
-            </div>
-            <div class="action-card" onclick="renderAppSection('messages')">
-                <div class="action-card-icon"><i class="fas fa-concierge-bell"></i></div>
-                <div class="action-card-content">
-                    <h3>Concierge Support</h3>
-                    <p>24/7 premium support and direct communication with your team.</p>
-                </div>
-            </div>
-        </div>
-    </div>`;
+// --- TEMPLATE GETTERS ---
+
+function getLoginTemplate() {
+    return `<div class="auth-header"><h2><i class="fas fa-sign-in-alt"></i> Welcome Back</h2><p>Sign in to your SteelConnect account</p></div><form id="login-form" class="modern-form"><div class="form-group"><label class="form-label"><i class="fas fa-envelope"></i> Email</label><input type="email" class="form-input" name="loginEmail" required></div><div class="form-group"><label class="form-label"><i class="fas fa-lock"></i> Password</label><input type="password" class="form-input" name="loginPassword" required></div><button type="submit" class="btn btn-primary btn-full"><i class="fas fa-sign-in-alt"></i> Sign In</button></form><div class="auth-switch">Don't have an account? <a onclick="renderAuthForm('register')" class="auth-link">Create Account</a></div>`;
 }
 
-function getJobCardTemplate(job) {
-    return `
-    <div class="job-card" data-job-id="${job.id}">
-        <div class="job-header">
-            <div class="job-title-section">
-                <h3>${job.title}</h3>
-                <span class="job-status-badge open"><i class="fas fa-star"></i> Premium Open</span>
-            </div>
-            <div class="job-budget-section">
-                <span class="budget-label">Premium Budget</span>
-                <span class="budget-amount">${job.budget}</span>
-            </div>
-        </div>
-        <div class="job-meta">
-            <div class="job-meta-item"><i class="fas fa-building"></i> <span>Client: <strong>${job.posterName}</strong></span></div>
-            <div class="job-meta-item"><i class="fas fa-calendar-alt"></i> <span>Deadline: <strong>${new Date(job.deadline).toLocaleDateString()}</strong></span></div>
-        </div>
-        <div class="job-description">
-            <p>${job.description}</p>
-        </div>
-        <div class="job-actions">
-            <button class="btn btn-premium" onclick="viewQuotes('${job.id}')">
-                <i class="fas fa-eye"></i> View Proposals (${job.quotesCount || 0})
-            </button>
-        </div>
-    </div>`;
+function getRegisterTemplate() {
+    return `<div class="auth-header"><h2><i class="fas fa-user-plus"></i> Join SteelConnect</h2><p>Create your professional account</p></div><form id="register-form" class="modern-form"><div class="form-group"><label class="form-label"><i class="fas fa-user"></i> Full Name</label><input type="text" class="form-input" name="regName" required></div><div class="form-group"><label class="form-label"><i class="fas fa-envelope"></i> Email</label><input type="email" class="form-input" name="regEmail" required></div><div class="form-group"><label class="form-label"><i class="fas fa-lock"></i> Password</label><input type="password" class="form-input" name="regPassword" required></div><div class="form-group"><label class="form-label"><i class="fas fa-user-tag"></i> I am a...</label><select class="form-select" name="regRole" required><option value="" disabled selected>Select role</option><option value="contractor">Client / Contractor</option><option value="designer">Designer / Engineer</option></select></div><button type="submit" class="btn btn-primary btn-full"><i class="fas fa-user-plus"></i> Create Account</button></form><div class="auth-switch">Already have an account? <a onclick="renderAuthForm('login')" class="auth-link">Sign In</a></div>`;
 }
 
-function getPremiumLoginTemplate() {
-    return `<div class="auth-header"><h2><i class="fas fa-crown"></i> Premium Access</h2><p>Sign in to your account</p></div><form id="login-form"><div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" name="loginEmail" required value="premium.client@example.com"></div><div class="form-group"><label class="form-label">Password</label><input type="password" class="form-input" name="loginPassword" required value="password"></div><button type="submit" class="btn btn-premium">Access Dashboard</button></form>`;
+function getPostJobTemplate() {
+    return `<div class="section-header modern-header"><h2><i class="fas fa-plus-circle"></i> Post a New Project</h2><p class="header-subtitle">Create a detailed project listing to attract professionals</p></div><div class="post-job-container"><form id="post-job-form" class="modern-form post-job-form"><div class="form-section"><h3><i class="fas fa-info-circle"></i> Project Details</h3><div class="form-group"><label class="form-label"><i class="fas fa-heading"></i> Project Title</label><input type="text" class="form-input" name="title" required placeholder="e.g., Structural Steel Design for Warehouse"></div><div class="form-row"><div class="form-group"><label class="form-label"><i class="fas fa-dollar-sign"></i> Budget</label><input type="text" class="form-input" name="budget" required placeholder="e.g., $5,000 - $10,000"></div><div class="form-group"><label class="form-label"><i class="fas fa-calendar-alt"></i> Deadline</label><input type="date" class="form-input" name="deadline" required></div></div><div class="form-group"><label class="form-label"><i class="fas fa-tools"></i> Skills</label><input type="text" class="form-input" name="skills" placeholder="e.g., AutoCAD, Revit, Steel Design"><small class="form-help">Separate with commas</small></div></div><div class="form-section"><h3><i class="fas fa-file-alt"></i> Description</h3><div class="form-group"><label class="form-label"><i class="fas fa-align-left"></i> Details</label><textarea class="form-textarea" name="description" required placeholder="Provide a comprehensive project description..."></textarea></div><div class="form-group"><label class="form-label"><i class="fas fa-paperclip"></i> Attachments</label><input type="file" class="form-input file-input" name="attachment"><small class="form-help">Upload drawings, specifications, etc.</small></div></div><div class="form-actions"><button type="submit" class="btn btn-primary btn-large"><i class="fas fa-rocket"></i> Post Project</button></div></form></div>`;
 }
 
-function getPremiumRegisterTemplate() {
-    return `<div class="auth-header"><h2><i class="fas fa-star"></i> Join Premium</h2><p>Create your exclusive account</p></div><form id="register-form"><div class="form-group"><label class="form-label">Name</label><input type="text" class="form-input" name="regName" required></div><div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" name="regEmail" required></div><div class="form-group"><label class="form-label">Password</label><input type="password" class="form-input" name="regPassword" required></div><button type="submit" class="btn btn-premium">Create Premium Account</button></form>`;
+async function analyzeJobQuotes(jobId) {
+    try {
+        const response = await apiCall(`/analysis/job/${jobId}`, 'GET');
+        const analysis = response.data;
+        const analysisHtml = `<div class="modal-header"><h3><i class="fas fa-chart-bar"></i> Quote Analysis</h3><p class="modal-subtitle">For: <strong>${analysis.jobTitle}</strong></p></div><div class="analysis-results" style="padding:0 32px 32px;"><div class="analysis-stat"><span>Total Quotes</span><strong>${analysis.totalQuotes}</strong></div><hr><h4>Quote Amount</h4><div class="analysis-stat"><span>Average</span><strong>$${analysis.averageAmount}</strong></div><div class="analysis-stat"><span>Lowest</span><strong style="color:#10B981;">$${analysis.lowestAmount}</strong></div><div class="analysis-stat"><span>Highest</span><strong style="color:#EF4444;">$${analysis.highestAmount}</strong></div><hr><h4>Timeline (Days)</h4><div class="analysis-stat"><span>Average</span><strong>${analysis.averageDeliveryTime} days</strong></div></div>`;
+        showGenericModal(analysisHtml, 'max-width: 600px;');
+    } catch (error) {}
 }
 
-function getLandingPageTemplate() {
-    // Returns a simplified version of your landing page for SPA context.
-    return `<main><section class="hero" id="hero-section"><div class="hero-background"></div><div class="hero-content"><div class="hero-text"><h1>SteelConnect: The <span class="highlight">Premium Platform</span> for Elite Contractors</h1><p>Join the exclusive marketplace where premium contractors connect with world-class steel designers and structural engineers.</p><div class="hero-cta"><button id="get-started-btn" class="btn btn-premium">Start Premium Journey <i class="fas fa-crown"></i></button></div></div></div></section></main>`;
-}
-
-function getMockJobs() {
-    // Mock data for demonstration purposes
-    return {
-        success: true,
-        data: [
-            { id: '1', title: 'Premium Steel Framework for Luxury Resort', description: 'Design and engineer steel framework for a 5-star luxury resort complex. Requires expertise in seismic engineering and aesthetic integration.', budget: '$75,000 - $125,000', posterName: 'Elite Construction Group', deadline: '2025-12-31', quotesCount: 8 },
-            { id: '2', title: 'High-Rise Commercial Tower Structural Design', description: 'Complete structural steel design for 45-story commercial tower in downtown financial district. Premium materials and cutting-edge engineering required.', budget: '$200,000 - $300,000', posterName: 'Metropolitan Developers', deadline: '2026-01-15', quotesCount: 12 },
-        ]
-    };
+async function analyzeDesignerStats() {
+    try {
+        const response = await apiCall('/analysis/designer/stats', 'GET');
+        const stats = response.data;
+        const statsHtml = `<div class="modal-header"><h3><i class="fas fa-user-chart"></i> Your Stats</h3></div><div class="analysis-results" style="padding:0 32px 32px;"><div class="analysis-stat"><span>Total Quotes</span><strong>${stats.totalQuotes}</strong></div><hr><div class="analysis-stat"><span>Accepted</span><strong style="color:#10B981;">${stats.acceptedQuotes}</strong></div><div class="analysis-stat"><span>Pending</span><strong>${stats.pendingQuotes}</strong></div><hr><div class="analysis-stat"><span>Acceptance Rate</span><strong style="color:#3B82F6;">${stats.acceptanceRate}%</strong></div></div>`;
+        showGenericModal(statsHtml, 'max-width: 500px;');
+    } catch (error) {}
 }
