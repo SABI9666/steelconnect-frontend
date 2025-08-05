@@ -1,3 +1,37 @@
+// --- HERO BACKGROUND SLIDER ---
+let heroSliderInterval = null;
+let heroSliderInitialized = false;
+
+function initializeHeroSlider() {
+    // Prevent multiple initializations
+    if (heroSliderInitialized) {
+        return;
+    }
+    
+    const heroSlides = document.querySelectorAll('.hero-bg-slide');
+
+    if (heroSlides.length > 1) {
+        let current = 0;
+        heroSlides[current].classList.add('active');
+
+        // Clear any previous interval just in case
+        if (heroSliderInterval) {
+            clearInterval(heroSliderInterval);
+        }
+
+        heroSliderInterval = setInterval(() => {
+            heroSlides[current].classList.remove('active');
+            current = (current + 1) % heroSlides.length;
+            heroSlides[current].classList.add('active');
+        }, 4000); // 4-second interval
+
+        heroSliderInitialized = true;
+    } else if (heroSlides.length === 1) {
+        heroSlides[0].classList.add('active');
+        heroSliderInitialized = true;
+    }
+}
+
 // --- LANDING PAGE SLIDER LOGIC ---
 let currentSlide = 0;
 const sliderWrapper = document.getElementById('slider-wrapper');
@@ -36,6 +70,12 @@ document.querySelectorAll('.nav-link[href^="#"]').forEach(link => {
 
 // --- FULL APPLICATION SCRIPT ---
 document.addEventListener('DOMContentLoaded', initializeApp);
+// Backup initializer
+window.addEventListener('load', () => {
+    if (!heroSliderInitialized) {
+        initializeHeroSlider();
+    }
+});
 
 // --- CONSTANTS & STATE ---
 const BACKEND_URL = 'https://steelconnect-backend.onrender.com/api';
@@ -120,6 +160,11 @@ function initializeApp() {
     } else {
         showLandingPageView();
     }
+    
+    // Initialize hero background slider
+    setTimeout(() => {
+        initializeHeroSlider();
+    }, 500);
 }
 
 // --- NEW: AUTOMATIC WELCOME CAROUSEL ---

@@ -170,7 +170,7 @@
             }
         }
         
-        /* --- ENHANCED HERO SECTION --- */
+        /* --- ENHANCED HERO SECTION WITH ROTATING BACKGROUND --- */
         .hero { 
             position: relative;
             min-height: 100vh;
@@ -179,19 +179,54 @@
             background-color: #0f172a; /* Fallback color */
             overflow: hidden;
         }
-        #hero-video-background {
+        
+        .hero-background-slider {
             position: absolute;
-            top: 50%;
-            left: 50%;
-            min-width: 100%;
-            min-height: 100%;
-            width: auto;
-            height: auto;
-            transform: translateX(-50%) translateY(-50%);
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             z-index: 0;
-            opacity: 0.15;
-            object-fit: cover;
         }
+        
+        .hero-bg-slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            transition: opacity 2s ease-in-out;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            transform: scale(1.1);
+        }
+        
+        .hero-bg-slide.active {
+            opacity: 0.4;
+            animation: kenburns-hero 20s ease-in-out infinite;
+        }
+        
+        @keyframes kenburns-hero {
+            0% { transform: scale(1.1) translateX(0) translateY(0); }
+            25% { transform: scale(1.15) translateX(-10px) translateY(5px); }
+            50% { transform: scale(1.2) translateX(10px) translateY(-5px); }
+            75% { transform: scale(1.15) translateX(-5px) translateY(10px); }
+            100% { transform: scale(1.1) translateX(0) translateY(0); }
+        }
+        
+        .hero-bg-slide::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.6));
+            z-index: 1;
+        }
+
         .hero::before {
             content: '';
             position: absolute;
@@ -200,10 +235,34 @@
             right: 0;
             bottom: 0;
             background: 
-                radial-gradient(circle at 20% 80%, rgba(30, 64, 175, 0.4) 0%, transparent 50%),
-                radial-gradient(circle at 80% 20%, rgba(15, 118, 110, 0.3) 0%, transparent 50%),
-                radial-gradient(circle at 40% 40%, rgba(8, 145, 178, 0.2) 0%, transparent 50%);
+                radial-gradient(circle at 15% 85%, rgba(245, 158, 11, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 85% 15%, rgba(30, 64, 175, 0.2) 0%, transparent 50%),
+                radial-gradient(circle at 50% 50%, rgba(15, 118, 110, 0.1) 0%, transparent 60%),
+                linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.85) 100%);
             z-index: 1;
+        }
+        
+        .hero::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                radial-gradient(2px 2px at 20px 30px, rgba(255, 255, 255, 0.15), transparent),
+                radial-gradient(2px 2px at 40px 70px, rgba(245, 158, 11, 0.2), transparent),
+                radial-gradient(1px 1px at 90px 40px, rgba(30, 64, 175, 0.3), transparent),
+                radial-gradient(1px 1px at 130px 80px, rgba(255, 255, 255, 0.1), transparent);
+            background-repeat: repeat;
+            background-size: 150px 100px;
+            animation: float-particles 20s linear infinite;
+            z-index: 1;
+        }
+        
+        @keyframes float-particles {
+            0% { transform: translateY(0px); }
+            100% { transform: translateY(-100px); }
         }
         .hero-content { 
             position: relative;
@@ -1011,12 +1070,15 @@
 
     <div id="landing-page-content">
         <main>
-            <section class="hero">
-                <video id="hero-video-background" autoplay loop muted playsinline>
-                    <source src="https://assets.mixkit.co/videos/preview/mixkit-architect-working-on-a-city-plan-4235-large.mp4" type="video/mp4">
-                    Your browser does not support the video tag.
-                </video>
-                <div class="hero-content">
+                    <section class="hero">
+            <div class="hero-background-slider">
+                <div class="hero-bg-slide active" style="background-image: url('https://images.unsplash.com/photo-1541888946425-d81bb19240f5?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80');"></div>
+                <div class="hero-bg-slide" style="background-image: url('https://images.unsplash.com/photo-1503387762-592deb58ef4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=2071&q=80');"></div>
+                <div class="hero-bg-slide" style="background-image: url('https://images.unsplash.com/photo-1621905252507-b35492cc74b4?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80');"></div>
+                <div class="hero-bg-slide" style="background-image: url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80');"></div>
+                <div class="hero-bg-slide" style="background-image: url('https://images.unsplash.com/photo-1558618666-fcd25c85cd64?ixlib=rb-4.0.3&auto=format&fit=crop&w=2071&q=80');"></div>
+            </div>
+            <div class="hero-content">
                     <div class="hero-text">
                         <h1>SteelConnect: The <span class="highlight">Premier Platform</span> Connecting Designers & Contractors</h1>
                         <p>Join the leading marketplace where steel designers, structural engineers, and contractors collaborate seamlessly. Build your professional network, showcase expertise, and deliver exceptional projects together.</p>
