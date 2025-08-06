@@ -1033,26 +1033,36 @@ function renderEstimatesSection() {
         <div class="section-header modern-header">
             <div class="header-content">
                 <h2><i class="fas fa-calculator"></i> Steel Tonnage & Cost Estimator</h2>
-                <p class="header-subtitle">Upload MTO or DWG files, or enter tonnage manually for detailed cost estimations based on regional pricing.</p>
+                <p class="header-subtitle">Upload project files or enter tonnage manually for a detailed cost estimation.</p>
             </div>
         </div>
         <div class="tonnage-estimator-container">
             <div class="tonnage-form-panel">
                 <form id="tonnage-estimator-form" class="modern-form">
                     <div class="form-section">
-                        <h3><i class="fas fa-file-upload"></i> Upload MTO / DWG (Optional)</h3>
-                        <div class="file-upload-area" id="tonnage-drop-zone">
-                            <div class="upload-icon"><i class="fas fa-file-excel"></i></div>
-                            <h4>Drag & Drop MTO or DWG File</h4>
-                            <p>Or click to browse for a DWG, PDF, Excel, or CSV file</p>
-                            <input type="file" id="tonnage-file-input" class="file-input" accept=".dwg,.pdf,.xlsx,.xls,.csv">
+                        <h3><i class="fas fa-file-upload"></i> 1. Upload Project Files (Optional)</h3>
+                        <div class="upload-area-grid">
+                            <!-- MTO Upload Card -->
+                            <div class="file-upload-area" id="mto-drop-zone">
+                                <div class="upload-icon-bg"><i class="fas fa-file-excel"></i></div>
+                                <h4>Upload MTO Files</h4>
+                                <p>Excel, CSV, or PDF</p>
+                                <input type="file" id="mto-file-input" class="file-input" accept=".xlsx,.xls,.csv,.pdf" multiple>
+                            </div>
+                            <!-- DWG Upload Card -->
+                            <div class="file-upload-area" id="dwg-drop-zone">
+                                <div class="upload-icon-bg"><i class="fas fa-drafting-compass"></i></div>
+                                <h4>Upload DWG Files</h4>
+                                <p>CAD Drawings</p>
+                                <input type="file" id="dwg-file-input" class="file-input" accept=".dwg" multiple>
+                            </div>
                         </div>
                         <div id="tonnage-file-info-container" class="file-info-display" style="display: none;"></div>
                         <iframe id="tonnage-pdf-preview" class="pdf-preview" style="display:none;"></iframe>
                     </div>
 
                     <div class="form-section">
-                        <h3><i class="fas fa-info-circle"></i> Project Details</h3>
+                        <h3><i class="fas fa-info-circle"></i> 2. Enter Project Details</h3>
                         <div class="form-group">
                             <label class="form-label" for="projectName">Project Name</label>
                             <input type="text" id="projectName" class="form-input" placeholder="e.g., Downtown Office Tower">
@@ -1077,11 +1087,7 @@ function renderEstimatesSection() {
                                 <input type="text" id="steelGrade" class="form-input" placeholder="e.g., Grade 50, S355" list="gradesList">
                             </div>
                         </div>
-                    </div>
-
-                    <div class="form-section">
-                        <h3><i class="fas fa-globe-americas"></i> Regional Specifications</h3>
-                        <div class="form-row">
+                         <div class="form-row">
                             <div class="form-group">
                                 <label class="form-label" for="region">Region/Country</label>
                                 <select id="region" class="form-select"></select>
@@ -1095,11 +1101,11 @@ function renderEstimatesSection() {
                     </div>
 
                     <div class="form-section">
-                        <h3><i class="fas fa-weight-hanging"></i> Steel Tonnage</h3>
+                        <h3><i class="fas fa-weight-hanging"></i> 3. Confirm Tonnage</h3>
                         <div class="form-group">
-                            <label class="form-label" for="totalTonnageInput">Manual Tonnage Entry (Optional)</label>
-                            <input type="number" id="totalTonnageInput" class="form-input" placeholder="Enter total tonnage or upload a file" step="0.01" min="0.1">
-                             <small class="form-help">Enter tonnage directly, or leave blank if uploading a file for automatic extraction.</small>
+                            <label class="form-label" for="totalTonnageInput">Total Steel Tonnage (Metric Tons)</label>
+                            <input type="number" id="totalTonnageInput" class="form-input" placeholder="Enter tonnage or upload a file" step="0.01" min="0.1">
+                             <small class="form-help">This value is auto-filled if a file is processed successfully.</small>
                         </div>
                     </div>
 
@@ -1131,34 +1137,43 @@ function initializeTonnageEstimator() {
     for (const key in regionalPricing) {
         currencySelect.innerHTML += `<option value="${regionalPricing[key].currency}">${regionalPricing[key].currency}</option>`;
     }
-    
+
     // Set defaults and update display
     regionSelect.value = 'us';
     updateRegionalPricingDisplay();
 
     // Attach listeners
-    const calculateBtn = document.getElementById('calculate-estimate-btn');
-    calculateBtn.addEventListener('click', handleCalculateSteelEstimate);
-    
+    document.getElementById('calculate-estimate-btn').addEventListener('click', handleCalculateSteelEstimate);
     regionSelect.addEventListener('change', updateRegionalPricingDisplay);
 
-    const dropZone = document.getElementById('tonnage-drop-zone');
-    const fileInput = document.getElementById('tonnage-file-input');
-    
-    dropZone.addEventListener('click', () => fileInput.click());
-    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-    dropZone.addEventListener('dragleave', e => { e.preventDefault(); dropZone.classList.remove('drag-over'); });
-    dropZone.addEventListener('drop', e => {
+    // MTO Upload Listeners
+    const mtoDropZone = document.getElementById('mto-drop-zone');
+    const mtoFileInput = document.getElementById('mto-file-input');
+    mtoDropZone.addEventListener('click', () => mtoFileInput.click());
+    mtoDropZone.addEventListener('dragover', e => { e.preventDefault(); mtoDropZone.classList.add('drag-over'); });
+    mtoDropZone.addEventListener('dragleave', e => { e.preventDefault(); mtoDropZone.classList.remove('drag-over'); });
+    mtoDropZone.addEventListener('drop', e => {
         e.preventDefault();
-        dropZone.classList.remove('drag-over');
-        if (e.dataTransfer.files.length > 0) {
-            handleTonnageFile(e.dataTransfer.files[0]);
-        }
+        mtoDropZone.classList.remove('drag-over');
+        if (e.dataTransfer.files.length > 0) handleTonnageFile(e.dataTransfer.files[0]);
     });
-    fileInput.addEventListener('change', e => {
-        if (e.target.files.length > 0) {
-            handleTonnageFile(e.target.files[0]);
-        }
+    mtoFileInput.addEventListener('change', e => {
+        if (e.target.files.length > 0) handleTonnageFile(e.target.files[0]);
+    });
+
+    // DWG Upload Listeners
+    const dwgDropZone = document.getElementById('dwg-drop-zone');
+    const dwgFileInput = document.getElementById('dwg-file-input');
+    dwgDropZone.addEventListener('click', () => dwgFileInput.click());
+    dwgDropZone.addEventListener('dragover', e => { e.preventDefault(); dwgDropZone.classList.add('drag-over'); });
+    dwgDropZone.addEventListener('dragleave', e => { e.preventDefault(); dwgDropZone.classList.remove('drag-over'); });
+    dwgDropZone.addEventListener('drop', e => {
+        e.preventDefault();
+        dwgDropZone.classList.remove('drag-over');
+        if (e.dataTransfer.files.length > 0) handleTonnageFile(e.dataTransfer.files[0]);
+    });
+    dwgFileInput.addEventListener('change', e => {
+        if (e.target.files.length > 0) handleTonnageFile(e.target.files[0]);
     });
 }
 
@@ -1179,11 +1194,11 @@ function handleTonnageFile(file) {
     tonnageEstimatorState.currentFile = file;
     const infoContainer = document.getElementById('tonnage-file-info-container');
     const pdfPreview = document.getElementById('tonnage-pdf-preview');
-    
+
     const fileSize = (file.size / (1024 * 1024)).toFixed(2);
     infoContainer.innerHTML = `<div class="file-item"><i class="fas fa-file"></i><span class="file-name">${file.name} (${fileSize} MB)</span><span id="file-status" class="file-status-processing">Processing...</span></div>`;
     infoContainer.style.display = 'block';
-    
+
     pdfPreview.style.display = 'none';
 
     if (file.type === 'application/pdf') {
@@ -1191,7 +1206,7 @@ function handleTonnageFile(file) {
         pdfPreview.src = fileURL;
         pdfPreview.style.display = 'block';
     }
-    
+
     // Simulate processing for tonnage extraction
     setTimeout(() => {
         const baseTonnage = Math.random() * 800 + 50; // 50-850 MT
@@ -1200,7 +1215,7 @@ function handleTonnageFile(file) {
         const statusSpan = document.getElementById('file-status');
         statusSpan.textContent = `Processed - ${tonnageEstimatorState.extractedTonnage} MT extracted`;
         statusSpan.className = 'file-status-success';
-        showNotification('MTO file processed successfully!', 'success');
+        showNotification('File processed successfully! Tonnage has been estimated.', 'success');
     }, 2000);
 }
 
@@ -1219,7 +1234,7 @@ function handleCalculateSteelEstimate() {
         return showNotification('Please select a region.', 'error');
     }
     if (totalTonnage <= 0) {
-        return showNotification('Please enter a valid tonnage or upload an MTO file.', 'error');
+        return showNotification('Please enter a valid tonnage or upload a file for extraction.', 'error');
     }
 
     const pricing = regionalPricing[region];
@@ -1255,7 +1270,7 @@ function handleCalculateSteelEstimate() {
 function displayTonnageEstimateResults() {
     const container = document.getElementById('tonnage-result-container');
     const est = tonnageEstimatorState.currentEstimate;
-    
+
     const formatCurrency = (val) => `${est.currency} ${Math.round(val).toLocaleString()}`;
 
     container.innerHTML = `
