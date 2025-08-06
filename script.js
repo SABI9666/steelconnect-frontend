@@ -1,4 +1,4 @@
-/ --- LANDING PAGE SLIDER LOGIC ---
+// --- LANDING PAGE SLIDER LOGIC ---
 let currentSlide = 0;
 const sliderWrapper = document.getElementById('slider-wrapper');
 const sliderDots = document.querySelectorAll('.slider-dot');
@@ -866,7 +866,7 @@ function renderAppSection(sectionId) {
         container.innerHTML = getPostJobTemplate();
         document.getElementById('post-job-form').addEventListener('submit', handlePostJob);
     } else if (sectionId === 'estimates') {
-        renderTonnageEstimatorSection();
+        renderEstimatesSection();
     } else if (sectionId === 'my-quotes') {
         fetchAndRenderMyQuotes();
     } else if (sectionId === 'approved-jobs') {
@@ -1003,7 +1003,6 @@ async function analyzeDesignerStats() {
     } catch (error) {}
 }
 
-
 // --- NEW: STEEL TONNAGE ESTIMATOR ---
 
 // Global state for the estimator
@@ -1027,7 +1026,7 @@ const regionalPricing = {
     'south-africa': { basePrice: 18000, fabrication: 12000, erection: 9000, currency: 'ZAR', info: 'South African market - SANS standards' }
 };
 
-function renderTonnageEstimatorSection() {
+function renderEstimatesSection() {
     const container = document.getElementById('app-container');
     container.innerHTML = `
         <div class="section-header modern-header">
@@ -1131,7 +1130,7 @@ function initializeTonnageEstimator() {
     for (const key in regionalPricing) {
         currencySelect.innerHTML += `<option value="${regionalPricing[key].currency}">${regionalPricing[key].currency}</option>`;
     }
-    
+
     // Set defaults and update display
     regionSelect.value = 'us';
     updateRegionalPricingDisplay();
@@ -1139,12 +1138,12 @@ function initializeTonnageEstimator() {
     // Attach listeners
     const calculateBtn = document.getElementById('calculate-estimate-btn');
     calculateBtn.addEventListener('click', handleCalculateSteelEstimate);
-    
+
     regionSelect.addEventListener('change', updateRegionalPricingDisplay);
 
     const dropZone = document.getElementById('tonnage-drop-zone');
     const fileInput = document.getElementById('tonnage-file-input');
-    
+
     dropZone.addEventListener('click', () => fileInput.click());
     dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
     dropZone.addEventListener('dragleave', e => { e.preventDefault(); dropZone.classList.remove('drag-over'); });
@@ -1179,11 +1178,11 @@ function handleTonnageFile(file) {
     tonnageEstimatorState.currentFile = file;
     const infoContainer = document.getElementById('tonnage-file-info-container');
     const pdfPreview = document.getElementById('tonnage-pdf-preview');
-    
+
     const fileSize = (file.size / (1024 * 1024)).toFixed(2);
     infoContainer.innerHTML = `<div class="file-item"><i class="fas fa-file"></i><span class="file-name">${file.name} (${fileSize} MB)</span><span id="file-status" class="file-status-processing">Processing...</span></div>`;
     infoContainer.style.display = 'block';
-    
+
     pdfPreview.style.display = 'none';
 
     if (file.type === 'application/pdf') {
@@ -1191,7 +1190,7 @@ function handleTonnageFile(file) {
         pdfPreview.src = fileURL;
         pdfPreview.style.display = 'block';
     }
-    
+
     // Simulate processing for tonnage extraction
     setTimeout(() => {
         const baseTonnage = Math.random() * 800 + 50; // 50-850 MT
@@ -1255,7 +1254,7 @@ function handleCalculateSteelEstimate() {
 function displayTonnageEstimateResults() {
     const container = document.getElementById('tonnage-result-container');
     const est = tonnageEstimatorState.currentEstimate;
-    
+
     const formatCurrency = (val) => `${est.currency} ${Math.round(val).toLocaleString()}`;
 
     container.innerHTML = `
