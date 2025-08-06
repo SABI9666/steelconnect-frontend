@@ -1003,6 +1003,7 @@ async function analyzeDesignerStats() {
     } catch (error) {}
 }
 
+
 // --- NEW: STEEL TONNAGE ESTIMATOR ---
 
 // Global state for the estimator
@@ -1032,19 +1033,19 @@ function renderEstimatesSection() {
         <div class="section-header modern-header">
             <div class="header-content">
                 <h2><i class="fas fa-calculator"></i> Steel Tonnage & Cost Estimator</h2>
-                <p class="header-subtitle">Upload MTO documents or enter tonnage manually for detailed cost estimations based on regional pricing.</p>
+                <p class="header-subtitle">Upload MTO or DWG files, or enter tonnage manually for detailed cost estimations based on regional pricing.</p>
             </div>
         </div>
         <div class="tonnage-estimator-container">
             <div class="tonnage-form-panel">
                 <form id="tonnage-estimator-form" class="modern-form">
                     <div class="form-section">
-                        <h3><i class="fas fa-file-upload"></i> Upload MTO (Optional)</h3>
+                        <h3><i class="fas fa-file-upload"></i> Upload MTO / DWG (Optional)</h3>
                         <div class="file-upload-area" id="tonnage-drop-zone">
                             <div class="upload-icon"><i class="fas fa-file-excel"></i></div>
-                            <h4>Drag & Drop MTO File</h4>
-                            <p>Or click to browse for a PDF, Excel, or CSV file</p>
-                            <input type="file" id="tonnage-file-input" class="file-input" accept=".pdf,.xlsx,.xls,.csv">
+                            <h4>Drag & Drop MTO or DWG File</h4>
+                            <p>Or click to browse for a DWG, PDF, Excel, or CSV file</p>
+                            <input type="file" id="tonnage-file-input" class="file-input" accept=".dwg,.pdf,.xlsx,.xls,.csv">
                         </div>
                         <div id="tonnage-file-info-container" class="file-info-display" style="display: none;"></div>
                         <iframe id="tonnage-pdf-preview" class="pdf-preview" style="display:none;"></iframe>
@@ -1096,9 +1097,9 @@ function renderEstimatesSection() {
                     <div class="form-section">
                         <h3><i class="fas fa-weight-hanging"></i> Steel Tonnage</h3>
                         <div class="form-group">
-                            <label class="form-label" for="totalTonnageInput">Total Steel Tonnage (Metric Tons)</label>
-                            <input type="number" id="totalTonnageInput" class="form-input" placeholder="Enter total tonnage or upload MTO" step="0.01" min="0.1">
-                             <small class="form-help">This value will be updated automatically if a valid MTO file is uploaded.</small>
+                            <label class="form-label" for="totalTonnageInput">Manual Tonnage Entry (Optional)</label>
+                            <input type="number" id="totalTonnageInput" class="form-input" placeholder="Enter total tonnage or upload a file" step="0.01" min="0.1">
+                             <small class="form-help">Enter tonnage directly, or leave blank if uploading a file for automatic extraction.</small>
                         </div>
                     </div>
 
@@ -1130,7 +1131,7 @@ function initializeTonnageEstimator() {
     for (const key in regionalPricing) {
         currencySelect.innerHTML += `<option value="${regionalPricing[key].currency}">${regionalPricing[key].currency}</option>`;
     }
-
+    
     // Set defaults and update display
     regionSelect.value = 'us';
     updateRegionalPricingDisplay();
@@ -1138,12 +1139,12 @@ function initializeTonnageEstimator() {
     // Attach listeners
     const calculateBtn = document.getElementById('calculate-estimate-btn');
     calculateBtn.addEventListener('click', handleCalculateSteelEstimate);
-
+    
     regionSelect.addEventListener('change', updateRegionalPricingDisplay);
 
     const dropZone = document.getElementById('tonnage-drop-zone');
     const fileInput = document.getElementById('tonnage-file-input');
-
+    
     dropZone.addEventListener('click', () => fileInput.click());
     dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
     dropZone.addEventListener('dragleave', e => { e.preventDefault(); dropZone.classList.remove('drag-over'); });
@@ -1178,11 +1179,11 @@ function handleTonnageFile(file) {
     tonnageEstimatorState.currentFile = file;
     const infoContainer = document.getElementById('tonnage-file-info-container');
     const pdfPreview = document.getElementById('tonnage-pdf-preview');
-
+    
     const fileSize = (file.size / (1024 * 1024)).toFixed(2);
     infoContainer.innerHTML = `<div class="file-item"><i class="fas fa-file"></i><span class="file-name">${file.name} (${fileSize} MB)</span><span id="file-status" class="file-status-processing">Processing...</span></div>`;
     infoContainer.style.display = 'block';
-
+    
     pdfPreview.style.display = 'none';
 
     if (file.type === 'application/pdf') {
@@ -1190,7 +1191,7 @@ function handleTonnageFile(file) {
         pdfPreview.src = fileURL;
         pdfPreview.style.display = 'block';
     }
-
+    
     // Simulate processing for tonnage extraction
     setTimeout(() => {
         const baseTonnage = Math.random() * 800 + 50; // 50-850 MT
@@ -1254,7 +1255,7 @@ function handleCalculateSteelEstimate() {
 function displayTonnageEstimateResults() {
     const container = document.getElementById('tonnage-result-container');
     const est = tonnageEstimatorState.currentEstimate;
-
+    
     const formatCurrency = (val) => `${est.currency} ${Math.round(val).toLocaleString()}`;
 
     container.innerHTML = `
