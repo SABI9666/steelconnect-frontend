@@ -160,37 +160,14 @@
             border-color: #dc2626;
         }
 
-        /* --- KEN BURNS ANIMATION --- */
-        @keyframes kenburns {
-            0% {
-                transform: scale(1.15) translate(0, 0);
-            }
-            100% {
-                transform: scale(1) translate(-10px, 5px);
-            }
-        }
-        
         /* --- ENHANCED HERO SECTION --- */
         .hero { 
             position: relative;
             min-height: 100vh;
             display: flex;
             align-items: center;
-            background-color: #0f172a; /* Fallback color */
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 30%, #334155 70%, #475569 100%);
             overflow: hidden;
-        }
-        #hero-video-background {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            min-width: 100%;
-            min-height: 100%;
-            width: auto;
-            height: auto;
-            transform: translateX(-50%) translateY(-50%);
-            z-index: 0;
-            opacity: 0.15;
-            object-fit: cover;
         }
         .hero::before {
             content: '';
@@ -204,6 +181,16 @@
                 radial-gradient(circle at 80% 20%, rgba(15, 118, 110, 0.3) 0%, transparent 50%),
                 radial-gradient(circle at 40% 40%, rgba(8, 145, 178, 0.2) 0%, transparent 50%);
             z-index: 1;
+        }
+        .hero-background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('https://images.unsplash.com/photo-1541888946425-d81bb19240f5?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3') center/cover;
+            opacity: 0.2;
+            z-index: 0;
         }
         .hero-content { 
             position: relative;
@@ -304,10 +291,10 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
-            animation: kenburns 30s ease-out infinite;
+            transition: transform 0.6s ease;
         }
         .hero-image-container:hover .hero-image {
-            animation-play-state: paused;
+            transform: scale(1.05);
         }
         .hero-image-overlay {
             position: absolute;
@@ -548,17 +535,11 @@
         .slide-visual {
             flex: 1;
             height: 400px;
-            min-width: 40%;
             border-radius: 16px;
             overflow: hidden;
             box-shadow: var(--shadow-lg);
         }
-        .slide-visual img { 
-            width: 100%; 
-            height: 100%; 
-            object-fit: cover;
-            animation: kenburns 20s ease-out infinite;
-        }
+        .slide-visual img { width: 100%; height: 100%; object-fit: cover; }
         .slider-controls {
             display: flex;
             justify-content: center;
@@ -660,12 +641,7 @@
             background: rgba(255, 255, 255, 0.12);
             border-color: rgba(255, 255, 255, 0.25);
         }
-        .showcase-image { 
-            width: 100%; 
-            height: 240px; 
-            object-fit: cover;
-            animation: kenburns 25s ease-out infinite;
-        }
+        .showcase-image { width: 100%; height: 240px; object-fit: cover; }
         .showcase-content { padding: 32px; }
         .showcase-content h3 { font-size: 24px; font-weight: 700; margin-bottom: 16px; color: white; }
         .showcase-content p { color: rgba(255, 255, 255, 0.8); line-height: 1.6; }
@@ -1012,10 +988,7 @@
     <div id="landing-page-content">
         <main>
             <section class="hero">
-                <video id="hero-video-background" autoplay loop muted playsinline>
-                    <source src="https://assets.mixkit.co/videos/preview/mixkit-architect-working-on-a-city-plan-4235-large.mp4" type="video/mp4">
-                    Your browser does not support the video tag.
-                </video>
+                <div class="hero-background"></div>
                 <div class="hero-content">
                     <div class="hero-text">
                         <h1>SteelConnect: The <span class="highlight">Premier Platform</span> Connecting Designers & Contractors</h1>
@@ -1042,7 +1015,7 @@
                     </div>
                     <div class="hero-visual">
                         <div class="hero-image-container">
-                            <img src="https://images.unsplash.com/photo-1621999933994-3a8549133043?q=80&w=2874&auto=format&fit=crop&ixlib=rb-4.0.3" alt="Steel construction professionals collaborating" class="hero-image" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1486406146926?q=80&w=2940&auto=format&fit=crop';">
+                            <img src="https://images.unsplash.com/photo-1504307651254-35680f356dfd?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3" alt="Steel construction professionals at work" class="hero-image" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2940&auto=format&fit=crop';">
                             <div class="hero-image-overlay">
                                 <h3>Professional Excellence</h3>
                                 <p>Connecting top-tier engineers and contractors worldwide</p>
@@ -1089,9 +1062,9 @@
                     <h2 class="section-title">Why SteelConnect?</h2>
                     <div class="slider-container">
                         <div class="slider-wrapper" id="slider-wrapper">
-                            <div class="slide"><div class="slide-content"><h3>Global Network of Experts</h3><p>Connect with a worldwide community of freelance steel designers, structural engineers, and certified professionals ready to tackle your most challenging projects.</p><ul class="slide-features"><li><i class="fas fa-check"></i> PE-licensed engineers across multiple jurisdictions</li><li><i class="fas fa-check"></i> Specialized expertise in seismic and wind engineering</li><li><i class="fas fa-check"></i> Multi-language support for international projects</li><li><i class="fas fa-check"></i> 24/7 availability across time zones</li></ul></div><div class="slide-visual"><img src="https://images.unsplash.com/photo-1556761175-b413da4b248a?q=80&w=2848&auto=format&fit=crop&ixlib=rb-4.0.3" alt="Diverse team of engineers collaborating" onerror="this.onerror=null;this.src='https://placehold.co/600x400/0f766e/ffffff?text=Expert';"></div></div>
-                            <div class="slide"><div class="slide-content"><h3>Advanced Engineering Solutions</h3><p>From initial concept to final construction drawings, our professionals use cutting-edge technology and industry-leading software to deliver precision engineering.</p><ul class="slide-features"><li><i class="fas fa-check"></i> Latest BIM and 3D modeling capabilities</li><li><i class="fas fa-check"></i> Advanced structural analysis software</li><li><i class="fas fa-check"></i> Code compliance across all major standards</li><li><i class="fas fa-check"></i> Sustainable design practices</li></ul></div><div class="slide-visual"><img src="https://images.unsplash.com/photo-1581092446327-9b52bd4a6042?q=80&w=2874&auto=format&fit=crop&ixlib=rb-4.0.3" alt="Engineer working on a digital blueprint" onerror="this.onerror=null;this.src='https://placehold.co/600x400/0891b2/ffffff?text=Engineer';"></div></div>
-                            <div class="slide"><div class="slide-content"><h3>Proven Track Record</h3><p>Our platform has facilitated thousands of successful projects, from residential developments to major infrastructure, with verified reviews and portfolio showcases.</p><ul class="slide-features"><li><i class="fas fa-check"></i> Verified professional credentials and licenses</li><li><i class="fas fa-check"></i> Comprehensive project portfolios</li><li><i class="fas fa-check"></i> Client reviews and ratings system</li><li><i class="fas fa-check"></i> Quality assurance and project insurance</li></ul></div><div class="slide-visual"><img src="https://images.unsplash.com/photo-1520494245347-19cde4786426?q=80&w=2938&auto=format&fit=crop&ixlib=rb-4.0.3" alt="Completed modern building structure" onerror="this.onerror=null;this.src='https://placehold.co/600x400/1e40af/ffffff?text=Success';"></div></div>
+                            <div class="slide"><div class="slide-content"><h3>Global Network of Experts</h3><p>Connect with a worldwide community of freelance steel designers, structural engineers, and certified professionals ready to tackle your most challenging projects.</p><ul class="slide-features"><li><i class="fas fa-check"></i> PE-licensed engineers across multiple jurisdictions</li><li><i class="fas fa-check"></i> Specialized expertise in seismic and wind engineering</li><li><i class="fas fa-check"></i> Multi-language support for international projects</li><li><i class="fas fa-check"></i> 24/7 availability across time zones</li></ul></div><div class="slide-visual"><img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=2940&auto=format&fit=crop" alt="Global network" onerror="this.onerror=null;this.src='https://placehold.co/600x400/0f766e/ffffff?text=Expert';"></div></div>
+                            <div class="slide"><div class="slide-content"><h3>Advanced Engineering Solutions</h3><p>From initial concept to final construction drawings, our professionals use cutting-edge technology and industry-leading software to deliver precision engineering.</p><ul class="slide-features"><li><i class="fas fa-check"></i> Latest BIM and 3D modeling capabilities</li><li><i class="fas fa-check"></i> Advanced structural analysis software</li><li><i class="fas fa-check"></i> Code compliance across all major standards</li><li><i class="fas fa-check"></i> Sustainable design practices</li></ul></div><div class="slide-visual"><img src="https://images.unsplash.com/photo-1581094794329-c8112a89af12?q=80&w=2940&auto=format&fit=crop" alt="Engineering solutions" onerror="this.onerror=null;this.src='https://placehold.co/600x400/0891b2/ffffff?text=Engineer';"></div></div>
+                            <div class="slide"><div class="slide-content"><h3>Proven Track Record</h3><p>Our platform has facilitated thousands of successful projects, from residential developments to major infrastructure, with verified reviews and portfolio showcases.</p><ul class="slide-features"><li><i class="fas fa-check"></i> Verified professional credentials and licenses</li><li><i class="fas fa-check"></i> Comprehensive project portfolios</li><li><i class="fas fa-check"></i> Client reviews and ratings system</li><li><i class="fas fa-check"></i> Quality assurance and project insurance</li></ul></div><div class="slide-visual"><img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2940&auto=format&fit=crop" alt="Proven results" onerror="this.onerror=null;this.src='https://placehold.co/600x400/1e40af/ffffff?text=Success';"></div></div>
                         </div>
                         <button class="slider-nav prev" onclick="changeSlide(-1)"><i class="fas fa-chevron-left"></i></button>
                         <button class="slider-nav next" onclick="changeSlide(1)"><i class="fas fa-chevron-right"></i></button>
@@ -1104,9 +1077,9 @@
                 <div class="section-container">
                     <h2 class="section-title">Industry Excellence Showcase</h2>
                     <div class="showcase-grid">
-                        <div class="showcase-card"><img src="https://images.unsplash.com/photo-1519999482648-25049ddd37b1?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3" alt="Modern skyscraper at night" class="showcase-image" onerror="this.onerror=null;this.src='https://placehold.co/400x240/1e293b/ffffff?text=High-Rise';"><div class="showcase-content"><h3>High-Rise Construction</h3><p>Structural steel design for towers and commercial buildings with advanced seismic engineering and wind load analysis.</p></div></div>
-                        <div class="showcase-card"><img src="https://images.unsplash.com/photo-1541696432-82c6da8ce7bf?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3" alt="Intricate steel bridge structure" class="showcase-image" onerror="this.onerror=null;this.src='https://placehold.co/400x240/1e293b/ffffff?text=Bridge';"><div class="showcase-content"><h3>Infrastructure Projects</h3><p>Complex bridge design, highway infrastructure, and transportation networks engineered for safety and longevity.</p></div></div>
-                        <div class="showcase-card"><img src="https://images.unsplash.com/photo-1616099393134-a61433a8c323?q=80&w=2874&auto=format&fit=crop&ixlib=rb-4.0.3" alt="Interior of a modern industrial facility" class="showcase-image" onerror="this.onerror=null;this.src='https://placehold.co/400x240/1e293b/ffffff?text=Industrial';"><div class="showcase-content"><h3>Industrial Facilities</h3><p>Manufacturing plants, warehouses, and industrial complexes with specialized steel frame solutions and heavy load engineering.</p></div></div>
+                        <div class="showcase-card"><img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2940&auto=format&fit=crop" alt="Modern skyscraper" class="showcase-image" onerror="this.onerror=null;this.src='https://placehold.co/400x240/1e293b/ffffff?text=High-Rise';"><div class="showcase-content"><h3>High-Rise Construction</h3><p>Structural steel design for towers and commercial buildings with advanced seismic engineering and wind load analysis.</p></div></div>
+                        <div class="showcase-card"><img src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?q=80&w=2940&auto=format&fit=crop" alt="Steel bridge" class="showcase-image" onerror="this.onerror=null;this.src='https://placehold.co/400x240/1e293b/ffffff?text=Bridge';"><div class="showcase-content"><h3>Infrastructure Projects</h3><p>Complex bridge design, highway infrastructure, and transportation networks engineered for safety and longevity.</p></div></div>
+                        <div class="showcase-card"><img src="https://images.unsplash.com/photo-1565008447742-97f6f38c985c?q=80&w=2940&auto=format&fit=crop" alt="Industrial facility" class="showcase-image" onerror="this.onerror=null;this.src='https://placehold.co/400x240/1e293b/ffffff?text=Industrial';"><div class="showcase-content"><h3>Industrial Facilities</h3><p>Manufacturing plants, warehouses, and industrial complexes with specialized steel frame solutions and heavy load engineering.</p></div></div>
                     </div>
                 </div>
             </section>

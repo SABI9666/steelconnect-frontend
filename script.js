@@ -66,7 +66,7 @@ function resetInactivityTimer() {
 
 function initializeApp() {
     console.log("SteelConnect App Initializing...");
-    
+
     // Setup inactivity listeners
     window.addEventListener('mousemove', resetInactivityTimer);
     window.addEventListener('keydown', resetInactivityTimer);
@@ -78,10 +78,10 @@ function initializeApp() {
 
     const joinBtn = document.getElementById('join-btn');
     if (joinBtn) joinBtn.addEventListener('click', () => showAuthModal('register'));
-    
+
     const getStartedBtn = document.getElementById('get-started-btn');
     if (getStartedBtn) getStartedBtn.addEventListener('click', () => showAuthModal('register'));
-    
+
     const logo = document.querySelector('.logo');
     if (logo) {
         logo.addEventListener('click', (e) => {
@@ -94,7 +94,7 @@ function initializeApp() {
             }
         });
     }
-    
+
     const logoutBtn = document.getElementById('logout-button');
     if(logoutBtn) {
         logoutBtn.addEventListener('click', (e) => {
@@ -106,7 +106,7 @@ function initializeApp() {
     // Check for existing user session
     const token = localStorage.getItem('jwtToken');
     const user = localStorage.getItem('currentUser');
-    
+
     if (token && user) {
         try {
             appState.jwtToken = token;
@@ -192,7 +192,7 @@ async function apiCall(endpoint, method, body = null, successMessage = null) {
                 options.body = JSON.stringify(body);
             }
         }
-        
+
         const response = await fetch(BACKEND_URL + endpoint, options);
 
         if (response.status === 204 || response.headers.get("content-length") === "0") {
@@ -213,7 +213,7 @@ async function apiCall(endpoint, method, body = null, successMessage = null) {
         if (successMessage) {
             showNotification(successMessage, 'success');
         }
-        
+
         return responseData;
 
     } catch (error) {
@@ -250,7 +250,7 @@ async function handleLogin(event) {
         localStorage.setItem('jwtToken', data.token);
         closeModal();
         showAppView();
-        
+
         if (data.user.type === 'designer') {
             loadUserQuotes();
         }
@@ -302,24 +302,24 @@ async function fetchAndRenderJobs(loadMore = false) {
     }
 
     const user = appState.currentUser;
-    const endpoint = user.type === 'designer' 
-        ? `/jobs?page=${appState.jobsPage}&limit=6` 
+    const endpoint = user.type === 'designer'
+        ? `/jobs?page=${appState.jobsPage}&limit=6`
         : `/jobs/user/${user.id}`;
-    
+
     if(loadMoreContainer) loadMoreContainer.innerHTML = `<button class="btn btn-loading" disabled><div class="btn-spinner"></div>Loading...</button>`;
 
     try {
         const response = await apiCall(endpoint, 'GET');
         const newJobs = response.data || [];
         appState.jobs.push(...newJobs);
-        
+
         if (user.type === 'designer') {
             appState.hasMoreJobs = response.pagination.hasNext;
             appState.jobsPage += 1;
         } else {
             appState.hasMoreJobs = false;
         }
-        
+
         if (appState.jobs.length === 0) {
             jobsListContainer.innerHTML = user.type === 'designer'
                 ? `<div class="empty-state">
@@ -339,7 +339,7 @@ async function fetchAndRenderJobs(loadMore = false) {
         const jobsHTML = appState.jobs.map(job => {
             const hasUserQuoted = appState.userSubmittedQuotes.has(job.id);
             const canQuote = user.type === 'designer' && job.status === 'open' && !hasUserQuoted;
-            const quoteButton = canQuote 
+            const quoteButton = canQuote
                 ? `<button class="btn btn-primary btn-submit-quote" onclick="showQuoteModal('${job.id}')"><i class="fas fa-file-invoice-dollar"></i> Submit Quote</button>`
                 : user.type === 'designer' && hasUserQuoted
                 ? `<button class="btn btn-outline btn-submitted" disabled><i class="fas fa-check-circle"></i> Quote Submitted</button>`
@@ -353,14 +353,14 @@ async function fetchAndRenderJobs(loadMore = false) {
                      <button class="btn btn-outline" onclick="viewQuotes('${job.id}')"><i class="fas fa-eye"></i> View Quotes (${job.quotesCount || 0})</button>
                      <button class="btn btn-danger" onclick="deleteJob('${job.id}')"><i class="fas fa-trash"></i> Delete</button>
                    </div>`;
-            
-            const statusBadge = job.status !== 'open' 
-                ? `<span class="job-status-badge ${job.status}"><i class="fas ${job.status === 'assigned' ? 'fa-user-check' : 'fa-check-circle'}"></i> ${job.status.charAt(0).toUpperCase() + job.status.slice(1)}</span>` 
+
+            const statusBadge = job.status !== 'open'
+                ? `<span class="job-status-badge ${job.status}"><i class="fas ${job.status === 'assigned' ? 'fa-user-check' : 'fa-check-circle'}"></i> ${job.status.charAt(0).toUpperCase() + job.status.slice(1)}</span>`
                 : `<span class="job-status-badge open"><i class="fas fa-clock"></i> Open</span>`;
-            
+
             const attachmentLink = job.attachment ? `<div class="job-attachment"><i class="fas fa-paperclip"></i> <a href="${job.attachment}" target="_blank" rel="noopener noreferrer">View Attachment</a></div>` : '';
             const skillsDisplay = job.skills?.length > 0 ? `<div class="job-skills"><i class="fas fa-tools"></i> <span>Skills:</span><div class="skills-tags">${job.skills.map(skill => `<span class="skill-tag">${skill}</span>`).join('')}</div></div>` : '';
-            
+
             return `
                 <div class="job-card" data-job-id="${job.id}">
                     <div class="job-header">
@@ -412,25 +412,25 @@ async function fetchAndRenderApprovedJobs() {
             </div>
         </div>
         <div id="approved-jobs-list" class="jobs-grid"></div>`;
-    
+
     const listContainer = document.getElementById('approved-jobs-list');
     listContainer.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Loading approved projects...</p></div>';
-    
+
     try {
         const response = await apiCall(`/jobs/user/${appState.currentUser.id}`, 'GET');
         const allJobs = response.data || [];
         const approvedJobs = allJobs.filter(job => job.status === 'assigned');
         appState.approvedJobs = approvedJobs;
-        
+
         if (approvedJobs.length === 0) {
             listContainer.innerHTML = `<div class="empty-state"><div class="empty-icon"><i class="fas fa-clipboard-check"></i></div><h3>No Approved Projects</h3><p>Your approved projects will appear here once you accept quotes from designers.</p><button class="btn btn-primary" onclick="renderAppSection('jobs')">View My Projects</button></div>`;
             return;
         }
-        
+
         listContainer.innerHTML = approvedJobs.map(job => {
             const attachmentLink = job.attachment ? `<div class="job-attachment"><i class="fas fa-paperclip"></i> <a href="${job.attachment}" target="_blank" rel="noopener noreferrer">View Attachment</a></div>` : '';
             const skillsDisplay = job.skills?.length > 0 ? `<div class="job-skills"><i class="fas fa-tools"></i> <span>Skills:</span><div class="skills-tags">${job.skills.map(skill => `<span class="skill-tag">${skill}</span>`).join('')}</div></div>` : '';
-            
+
             return `
                 <div class="job-card approved-job">
                     <div class="job-header">
@@ -480,20 +480,20 @@ async function fetchAndRenderMyQuotes() {
             </div>
         </div>
         <div id="my-quotes-list" class="jobs-grid"></div>`;
-    
+
     const listContainer = document.getElementById('my-quotes-list');
     listContainer.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Loading your quotes...</p></div>';
-    
+
     try {
         const response = await apiCall(`/quotes/user/${appState.currentUser.id}`, 'GET');
         const quotes = response.data || [];
         appState.myQuotes = quotes;
-        
+
         if (quotes.length === 0) {
             listContainer.innerHTML = `<div class="empty-state"><div class="empty-icon"><i class="fas fa-file-invoice"></i></div><h3>No Quotes Submitted</h3><p>You haven't submitted any quotes yet. Browse available projects to get started.</p><button class="btn btn-primary" onclick="renderAppSection('jobs')">Find Projects</button></div>`;
             return;
         }
-        
+
         listContainer.innerHTML = quotes.map(quote => {
             const attachments = quote.attachments || [];
             let attachmentLink = attachments.length > 0 ? `<div class="quote-attachment"><i class="fas fa-paperclip"></i><a href="${attachments[0]}" target="_blank" rel="noopener noreferrer">View Attachment</a></div>` : '';
@@ -504,7 +504,7 @@ async function fetchAndRenderMyQuotes() {
                 actionButtons.push(`<button class="btn btn-outline" onclick="editQuote('${quote.id}')"><i class="fas fa-edit"></i> Edit Quote</button>`);
                 actionButtons.push(`<button class="btn btn-danger" onclick="deleteQuote('${quote.id}')"><i class="fas fa-trash"></i> Delete</button>`);
             }
-            
+
             return `
                 <div class="quote-card quote-status-${quote.status}">
                     <div class="quote-header">
@@ -529,7 +529,7 @@ async function editQuote(quoteId) {
     try {
         const response = await apiCall(`/quotes/${quoteId}`, 'GET');
         const quote = response.data;
-        
+
         const content = `
             <div class="modal-header"><h3><i class="fas fa-edit"></i> Edit Your Quote</h3><p class="modal-subtitle">Update your quote details for: <strong>${quote.jobTitle}</strong></p></div>
             <form id="edit-quote-form" class="modern-form"><input type="hidden" name="quoteId" value="${quote.id}"><div class="form-row"><div class="form-group"><label class="form-label"><i class="fas fa-dollar-sign"></i> Quote Amount ($)</label><input type="number" class="form-input" name="amount" value="${quote.quoteAmount}" required min="1" step="0.01"></div><div class="form-group"><label class="form-label"><i class="fas fa-calendar-alt"></i> Timeline (days)</label><input type="number" class="form-input" name="timeline" value="${quote.timeline || ''}" required min="1"></div></div><div class="form-group"><label class="form-label"><i class="fas fa-file-alt"></i> Proposal Description</label><textarea class="form-textarea" name="description" required placeholder="Describe your approach...">${quote.description}</textarea></div><div class="form-group"><label class="form-label"><i class="fas fa-paperclip"></i> Attachments</label><input type="file" class="form-input file-input" name="attachments" multiple><small class="form-help">Supported formats: PDF, DOC, DWG, Images</small></div><div class="form-actions"><button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button><button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Update Quote</button></div></form>`;
@@ -599,9 +599,9 @@ async function viewQuotes(jobId) {
     try {
         const response = await apiCall(`/quotes/job/${jobId}`, 'GET');
         const quotes = response.data || [];
-        
+
         let quotesHTML = `<div class="modal-header"><h3><i class="fas fa-file-invoice-dollar"></i> Received Quotes</h3><p class="modal-subtitle">Review quotes for this project</p><div class="modal-actions" style="margin-top: 16px;"><button class="btn btn-primary" onclick="analyzeJobQuotes('${jobId}')"><i class="fas fa-chart-bar"></i> Analyze All Quotes</button></div></div>`;
-            
+
         if (quotes.length === 0) {
             quotesHTML += `<div class="empty-state"><div class="empty-icon"><i class="fas fa-file-invoice"></i></div><h3>No Quotes Received</h3><p>No quotes have been submitted for this project yet.</p></div>`;
         } else {
@@ -618,7 +618,7 @@ async function viewQuotes(jobId) {
                     actionButtons = `<span class="status-approved"><i class="fas fa-check-circle"></i> Approved</span>${messageButton}`;
                 }
                 const statusIcon = {'submitted': 'fa-clock', 'approved': 'fa-check-circle', 'rejected': 'fa-times-circle'}[quote.status] || 'fa-question-circle';
-                
+
                 return `<div class="quote-item quote-status-${quote.status}"><div class="quote-item-header"><div class="designer-info"><div class="designer-avatar">${quote.designerName.charAt(0).toUpperCase()}</div><div class="designer-details"><h4>${quote.designerName}</h4><span class="quote-status-badge ${quote.status}"><i class="fas ${statusIcon}"></i> ${quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}</span></div></div><div class="quote-amount"><span class="amount-label">Quote</span><span class="amount-value">${quote.quoteAmount}</span></div></div><div class="quote-details">${quote.timeline ? `<div class="quote-meta-item"><i class="fas fa-calendar-alt"></i> <span>Timeline: <strong>${quote.timeline} days</strong></span></div>` : ''}<div class="quote-description"><p>${quote.description}</p></div>${attachmentLink}</div><div class="quote-actions">${actionButtons}</div></div>`;
             }).join('')}</div>`;
         }
@@ -691,7 +691,7 @@ async function fetchAndRenderConversations() {
             const otherParticipant = convo.participants.find(p => p.id !== appState.currentUser.id) || {};
             const lastMessage = convo.lastMessage ? (convo.lastMessage.length > 60 ? convo.lastMessage.substring(0, 60) + '...' : convo.lastMessage) : 'No messages yet.';
             const avatarColor = getAvatarColor(otherParticipant.name || 'U');
-            
+
             return `<div class="conversation-card" onclick="renderConversationView('${convo.id}')"><div class="convo-avatar" style="background-color: ${avatarColor}">${(otherParticipant.name || 'U').charAt(0).toUpperCase()}</div><div class="convo-details"><div class="convo-header"><h4>${otherParticipant.name || 'Unknown'}</h4></div><p class="convo-project"><i class="fas fa-briefcase"></i> <strong>${convo.jobTitle}</strong></p><p class="convo-preview">${lastMessage}</p></div></div>`;
         }).join('');
     } catch (error) {}
@@ -773,7 +773,7 @@ function showAppView() {
     document.getElementById('app-content').style.display = 'flex';
     document.getElementById('auth-buttons-container').style.display = 'none';
     document.getElementById('user-info').style.display = 'flex';
-    
+
     const user = appState.currentUser;
     document.getElementById('userName').textContent = user.name;
     document.getElementById('userType').textContent = user.type;
@@ -781,10 +781,10 @@ function showAppView() {
     document.getElementById('sidebarUserName').textContent = user.name;
     document.getElementById('sidebarUserType').textContent = user.type;
     document.getElementById('sidebarUserAvatar').textContent = (user.name || "A").charAt(0).toUpperCase();
-    
+
     buildSidebarNav();
     renderAppSection('jobs');
-    
+
     if (user.type === 'designer') loadUserQuotes();
 }
 
@@ -800,7 +800,7 @@ function buildSidebarNav() {
     const role = appState.currentUser.type;
     let links = (role === 'designer')
         ? `<a href="#" class="sidebar-nav-link" data-section="jobs"><i class="fas fa-search fa-fw"></i> <span>Find Projects</span></a><a href="#" class="sidebar-nav-link" data-section="my-quotes"><i class="fas fa-file-invoice-dollar fa-fw"></i> <span>My Quotes</span></a>`
-        : `<a href="#" class="sidebar-nav-link" data-section="jobs"><i class="fas fa-tasks fa-fw"></i> <span>My Projects</span></a><a href="#" class="sidebar-nav-link" data-section="approved-jobs"><i class="fas fa-check-circle fa-fw"></i> <span>Approved Projects</span></a><a href="#" class="sidebar-nav-link" data-section="post-job"><i class="fas fa-plus-circle fa-fw"></i> <span>Post Project</span></a>`;
+        : `<a href="#" class="sidebar-nav-link" data-section="jobs"><i class="fas fa-tasks fa-fw"></i> <span>My Projects</span></a><a href="#" class="sidebar-nav-link" data-section="approved-jobs"><i class="fas fa-check-circle fa-fw"></i> <span>Approved Projects</span></a><a href="#" class="sidebar-nav-link" data-section="post-job"><i class="fas fa-plus-circle fa-fw"></i> <span>Post Project</span></a><a href="#" class="sidebar-nav-link" data-section="estimates"><i class="fas fa-calculator fa-fw"></i> <span>Generate Estimates</span></a>`;
     links += `<a href="#" class="sidebar-nav-link" data-section="messages"><i class="fas fa-comments fa-fw"></i> <span>Messages</span></a>`;
     navContainer.innerHTML = links;
     navContainer.querySelectorAll('.sidebar-nav-link').forEach(link => link.addEventListener('click', (e) => { e.preventDefault(); renderAppSection(link.dataset.section); }));
@@ -811,14 +811,14 @@ function renderAppSection(sectionId) {
     document.querySelectorAll('.sidebar-nav-link').forEach(link => {
         link.classList.toggle('active', link.dataset.section === sectionId);
     });
-    
+
     const user = appState.currentUser;
     const userRole = user.type;
 
     if (sectionId === 'jobs') {
         const title = userRole === 'designer' ? 'Available Projects' : 'My Posted Projects';
         const subtitle = userRole === 'designer' ? 'Browse and submit quotes' : 'Manage your project listings';
-        
+
         let welcomeDashboardHTML = '';
         if (userRole === 'contractor') {
             welcomeDashboardHTML = `
@@ -850,13 +850,13 @@ function renderAppSection(sectionId) {
         }
 
         container.innerHTML = `
-            ${welcomeDashboardHTML} 
+            ${welcomeDashboardHTML}
             <div class="section-header modern-header" style="margin-top: ${userRole === 'contractor' ? 'var(--space-12)' : '0'};">
                 <div class="header-content"><h2><i class="fas ${userRole === 'designer' ? 'fa-search' : 'fa-tasks'}"></i> ${title}</h2><p class="header-subtitle">${subtitle}</p></div>
             </div>
             <div id="jobs-list" class="jobs-grid"></div>
             <div id="load-more-container" class="load-more-section"></div>`;
-        
+
         if (userRole === 'contractor') {
             initializeWelcomeCarousel();
         }
@@ -865,6 +865,8 @@ function renderAppSection(sectionId) {
     } else if (sectionId === 'post-job') {
         container.innerHTML = getPostJobTemplate();
         document.getElementById('post-job-form').addEventListener('submit', handlePostJob);
+    } else if (sectionId === 'estimates') {
+        renderEstimatesSection();
     } else if (sectionId === 'my-quotes') {
         fetchAndRenderMyQuotes();
     } else if (sectionId === 'approved-jobs') {
@@ -1000,3 +1002,534 @@ async function analyzeDesignerStats() {
         showGenericModal(statsHtml, 'max-width: 650px;');
     } catch (error) {}
 }
+
+// --- NEW ESTIMATES FUNCTIONALITY ---
+
+function renderEstimatesSection() {
+    const container = document.getElementById('app-container');
+    container.innerHTML = `
+        <div class="section-header modern-header">
+            <div class="header-content">
+                <h2><i class="fas fa-calculator"></i> Generate Fabrication Estimates</h2>
+                <p class="header-subtitle">Upload your fabrication files to get automated cost estimates</p>
+            </div>
+        </div>
+        <div class="estimates-container">
+            <div class="upload-section">
+                <div class="upload-card">
+                    <div class="upload-header">
+                        <h3><i class="fas fa-cloud-upload-alt"></i> Upload Fabrication Files</h3>
+                        <p>Upload drawings, specifications, or 3D models for instant estimates</p>
+                    </div>
+                    <form id="estimate-upload-form" class="modern-form">
+                        <div class="file-upload-area" id="file-drop-zone">
+                            <div class="upload-icon"><i class="fas fa-file-upload"></i></div>
+                            <h4>Drag & Drop Files Here</h4>
+                            <p>Or click to browse files</p>
+                            <input type="file" id="estimate-files" name="files" multiple accept=".dwg,.dxf,.pdf,.step,.stp,.iges,.igs,.jpg,.jpeg,.png,.xlsx,.xls">
+                            <div class="supported-formats">
+                                <small>Supported: DWG, DXF, PDF, STEP, IGES, Images, Excel</small>
+                            </div>
+                        </div>
+                        <div class="upload-options">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label"><i class="fas fa-industry"></i> Material Type</label>
+                                    <select class="form-select" name="materialType" required>
+                                        <option value="">Select Material</option>
+                                        <option value="carbon-steel">Carbon Steel</option>
+                                        <option value="stainless-steel">Stainless Steel</option>
+                                        <option value="aluminum">Aluminum</option>
+                                        <option value="mild-steel">Mild Steel</option>
+                                        <option value="alloy-steel">Alloy Steel</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label"><i class="fas fa-weight"></i> Estimated Weight (lbs)</label>
+                                    <input type="number" class="form-input" name="estimatedWeight" placeholder="Optional">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label"><i class="fas fa-cogs"></i> Fabrication Complexity</label>
+                                    <select class="form-select" name="complexity" required>
+                                        <option value="">Select Complexity</option>
+                                        <option value="simple">Simple - Basic cuts and welds</option>
+                                        <option value="moderate">Moderate - Standard fabrication</option>
+                                        <option value="complex">Complex - Intricate details</option>
+                                        <option value="highly-complex">Highly Complex - Precision work</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label"><i class="fas fa-calendar-alt"></i> Required Delivery</label>
+                                    <select class="form-select" name="urgency" required>
+                                        <option value="">Select Timeline</option>
+                                        <option value="standard">Standard (2-4 weeks)</option>
+                                        <option value="expedited">Expedited (1-2 weeks)</option>
+                                        <option value="rush">Rush (3-7 days)</option>
+                                        <option value="emergency">Emergency (1-2 days)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label"><i class="fas fa-map-marker-alt"></i> Project Location</label>
+                                <input type="text" class="form-input" name="location" placeholder="City, State" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label"><i class="fas fa-sticky-note"></i> Additional Notes</label>
+                                <textarea class="form-textarea" name="notes" placeholder="Any special requirements, finishing, coating, etc."></textarea>
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary btn-large">
+                                <i class="fas fa-calculator"></i> Generate Estimate
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="estimates-history">
+                <div class="history-header">
+                    <h3><i class="fas fa-history"></i> Recent Estimates</h3>
+                </div>
+                <div id="estimates-list" class="estimates-list">
+                    </div>
+            </div>
+        </div>`;
+    initializeEstimateUpload();
+    loadEstimateHistory();
+}
+
+function initializeEstimateUpload() {
+    const form = document.getElementById('estimate-upload-form');
+    const dropZone = document.getElementById('file-drop-zone');
+    const fileInput = document.getElementById('estimate-files');
+
+    // Handle form submission
+    form.addEventListener('submit', handleEstimateUpload);
+
+    // File input change
+    fileInput.addEventListener('change', handleFileSelect);
+
+    // Drag and drop functionality
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('drag-over');
+    });
+
+    dropZone.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('drag-over');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('drag-over');
+        const files = e.dataTransfer.files;
+        fileInput.files = files;
+        handleFileSelect({ target: { files } });
+    });
+}
+
+function handleFileSelect(event) {
+    const files = event.target.files;
+    const dropZone = document.getElementById('file-drop-zone');
+
+    if (files.length > 0) {
+        let fileList = '<div class="selected-files"><h4>Selected Files:</h4>';
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            const fileSize = (file.size / (1024 * 1024)).toFixed(2);
+            fileList += `<div class="file-item">
+                <i class="fas fa-file"></i>
+                <span class="file-name">${file.name}</span>
+                <span class="file-size">(${fileSize} MB)</span>
+            </div>`;
+        }
+        fileList += '</div>';
+
+        dropZone.innerHTML = fileList;
+        dropZone.classList.add('has-files');
+    }
+}
+
+async function handleEstimateUpload(event) {
+    event.preventDefault();
+    const form = event.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+
+    const files = document.getElementById('estimate-files').files;
+    if (files.length === 0) {
+        showNotification('Please select at least one file to upload.', 'error');
+        return;
+    }
+
+    try {
+        submitBtn.innerHTML = '<div class="btn-spinner"></div> Analyzing Files...';
+        submitBtn.disabled = true;
+
+        const formData = new FormData(form);
+
+        // Add files to form data
+        for (let i = 0; i < files.length; i++) {
+            formData.append('files', files[i]);
+        }
+
+        // Simulate estimate generation (replace with actual API call)
+        await simulateEstimateGeneration(formData);
+
+        showNotification('Estimate generated successfully!', 'success');
+        form.reset();
+        document.getElementById('file-drop-zone').classList.remove('has-files'); // visual reset
+        loadEstimateHistory();
+
+    } catch (error) {
+        console.error('Estimate generation failed:', error);
+        showNotification('Failed to generate estimate. Please try again.', 'error');
+    } finally {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+
+        // Reset file upload area
+        const dropZone = document.getElementById('file-drop-zone');
+        dropZone.innerHTML = `
+            <div class="upload-icon"><i class="fas fa-file-upload"></i></div>
+            <h4>Drag & Drop Files Here</h4>
+            <p>Or click to browse files</p>
+            <input type="file" id="estimate-files" name="files" multiple accept=".dwg,.dxf,.pdf,.step,.stp,.iges,.igs,.jpg,.jpeg,.png,.xlsx,.xls">
+            <div class="supported-formats">
+                <small>Supported: DWG, DXF, PDF, STEP, IGES, Images, Excel</small>
+            </div>`;
+        dropZone.classList.remove('has-files');
+
+        // Reinitialize file input
+        document.getElementById('estimate-files').addEventListener('change', handleFileSelect);
+    }
+}
+
+async function simulateEstimateGeneration(formData) {
+    // Simulate processing time
+    await new Promise(resolve => setTimeout(resolve, 2500));
+
+    // Get form values
+    const materialType = formData.get('materialType');
+    const complexity = formData.get('complexity');
+    const urgency = formData.get('urgency');
+    const location = formData.get('location');
+    const estimatedWeight = formData.get('estimatedWeight') || 0;
+
+    // Generate mock estimate data
+    const estimate = generateMockEstimate(materialType, complexity, urgency, estimatedWeight);
+
+    // Save to local storage (in real app, this would be saved to backend)
+    let estimates = JSON.parse(localStorage.getItem('estimates') || '[]');
+    estimates.unshift({
+        id: Date.now().toString(),
+        timestamp: new Date().toISOString(),
+        materialType,
+        complexity,
+        urgency,
+        location,
+        estimatedWeight,
+        ...estimate
+    });
+    localStorage.setItem('estimates', JSON.stringify(estimates.slice(0, 10))); // Keep last 10
+}
+
+function generateMockEstimate(materialType, complexity, urgency, weight) {
+    // Base rates per pound for different materials
+    const materialRates = {
+        'carbon-steel': 2.50,
+        'stainless-steel': 4.20,
+        'aluminum': 3.80,
+        'mild-steel': 2.20,
+        'alloy-steel': 3.50
+    };
+
+    // Complexity multipliers
+    const complexityMultipliers = {
+        'simple': 1.0,
+        'moderate': 1.3,
+        'complex': 1.7,
+        'highly-complex': 2.2
+    };
+
+    // Urgency multipliers
+    const urgencyMultipliers = {
+        'standard': 1.0,
+        'expedited': 1.25,
+        'rush': 1.6,
+        'emergency': 2.0
+    };
+
+    const baseWeight = weight > 0 ? parseFloat(weight) : Math.floor(Math.random() * 5000) + 500;
+    const baseMaterialCost = baseWeight * materialRates[materialType];
+    const fabricationCost = baseMaterialCost * complexityMultipliers[complexity];
+    const urgencyCost = (fabricationCost * urgencyMultipliers[urgency]) - fabricationCost; // Urgency cost is the premium
+
+    // Additional costs
+    const laborCost = fabricationCost * 0.6;
+    const overheadCost = (baseMaterialCost + fabricationCost + laborCost) * 0.15;
+    const profitMargin = (baseMaterialCost + fabricationCost + laborCost + overheadCost) * 0.20;
+
+    const totalCost = baseMaterialCost + fabricationCost + urgencyCost + laborCost + overheadCost + profitMargin;
+
+    return {
+        materialCost: Math.round(baseMaterialCost),
+        fabricationCost: Math.round(fabricationCost),
+        laborCost: Math.round(laborCost),
+        overheadCost: Math.round(overheadCost),
+        profitMargin: Math.round(profitMargin),
+        totalCost: Math.round(totalCost),
+        actualWeight: baseWeight,
+        costPerPound: (totalCost / baseWeight).toFixed(2),
+        estimatedDelivery: getEstimatedDelivery(urgency)
+    };
+}
+
+function getEstimatedDelivery(urgency) {
+    const now = new Date();
+    const deliveryDays = {
+        'standard': 21,
+        'expedited': 10,
+        'rush': 5,
+        'emergency': 2
+    };
+
+    now.setDate(now.getDate() + deliveryDays[urgency]);
+    return now.toLocaleDateString();
+}
+
+function loadEstimateHistory() {
+    const container = document.getElementById('estimates-list');
+    const estimates = JSON.parse(localStorage.getItem('estimates') || '[]');
+
+    if (estimates.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon"><i class="fas fa-calculator"></i></div>
+                <h3>No Estimates Generated</h3>
+                <p>Upload your first fabrication file to generate an estimate.</p>
+            </div>`;
+        return;
+    }
+
+    container.innerHTML = estimates.map(estimate => `
+        <div class="estimate-card">
+            <div class="estimate-header">
+                <div class="estimate-info">
+                    <h4>Estimate #${estimate.id.slice(-6)}</h4>
+                    <p class="estimate-date"><i class="fas fa-clock"></i> ${new Date(estimate.timestamp).toLocaleDateString()}</p>
+                </div>
+                <div class="estimate-total">
+                    <span class="total-label">Total Cost</span>
+                    <span class="total-amount">$${estimate.totalCost.toLocaleString()}</span>
+                </div>
+            </div>
+            <div class="estimate-details">
+                <div class="detail-row">
+                    <span><i class="fas fa-weight"></i> Weight: ${estimate.actualWeight} lbs</span>
+                    <span><i class="fas fa-dollar-sign"></i> Cost/lb: $${estimate.costPerPound}</span>
+                </div>
+                <div class="detail-row">
+                    <span><i class="fas fa-industry"></i> ${estimate.materialType.replace('-', ' ').toUpperCase()}</span>
+                    <span><i class="fas fa-calendar-alt"></i> Delivery: ${estimate.estimatedDelivery}</span>
+                </div>
+            </div>
+            <div class="estimate-actions">
+                <button class="btn btn-outline btn-sm" onclick="viewEstimateDetails('${estimate.id}')">
+                    <i class="fas fa-eye"></i> View Details
+                </button>
+                <button class="btn btn-primary btn-sm" onclick="downloadEstimate('${estimate.id}')">
+                    <i class="fas fa-download"></i> Download Report
+                </button>
+                <button class="btn btn-success btn-sm" onclick="convertToProject('${estimate.id}')">
+                    <i class="fas fa-plus"></i> Create Project
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function viewEstimateDetails(estimateId) {
+    const estimates = JSON.parse(localStorage.getItem('estimates') || '[]');
+    const estimate = estimates.find(e => e.id === estimateId);
+
+    if (!estimate) return;
+
+    const detailsHtml = `
+        <div class="modal-header">
+            <h3><i class="fas fa-file-invoice-dollar"></i> Estimate Details</h3>
+            <p class="modal-subtitle">Estimate #${estimate.id.slice(-6)} - ${new Date(estimate.timestamp).toLocaleDateString()}</p>
+        </div>
+        <div class="estimate-breakdown">
+            <div class="breakdown-section">
+                <h4><i class="fas fa-info-circle"></i> Project Information</h4>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <label>Material Type:</label>
+                        <span>${estimate.materialType.replace('-', ' ').toUpperCase()}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Weight:</label>
+                        <span>${estimate.actualWeight} lbs</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Complexity:</label>
+                        <span>${estimate.complexity.replace('-', ' ').toUpperCase()}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Urgency:</label>
+                        <span>${estimate.urgency.replace('-', ' ').toUpperCase()}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Location:</label>
+                        <span>${estimate.location}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Est. Delivery:</label>
+                        <span>${estimate.estimatedDelivery}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="breakdown-section">
+                <h4><i class="fas fa-calculator"></i> Cost Breakdown</h4>
+                <div class="cost-breakdown">
+                    <div class="cost-item">
+                        <span>Material Cost:</span>
+                        <span>$${estimate.materialCost.toLocaleString()}</span>
+                    </div>
+                    <div class="cost-item">
+                        <span>Fabrication Cost:</span>
+                        <span>$${estimate.fabricationCost.toLocaleString()}</span>
+                    </div>
+                    <div class="cost-item">
+                        <span>Labor Cost:</span>
+                        <span>$${estimate.laborCost.toLocaleString()}</span>
+                    </div>
+                    <div class="cost-item">
+                        <span>Overhead (15%):</span>
+                        <span>$${estimate.overheadCost.toLocaleString()}</span>
+                    </div>
+                    <div class="cost-item">
+                        <span>Profit Margin (20%):</span>
+                        <span>$${estimate.profitMargin.toLocaleString()}</span>
+                    </div>
+                    <div class="cost-item total">
+                        <span><strong>Total Cost:</strong></span>
+                        <span><strong>$${estimate.totalCost.toLocaleString()}</strong></span>
+                    </div>
+                    <div class="cost-item">
+                        <span>Cost per Pound:</span>
+                        <span>$${estimate.costPerPound}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="form-actions" style="justify-content: center; margin-top: 24px;">
+                <button class="btn btn-primary" onclick="downloadEstimate('${estimate.id}')">
+                    <i class="fas fa-download"></i> Download PDF Report
+                </button>
+                <button class="btn btn-success" onclick="convertToProject('${estimate.id}'); closeModal();">
+                    <i class="fas fa-plus"></i> Create Project from Estimate
+                </button>
+            </div>
+        </div>`;
+    showGenericModal(detailsHtml, 'max-width: 700px;');
+}
+
+function downloadEstimate(estimateId) {
+    const estimates = JSON.parse(localStorage.getItem('estimates') || '[]');
+    const estimate = estimates.find(e => e.id === estimateId);
+
+    if (!estimate) return;
+
+    // Simulate PDF generation by creating a detailed text report
+    const reportContent = generateEstimateReport(estimate);
+
+    // Create a blob and trigger download
+    const blob = new Blob([reportContent], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `SteelConnect_Estimate_${estimate.id.slice(-6)}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+
+    showNotification('Estimate report downloaded successfully!', 'success');
+}
+
+function generateEstimateReport(estimate) {
+    return `
+STEELCONNECT FABRICATION ESTIMATE REPORT
+========================================
+Estimate ID: ${estimate.id.slice(-6)}
+Generated: ${new Date(estimate.timestamp).toLocaleString()}
+
+PROJECT DETAILS:
+----------------
+- Material Type:     ${estimate.materialType.replace('-', ' ').toUpperCase()}
+- Weight:            ${estimate.actualWeight.toLocaleString()} lbs
+- Complexity:        ${estimate.complexity.replace('-', ' ').toUpperCase()}
+- Urgency:           ${estimate.urgency.replace('-', ' ').toUpperCase()}
+- Location:          ${estimate.location}
+- Estimated Delivery: ${estimate.estimatedDelivery}
+
+COST BREAKDOWN:
+---------------
+- Material Cost:     $${estimate.materialCost.toLocaleString()}
+- Fabrication Cost:  $${estimate.fabricationCost.toLocaleString()}
+- Labor Cost:        $${estimate.laborCost.toLocaleString()}
+- Overhead (15%):    $${estimate.overheadCost.toLocaleString()}
+- Profit Margin (20%): $${estimate.profitMargin.toLocaleString()}
+----------------------------------------
+TOTAL ESTIMATED COST:  $${estimate.totalCost.toLocaleString()}
+Cost per Pound:      $${estimate.costPerPound}
+========================================
+
+This estimate is valid for 30 days from the generation date.
+For questions or to proceed with fabrication, contact SteelConnect.
+    `.trim();
+}
+
+function convertToProject(estimateId) {
+    const estimates = JSON.parse(localStorage.getItem('estimates') || '[]');
+    const estimate = estimates.find(e => e.id === estimateId);
+
+    if (!estimate) return;
+
+    // Pre-fill post job form with estimate data
+    renderAppSection('post-job');
+
+    setTimeout(() => {
+        const form = document.getElementById('post-job-form');
+        if (form) {
+            form.title.value = `Fabrication Project - ${estimate.materialType.replace('-', ' ').toUpperCase()}`;
+            form.budget.value = `$${(estimate.totalCost * 0.9).toFixed(0)} - $${(estimate.totalCost * 1.1).toFixed(0)}`;
+            form.skills.value = 'Steel Fabrication, Welding, ' + estimate.materialType.replace('-', ' ');
+            form.description.value = `Project based on estimate #${estimate.id.slice(-6)}:
+- Material: ${estimate.materialType.replace('-', ' ').toUpperCase()}
+- Weight: ${estimate.actualWeight} lbs
+- Complexity: ${estimate.complexity.replace('-', ' ')}
+- Estimated Cost: $${estimate.totalCost.toLocaleString()}
+- Expected Delivery: ${estimate.estimatedDelivery}
+
+Please provide detailed quotes based on this estimate. Original files associated with the estimate should be considered part of this project.`;
+        }
+    }, 100);
+
+    showNotification('Project form pre-filled with estimate data!', 'info');
+}
+
+
+
+
+
+
+
+
+

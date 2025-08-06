@@ -310,3 +310,245 @@ body {
 .progress-ring-circle-bg { stroke: var(--neutral-200); }
 .progress-ring-circle { stroke: var(--primary-500); stroke-linecap: round; transform: rotate(-90deg); transform-origin: 50% 50%; transition: stroke-dashoffset 0.5s ease; }
 .progress-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 1.5rem; font-weight: 700; color: var(--primary-600); }
+
+
+/* --- NEW: ESTIMATES FEATURE STYLES --- */
+
+/* Estimates Container */
+.estimates-container {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: var(--space-8);
+    margin-top: var(--space-6);
+}
+@media (max-width: 1024px) {
+    .estimates-container {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Upload & History Sections */
+.upload-section, .estimates-history {
+    background: white;
+    border-radius: var(--radius-xl);
+    padding: var(--space-8);
+    box-shadow: var(--shadow-lg);
+}
+.upload-header, .history-header {
+    text-align: center;
+    margin-bottom: var(--space-6);
+}
+.upload-header h3, .history-header h3 {
+    color: var(--neutral-800);
+    margin-bottom: var(--space-2);
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+.upload-header p {
+    color: var(--neutral-500);
+    font-size: 1rem;
+}
+
+/* File Upload Area */
+.file-upload-area {
+    border: 2px dashed var(--neutral-300);
+    border-radius: var(--radius-md);
+    padding: var(--space-8);
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: var(--neutral-50);
+    position: relative;
+    margin-bottom: var(--space-6);
+}
+.file-upload-area:hover {
+    border-color: var(--primary-500);
+    background: var(--primary-50);
+}
+.file-upload-area.drag-over {
+    border-color: var(--primary-500);
+    background: var(--primary-100);
+    transform: scale(1.02);
+}
+.file-upload-area.has-files {
+    border-color: var(--success-500);
+    background: var(--success-50);
+    padding: var(--space-4);
+}
+.file-upload-area input[type="file"] {
+    position: absolute;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    cursor: pointer;
+}
+.upload-icon {
+    font-size: 3rem;
+    color: var(--primary-500);
+    margin-bottom: var(--space-4);
+}
+.file-upload-area h4 {
+    color: var(--neutral-800);
+    margin-bottom: var(--space-2);
+    font-weight: 600;
+}
+.file-upload-area p {
+    color: var(--neutral-500);
+    margin-bottom: var(--space-4);
+}
+.supported-formats {
+    margin-top: var(--space-4);
+}
+.supported-formats small {
+    color: var(--neutral-500);
+    font-size: 0.875rem;
+}
+
+/* Selected Files Display */
+.selected-files {
+    text-align: left;
+}
+.selected-files h4 {
+    color: var(--success-700);
+    margin-bottom: var(--space-3);
+    font-size: 1rem;
+}
+.file-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-3);
+    background: white;
+    border: 1px solid var(--neutral-200);
+    border-radius: var(--radius-sm);
+    margin-bottom: var(--space-2);
+}
+.file-item i {
+    color: var(--primary-500);
+}
+.file-name {
+    flex: 1;
+    color: var(--neutral-800);
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+.file-size {
+    color: var(--neutral-500);
+    font-size: 0.875rem;
+}
+
+/* Estimate History List */
+.estimates-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+.estimate-card {
+    background: white;
+    border: 1px solid var(--neutral-200);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+    transition: all 0.2s ease;
+}
+.estimate-card:hover {
+    box-shadow: var(--shadow-md);
+    border-color: var(--neutral-300);
+}
+.estimate-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--space-3);
+}
+.estimate-info h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--neutral-800);
+}
+.estimate-date {
+    font-size: 0.8rem;
+    color: var(--neutral-500);
+}
+.estimate-total {
+    text-align: right;
+}
+.estimate-total .total-label {
+    font-size: 0.75rem;
+    color: var(--neutral-500);
+    text-transform: uppercase;
+}
+.estimate-total .total-amount {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--success-700);
+}
+.estimate-details {
+    padding: var(--space-3) 0;
+    font-size: 0.85rem;
+    color: var(--neutral-600);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+}
+.estimate-actions {
+    margin-top: var(--space-3);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--neutral-200);
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-2);
+}
+
+/* Estimate Details Modal */
+.estimate-breakdown {
+    padding: var(--space-6);
+}
+.breakdown-section {
+    margin-bottom: var(--space-6);
+}
+.breakdown-section h4 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--neutral-700);
+    margin-bottom: var(--space-4);
+    border-bottom: 1px solid var(--neutral-200);
+    padding-bottom: var(--space-2);
+}
+.info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-3) var(--space-6);
+}
+.info-item label {
+    display: block;
+    color: var(--neutral-500);
+    font-size: 0.85rem;
+    margin-bottom: var(--space-1);
+}
+.info-item span {
+    font-weight: 500;
+    color: var(--neutral-800);
+}
+.cost-breakdown {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2-5);
+}
+.cost-item {
+    display: flex;
+    justify-content: space-between;
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--neutral-100);
+}
+.cost-item.total {
+    font-size: 1.1rem;
+    border-top: 2px solid var(--neutral-300);
+    margin-top: var(--space-2);
+}
