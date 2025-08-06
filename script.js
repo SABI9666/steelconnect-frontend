@@ -1,4 +1,4 @@
-// --- LANDING PAGE SLIDER LOGIC ---
+/ --- LANDING PAGE SLIDER LOGIC ---
 let currentSlide = 0;
 const sliderWrapper = document.getElementById('slider-wrapper');
 const sliderDots = document.querySelectorAll('.slider-dot');
@@ -866,7 +866,7 @@ function renderAppSection(sectionId) {
         container.innerHTML = getPostJobTemplate();
         document.getElementById('post-job-form').addEventListener('submit', handlePostJob);
     } else if (sectionId === 'estimates') {
-        renderEstimatesSection();
+        renderTonnageEstimatorSection();
     } else if (sectionId === 'my-quotes') {
         fetchAndRenderMyQuotes();
     } else if (sectionId === 'approved-jobs') {
@@ -1003,533 +1003,356 @@ async function analyzeDesignerStats() {
     } catch (error) {}
 }
 
-// --- NEW ESTIMATES FUNCTIONALITY ---
 
-function renderEstimatesSection() {
+// --- NEW: STEEL TONNAGE ESTIMATOR ---
+
+// Global state for the estimator
+let tonnageEstimatorState = {
+    currentFile: null,
+    currentEstimate: null,
+    extractedTonnage: 0,
+};
+
+// Regional pricing data (price per MT in local currency)
+const regionalPricing = {
+    'us': { basePrice: 1200, fabrication: 800, erection: 600, currency: 'USD', info: 'US market pricing - includes transportation' },
+    'canada': { basePrice: 1400, fabrication: 900, erection: 700, currency: 'CAD', info: 'Canadian market - varies by province' },
+    'uk': { basePrice: 950, fabrication: 650, erection: 500, currency: 'GBP', info: 'UK market - includes VAT considerations' },
+    'australia': { basePrice: 1600, fabrication: 1000, erection: 800, currency: 'AUD', info: 'Australian market - remote area surcharge may apply' },
+    'germany': { basePrice: 1100, fabrication: 750, erection: 600, currency: 'EUR', info: 'German market - CE marking included' },
+    'india': { basePrice: 45000, fabrication: 25000, erection: 18000, currency: 'INR', info: 'Indian market - GST not included' },
+    'china': { basePrice: 3500, fabrication: 2200, erection: 1800, currency: 'CNY', info: 'Chinese market - export quality standards' },
+    'uae': { basePrice: 2200, fabrication: 1400, erection: 1100, currency: 'AED', info: 'UAE market - desert conditions pricing' },
+    'saudi': { basePrice: 2400, fabrication: 1500, erection: 1200, currency: 'SAR', info: 'Saudi market - SASO standards compliance' },
+    'south-africa': { basePrice: 18000, fabrication: 12000, erection: 9000, currency: 'ZAR', info: 'South African market - SANS standards' }
+};
+
+function renderTonnageEstimatorSection() {
     const container = document.getElementById('app-container');
     container.innerHTML = `
         <div class="section-header modern-header">
             <div class="header-content">
-                <h2><i class="fas fa-calculator"></i> Generate Fabrication Estimates</h2>
-                <p class="header-subtitle">Upload your fabrication files to get automated cost estimates</p>
+                <h2><i class="fas fa-calculator"></i> Steel Tonnage & Cost Estimator</h2>
+                <p class="header-subtitle">Upload MTO documents or enter tonnage manually for detailed cost estimations based on regional pricing.</p>
             </div>
         </div>
-        <div class="estimates-container">
-            <div class="upload-section">
-                <div class="upload-card">
-                    <div class="upload-header">
-                        <h3><i class="fas fa-cloud-upload-alt"></i> Upload Fabrication Files</h3>
-                        <p>Upload drawings, specifications, or 3D models for instant estimates</p>
+        <div class="tonnage-estimator-container">
+            <div class="tonnage-form-panel">
+                <form id="tonnage-estimator-form" class="modern-form">
+                    <div class="form-section">
+                        <h3><i class="fas fa-file-upload"></i> Upload MTO (Optional)</h3>
+                        <div class="file-upload-area" id="tonnage-drop-zone">
+                            <div class="upload-icon"><i class="fas fa-file-excel"></i></div>
+                            <h4>Drag & Drop MTO File</h4>
+                            <p>Or click to browse for a PDF, Excel, or CSV file</p>
+                            <input type="file" id="tonnage-file-input" class="file-input" accept=".pdf,.xlsx,.xls,.csv">
+                        </div>
+                        <div id="tonnage-file-info-container" class="file-info-display" style="display: none;"></div>
+                        <iframe id="tonnage-pdf-preview" class="pdf-preview" style="display:none;"></iframe>
                     </div>
-                    <form id="estimate-upload-form" class="modern-form">
-                        <div class="file-upload-area" id="file-drop-zone">
-                            <div class="upload-icon"><i class="fas fa-file-upload"></i></div>
-                            <h4>Drag & Drop Files Here</h4>
-                            <p>Or click to browse files</p>
-                            <input type="file" id="estimate-files" name="files" multiple accept=".dwg,.dxf,.pdf,.step,.stp,.iges,.igs,.jpg,.jpeg,.png,.xlsx,.xls">
-                            <div class="supported-formats">
-                                <small>Supported: DWG, DXF, PDF, STEP, IGES, Images, Excel</small>
-                            </div>
+
+                    <div class="form-section">
+                        <h3><i class="fas fa-info-circle"></i> Project Details</h3>
+                        <div class="form-group">
+                            <label class="form-label" for="projectName">Project Name</label>
+                            <input type="text" id="projectName" class="form-input" placeholder="e.g., Downtown Office Tower">
                         </div>
-                        <div class="upload-options">
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label class="form-label"><i class="fas fa-industry"></i> Material Type</label>
-                                    <select class="form-select" name="materialType" required>
-                                        <option value="">Select Material</option>
-                                        <option value="carbon-steel">Carbon Steel</option>
-                                        <option value="stainless-steel">Stainless Steel</option>
-                                        <option value="aluminum">Aluminum</option>
-                                        <option value="mild-steel">Mild Steel</option>
-                                        <option value="alloy-steel">Alloy Steel</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label"><i class="fas fa-weight"></i> Estimated Weight (lbs)</label>
-                                    <input type="number" class="form-input" name="estimatedWeight" placeholder="Optional">
-                                </div>
-                            </div>
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label class="form-label"><i class="fas fa-cogs"></i> Fabrication Complexity</label>
-                                    <select class="form-select" name="complexity" required>
-                                        <option value="">Select Complexity</option>
-                                        <option value="simple">Simple - Basic cuts and welds</option>
-                                        <option value="moderate">Moderate - Standard fabrication</option>
-                                        <option value="complex">Complex - Intricate details</option>
-                                        <option value="highly-complex">Highly Complex - Precision work</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label"><i class="fas fa-calendar-alt"></i> Required Delivery</label>
-                                    <select class="form-select" name="urgency" required>
-                                        <option value="">Select Timeline</option>
-                                        <option value="standard">Standard (2-4 weeks)</option>
-                                        <option value="expedited">Expedited (1-2 weeks)</option>
-                                        <option value="rush">Rush (3-7 days)</option>
-                                        <option value="emergency">Emergency (1-2 days)</option>
-                                    </select>
-                                </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label" for="structureType">Project Type</label>
+                                <select id="structureType" class="form-select">
+                                    <option value="">Select project type</option>
+                                    <option value="building">Commercial Building</option>
+                                    <option value="warehouse">Warehouse/Industrial</option>
+                                    <option value="bridge">Bridge Structure</option>
+                                    <option value="tower">Tower/Mast</option>
+                                    <option value="stadium">Stadium/Sports Complex</option>
+                                    <option value="residential">Residential Complex</option>
+                                    <option value="infrastructure">Infrastructure</option>
+                                    <option value="miscellaneous">Miscellaneous Steel</option>
+                                </select>
                             </div>
                             <div class="form-group">
-                                <label class="form-label"><i class="fas fa-map-marker-alt"></i> Project Location</label>
-                                <input type="text" class="form-input" name="location" placeholder="City, State" required>
+                                <label class="form-label" for="steelGrade">Steel Grade/Type</label>
+                                <input type="text" id="steelGrade" class="form-input" placeholder="e.g., Grade 50, S355" list="gradesList">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3><i class="fas fa-globe-americas"></i> Regional Specifications</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label" for="region">Region/Country</label>
+                                <select id="region" class="form-select"></select>
+                                <small id="region-price-info" class="form-help"></small>
                             </div>
                             <div class="form-group">
-                                <label class="form-label"><i class="fas fa-sticky-note"></i> Additional Notes</label>
-                                <textarea class="form-textarea" name="notes" placeholder="Any special requirements, finishing, coating, etc."></textarea>
+                                <label class="form-label" for="currency">Currency</label>
+                                <select id="currency" class="form-select"></select>
                             </div>
                         </div>
-                        <div class="form-actions">
-                            <button type="submit" class="btn btn-primary btn-large">
-                                <i class="fas fa-calculator"></i> Generate Estimate
-                            </button>
+                    </div>
+
+                    <div class="form-section">
+                        <h3><i class="fas fa-weight-hanging"></i> Steel Tonnage</h3>
+                        <div class="form-group">
+                            <label class="form-label" for="totalTonnageInput">Total Steel Tonnage (Metric Tons)</label>
+                            <input type="number" id="totalTonnageInput" class="form-input" placeholder="Enter total tonnage or upload MTO" step="0.01" min="0.1">
+                             <small class="form-help">This value will be updated automatically if a valid MTO file is uploaded.</small>
                         </div>
-                    </form>
-                </div>
+                    </div>
+
+                     <div class="form-actions">
+                        <button type="button" id="calculate-estimate-btn" class="btn btn-primary btn-large"><i class="fas fa-calculator"></i> Calculate Estimate</button>
+                    </div>
+                </form>
             </div>
-            <div class="estimates-history">
-                <div class="history-header">
-                    <h3><i class="fas fa-history"></i> Recent Estimates</h3>
-                </div>
-                <div id="estimates-list" class="estimates-list">
+            <div class="tonnage-results-panel">
+                <div id="tonnage-result-container" class="results-wrapper">
+                    <div class="empty-state">
+                        <div class="empty-icon"><i class="fas fa-clipboard-list"></i></div>
+                        <h3>Awaiting Calculation</h3>
+                        <p>Your detailed cost estimation report will appear here.</p>
                     </div>
+                </div>
             </div>
         </div>`;
-    initializeEstimateUpload();
-    loadEstimateHistory();
+    initializeTonnageEstimator();
 }
 
-function initializeEstimateUpload() {
-    const form = document.getElementById('estimate-upload-form');
-    const dropZone = document.getElementById('file-drop-zone');
-    const fileInput = document.getElementById('estimate-files');
+function initializeTonnageEstimator() {
+    // Populate dropdowns
+    const regionSelect = document.getElementById('region');
+    const currencySelect = document.getElementById('currency');
+    for (const key in regionalPricing) {
+        regionSelect.innerHTML += `<option value="${key}">${key.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}</option>`;
+    }
+    for (const key in regionalPricing) {
+        currencySelect.innerHTML += `<option value="${regionalPricing[key].currency}">${regionalPricing[key].currency}</option>`;
+    }
+    
+    // Set defaults and update display
+    regionSelect.value = 'us';
+    updateRegionalPricingDisplay();
 
-    // Handle form submission
-    form.addEventListener('submit', handleEstimateUpload);
+    // Attach listeners
+    const calculateBtn = document.getElementById('calculate-estimate-btn');
+    calculateBtn.addEventListener('click', handleCalculateSteelEstimate);
+    
+    regionSelect.addEventListener('change', updateRegionalPricingDisplay);
 
-    // File input change
-    fileInput.addEventListener('change', handleFileSelect);
-
-    // Drag and drop functionality
+    const dropZone = document.getElementById('tonnage-drop-zone');
+    const fileInput = document.getElementById('tonnage-file-input');
+    
     dropZone.addEventListener('click', () => fileInput.click());
-
-    dropZone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        dropZone.classList.add('drag-over');
-    });
-
-    dropZone.addEventListener('dragleave', (e) => {
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+    dropZone.addEventListener('dragleave', e => { e.preventDefault(); dropZone.classList.remove('drag-over'); });
+    dropZone.addEventListener('drop', e => {
         e.preventDefault();
         dropZone.classList.remove('drag-over');
-    });
-
-    dropZone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        dropZone.classList.remove('drag-over');
-        const files = e.dataTransfer.files;
-        fileInput.files = files;
-        handleFileSelect({ target: { files } });
-    });
-}
-
-function handleFileSelect(event) {
-    const files = event.target.files;
-    const dropZone = document.getElementById('file-drop-zone');
-
-    if (files.length > 0) {
-        let fileList = '<div class="selected-files"><h4>Selected Files:</h4>';
-        for (let i = 0; i < files.length; i++) {
-            const file = files[i];
-            const fileSize = (file.size / (1024 * 1024)).toFixed(2);
-            fileList += `<div class="file-item">
-                <i class="fas fa-file"></i>
-                <span class="file-name">${file.name}</span>
-                <span class="file-size">(${fileSize} MB)</span>
-            </div>`;
+        if (e.dataTransfer.files.length > 0) {
+            handleTonnageFile(e.dataTransfer.files[0]);
         }
-        fileList += '</div>';
-
-        dropZone.innerHTML = fileList;
-        dropZone.classList.add('has-files');
-    }
-}
-
-async function handleEstimateUpload(event) {
-    event.preventDefault();
-    const form = event.target;
-    const submitBtn = form.querySelector('button[type="submit"]');
-    const originalText = submitBtn.innerHTML;
-
-    const files = document.getElementById('estimate-files').files;
-    if (files.length === 0) {
-        showNotification('Please select at least one file to upload.', 'error');
-        return;
-    }
-
-    try {
-        submitBtn.innerHTML = '<div class="btn-spinner"></div> Analyzing Files...';
-        submitBtn.disabled = true;
-
-        const formData = new FormData(form);
-
-        // Add files to form data
-        for (let i = 0; i < files.length; i++) {
-            formData.append('files', files[i]);
-        }
-
-        // Simulate estimate generation (replace with actual API call)
-        await simulateEstimateGeneration(formData);
-
-        showNotification('Estimate generated successfully!', 'success');
-        form.reset();
-        document.getElementById('file-drop-zone').classList.remove('has-files'); // visual reset
-        loadEstimateHistory();
-
-    } catch (error) {
-        console.error('Estimate generation failed:', error);
-        showNotification('Failed to generate estimate. Please try again.', 'error');
-    } finally {
-        submitBtn.innerHTML = originalText;
-        submitBtn.disabled = false;
-
-        // Reset file upload area
-        const dropZone = document.getElementById('file-drop-zone');
-        dropZone.innerHTML = `
-            <div class="upload-icon"><i class="fas fa-file-upload"></i></div>
-            <h4>Drag & Drop Files Here</h4>
-            <p>Or click to browse files</p>
-            <input type="file" id="estimate-files" name="files" multiple accept=".dwg,.dxf,.pdf,.step,.stp,.iges,.igs,.jpg,.jpeg,.png,.xlsx,.xls">
-            <div class="supported-formats">
-                <small>Supported: DWG, DXF, PDF, STEP, IGES, Images, Excel</small>
-            </div>`;
-        dropZone.classList.remove('has-files');
-
-        // Reinitialize file input
-        document.getElementById('estimate-files').addEventListener('change', handleFileSelect);
-    }
-}
-
-async function simulateEstimateGeneration(formData) {
-    // Simulate processing time
-    await new Promise(resolve => setTimeout(resolve, 2500));
-
-    // Get form values
-    const materialType = formData.get('materialType');
-    const complexity = formData.get('complexity');
-    const urgency = formData.get('urgency');
-    const location = formData.get('location');
-    const estimatedWeight = formData.get('estimatedWeight') || 0;
-
-    // Generate mock estimate data
-    const estimate = generateMockEstimate(materialType, complexity, urgency, estimatedWeight);
-
-    // Save to local storage (in real app, this would be saved to backend)
-    let estimates = JSON.parse(localStorage.getItem('estimates') || '[]');
-    estimates.unshift({
-        id: Date.now().toString(),
-        timestamp: new Date().toISOString(),
-        materialType,
-        complexity,
-        urgency,
-        location,
-        estimatedWeight,
-        ...estimate
     });
-    localStorage.setItem('estimates', JSON.stringify(estimates.slice(0, 10))); // Keep last 10
+    fileInput.addEventListener('change', e => {
+        if (e.target.files.length > 0) {
+            handleTonnageFile(e.target.files[0]);
+        }
+    });
 }
 
-function generateMockEstimate(materialType, complexity, urgency, weight) {
-    // Base rates per pound for different materials
-    const materialRates = {
-        'carbon-steel': 2.50,
-        'stainless-steel': 4.20,
-        'aluminum': 3.80,
-        'mild-steel': 2.20,
-        'alloy-steel': 3.50
-    };
-
-    // Complexity multipliers
-    const complexityMultipliers = {
-        'simple': 1.0,
-        'moderate': 1.3,
-        'complex': 1.7,
-        'highly-complex': 2.2
-    };
-
-    // Urgency multipliers
-    const urgencyMultipliers = {
-        'standard': 1.0,
-        'expedited': 1.25,
-        'rush': 1.6,
-        'emergency': 2.0
-    };
-
-    const baseWeight = weight > 0 ? parseFloat(weight) : Math.floor(Math.random() * 5000) + 500;
-    const baseMaterialCost = baseWeight * materialRates[materialType];
-    const fabricationCost = baseMaterialCost * complexityMultipliers[complexity];
-    const urgencyCost = (fabricationCost * urgencyMultipliers[urgency]) - fabricationCost; // Urgency cost is the premium
-
-    // Additional costs
-    const laborCost = fabricationCost * 0.6;
-    const overheadCost = (baseMaterialCost + fabricationCost + laborCost) * 0.15;
-    const profitMargin = (baseMaterialCost + fabricationCost + laborCost + overheadCost) * 0.20;
-
-    const totalCost = baseMaterialCost + fabricationCost + urgencyCost + laborCost + overheadCost + profitMargin;
-
-    return {
-        materialCost: Math.round(baseMaterialCost),
-        fabricationCost: Math.round(fabricationCost),
-        laborCost: Math.round(laborCost),
-        overheadCost: Math.round(overheadCost),
-        profitMargin: Math.round(profitMargin),
-        totalCost: Math.round(totalCost),
-        actualWeight: baseWeight,
-        costPerPound: (totalCost / baseWeight).toFixed(2),
-        estimatedDelivery: getEstimatedDelivery(urgency)
-    };
+function updateRegionalPricingDisplay() {
+    const region = document.getElementById('region').value;
+    const infoDiv = document.getElementById('region-price-info');
+    const currencySelect = document.getElementById('currency');
+    if (region && regionalPricing[region]) {
+        const pricing = regionalPricing[region];
+        infoDiv.textContent = `Base: ${pricing.basePrice} ${pricing.currency}/MT. ${pricing.info}`;
+        currencySelect.value = pricing.currency;
+    } else {
+        infoDiv.textContent = '';
+    }
 }
 
-function getEstimatedDelivery(urgency) {
-    const now = new Date();
-    const deliveryDays = {
-        'standard': 21,
-        'expedited': 10,
-        'rush': 5,
-        'emergency': 2
-    };
+function handleTonnageFile(file) {
+    tonnageEstimatorState.currentFile = file;
+    const infoContainer = document.getElementById('tonnage-file-info-container');
+    const pdfPreview = document.getElementById('tonnage-pdf-preview');
+    
+    const fileSize = (file.size / (1024 * 1024)).toFixed(2);
+    infoContainer.innerHTML = `<div class="file-item"><i class="fas fa-file"></i><span class="file-name">${file.name} (${fileSize} MB)</span><span id="file-status" class="file-status-processing">Processing...</span></div>`;
+    infoContainer.style.display = 'block';
+    
+    pdfPreview.style.display = 'none';
 
-    now.setDate(now.getDate() + deliveryDays[urgency]);
-    return now.toLocaleDateString();
+    if (file.type === 'application/pdf') {
+        const fileURL = URL.createObjectURL(file);
+        pdfPreview.src = fileURL;
+        pdfPreview.style.display = 'block';
+    }
+    
+    // Simulate processing for tonnage extraction
+    setTimeout(() => {
+        const baseTonnage = Math.random() * 800 + 50; // 50-850 MT
+        tonnageEstimatorState.extractedTonnage = Math.round(baseTonnage * 100) / 100;
+        document.getElementById('totalTonnageInput').value = tonnageEstimatorState.extractedTonnage;
+        const statusSpan = document.getElementById('file-status');
+        statusSpan.textContent = `Processed - ${tonnageEstimatorState.extractedTonnage} MT extracted`;
+        statusSpan.className = 'file-status-success';
+        showNotification('MTO file processed successfully!', 'success');
+    }, 2000);
 }
 
-function loadEstimateHistory() {
-    const container = document.getElementById('estimates-list');
-    const estimates = JSON.parse(localStorage.getItem('estimates') || '[]');
+function handleCalculateSteelEstimate() {
+    const projectName = document.getElementById('projectName').value;
+    const structureType = document.getElementById('structureType').value;
+    const region = document.getElementById('region').value;
+    const currency = document.getElementById('currency').value;
+    const steelGrade = document.getElementById('steelGrade').value;
+    const totalTonnage = parseFloat(document.getElementById('totalTonnageInput').value) || 0;
 
-    if (estimates.length === 0) {
-        container.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-icon"><i class="fas fa-calculator"></i></div>
-                <h3>No Estimates Generated</h3>
-                <p>Upload your first fabrication file to generate an estimate.</p>
-            </div>`;
-        return;
+    if (!projectName || !structureType) {
+        return showNotification('Please enter a Project Name and select a Project Type.', 'error');
+    }
+    if (!region) {
+        return showNotification('Please select a region.', 'error');
+    }
+    if (totalTonnage <= 0) {
+        return showNotification('Please enter a valid tonnage or upload an MTO file.', 'error');
     }
 
-    container.innerHTML = estimates.map(estimate => `
-        <div class="estimate-card">
-            <div class="estimate-header">
-                <div class="estimate-info">
-                    <h4>Estimate #${estimate.id.slice(-6)}</h4>
-                    <p class="estimate-date"><i class="fas fa-clock"></i> ${new Date(estimate.timestamp).toLocaleDateString()}</p>
-                </div>
-                <div class="estimate-total">
-                    <span class="total-label">Total Cost</span>
-                    <span class="total-amount">$${estimate.totalCost.toLocaleString()}</span>
-                </div>
+    const pricing = regionalPricing[region];
+    if (!pricing) {
+        return showNotification('Pricing data not available for the selected region.', 'error');
+    }
+
+    // Calculations
+    const baseMaterialCost = totalTonnage * pricing.basePrice;
+    const fabricationCost = totalTonnage * pricing.fabrication;
+    const erectionCost = totalTonnage * pricing.erection;
+    const transportationCost = baseMaterialCost * 0.08;
+    const qualityControlCost = (baseMaterialCost + fabricationCost) * 0.03;
+    const safetyCompliance = fabricationCost * 0.05;
+    const engineeringServices = totalTonnage * (pricing.basePrice * 0.15);
+    const subtotal = baseMaterialCost + fabricationCost + erectionCost + transportationCost + qualityControlCost + safetyCompliance + engineeringServices;
+    const overheads = subtotal * 0.12;
+    const profit = subtotal * 0.18;
+    const totalProjectCost = subtotal + overheads + profit;
+    const estimatedWeeks = Math.ceil((totalTonnage / 50) + 2);
+
+    tonnageEstimatorState.currentEstimate = {
+        projectName, structureType, region, currency, steelGrade, totalTonnage,
+        baseMaterialCost, fabricationCost, erectionCost, transportationCost, qualityControlCost,
+        safetyCompliance, engineeringServices, subtotal, overheads, profit, totalProjectCost,
+        costPerMT: totalProjectCost / totalTonnage, estimatedWeeks, pricing,
+        generatedDate: new Date().toLocaleDateString()
+    };
+
+    displayTonnageEstimateResults();
+}
+
+function displayTonnageEstimateResults() {
+    const container = document.getElementById('tonnage-result-container');
+    const est = tonnageEstimatorState.currentEstimate;
+    
+    const formatCurrency = (val) => `${est.currency} ${Math.round(val).toLocaleString()}`;
+
+    container.innerHTML = `
+        <div class="result-header">
+            <h4><i class="fas fa-clipboard-check"></i> Estimation Report</h4>
+            <p>For: <strong>${est.projectName}</strong></p>
+        </div>
+        <div class="result-summary">
+            <div class="summary-item">
+                <span>Total Tonnage</span>
+                <strong>${est.totalTonnage.toFixed(2)} MT</strong>
             </div>
-            <div class="estimate-details">
-                <div class="detail-row">
-                    <span><i class="fas fa-weight"></i> Weight: ${estimate.actualWeight} lbs</span>
-                    <span><i class="fas fa-dollar-sign"></i> Cost/lb: $${estimate.costPerPound}</span>
-                </div>
-                <div class="detail-row">
-                    <span><i class="fas fa-industry"></i> ${estimate.materialType.replace('-', ' ').toUpperCase()}</span>
-                    <span><i class="fas fa-calendar-alt"></i> Delivery: ${estimate.estimatedDelivery}</span>
-                </div>
+            <div class="summary-item">
+                <span>Est. Timeline</span>
+                <strong>${est.estimatedWeeks} weeks</strong>
             </div>
-            <div class="estimate-actions">
-                <button class="btn btn-outline btn-sm" onclick="viewEstimateDetails('${estimate.id}')">
-                    <i class="fas fa-eye"></i> View Details
-                </button>
-                <button class="btn btn-primary btn-sm" onclick="downloadEstimate('${estimate.id}')">
-                    <i class="fas fa-download"></i> Download Report
-                </button>
-                <button class="btn btn-success btn-sm" onclick="convertToProject('${estimate.id}')">
-                    <i class="fas fa-plus"></i> Create Project
-                </button>
+            <div class="summary-item">
+                <span>Cost per MT</span>
+                <strong>${formatCurrency(est.costPerMT)}</strong>
             </div>
         </div>
-    `).join('');
-}
-
-function viewEstimateDetails(estimateId) {
-    const estimates = JSON.parse(localStorage.getItem('estimates') || '[]');
-    const estimate = estimates.find(e => e.id === estimateId);
-
-    if (!estimate) return;
-
-    const detailsHtml = `
-        <div class="modal-header">
-            <h3><i class="fas fa-file-invoice-dollar"></i> Estimate Details</h3>
-            <p class="modal-subtitle">Estimate #${estimate.id.slice(-6)} - ${new Date(estimate.timestamp).toLocaleDateString()}</p>
+        <div class="result-breakdown">
+            <div class="result-item"><span>Base Material Cost</span><span>${formatCurrency(est.baseMaterialCost)}</span></div>
+            <div class="result-item"><span>Fabrication Cost</span><span>${formatCurrency(est.fabricationCost)}</span></div>
+            <div class="result-item"><span>Erection Cost</span><span>${formatCurrency(est.erectionCost)}</span></div>
+            <div class="result-item"><span>Transportation & Logistics</span><span>${formatCurrency(est.transportationCost)}</span></div>
+            <div class="result-item"><span>Quality Control & Testing</span><span>${formatCurrency(est.qualityControlCost)}</span></div>
+            <div class="result-item"><span>Safety & Compliance</span><span>${formatCurrency(est.safetyCompliance)}</span></div>
+            <div class="result-item"><span>Engineering Services</span><span>${formatCurrency(est.engineeringServices)}</span></div>
+            <div class="result-item subtotal"><strong>Subtotal</strong><strong>${formatCurrency(est.subtotal)}</strong></div>
+            <div class="result-item"><span>Overheads (12%)</span><span>${formatCurrency(est.overheads)}</span></div>
+            <div class="result-item"><span>Profit Margin (18%)</span><span>${formatCurrency(est.profit)}</span></div>
         </div>
-        <div class="estimate-breakdown">
-            <div class="breakdown-section">
-                <h4><i class="fas fa-info-circle"></i> Project Information</h4>
-                <div class="info-grid">
-                    <div class="info-item">
-                        <label>Material Type:</label>
-                        <span>${estimate.materialType.replace('-', ' ').toUpperCase()}</span>
-                    </div>
-                    <div class="info-item">
-                        <label>Weight:</label>
-                        <span>${estimate.actualWeight} lbs</span>
-                    </div>
-                    <div class="info-item">
-                        <label>Complexity:</label>
-                        <span>${estimate.complexity.replace('-', ' ').toUpperCase()}</span>
-                    </div>
-                    <div class="info-item">
-                        <label>Urgency:</label>
-                        <span>${estimate.urgency.replace('-', ' ').toUpperCase()}</span>
-                    </div>
-                    <div class="info-item">
-                        <label>Location:</label>
-                        <span>${estimate.location}</span>
-                    </div>
-                    <div class="info-item">
-                        <label>Est. Delivery:</label>
-                        <span>${estimate.estimatedDelivery}</span>
-                    </div>
-                </div>
-            </div>
-            <div class="breakdown-section">
-                <h4><i class="fas fa-calculator"></i> Cost Breakdown</h4>
-                <div class="cost-breakdown">
-                    <div class="cost-item">
-                        <span>Material Cost:</span>
-                        <span>$${estimate.materialCost.toLocaleString()}</span>
-                    </div>
-                    <div class="cost-item">
-                        <span>Fabrication Cost:</span>
-                        <span>$${estimate.fabricationCost.toLocaleString()}</span>
-                    </div>
-                    <div class="cost-item">
-                        <span>Labor Cost:</span>
-                        <span>$${estimate.laborCost.toLocaleString()}</span>
-                    </div>
-                    <div class="cost-item">
-                        <span>Overhead (15%):</span>
-                        <span>$${estimate.overheadCost.toLocaleString()}</span>
-                    </div>
-                    <div class="cost-item">
-                        <span>Profit Margin (20%):</span>
-                        <span>$${estimate.profitMargin.toLocaleString()}</span>
-                    </div>
-                    <div class="cost-item total">
-                        <span><strong>Total Cost:</strong></span>
-                        <span><strong>$${estimate.totalCost.toLocaleString()}</strong></span>
-                    </div>
-                    <div class="cost-item">
-                        <span>Cost per Pound:</span>
-                        <span>$${estimate.costPerPound}</span>
-                    </div>
-                </div>
-            </div>
-            <div class="form-actions" style="justify-content: center; margin-top: 24px;">
-                <button class="btn btn-primary" onclick="downloadEstimate('${estimate.id}')">
-                    <i class="fas fa-download"></i> Download PDF Report
-                </button>
-                <button class="btn btn-success" onclick="convertToProject('${estimate.id}'); closeModal();">
-                    <i class="fas fa-plus"></i> Create Project from Estimate
-                </button>
-            </div>
-        </div>`;
-    showGenericModal(detailsHtml, 'max-width: 700px;');
+        <div class="result-total">
+            <span>Total Estimated Project Cost</span>
+            <strong>${formatCurrency(est.totalProjectCost)}</strong>
+        </div>
+        <div class="result-actions">
+            <button class="btn btn-secondary" id="download-tonnage-report-btn"><i class="fas fa-download"></i> Download Report</button>
+        </div>
+    `;
+
+    document.getElementById('download-tonnage-report-btn').addEventListener('click', downloadTonnageReport);
 }
 
-function downloadEstimate(estimateId) {
-    const estimates = JSON.parse(localStorage.getItem('estimates') || '[]');
-    const estimate = estimates.find(e => e.id === estimateId);
+function downloadTonnageReport() {
+    const est = tonnageEstimatorState.currentEstimate;
+    if (!est) return;
 
-    if (!estimate) return;
+    const content = `
+STEEL STRUCTURE TONNAGE ESTIMATION REPORT
+==========================================
+Project: ${est.projectName}
+Date: ${est.generatedDate}
 
-    // Simulate PDF generation by creating a detailed text report
-    const reportContent = generateEstimateReport(estimate);
+PROJECT OVERVIEW
+--------------------------------
+- Project Type: ${est.structureType}
+- Total Steel Tonnage: ${est.totalTonnage.toFixed(2)} MT
+- Region: ${est.region.toUpperCase()}
+- Currency: ${est.currency}
+- Steel Grade: ${est.steelGrade || 'N/A'}
+- Estimated Timeline: ${est.estimatedWeeks} weeks
 
-    // Create a blob and trigger download
-    const blob = new Blob([reportContent], { type: 'text/plain' });
+COST BREAKDOWN (${est.currency})
+--------------------------------
+- Base Material Cost:           ${est.baseMaterialCost.toLocaleString()}
+- Fabrication Cost:             ${est.fabricationCost.toLocaleString()}
+- Erection Cost:                ${est.erectionCost.toLocaleString()}
+- Transportation & Logistics:   ${est.transportationCost.toLocaleString()}
+- Quality Control & Testing:    ${est.qualityControlCost.toLocaleString()}
+- Safety & Compliance:          ${est.safetyCompliance.toLocaleString()}
+- Engineering Services:         ${est.engineeringServices.toLocaleString()}
+--------------------------------------------
+SUBTOTAL:                       ${est.subtotal.toLocaleString()}
+- Overheads (12%):              ${est.overheads.toLocaleString()}
+- Profit Margin (18%):          ${est.profit.toLocaleString()}
+============================================
+TOTAL PROJECT COST:             ${est.totalProjectCost.toLocaleString()}
+Cost per MT:                    ${Math.round(est.costPerMT).toLocaleString()}/${'MT'}
+============================================
+
+NOTES & ASSUMPTIONS
+- Pricing based on ${est.region.toUpperCase()} regional rates. ${est.pricing.info}.
+- This is a preliminary estimate for planning purposes only and is valid for 30 days.
+- Final costs may vary based on detailed engineering, site conditions, and market fluctuations.
+- Generated by SteelConnect Tonnage Estimator.
+    `.trim();
+
+    const blob = new Blob([content.replace(/\n/g, '\r\n')], { type: 'text/plain' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `SteelConnect_Estimate_${estimate.id.slice(-6)}.txt`;
+    a.download = `Steel_Estimate_${est.projectName.replace(/[^a-zA-Z0-9]/g, '_')}.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
-
-    showNotification('Estimate report downloaded successfully!', 'success');
+    showNotification('Report download initiated.', 'success');
 }
-
-function generateEstimateReport(estimate) {
-    return `
-STEELCONNECT FABRICATION ESTIMATE REPORT
-========================================
-Estimate ID: ${estimate.id.slice(-6)}
-Generated: ${new Date(estimate.timestamp).toLocaleString()}
-
-PROJECT DETAILS:
-----------------
-- Material Type:     ${estimate.materialType.replace('-', ' ').toUpperCase()}
-- Weight:            ${estimate.actualWeight.toLocaleString()} lbs
-- Complexity:        ${estimate.complexity.replace('-', ' ').toUpperCase()}
-- Urgency:           ${estimate.urgency.replace('-', ' ').toUpperCase()}
-- Location:          ${estimate.location}
-- Estimated Delivery: ${estimate.estimatedDelivery}
-
-COST BREAKDOWN:
----------------
-- Material Cost:     $${estimate.materialCost.toLocaleString()}
-- Fabrication Cost:  $${estimate.fabricationCost.toLocaleString()}
-- Labor Cost:        $${estimate.laborCost.toLocaleString()}
-- Overhead (15%):    $${estimate.overheadCost.toLocaleString()}
-- Profit Margin (20%): $${estimate.profitMargin.toLocaleString()}
-----------------------------------------
-TOTAL ESTIMATED COST:  $${estimate.totalCost.toLocaleString()}
-Cost per Pound:      $${estimate.costPerPound}
-========================================
-
-This estimate is valid for 30 days from the generation date.
-For questions or to proceed with fabrication, contact SteelConnect.
-    `.trim();
-}
-
-function convertToProject(estimateId) {
-    const estimates = JSON.parse(localStorage.getItem('estimates') || '[]');
-    const estimate = estimates.find(e => e.id === estimateId);
-
-    if (!estimate) return;
-
-    // Pre-fill post job form with estimate data
-    renderAppSection('post-job');
-
-    setTimeout(() => {
-        const form = document.getElementById('post-job-form');
-        if (form) {
-            form.title.value = `Fabrication Project - ${estimate.materialType.replace('-', ' ').toUpperCase()}`;
-            form.budget.value = `$${(estimate.totalCost * 0.9).toFixed(0)} - $${(estimate.totalCost * 1.1).toFixed(0)}`;
-            form.skills.value = 'Steel Fabrication, Welding, ' + estimate.materialType.replace('-', ' ');
-            form.description.value = `Project based on estimate #${estimate.id.slice(-6)}:
-- Material: ${estimate.materialType.replace('-', ' ').toUpperCase()}
-- Weight: ${estimate.actualWeight} lbs
-- Complexity: ${estimate.complexity.replace('-', ' ')}
-- Estimated Cost: $${estimate.totalCost.toLocaleString()}
-- Expected Delivery: ${estimate.estimatedDelivery}
-
-Please provide detailed quotes based on this estimate. Original files associated with the estimate should be considered part of this project.`;
-        }
-    }, 100);
-
-    showNotification('Project form pre-filled with estimate data!', 'info');
-}
-
-
-
-
-
-
-
-
-
