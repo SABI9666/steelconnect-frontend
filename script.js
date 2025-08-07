@@ -1,4 +1,4 @@
-// --- LANDING PAGE SLIDER LOGIC ---
+/ --- LANDING PAGE SLIDER LOGIC ---
 let currentSlide = 0;
 const sliderWrapper = document.getElementById('slider-wrapper');
 const sliderDots = document.querySelectorAll('.slider-dot');
@@ -1006,51 +1006,41 @@ async function analyzeDesignerStats() {
 
 
 // --- ENHANCED STEEL TONNAGE ESTIMATOR ---
-// This section replaces the old estimator logic with the new, professional version.
+// This section contains the new, professional version that communicates with the backend.
 
-// Global state for the estimator (enhanced)
+// Global state for the estimator
 let tonnageEstimatorState = {
     currentFiles: [],
     currentEstimate: null,
     extractedTonnage: 0,
     processingFiles: new Set(),
-    dwgViewer: null,
     estimateHistory: []
 };
 
-// Enhanced regional pricing data with more accurate values
+// Data for form dropdowns (could be fetched from backend in future)
 const regionalPricing = {
-    'us': { basePrice: 1200, fabrication: 800, erection: 600, currency: 'USD', info: 'US market pricing - includes transportation', multiplier: 1.0 },
-    'canada': { basePrice: 1400, fabrication: 900, erection: 700, currency: 'CAD', info: 'Canadian market - varies by province', multiplier: 1.15 },
-    'uk': { basePrice: 950, fabrication: 650, erection: 500, currency: 'GBP', info: 'UK market - includes VAT considerations', multiplier: 0.8 },
-    'australia': { basePrice: 1600, fabrication: 1000, erection: 800, currency: 'AUD', info: 'Australian market - remote area surcharge may apply', multiplier: 1.3 },
-    'germany': { basePrice: 1100, fabrication: 750, erection: 600, currency: 'EUR', info: 'German market - CE marking included', multiplier: 0.9 },
-    'india': { basePrice: 45000, fabrication: 25000, erection: 18000, currency: 'INR', info: 'Indian market - GST not included', multiplier: 75 },
-    'china': { basePrice: 3500, fabrication: 2200, erection: 1800, currency: 'CNY', info: 'Chinese market - export quality standards', multiplier: 6.5 },
-    'uae': { basePrice: 2200, fabrication: 1400, erection: 1100, currency: 'AED', info: 'UAE market - desert conditions pricing', multiplier: 3.5 },
-    'saudi': { basePrice: 2400, fabrication: 1500, erection: 1200, currency: 'SAR', info: 'Saudi market - SASO standards compliance', multiplier: 3.8 },
-    'south-africa': { basePrice: 18000, fabrication: 12000, erection: 9000, currency: 'ZAR', info: 'South African market - SANS standards', multiplier: 18 }
+    'us': { currency: 'USD', info: 'US market pricing - includes transportation' },
+    'canada': { currency: 'CAD', info: 'Canadian market - varies by province' },
+    'uk': { currency: 'GBP', info: 'UK market - includes VAT considerations' },
+    'australia': { currency: 'AUD', info: 'Australian market - remote area surcharge may apply' },
+    'germany': { currency: 'EUR', info: 'German market - CE marking included' },
+    'india': { currency: 'INR', info: 'Indian market - GST not included' },
+    'china': { currency: 'CNY', info: 'Chinese market - export quality standards' },
+    'uae': { currency: 'AED', info: 'UAE market - desert conditions pricing' },
+    'saudi': { currency: 'SAR', info: 'Saudi market - SASO standards compliance' },
+    'south-africa': { currency: 'ZAR', info: 'South African market - SANS standards' }
 };
 
-// Steel grades with pricing multipliers
 const steelGrades = {
-    'A36': { multiplier: 1.0, description: 'Structural Steel' },
-    'A572-50': { multiplier: 1.15, description: 'High-Strength Low-Alloy' },
-    'A992': { multiplier: 1.2, description: 'Wide-Flange Shapes' },
-    'S355': { multiplier: 1.1, description: 'European Standard' },
-    'S275': { multiplier: 1.05, description: 'European Structural' },
-    'Grade-50': { multiplier: 1.15, description: 'ASTM A572 Grade 50' },
-    'Weathering': { multiplier: 1.4, description: 'Cor-Ten Steel' },
-    'Stainless-316': { multiplier: 3.2, description: 'Stainless Steel 316' },
-    'Custom': { multiplier: 1.0, description: 'Custom Grade' }
-};
-
-// Project complexity factors
-const projectComplexityFactors = {
-    'simple': { factor: 1.0, description: 'Standard structural work' },
-    'moderate': { factor: 1.25, description: 'Some complex connections' },
-    'complex': { factor: 1.6, description: 'Complex geometry and connections' },
-    'architectural': { factor: 2.0, description: 'Architectural exposed steel' }
+    'A36': { description: 'Structural Steel' },
+    'A572-50': { description: 'High-Strength Low-Alloy' },
+    'A992': { description: 'Wide-Flange Shapes' },
+    'S355': { description: 'European Standard' },
+    'S275': { description: 'European Structural' },
+    'Grade-50': { description: 'ASTM A572 Grade 50' },
+    'Weathering': { description: 'Cor-Ten Steel' },
+    'Stainless-316': { description: 'Stainless Steel 316' },
+    'Custom': { description: 'Custom Grade' }
 };
 
 function renderEstimatesSection() {
@@ -1067,7 +1057,6 @@ function renderEstimatesSection() {
             </div>
         </div>
         <div class="tonnage-estimator-container">
-            <!-- Enhanced Form Panel -->
             <div class="tonnage-form-panel">
                 <div class="estimator-progress-bar">
                     <div class="progress-step active" data-step="1">
@@ -1084,62 +1073,36 @@ function renderEstimatesSection() {
                     </div>
                 </div>
                 <form id="tonnage-estimator-form" class="modern-form enhanced-form">
-                    <!-- Step 1: File Upload Section -->
                     <div class="form-step active" data-step="1">
                         <div class="form-section">
                             <h3><i class="fas fa-cloud-upload-alt"></i> Upload Project Files</h3>
                             <p class="section-description">Upload your project files for automatic tonnage extraction and analysis.</p>
                             <div class="upload-grid-enhanced">
-                                <!-- Enhanced MTO Upload -->
                                 <div class="file-upload-card" id="mto-drop-zone">
                                     <div class="upload-icon-container"><i class="fas fa-file-excel"></i></div>
                                     <h4>Material Take-Off (MTO)</h4>
                                     <p>Excel, CSV, or PDF files</p>
-                                    <div class="supported-formats">
-                                        <span class="format-tag">XLSX</span>
-                                        <span class="format-tag">CSV</span>
-                                        <span class="format-tag">PDF</span>
-                                    </div>
                                     <input type="file" id="mto-file-input" class="file-input" accept=".xlsx,.xls,.csv,.pdf" multiple>
                                 </div>
-                                <!-- Enhanced DWG Upload -->
                                 <div class="file-upload-card" id="dwg-drop-zone">
                                     <div class="upload-icon-container"><i class="fas fa-drafting-compass"></i></div>
                                     <h4>CAD Drawings</h4>
                                     <p>AutoCAD and PDF drawings</p>
-                                    <div class="supported-formats">
-                                        <span class="format-tag">DWG</span>
-                                        <span class="format-tag">DXF</span>
-                                        <span class="format-tag">PDF</span>
-                                    </div>
                                     <input type="file" id="dwg-file-input" class="file-input" accept=".dwg,.dxf,.pdf" multiple>
                                 </div>
-                                <!-- 3D Model Upload -->
                                 <div class="file-upload-card" id="model-drop-zone">
                                     <div class="upload-icon-container"><i class="fas fa-cube"></i></div>
                                     <h4>3D Models</h4>
                                     <p>Structural 3D models</p>
-                                    <div class="supported-formats">
-                                        <span class="format-tag">IFC</span>
-                                        <span class="format-tag">STEP</span>
-                                        <span class="format-tag">SAT</span>
-                                    </div>
                                     <input type="file" id="model-file-input" class="file-input" accept=".ifc,.step,.stp,.sat" multiple>
                                 </div>
-                                <!-- Specification Upload -->
                                 <div class="file-upload-card" id="spec-drop-zone">
                                     <div class="upload-icon-container"><i class="fas fa-file-contract"></i></div>
                                     <h4>Specifications</h4>
                                     <p>Technical specifications</p>
-                                    <div class="supported-formats">
-                                        <span class="format-tag">PDF</span>
-                                        <span class="format-tag">DOC</span>
-                                        <span class="format-tag">TXT</span>
-                                    </div>
                                     <input type="file" id="spec-file-input" class="file-input" accept=".pdf,.doc,.docx,.txt" multiple>
                                 </div>
                             </div>
-                            <!-- Enhanced File Display -->
                             <div id="uploaded-files-container" class="uploaded-files-display" style="display: none;"></div>
                         </div>
                         <div class="step-navigation">
@@ -1148,7 +1111,6 @@ function renderEstimatesSection() {
                             </button>
                         </div>
                     </div>
-                    <!-- Step 2: Project Details -->
                     <div class="form-step" data-step="2">
                         <div class="form-section">
                             <h3><i class="fas fa-building"></i> Project Information</h3>
@@ -1165,8 +1127,7 @@ function renderEstimatesSection() {
                             <div class="form-row">
                                 <div class="form-group">
                                     <label class="form-label" for="structureType"><i class="fas fa-building"></i> Project Type</label>
-                                    <select id="structureType" class="form-select enhanced-select" required>
-                                        <option value="">Select project type</option>
+                                    <select id="structureType" class="form-select" required>
                                         <option value="commercial-building">Commercial Building</option>
                                         <option value="warehouse">Warehouse/Industrial</option>
                                         <option value="bridge">Bridge Structure</option>
@@ -1181,7 +1142,7 @@ function renderEstimatesSection() {
                                 </div>
                                 <div class="form-group">
                                     <label class="form-label" for="projectComplexity"><i class="fas fa-layer-group"></i> Project Complexity</label>
-                                    <select id="projectComplexity" class="form-select enhanced-select">
+                                    <select id="projectComplexity" class="form-select">
                                         <option value="simple">Simple - Standard structural work</option>
                                         <option value="moderate">Moderate - Some complex connections</option>
                                         <option value="complex">Complex - Complex geometry</option>
@@ -1192,8 +1153,7 @@ function renderEstimatesSection() {
                             <div class="form-row">
                                 <div class="form-group">
                                     <label class="form-label" for="steelGrade"><i class="fas fa-industry"></i> Primary Steel Grade</label>
-                                    <select id="steelGrade" class="form-select enhanced-select">
-                                        <option value="">Select steel grade</option>
+                                    <select id="steelGrade" class="form-select">
                                         ${Object.entries(steelGrades).map(([grade, info]) =>
                                              `<option value="${grade}">${grade} - ${info.description}</option>`
                                         ).join('')}
@@ -1201,7 +1161,7 @@ function renderEstimatesSection() {
                                 </div>
                                 <div class="form-group">
                                     <label class="form-label" for="coatingRequirement"><i class="fas fa-paint-brush"></i> Coating Requirement</label>
-                                    <select id="coatingRequirement" class="form-select enhanced-select">
+                                    <select id="coatingRequirement" class="form-select">
                                         <option value="none">No special coating</option>
                                         <option value="primer">Shop primer only</option>
                                         <option value="intermediate">Intermediate system</option>
@@ -1211,16 +1171,10 @@ function renderEstimatesSection() {
                                     </select>
                                 </div>
                             </div>
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label class="form-label" for="region"><i class="fas fa-globe"></i> Region/Country</label>
-                                    <select id="region" class="form-select enhanced-select" required></select>
-                                    <small id="region-price-info" class="form-help"></small>
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label" for="currency"><i class="fas fa-coins"></i> Currency</label>
-                                    <select id="currency" class="form-select enhanced-select" required></select>
-                                </div>
+                             <div class="form-group">
+                                <label class="form-label" for="region"><i class="fas fa-globe"></i> Region/Country</label>
+                                <select id="region" class="form-select" required></select>
+                                <small id="region-price-info" class="form-help"></small>
                             </div>
                         </div>
                         <div class="step-navigation">
@@ -1228,7 +1182,6 @@ function renderEstimatesSection() {
                             <button type="button" class="btn btn-primary" onclick="nextStep(3)">Next: Review <i class="fas fa-arrow-right"></i></button>
                         </div>
                     </div>
-                    <!-- Step 3: Review and Calculate -->
                     <div class="form-step" data-step="3">
                         <div class="form-section">
                             <h3><i class="fas fa-weight-hanging"></i> Tonnage & Final Review</h3>
@@ -1245,7 +1198,6 @@ function renderEstimatesSection() {
                                     </div>
                                 </div>
                             </div>
-                            <!-- Project Summary -->
                             <div class="project-summary-card">
                                 <h4><i class="fas fa-clipboard-list"></i> Project Summary</h4>
                                 <div id="project-summary-content" class="summary-grid"></div>
@@ -1253,12 +1205,11 @@ function renderEstimatesSection() {
                         </div>
                         <div class="step-navigation">
                             <button type="button" class="btn btn-secondary" onclick="previousStep(2)"><i class="fas fa-arrow-left"></i> Back</button>
-                            <button type="button" id="calculate-estimate-btn" class="btn btn-primary btn-calculate"><i class="fas fa-calculator"></i> Generate Professional Estimate</button>
+                            <button type="button" id="calculate-estimate-btn" class="btn btn-primary"><i class="fas fa-calculator"></i> Generate Professional Estimate</button>
                         </div>
                     </div>
                 </form>
             </div>
-            <!-- Enhanced Results Panel -->
             <div class="tonnage-results-panel">
                 <div id="tonnage-result-container" class="results-wrapper">
                     <div class="results-placeholder">
@@ -1279,32 +1230,22 @@ function renderEstimatesSection() {
 }
 
 function initializeEnhancedTonnageEstimator() {
-    // Initialize dropdowns
     populateRegionDropdown();
-    // Attach enhanced event listeners
     attachFileUploadListeners();
     attachFormEventListeners();
-    // Initialize step navigation
     updateProjectSummary();
-    // Set default values
     document.getElementById('region').value = 'us';
-    document.getElementById('projectComplexity').value = 'simple';
+    document.getElementById('projectComplexity').value = 'moderate';
     updateRegionalPricingDisplay();
 }
 
 function populateRegionDropdown() {
     const regionSelect = document.getElementById('region');
-    const currencySelect = document.getElementById('currency');
-    regionSelect.innerHTML = '<option value="">Select region</option>';
-    currencySelect.innerHTML = '<option value="">Select currency</option>';
+    regionSelect.innerHTML = '';
     for (const [key, data] of Object.entries(regionalPricing)) {
-        const regionName = key.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase());
+        const regionName = key.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
         regionSelect.innerHTML += `<option value="${key}">${regionName}</option>`;
     }
-    const currencies = [...new Set(Object.values(regionalPricing).map(p => p.currency))];
-    currencies.forEach(currency => {
-        currencySelect.innerHTML += `<option value="${currency}">${currency}</option>`;
-    });
 }
 
 function attachFileUploadListeners() {
@@ -1318,10 +1259,14 @@ function attachFileUploadListeners() {
         const dropZone = document.getElementById(zone);
         const fileInput = document.getElementById(input);
         dropZone.addEventListener('click', () => fileInput.click());
-        dropZone.addEventListener('dragover', handleDragOver);
-        dropZone.addEventListener('dragleave', handleDragLeave);
-        dropZone.addEventListener('drop', (e) => handleFileDrop(e, type));
-        fileInput.addEventListener('change', (e) => handleFileSelect(e, type));
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); e.currentTarget.classList.add('drag-over'); });
+        dropZone.addEventListener('dragleave', (e) => e.currentTarget.classList.remove('drag-over'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-over');
+            processUploadedFiles(Array.from(e.dataTransfer.files), type);
+        });
+        fileInput.addEventListener('change', (e) => processUploadedFiles(Array.from(e.target.files), type));
     });
 }
 
@@ -1338,50 +1283,31 @@ function attachFormEventListeners() {
     });
 }
 
-function handleDragOver(e) {
-    e.preventDefault();
-    e.currentTarget.classList.add('drag-over');
-}
-
-function handleDragLeave(e) {
-    e.preventDefault();
-    e.currentTarget.classList.remove('drag-over');
-}
-
-function handleFileDrop(e, type) {
-    e.preventDefault();
-    e.currentTarget.classList.remove('drag-over');
-    const files = Array.from(e.dataTransfer.files);
-    processUploadedFiles(files, type);
-}
-
-function handleFileSelect(e, type) {
-    const files = Array.from(e.target.files);
-    processUploadedFiles(files, type);
-}
-
 function processUploadedFiles(files, type) {
     files.forEach(file => {
-        if (validateFileType(file, type)) {
-            const fileId = `file-${Date.now()}-${Math.random()}`;
-            tonnageEstimatorState.currentFiles.push({ file, type, id: fileId, status: 'processing' });
-            displayUploadedFile(file, type, fileId);
-            processFileForTonnage(file, type, fileId);
-        } else {
-            showNotification(`File type not supported for ${type} upload: ${file.name}`, 'error');
-        }
+        const fileId = `file-${Date.now()}-${Math.random()}`;
+        tonnageEstimatorState.currentFiles.push({ file, type, id: fileId, status: 'processing' });
+        displayUploadedFile(file, type, fileId);
+        // Simulate backend file processing
+        setTimeout(() => {
+            const statusElement = document.getElementById(`status-${fileId}`);
+            let extractedTonnage = 0;
+            if (statusElement) {
+                statusElement.className = 'file-status success';
+                if (type === 'mto' || type === 'dwg' || type === 'model') {
+                    extractedTonnage = Math.round((Math.random() * (800 - 20) + 20) * 100) / 100;
+                    const currentTonnage = parseFloat(document.getElementById('totalTonnageInput').value) || 0;
+                    const newTotal = currentTonnage + extractedTonnage;
+                    document.getElementById('totalTonnageInput').value = newTotal.toFixed(2);
+                    tonnageEstimatorState.extractedTonnage = newTotal;
+                    statusElement.innerHTML = `<i class="fas fa-check-circle"></i> ${extractedTonnage.toFixed(2)} MT found`;
+                    updateProjectSummary();
+                } else {
+                     statusElement.innerHTML = `<i class="fas fa-check-circle"></i> Processed`;
+                }
+            }
+        }, 1500 + Math.random() * 1000);
     });
-}
-
-function validateFileType(file, type) {
-    const typeMap = {
-        'mto': ['.xlsx', '.xls', '.csv', '.pdf'],
-        'dwg': ['.dwg', '.dxf', '.pdf'],
-        'model': ['.ifc', '.step', '.stp', '.sat'],
-        'spec': ['.pdf', '.doc', '.docx', '.txt']
-    };
-    const extension = '.' + file.name.split('.').pop().toLowerCase();
-    return typeMap[type]?.includes(extension);
 }
 
 function displayUploadedFile(file, type, fileId) {
@@ -1413,27 +1339,6 @@ function displayUploadedFile(file, type, fileId) {
     container.style.display = 'block';
 }
 
-function processFileForTonnage(file, type, fileId) {
-    setTimeout(() => {
-        const statusElement = document.getElementById(`status-${fileId}`);
-        let extractedTonnage = 0;
-        if (statusElement) {
-            statusElement.className = 'file-status success';
-            if (type === 'mto' || type === 'dwg' || type === 'model') {
-                extractedTonnage = generateRealisticTonnage(type);
-                const currentTonnage = parseFloat(document.getElementById('totalTonnageInput').value) || 0;
-                const newTotal = currentTonnage + extractedTonnage;
-                document.getElementById('totalTonnageInput').value = newTotal.toFixed(2);
-                tonnageEstimatorState.extractedTonnage = newTotal;
-                statusElement.innerHTML = `<i class="fas fa-check-circle"></i> ${extractedTonnage.toFixed(2)} MT found`;
-                updateProjectSummary();
-            } else {
-                 statusElement.innerHTML = `<i class="fas fa-check-circle"></i> Processed`;
-            }
-        }
-    }, 2000 + Math.random() * 1000);
-}
-
 function removeFile(fileId) {
     const fileElement = document.getElementById(fileId);
     if (fileElement) fileElement.remove();
@@ -1447,33 +1352,15 @@ function removeFile(fileId) {
     updateProjectSummary();
 }
 
-function generateRealisticTonnage(type) {
-    const baseRanges = {
-        'mto': { min: 50, max: 800 }, 'dwg': { min: 20, max: 400 },
-        'model': { min: 100, max: 1200 }, 'spec': { min: 0, max: 0 }
-    };
-    const range = baseRanges[type];
-    const tonnage = Math.random() * (range.max - range.min) + range.min;
-    return Math.round(tonnage * 100) / 100;
-}
-
 function getFileIcon(filename) {
     const ext = filename.split('.').pop().toLowerCase();
-    const iconMap = {
-        'xlsx': '<i class="fas fa-file-excel"></i>', 'xls': '<i class="fas fa-file-excel"></i>', 'csv': '<i class="fas fa-file-csv"></i>',
-        'pdf': '<i class="fas fa-file-pdf"></i>', 'dwg': '<i class="fas fa-drafting-compass"></i>', 'dxf': '<i class="fas fa-vector-square"></i>',
-        'ifc': '<i class="fas fa-cube"></i>', 'step': '<i class="fas fa-cube"></i>', 'stp': '<i class="fas fa-cube"></i>', 'sat': '<i class="fas fa-cube"></i>',
-        'doc': '<i class="fas fa-file-word"></i>', 'docx': '<i class="fas fa-file-word"></i>', 'txt': '<i class="fas fa-file-alt"></i>'
-    };
-    return iconMap[ext] || '<i class="fas fa-file"></i>';
+    const iconMap = { 'xlsx': 'fa-file-excel', 'xls': 'fa-file-excel', 'csv': 'fa-file-csv', 'pdf': 'fa-file-pdf', 'dwg': 'fa-drafting-compass', 'dxf': 'fa-vector-square', 'ifc': 'fa-cube', 'step': 'fa-cube', 'doc': 'fa-file-word', 'docx': 'fa-file-word', 'txt': 'fa-file-alt' };
+    return `<i class="fas ${iconMap[ext] || 'fa-file'}"></i>`;
 }
 
 function getFileIconClass(filename) {
     const ext = filename.split('.').pop().toLowerCase();
-    const classMap = {
-        'xlsx': 'excel', 'xls': 'excel', 'csv': 'csv', 'pdf': 'pdf', 'dwg': 'cad', 'dxf': 'cad',
-        'ifc': 'model', 'step': 'model', 'stp': 'model', 'sat': 'model', 'doc': 'word', 'docx': 'word', 'txt': 'text'
-    };
+    const classMap = { 'xlsx': 'excel', 'xls': 'excel', 'csv': 'excel', 'pdf': 'pdf', 'dwg': 'cad', 'dxf': 'cad', 'ifc': 'model', 'step': 'model', 'doc': 'word', 'docx': 'word', 'txt': 'text' };
     return classMap[ext] || 'generic';
 }
 
@@ -1524,12 +1411,9 @@ function validateCurrentStep(stepNumber) {
 function updateRegionalPricingDisplay() {
     const region = document.getElementById('region').value;
     const infoDiv = document.getElementById('region-price-info');
-    const currencySelect = document.getElementById('currency');
     if (region && regionalPricing[region]) {
         const pricing = regionalPricing[region];
-        const totalCost = pricing.basePrice + pricing.fabrication + pricing.erection;
-        infoDiv.innerHTML = `<i class="fas fa-info-circle"></i> Approx. ${totalCost.toLocaleString()} ${pricing.currency}/MT. ${pricing.info}`;
-        currencySelect.value = pricing.currency;
+        infoDiv.innerHTML = `<i class="fas fa-info-circle"></i> ${pricing.info}. Currency set to ${pricing.currency}.`;
     } else {
         infoDiv.textContent = '';
     }
@@ -1553,51 +1437,66 @@ function updateProjectSummary() {
         <div class="summary-item"><span class="label">Steel Grade</span><span class="value">${getText('steelGrade')}</span></div>`;
 }
 
-function handleCalculateEnhancedEstimate() {
+async function handleCalculateEnhancedEstimate() {
     if (!validateCurrentStep(3)) return;
-    const tonnage = parseFloat(document.getElementById('totalTonnageInput').value);
-    const regionKey = document.getElementById('region').value;
-    const gradeKey = document.getElementById('steelGrade').value;
-    const complexityKey = document.getElementById('projectComplexity').value;
-    const pricing = regionalPricing[regionKey];
-    const gradeMultiplier = steelGrades[gradeKey]?.multiplier || 1.0;
-    const complexityFactor = projectComplexityFactors[complexityKey]?.factor || 1.0;
-    const baseMaterialCost = tonnage * pricing.basePrice * gradeMultiplier;
-    const fabricationCost = tonnage * pricing.fabrication * complexityFactor;
-    const erectionCost = tonnage * pricing.erection * complexityFactor;
-    const subtotal = baseMaterialCost + fabricationCost + erectionCost;
-    const engineeringServices = subtotal * 0.08;
-    const transportLogistics = subtotal * 0.05;
-    const qualityControl = subtotal * 0.03;
-    const postSubtotal = subtotal + engineeringServices + transportLogistics + qualityControl;
-    const contingency = postSubtotal * 0.10;
-    const overheadsProfit = postSubtotal * 0.15;
-    const totalProjectCost = postSubtotal + contingency + overheadsProfit;
-    const estimatedWeeks = Math.ceil((tonnage / 25) + 4);
-    tonnageEstimatorState.currentEstimate = {
+
+    const estimationData = {
         projectName: document.getElementById('projectName').value,
-        totalTonnage: tonnage, currency: pricing.currency, estimatedWeeks,
-        costPerMT: totalProjectCost / tonnage, totalProjectCost,
-        breakdown: {
-            'Base Material Cost': baseMaterialCost, 'Fabrication & Detailing': fabricationCost,
-            'Erection & Site Work': erectionCost, 'Engineering & Management (8%)': engineeringServices,
-            'Transport & Logistics (5%)': transportLogistics, 'Quality Control (3%)': qualityControl,
-            'Subtotal': postSubtotal, 'Contingency (10%)': contingency, 'Overhead & Profit (15%)': overheadsProfit,
-        }
+        projectLocation: document.getElementById('projectLocation').value,
+        structureType: document.getElementById('structureType').value,
+        projectComplexity: document.getElementById('projectComplexity').value,
+        steelGrade: document.getElementById('steelGrade').value,
+        coatingRequirement: document.getElementById('coatingRequirement').value,
+        region: document.getElementById('region').value,
+        totalTonnage: document.getElementById('totalTonnageInput').value,
     };
-    displayTonnageEstimateResults();
+
+    const calculateBtn = document.getElementById('calculate-estimate-btn');
+    const originalText = calculateBtn.innerHTML;
+    calculateBtn.innerHTML = '<div class="btn-spinner"></div> Calculating...';
+    calculateBtn.disabled = true;
+
+    try {
+        const response = await apiCall('/estimation/calculate', 'POST', estimationData);
+        
+        if (response.success && response.data) {
+            tonnageEstimatorState.currentEstimate = response.data;
+            displayTonnageEstimateResults(response.data);
+            showNotification('Estimation calculated successfully!', 'success');
+        } else {
+            throw new Error(response.message || 'Failed to calculate estimation.');
+        }
+
+    } catch (error) {
+        console.error('Estimation calculation error:', error);
+    } finally {
+        calculateBtn.innerHTML = originalText;
+        calculateBtn.disabled = false;
+    }
 }
 
-function displayTonnageEstimateResults() {
+function displayTonnageEstimateResults(est) {
     const container = document.getElementById('tonnage-result-container');
-    const est = tonnageEstimatorState.currentEstimate;
     if (!est) return;
-    const formatCurrency = (val) => `${est.currency} ${Math.round(val).toLocaleString()}`;
-    const breakdownHTML = Object.entries(est.breakdown).map(([key, value]) => `
-        <div class="result-item ${key.toLowerCase().includes('subtotal') ? 'subtotal' : ''}">
-            <span>${key}</span>
-            <span>${formatCurrency(value)}</span>
-        </div>`).join('');
+
+    const formatCurrency = (val) => {
+        try {
+            return new Intl.NumberFormat('en-US', { style: 'currency', currency: est.currency }).format(Math.round(val));
+        } catch (e) {
+            return `${est.currency} ${Math.round(val).toLocaleString()}`;
+        }
+    };
+    
+    const breakdownHTML = Object.entries(est.costBreakdown).map(([key, value]) => {
+        const itemClass = (key.toLowerCase().includes('subtotal') || key.toLowerCase().includes('contingency')) 
+                        ? 'result-item subtotal' : 'result-item';
+        return `
+            <div class="${itemClass}">
+                <span>${key}</span>
+                <span>${formatCurrency(value)}</span>
+            </div>`;
+    }).join('');
+    
     container.innerHTML = `
         <div class="result-header">
             <h4><i class="fas fa-clipboard-check"></i> Estimation Report</h4>
@@ -1608,41 +1507,58 @@ function displayTonnageEstimateResults() {
             <strong>${formatCurrency(est.totalProjectCost)}</strong>
         </div>
         <div class="result-summary">
-            <div class="summary-item"><span class="label">Total Tonnage</span><strong class="value">${est.totalTonnage.toFixed(2)} MT</strong></div>
-            <div class="summary-item"><span class="label">Est. Timeline</span><strong class="value">${est.estimatedWeeks} weeks</strong></div>
-            <div class="summary-item"><span class="label">Cost per MT</span><strong class="value">${formatCurrency(est.costPerMT)}</strong></div>
+            <div class="summary-item">
+                <span class="label">Total Tonnage</span>
+                <strong class="value">${parseFloat(est.totalTonnage).toFixed(2)} MT</strong>
+            </div>
+            <div class="summary-item">
+                <span class="label">Est. Timeline</span>
+                <strong class="value">${est.estimatedWeeks} weeks</strong>
+            </div>
+            <div class="summary-item">
+                <span class="label">Cost per MT</span>
+                <strong class="value">${formatCurrency(est.costPerTonne)}</strong>
+            </div>
         </div>
         <div class="result-breakdown">${breakdownHTML}</div>
         <div class="result-actions">
-            <button class="btn btn-secondary" onclick="downloadTonnageReport()"><i class="fas fa-download"></i> Download Report</button>
-            <button class="btn btn-primary" onclick="alert('This would save the estimate to your account.')"><i class="fas fa-save"></i> Save Estimate</button>
+            <button class="btn btn-secondary" onclick="downloadTonnageReport('${est._id}')"><i class="fas fa-download"></i> Download PDF</button>
+            <button class="btn btn-primary" onclick="showEstimateHistory()"><i class="fas fa-save"></i> View History</button>
         </div>`;
 }
 
-function downloadTonnageReport() {
-    const est = tonnageEstimatorState.currentEstimate;
-    if (!est) return showNotification('No estimate to download.', 'error');
-    let reportContent = `STEEL STRUCTURE COST ESTIMATION REPORT\n==========================================\nProject: ${est.projectName}\nDate: ${new Date().toLocaleDateString()}\n\nPROJECT OVERVIEW\n--------------------------------\n- Total Steel Tonnage: ${est.totalTonnage.toFixed(2)} MT\n- Estimated Timeline: ${est.estimatedWeeks} weeks\n- Estimated Cost per MT: ${est.currency} ${Math.round(est.costPerMT).toLocaleString()}\n\nCOST BREAKDOWN (${est.currency})\n--------------------------------\n`;
-    for(const [key, value] of Object.entries(est.breakdown)) {
-        reportContent += `- ${key.padEnd(30)}: ${Math.round(value).toLocaleString()}\n`;
+async function downloadTonnageReport(estimationId) {
+    if (!estimationId) return showNotification('No estimate ID found.', 'error');
+
+    try {
+        const response = await fetch(`${BACKEND_URL}/estimation/${estimationId}/generate-report`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${appState.jwtToken}` }
+        });
+
+        if (!response.ok) throw new Error('Failed to generate the report from the server.');
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = ''; 
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        showNotification('Report download initiated.', 'success');
+    } catch (error) {
+        console.error('Report download error:', error);
+        showNotification(error.message, 'error');
     }
-    reportContent += `============================================\nTOTAL ESTIMATED COST: ${est.currency} ${Math.round(est.totalProjectCost).toLocaleString()}\n============================================\n\nNOTES & ASSUMPTIONS\n- This is a preliminary budget estimate for planning purposes only.\n- Final costs may vary based on detailed engineering, market fluctuations, and site conditions.\n- Generated by SteelConnect Professional Estimator.`.trim();
-    const blob = new Blob([reportContent.replace(/\n/g, '\r\n')], { type: 'text/plain' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Steel_Estimate_${est.projectName.replace(/[^a-zA-Z0-9]/g, '_')}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-    showNotification('Report download initiated.', 'success');
 }
 
-// Dummy functions for the new buttons to prevent errors
 function showEstimateHistory() {
     showNotification('Estimate history feature coming soon!', 'info');
 }
+
 function exportEstimateTemplate() {
     showNotification('Template export feature coming soon!', 'info');
 }
