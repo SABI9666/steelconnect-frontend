@@ -126,32 +126,214 @@ function initializeApp() {
     }
 }
 
-/* --- API & AUTHENTICATION (functions remain unchanged) --- */
-async function apiCall(endpoint, method, body = null, successMessage = null) {
-    // This function is presumed to exist and is unchanged.
+/* --- ================================== --- */
+/* --- AUTHENTICATION & API LOGIC (RESTORED) --- */
+/* --- ================================== --- */
+
+/**
+ * A centralized function for making API calls to the backend.
+ * @param {string} endpoint - The API endpoint to call (e.g., '/auth/login').
+ * @param {string} method - The HTTP method (e.g., 'GET', 'POST').
+ * @param {object|null} body - The request body for POST/PUT requests.
+ * @param {string|null} successMessage - A message to show on successful API call.
+ * @returns {Promise<any>} - The JSON response from the server.
+ */
+async function apiCall(endpoint, method = 'GET', body = null, successMessage = null) {
+    const options = {
+        method,
+        headers: {
+            'Content-Type': 'application/json',
+        },
+    };
+
+    if (appState.jwtToken) {
+        options.headers['Authorization'] = `Bearer ${appState.jwtToken}`;
+    }
+
+    if (body) {
+        options.body = JSON.stringify(body);
+    }
+
+    try {
+        const response = await fetch(`${BACKEND_URL}${endpoint}`, options);
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'An unknown error occurred.');
+        }
+
+        if (successMessage) {
+            showNotification(successMessage, 'success');
+        }
+        return data;
+    } catch (error) {
+        showNotification(error.message, 'error');
+        throw error;
+    }
 }
 
+/**
+ * Handles the user registration form submission.
+ * @param {Event} event - The form submission event.
+ */
 async function handleRegister(event) {
-    // This function is presumed to exist and is unchanged.
+    event.preventDefault();
+    const form = event.target;
+    const name = form.elements.name.value;
+    const email = form.elements.email.value;
+    const password = form.elements.password.value;
+    const type = form.elements.type.value;
+
+    try {
+        await apiCall('/auth/register', 'POST', { name, email, password, type }, 'Registration successful! Please log in.');
+        showAuthModal('login'); // Switch to login modal after successful registration
+    } catch (error) {
+        console.error('Registration failed:', error);
+    }
 }
 
+/**
+ * Handles the user login form submission.
+ * @param {Event} event - The form submission event.
+ */
 async function handleLogin(event) {
-    // This function is presumed to exist and is unchanged.
+    event.preventDefault();
+    const form = event.target;
+    const email = form.elements.email.value;
+    const password = form.elements.password.value;
+
+    try {
+        const data = await apiCall('/auth/login', 'POST', { email, password });
+        appState.jwtToken = data.token;
+        appState.currentUser = data.user;
+
+        localStorage.setItem('jwtToken', data.token);
+        localStorage.setItem('currentUser', JSON.stringify(data.user));
+
+        closeModal();
+        showAppView();
+        resetInactivityTimer();
+        showNotification('Login successful!', 'success');
+    } catch (error) {
+        console.error('Login failed:', error);
+    }
 }
 
+/**
+ * Logs the user out, clears session data, and returns to the landing page.
+ */
 function logout() {
-    // This function is presumed to exist and is unchanged.
+    localStorage.removeItem('jwtToken');
+    localStorage.removeItem('currentUser');
+    appState.jwtToken = null;
+    appState.currentUser = null;
+    clearTimeout(inactivityTimer);
+    showLandingPageView();
+    showNotification('You have been logged out.', 'info');
 }
 
-/* --- ALL OTHER ORIGINAL FEATURE FUNCTIONS (JOBS, QUOTES, MESSAGING, ETC.) --- */
-// All other functions like fetchAndRenderJobs, handleQuoteSubmit, etc. are presumed to exist and are unchanged.
+
+/* --- ================================== --- */
+/* --- UI & VIEW MANAGEMENT (RESTORED) --- */
+/* --- ================================== --- */
+
+/**
+ * Displays the main application view for logged-in users.
+ */
+function showAppView() {
+    document.getElementById('landing-page-content').style.display = 'none';
+    document.getElementById('app-content').style.display = 'flex';
+    document.getElementById('auth-buttons-container').style.display = 'none';
+    document.getElementById('user-info').style.display = 'flex';
+    
+    const user = appState.currentUser;
+    if (user) {
+        document.getElementById('userName').textContent = user.name;
+        document.getElementById('userType').textContent = user.type;
+        document.getElementById('userAvatar').textContent = user.name.charAt(0).toUpperCase();
+        document.getElementById('sidebarUserName').textContent = user.name;
+        document.getElementById('sidebarUserType').textContent = user.type;
+        document.getElementById('sidebarUserAvatar').textContent = user.name.charAt(0).toUpperCase();
+    }
+    
+    buildSidebarNav();
+    renderAppSection('jobs'); // Default to jobs view
+}
+
+/**
+ * Displays the landing page for logged-out users.
+ */
+function showLandingPageView() {
+    document.getElementById('landing-page-content').style.display = 'block';
+    document.getElementById('app-content').style.display = 'none';
+    document.getElementById('auth-buttons-container').style.display = 'flex';
+    document.getElementById('user-info').style.display = 'none';
+}
+
+/**
+ * Creates and displays the authentication modal (login or register).
+ * @param {string} type - The type of modal to show ('login' or 'register').
+ */
+function showAuthModal(type) {
+    const modalContainer = document.getElementById('modal-container');
+    const isRegister = type === 'register';
+
+    const modalHTML = `
+        <div class="modal-overlay" id="auth-modal-overlay">
+            <div class="modal-content">
+                <button class="modal-close-button" onclick="closeModal()">&times;</button>
+                <h2>${isRegister ? 'Create Your Account' : 'Welcome Back'}</h2>
+                <form id="auth-form" class="form-grid">
+                    ${isRegister ? `
+                        <div class="form-group">
+                            <label for="name" class="form-label">Full Name</label>
+                            <input type="text" id="name" name="name" class="form-input" required>
+                        </div>
+                    ` : ''}
+                    <div class="form-group">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="email" id="email" name="email" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" id="password" name="password" class="form-input" required>
+                    </div>
+                    ${isRegister ? `
+                        <div class="form-group">
+                            <label for="type" class="form-label">I am a...</label>
+                            <select id="type" name="type" class="form-select">
+                                <option value="contractor">Contractor</option>
+                                <option value="designer">Designer/Engineer</option>
+                            </select>
+                        </div>
+                    ` : ''}
+                    <button type="submit" class="btn btn-primary">${isRegister ? 'Register' : 'Sign In'}</button>
+                </form>
+                <div class="modal-switch">
+                    ${isRegister ? `Already have an account? <a onclick="showAuthModal('login')">Sign In</a>` : `Don't have an account? <a onclick="showAuthModal('register')">Join Now</a>`}
+                </div>
+            </div>
+        </div>
+    `;
+    modalContainer.innerHTML = modalHTML;
+    document.getElementById('auth-form').addEventListener('submit', isRegister ? handleRegister : handleLogin);
+}
+
+/**
+ * Closes any open modal.
+ */
+function closeModal() {
+    const modalContainer = document.getElementById('modal-container');
+    modalContainer.innerHTML = '';
+}
 
 
-/* --- MODIFIED & NEW FUNCTIONS FOR ESTIMATION TOOL INTEGRATION --- */
+/* --- ================================== --- */
+/* --- ESTIMATION TOOL & OTHER FEATURES --- */
+/* --- ================================== --- */
 
 function buildSidebarNav() {
     const navContainer = document.getElementById('sidebar-nav-menu');
-    // Default to contractor for demonstration if currentUser is not set
     const role = appState.currentUser ? appState.currentUser.type : 'contractor';
     let links = '';
 
@@ -175,7 +357,6 @@ function buildSidebarNav() {
             e.preventDefault();
             const section = link.dataset.section;
             renderAppSection(section);
-            // Update active class
             navContainer.querySelectorAll('.sidebar-nav-link').forEach(l => l.classList.remove('active'));
             link.classList.add('active');
         });
@@ -187,10 +368,8 @@ function renderAppSection(sectionId) {
     const container = document.getElementById('app-container');
     const reportContainer = document.getElementById('estimation-report-container');
 
-    // Clear both containers
     container.innerHTML = '';
     if (reportContainer) reportContainer.innerHTML = '';
-
 
     document.querySelectorAll('.sidebar-nav-link').forEach(link => {
         link.classList.toggle('active', link.dataset.section === sectionId);
@@ -199,31 +378,21 @@ function renderAppSection(sectionId) {
     if (sectionId === 'estimation-tool') {
         renderEstimationToolUI(container);
     } else {
-        // Hide report container if not on the estimation tool page
         if(reportContainer) reportContainer.style.display = 'none';
         
-        // Existing logic for other sections
         if (sectionId === 'jobs') {
-            container.innerHTML = '<h2>Loading Jobs...</h2>'; // Placeholder
-            // fetchAndRenderJobs();
+            container.innerHTML = '<h2>Loading Projects...</h2>'; // Placeholder
         } else if (sectionId === 'post-job') {
-             container.innerHTML = '<h2>Post a New Job</h2>'; // Placeholder
-            // renderPostJobForm(container);
+             container.innerHTML = '<h2>Post a New Project</h2>'; // Placeholder
         } else if (sectionId === 'my-quotes') {
             container.innerHTML = '<h2>Loading My Quotes...</h2>'; // Placeholder
-            // fetchAndRenderMyQuotes();
         } else if (sectionId === 'approved-jobs') {
-            container.innerHTML = '<h2>Loading Approved Jobs...</h2>'; // Placeholder
-            // fetchAndRenderApprovedJobs();
+            container.innerHTML = '<h2>Loading Approved Projects...</h2>'; // Placeholder
         } else if (sectionId === 'messages') {
             container.innerHTML = '<h2>Loading Messages...</h2>'; // Placeholder
-            // fetchAndRenderConversations();
         }
     }
 }
-
-
-/* --- NEW FUNCTIONS FOR THE ESTIMATION TOOL --- */
 
 function renderEstimationToolUI(container) {
     container.innerHTML = `
@@ -406,18 +575,19 @@ function renderEstimationReport(data) {
         </div>`;
 }
 
-// Dummy showNotification function if it's not available globally
-if (typeof showNotification === 'undefined') {
-    function showNotification(message, type) {
-        console.log(`Notification (${type}): ${message}`);
-        const alertsContainer = document.getElementById('alerts-container');
-        if (alertsContainer) {
-            const alert = document.createElement('div');
-            alert.className = `alert alert-${type}`;
-            alert.textContent = message;
-            alertsContainer.appendChild(alert);
-            setTimeout(() => alert.remove(), 5000);
-        }
-    }
+function showNotification(message, type = 'info') {
+    const alertsContainer = document.getElementById('alerts-container');
+    if (!alertsContainer) return;
+
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type}`;
+    alert.textContent = message;
+
+    alertsContainer.appendChild(alert);
+
+    setTimeout(() => {
+        alert.style.opacity = '0';
+        setTimeout(() => alert.remove(), 500);
+    }, 5000);
 }
 
