@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SteelConnect - Professional Steel & Rebar Design Marketplace</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="notification-container"></div>
+    <div id="modal-container"></div>
+
+    <header class="header">
+        <div class="header-container">
+            <a href="#" class="logo">
+                <div class="logo-icon"><i class="fas fa-network-wired"></i></div>
+                <span>SteelConnect</span>
+            </a>
+            <nav id="main-nav-menu" class="main-nav">
+                <a href="#how-it-works" class="nav-link">How It Works</a>
+                <a href="#why-steelconnect" class="nav-link">Why Choose Us</a>
+                <a href="#showcase" class="nav-link">Showcase</a>
+            </nav>
+            <div id="auth-buttons-container" class="auth-buttons">
+                <button id="signin-btn" class="btn btn-outline">Sign In</button>
+                <button id="join-btn" class="btn btn-primary">Join Now</button>
+            </div>
+            <div id="user-info" class="user-profile-menu" style="display: none;">
+                <div class="user-details">
+                    <div id="userName" class="user-name"></div>
+                    <div id="userType" class="user-role"></div>
+                </div>
+                <div id="userAvatar" class="avatar"></div>
+                <button id="logout-button" class="btn btn-secondary">Logout</button>
+            </div>
+        </div>
+    </header>
+
+    <main id="landing-page-content">
+        <section class="hero">
+            <div class="hero-background"></div>
+            <div class="hero-content">
+                <div class="hero-text">
+                    <h1>SteelConnect: The <span class="highlight">Premier Platform</span> Connecting Designers & Contractors</h1>
+                    <p>Join the leading marketplace where steel designers, structural engineers, and contractors collaborate seamlessly. Build your professional network, showcase expertise, and deliver exceptional projects together.</p>
+                    <div class="hero-cta">
+                        <button id="get-started-btn" class="btn btn-primary">
+                            Start Building Today <i class="fas fa-rocket"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="hero-visual">
+                    </div>
+            </div>
+        </section>
+
+        <section id="how-it-works" class="how-it-works">
+            <div class="section-container">
+                <h2 class="section-title">How It Works</h2>
+                <p class="section-subtitle">Simple steps to connect with the right professionals for your steel construction needs</p>
+                <div class="steps-container">
+                    <div class="step-card"><div class="step-number">1</div><h3>Post Your Project</h3><p>Describe your steel construction needs, set your budget, and specify required skills. Upload drawings or specifications for better quotes.</p></div>
+                    <div class="step-card"><div class="step-number">2</div><h3>Receive Quotes</h3><p>Licensed professionals and certified engineers submit detailed proposals with timelines, costs, and their approach to your project.</p></div>
+                    <div class="step-card"><div class="step-number">3</div><h3>Collaborate & Deliver</h3><p>Choose the best fit, communicate directly through our platform, and track progress from design to completion.</p></div>
+                </div>
+            </div>
+        </section>
+
+        <section id="why-steelconnect" class="sliding-section">
+            <div class="section-container">
+                 <h2 class="section-title">Why SteelConnect?</h2>
+                 <div class="slider-container">
+                    <div class="slider-wrapper" id="slider-wrapper">
+                        <div class="slide">
+                           </div>
+                        <div class="slide">
+                           </div>
+                    </div>
+                 </div>
+            </div>
+        </section>
+        
+        <section id="showcase" class="showcase">
+             <div class="section-container">
+                <h2 class="section-title">Industry Excellence Showcase</h2>
+                </div>
+        </section>
+    </main>
+
+    <div id="app-content" class="main-layout" style="display: none;">
+        <aside class="sidebar">
+            <div class="sidebar-user-profile">
+                <div id="sidebarUserAvatar" class="sidebar-avatar"></div>
+                <h3 id="sidebarUserName"></h3>
+                <p id="sidebarUserType"></p>
+            </div>
+            <nav id="sidebar-nav-menu" class="sidebar-nav"></nav>
+        </aside>
+        <main class="main-content">
+            <div id="app-container" class="main-container"></div>
+            <div id="estimation-report-container" class="main-container" style="margin-top: 2rem;"></div>
+        </main>
+    </div>
+
+    <script src="script.js" defer></script>
+</body>
+</html>
