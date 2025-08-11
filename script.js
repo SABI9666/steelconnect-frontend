@@ -722,8 +722,8 @@ async function editQuote(quoteId) {
 
 async function handleQuoteEdit(event) {
     event.preventDefault();
+    const form = event.target;
     try {
-        const form = event.target;
         const submitBtn = form.querySelector('button[type="submit"]');
         const originalText = submitBtn.innerHTML;
         
@@ -990,8 +990,8 @@ function showQuoteModal(jobId) {
 
 async function handleQuoteSubmit(event) {
     event.preventDefault();
+    const form = event.target;
     try {
-        const form = event.target;
         const submitBtn = form.querySelector('button[type="submit"]');
         const originalText = submitBtn.innerHTML;
         
@@ -1393,20 +1393,31 @@ function renderEstimationToolUI(container) {
         <div class="estimation-container">
             <form id="estimation-form" class="estimation-form modern-form">
                 <div class="form-grid-2-col">
-                    <div class="form-group"><label for="project-name" class="form-label">Project Name</label><input type="text" id="project-name" class="form-input" placeholder="e.g., Downtown Office Building" required></div>
-                    <div class="form-group"><label for="project-location" class="form-label">Project Location</label><input type="text" id="project-location" class="form-input" placeholder="e.g., New York, NY" required></div>
+                    <div class="form-group">
+                        <label for="project-name" class="form-label">Project Name</label>
+                        <input type="text" id="project-name" name="projectName" class="form-input" placeholder="e.g., Downtown Office Building" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="project-location" class="form-label">Project Location</label>
+                        <input type="text" id="project-location" name="projectLocation" class="form-input" placeholder="e.g., Sydney" required>
+                    </div>
                 </div>
-                <div class="form-group"><label for="project-details" class="form-label">Project Details</label><textarea id="project-details" class="form-textarea" rows="4" placeholder="Provide a brief description of the project, scope of work, and any specific requirements."></textarea></div>
+                <div class="form-group">
+                    <label for="project-details" class="form-label">Project Details</label>
+                    <textarea id="project-details" name="projectDetails" class="form-textarea" rows="4" placeholder="Provide a brief description of the project, scope of work, and any specific requirements."></textarea>
+                </div>
                 <div class="form-group">
                     <label class="form-label">Upload PDF Drawings</label>
                     <div class="file-upload-area" id="file-upload-area">
-                        <input type="file" id="file-upload-input" accept=".pdf" required style="display: none;"/>
+                        <input type="file" id="file-upload-input" name="drawing" accept=".pdf" required style="display: none;"/>
                         <div class="file-upload-icon"><i class="fas fa-file-upload"></i></div>
                         <h3 id="upload-text-header">Drag & Drop PDF Drawings Here</h3>
                         <p id="upload-text-sub">or click to select a file</p>
                     </div>
                 </div>
-                <button type="submit" id="generate-estimation-btn" class="btn btn-primary btn-full-width"><i class="fas fa-cogs"></i> Generate Estimate</button>
+                <button type="submit" id="generate-estimation-btn" class="btn btn-primary btn-full-width">
+                    <i class="fas fa-cogs"></i> Generate Estimate
+                </button>
             </form>
             <div id="estimation-report-container"></div>
         </div>`;
@@ -1420,7 +1431,8 @@ function renderEstimationToolUI(container) {
     uploadArea.ondragleave = () => uploadArea.classList.remove('drag-over');
     uploadArea.ondrop = (e) => { e.preventDefault(); uploadArea.classList.remove('drag-over'); if (e.dataTransfer.files.length) { fileInput.files = e.dataTransfer.files; handleFileDisplay(fileInput.files[0]); } };
     fileInput.onchange = (e) => { if (e.target.files.length) handleFileDisplay(e.target.files[0]); };
-    estimationForm.onsubmit = (e) => { e.preventDefault(); const name = document.getElementById('project-name').value; if (fileInput.files.length > 0 && name) { simulateEstimationProcess(name); } else { showNotification("Please enter a project name and select a PDF file.", "error"); } };
+    
+    estimationForm.onsubmit = handleEstimationGeneration;
 }
 
 function handleFileDisplay(file) {
@@ -1428,41 +1440,102 @@ function handleFileDisplay(file) {
     const sub = document.getElementById('upload-text-sub');
     if (file && file.type === "application/pdf") {
         header.innerHTML = `<i class="fas fa-file-pdf"></i> ${file.name}`;
-        sub.textContent = `File size: ${(file.size / 1024).toFixed(2)} KB. Click to change.`;
+        sub.textContent = `File size: ${(file.size / 1024 / 1024).toFixed(2)} MB. Click to change.`;
     } else {
         showNotification("Please select a valid PDF file.", "error");
+        document.getElementById('file-upload-input').value = ''; // Clear invalid file
         header.innerHTML = `Drag & Drop PDF Drawings Here`;
         sub.textContent = `or click to select a file`;
     }
 }
 
-function simulateEstimationProcess(projectName) {
+async function handleEstimationGeneration(event) {
+    event.preventDefault();
+    const form = event.target;
+    const submitBtn = document.getElementById('generate-estimation-btn');
     const reportContainer = document.getElementById('estimation-report-container');
-    if (!reportContainer) return;
-    reportContainer.innerHTML = `<div class="loading-spinner"><div class="spinner"></div><p>AI is analyzing drawings... Please wait.</p></div>`;
-    setTimeout(() => {
-        const data = { projectName, totalCost: 185340.50, summary: { structuralSteel: 75200.00, concrete: 45875.00, reinforcement: 24265.50, labor: 40000.00 } };
-        renderEstimationReport(data);
-    }, 2500);
+    const fileInput = document.getElementById('file-upload-input');
+
+    if (fileInput.files.length === 0) {
+        showNotification("Please select a PDF file to upload.", "error");
+        return;
+    }
+
+    const originalBtnHTML = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<div class="btn-spinner"></div> Analyzing... Please wait.';
+    submitBtn.disabled = true;
+    reportContainer.innerHTML = `<div class="loading-spinner"><div class="spinner"></div><p>AI is analyzing drawings and calculating costs. This may take a moment...</p></div>`;
+
+    const formData = new FormData(form);
+    
+    try {
+        const response = await apiCall('/estimation/generate-from-upload', 'POST', formData);
+        renderEstimationReport(response.data); // Render the report with real data
+    } catch (error) {
+        reportContainer.innerHTML = `<div class="error-state"><div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div><h3>Estimation Failed</h3><p>${error.message || 'Could not generate the report. Please try again.'}</p></div>`;
+    } finally {
+        submitBtn.innerHTML = originalBtnHTML;
+        submitBtn.disabled = false;
+    }
 }
 
 function renderEstimationReport(data) {
     const reportContainer = document.getElementById('estimation-report-container');
-    if (!reportContainer) return;
-    const formatCurrency = (v) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(v);
+    if (!reportContainer || !data || !data.cost_summary) {
+        reportContainer.innerHTML = '<div class="error-state"><h3>Error</h3><p>Received invalid report data.</p></div>';
+        return;
+    }
+
+    const formatCurrency = (v) => new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(v);
+    const summary = data.cost_summary;
+    const categories = data.categories || {};
+
+    let categoriesHTML = Object.entries(categories).map(([name, details]) => `
+        <div class="summary-item">
+            <div class="label">${name}</div>
+            <div class="value">${formatCurrency(details.total_cost)}</div>
+        </div>
+    `).join('');
+
     reportContainer.innerHTML = `
         <div class="estimation-report modern-card">
-            <div class="report-header"><h3>Estimation Report: ${data.projectName}</h3></div>
-            <div class="report-summary">
-                <div class="summary-item"><div class="label">Structural Steel</div><div class="value">${formatCurrency(data.summary.structuralSteel)}</div></div>
-                <div class="summary-item"><div class="label">Concrete & Formwork</div><div class="value">${formatCurrency(data.summary.concrete)}</div></div>
-                <div class="summary-item"><div class="label">Reinforcement (Rebar)</div><div class="value">${formatCurrency(data.summary.reinforcement)}</div></div>
-                <div class="summary-item"><div class="label">Estimated Labor</div><div class="value">${formatCurrency(data.summary.labor)}</div></div>
+            <div class="report-header">
+                <h3>Estimation Report: ${data.project_id}</h3>
+                <span class="confidence-badge">Confidence: ${Math.round(data.confidence_score * 100)}%</span>
             </div>
-            <div class="report-total"><div class="label">Total Estimated Cost</div><div class="value">${formatCurrency(data.totalCost)}</div></div>
-            <p class="disclaimer">Disclaimer: This is an AI-generated preliminary estimate. Costs may vary and should be confirmed with detailed quotes.</p>
+            
+            <div class="report-section">
+                <h4><i class="fas fa-list-alt"></i> Category Breakdown</h4>
+                <div class="report-summary">
+                    ${categoriesHTML}
+                </div>
+            </div>
+
+            <div class="report-section">
+                <h4><i class="fas fa-cash-register"></i> Financial Summary</h4>
+                <div class="report-summary">
+                    <div class="summary-item"><div class="label">Base Cost</div><div class="value">${formatCurrency(summary.base_cost)}</div></div>
+                    <div class="summary-item"><div class="label">Risk & Location Adjusted Cost</div><div class="value">${formatCurrency(summary.risk_adjusted)}</div></div>
+                    <div class="summary-item"><div class="label">Contingencies</div><div class="value">${formatCurrency(summary.site_access_contingency + summary.unforeseen_contingency)}</div></div>
+                    <div class="summary-item bold-total"><div class="label">Subtotal (ex. GST)</div><div class="value">${formatCurrency(summary.subtotal_ex_gst)}</div></div>
+                    <div class="summary-item"><div class="label">GST (10%)</div><div class="value">${formatCurrency(summary.gst)}</div></div>
+                </div>
+            </div>
+
+            <div class="report-total">
+                <div class="label">Total Estimated Cost (inc. GST)</div>
+                <div class="value">${formatCurrency(summary.total_inc_gst)}</div>
+            </div>
+            
+            <div class="report-section">
+                <h4><i class="fas fa-clipboard-list"></i> Assumptions</h4>
+                <ul class="assumptions-list">${(data.assumptions || []).slice(0, 5).map(a => `<li>${a}</li>`).join('')}</ul>
+            </div>
+
+            <p class="disclaimer">Disclaimer: This is an AI-generated preliminary estimate for budget purposes only. Costs may vary based on detailed engineering, market conditions, and final quotes.</p>
         </div>`;
 }
+
 
 // --- NOTIFICATION & TEMPLATE SYSTEMS ---
 function showNotification(message, type = 'info', duration = 4000) {
@@ -1547,3 +1620,9 @@ function getPostJobTemplate() {
             </form>
         </div>`;
 }
+
+
+
+
+
+
