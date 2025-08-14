@@ -37,7 +37,11 @@ document.querySelectorAll('.nav-link[href^="#"]').forEach(link => {
 document.addEventListener('DOMContentLoaded', initializeApp);
 
 // --- CONSTANTS & STATE ---
-const BACKEND_URL = 'http://localhost:10000/api';
+// DYNAMIC BACKEND URL: Checks if you are on localhost or a deployed site
+const IS_LOCAL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const PROD_BACKEND_URL = 'https://steelconnect-backend.onrender.com/api';
+const BACKEND_URL = IS_LOCAL ? 'http://localhost:10000/api' : PROD_BACKEND_URL;
+
 const appState = {
     currentUser: null,
     jwtToken: null,
@@ -1899,3 +1903,4 @@ function getEstimationToolTemplate() {
         </div>
     `;
 }
+
