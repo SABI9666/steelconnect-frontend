@@ -154,7 +154,13 @@ body {
 .user-profile-menu { display: flex; align-items: center; gap: 12px; }
 .avatar { width: 40px; height: 40px; background-color: var(--primary-color); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; }
 
-/* --- STYLES FOR ESTIMATION TOOL --- */
+/* All other styles from your original style.css file should be here */
+/* ... */
+/* ... */
+
+
+/* --- NEW STYLES FOR ESTIMATION TOOL --- */
+
 .estimation-tool-container {
     display: grid;
     grid-template-columns: 1fr;
@@ -162,12 +168,14 @@ body {
     max-width: 900px;
     margin: 0 auto;
 }
+
 .file-upload-section {
     background: var(--bg-white);
     border-radius: 12px;
     padding: 24px;
     border: 1px solid var(--border-color);
 }
+
 .file-upload-area {
     border: 2px dashed var(--border-color);
     border-radius: 16px;
@@ -192,10 +200,24 @@ body {
 .file-upload-area:hover .file-upload-icon i {
     transform: scale(1.1) translateY(-5px);
 }
-.file-upload-area h3 { font-size: 20px; font-weight: 600; color: var(--text-dark); }
-.file-upload-area p { color: var(--text-gray); margin-top: 4px; margin-bottom: 8px; }
-.file-upload-area small { color: var(--text-gray); font-size: 12px; }
+
+.file-upload-area h3 {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-dark);
+}
+.file-upload-area p { 
+    color: var(--text-gray);
+    margin-top: 4px;
+    margin-bottom: 8px;
+}
+.file-upload-area small {
+    color: var(--text-gray);
+    font-size: 12px;
+}
+
 #file-upload-input { display: none; }
+
 #file-info-container {
     margin-top: 24px;
     background: var(--bg-white);
@@ -211,6 +233,7 @@ body {
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
 }
+
 #file-info {
     font-weight: 500;
     color: var(--secondary-color);
@@ -225,10 +248,16 @@ body {
     align-items: center;
     gap: 8px;
 }
-#generate-estimation-btn .btn-spinner { width: 16px; height: 16px; }
+#generate-estimation-btn .btn-spinner {
+    width: 16px;
+    height: 16px;
+}
 
 /* Estimation Report Styles */
-.estimation-results-container { margin-top: 10px; }
+.estimation-results-container {
+    margin-top: 10px;
+}
+
 .estimation-report {
     background: var(--bg-white);
     border: 1px solid var(--border-color);
@@ -256,9 +285,19 @@ body {
     border-radius: 8px; 
     border-left: 4px solid var(--primary-color);
 }
-.summary-item .label { font-size: 14px; color: var(--text-gray); margin-bottom: 8px; font-weight: 500; }
-.summary-item .value { font-size: 22px; font-weight: 700; color: var(--text-dark); }
+.summary-item .label { 
+    font-size: 14px; 
+    color: var(--text-gray); 
+    margin-bottom: 8px; 
+    font-weight: 500;
+}
+.summary-item .value { 
+    font-size: 22px; 
+    font-weight: 700; 
+    color: var(--text-dark); 
+}
 .summary-item .value.total { color: var(--secondary-color); }
+
 .report-details { padding: 24px; }
 .report-details h4 { 
     font-size: 18px; 
@@ -267,155 +306,32 @@ body {
     padding-bottom: 8px; 
     border-bottom: 1px solid var(--border-color); 
 }
-.report-table { width: 100%; border-collapse: collapse; }
-.report-table th, .report-table td { padding: 12px 8px; text-align: left; border-bottom: 1px solid var(--border-light); }
-.report-table th { font-size: 14px; color: var(--text-gray); font-weight: 500; background-color: var(--bg-light); }
-.report-table .currency { text-align: right; font-weight: 500; font-family: 'Courier New', Courier, monospace; }
-.report-table tfoot tr:last-child td { border-bottom: none; }
-.report-table .total-row td { font-weight: 700; font-size: 16px; border-top: 2px solid var(--border-color); padding-top: 12px; }
-
-
-/* --- NEW PREMIUM STYLES --- */
-
-/* --- PREMIUM CONTRACTOR PORTAL --- */
-.process-steps {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    max-width: 900px;
-    margin: 0 auto 40px;
-    position: relative;
+.report-table { 
+    width: 100%; 
+    border-collapse: collapse; 
 }
-.step-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    width: 160px;
-    opacity: 0.6;
-    transition: opacity 0.3s ease;
+.report-table th, .report-table td { 
+    padding: 12px 8px; 
+    text-align: left; 
+    border-bottom: 1px solid var(--border-light); 
 }
-.step-item.active {
-    opacity: 1;
+.report-table th { 
+    font-size: 14px; 
+    color: var(--text-gray); 
+    font-weight: 500; 
+    background-color: var(--bg-light);
 }
-.step-item .step-icon {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    background-color: var(--bg-gray);
-    border: 2px solid var(--border-color);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 24px;
-    color: var(--text-gray);
-    transition: all 0.3s ease;
-    margin-bottom: 12px;
+.report-table .currency { 
+    text-align: right; 
+    font-weight: 500; 
+    font-family: 'Courier New', Courier, monospace;
 }
-.step-item.active .step-icon {
-    background-color: var(--primary-color);
-    border-color: var(--primary-color);
-    color: white;
-    transform: scale(1.1);
+.report-table tfoot tr:last-child td {
+    border-bottom: none;
 }
-.step-text h3 {
-    font-size: 16px;
-    font-weight: 600;
-    margin-bottom: 4px;
-}
-.step-item.active .step-text h3 {
-    color: var(--primary-color);
-}
-.step-text p {
-    font-size: 13px;
-    color: var(--text-gray);
-    line-height: 1.4;
-}
-.step-connector {
-    flex-grow: 1;
-    height: 2px;
-    background-color: var(--border-color);
-    margin: 0 10px;
-    position: relative;
-    top: 30px;
-}
-
-/* --- PREMIUM ESTIMATION TOOL --- */
-.premium-estimation-tool {
-    display: grid;
-    grid-template-columns: 1.2fr 1fr;
-    gap: 30px;
-    background: var(--bg-white);
-    border: 1px solid var(--border-color);
-    padding: 30px;
-    border-radius: 16px;
-    max-width: 900px;
-    margin: 0 auto;
-}
-.estimation-form-section h3, .estimation-upload-section h3 {
-    font-size: 22px;
-    margin-bottom: 4px;
-}
-.estimation-form-section p, .estimation-upload-section p {
-    color: var(--text-gray);
-    margin-bottom: 24px;
-}
-.requirement-options {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-.requirement-options input[type="radio"] {
-    display: none;
-}
-.req-option {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 16px;
-    border: 2px solid var(--border-color);
-    border-radius: 12px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-.req-option:hover {
-    border-color: var(--primary-hover);
-    background-color: var(--primary-light);
-}
-.requirement-options input[type="radio"]:checked + .req-option {
-    border-color: var(--primary-color);
-    background-color: var(--primary-light);
-    box-shadow: 0 0 0 3px var(--primary-light);
-}
-.req-option i {
-    font-size: 24px;
-    color: var(--primary-color);
-    width: 30px;
-    text-align: center;
-}
-.req-option strong {
-    font-size: 16px;
-    color: var(--text-dark);
-}
-.req-option span {
-    font-size: 14px;
-    color: var(--text-gray);
-}
-.premium-uploader {
-    padding: 20px;
-    background: var(--bg-light);
-}
-.premium-uploader h4 {
-    font-size: 18px;
-    margin-bottom: 0;
-}
-.premium-uploader p {
-    font-size: 14px;
-    margin-top: 0;
-}
-.estimation-results-container .initial-state {
-    border: 2px dashed var(--border-color);
-    padding: 60px 20px;
-    margin-top: 30px;
-    border-radius: 16px;
+.report-table .total-row td { 
+    font-weight: 700; 
+    font-size: 16px; 
+    border-top: 2px solid var(--border-color); 
+    padding-top: 12px;
 }
