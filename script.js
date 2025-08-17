@@ -1,3 +1,4 @@
+// --- SLIDER SCRIPT (TOP OF PAGE) ---
 let currentSlide = 0;
 const sliderWrapper = document.getElementById('slider-wrapper');
 const sliderDots = document.querySelectorAll('.slider-dot');
@@ -331,90 +332,109 @@ async function fetchAndRenderJobs(loadMore = false) {
     }
 }
 
-async function fetchAndRenderApprovedJobs() {
-    // This function's logic remains the same
-}
+// --- MODAL, VIEW, and TEMPLATE FUNCTIONS ---
 
-async function markJobCompleted(jobId) {
-    // This function's logic remains the same
-}
-
-async function fetchAndRenderMyQuotes() {
-    // This function's logic remains the same
-}
-
-async function editQuote(quoteId) {
-    // This function's logic remains the same
-}
-
-async function handleQuoteEdit(event) {
-    // This function's logic remains the same
-}
-
-async function handlePostJob(event) {
-    // This function's logic remains the same
-}
-
-async function deleteJob(jobId) {
-    // This function's logic remains the same
-}
-
-async function deleteQuote(quoteId) {
-    // This function's logic remains the same
-}
-
-async function viewQuotes(jobId) {
-    // This function's logic remains the same
-}
-
-async function approveQuote(quoteId, jobId) {
-    // This function's logic remains the same
-}
-
-function showQuoteModal(jobId) {
-    // This function's logic remains the same
-}
-
-async function handleQuoteSubmit(event) {
-    // This function's logic remains the same
-}
-
-async function openConversation(jobId, recipientId) {
-    // This function's logic remains the same
-}
-
-async function fetchAndRenderConversations() {
-    // This function's logic remains the same
-}
-
-function getTimeAgo(timestamp) {
-    // This function's logic remains the same
-}
-
-function getAvatarColor(name) {
-    // This function's logic remains the same
-}
-
-async function renderConversationView(conversationOrId) {
-    // This function's logic remains the same
-}
-
-async function handleSendMessage(conversationId) {
-    // This function's logic remains the same
-}
-
+// [ADDED] Displays the authentication modal (pop-up)
 function showAuthModal(view) {
-    // This function's logic remains the same
+    const modalHTML = `
+        <div id="auth-modal-overlay" class="modal-overlay">
+            <div class="modal-content auth-modal">
+                <button class="modal-close-btn">&times;</button>
+                <div id="auth-form-container"></div>
+            </div>
+        </div>
+    `;
+
+    let modalContainer = document.getElementById('modal-container');
+    if (!modalContainer) {
+        modalContainer = document.createElement('div');
+        modalContainer.id = 'modal-container';
+        document.body.appendChild(modalContainer);
+    }
+    
+    modalContainer.innerHTML = modalHTML;
+    renderAuthForm(view); // Render the initial form view
+
+    modalContainer.querySelector('.modal-close-btn').addEventListener('click', closeModal);
+    modalContainer.querySelector('#auth-modal-overlay').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) {
+            closeModal();
+        }
+    });
 }
 
+// [ADDED] Renders the login or register form inside the modal
 function renderAuthForm(view) {
-    // This function's logic remains the same
+    const container = document.getElementById('auth-form-container');
+    if (!container) return;
+
+    if (view === 'login') {
+        container.innerHTML = `
+            <div class="auth-header">
+                <h2>Welcome Back!</h2>
+                <p>Sign in to continue to SteelConnect.</p>
+            </div>
+            <form id="login-form" class="auth-form">
+                <div class="form-group">
+                    <label for="loginEmail">Email</label>
+                    <input type="email" name="loginEmail" required placeholder="Enter your email">
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Password</label>
+                    <input type="password" name="loginPassword" required placeholder="Enter your password">
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Sign In</button>
+            </form>
+            <div class="auth-footer">
+                <p>Don't have an account? <a href="#" id="show-register">Join Now</a></p>
+            </div>
+        `;
+        document.getElementById('login-form').addEventListener('submit', handleLogin);
+        document.getElementById('show-register').addEventListener('click', (e) => {
+            e.preventDefault();
+            renderAuthForm('register');
+        });
+    } else { // 'register' view
+        container.innerHTML = `
+            <div class="auth-header">
+                <h2>Join SteelConnect</h2>
+                <p>Create an account to find projects or post jobs.</p>
+            </div>
+            <form id="register-form" class="auth-form">
+                <div class="form-group">
+                    <label for="regName">Full Name</label>
+                    <input type="text" name="regName" required placeholder="Enter your full name">
+                </div>
+                <div class="form-group">
+                    <label for="regEmail">Email</label>
+                    <input type="email" name="regEmail" required placeholder="Enter your email">
+                </div>
+                 <div class="form-group">
+                    <label for="regPassword">Password</label>
+                    <input type="password" name="regPassword" required placeholder="Create a password">
+                </div>
+                <div class="form-group">
+                    <label>I am a:</label>
+                    <select name="regRole" class="form-input">
+                        <option value="client">Client (Posting Jobs)</option>
+                        <option value="designer">Designer (Seeking Projects)</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Create Account</button>
+            </form>
+            <div class="auth-footer">
+                <p>Already have an account? <a href="#" id="show-login">Sign In</a></p>
+            </div>
+        `;
+        document.getElementById('register-form').addEventListener('submit', handleRegister);
+        document.getElementById('show-login').addEventListener('click', (e) => {
+            e.preventDefault();
+            renderAuthForm('login');
+        });
+    }
 }
 
-function showGenericModal(innerHTML, style = '') {
-    // This function's logic remains the same
-}
-
+// [ADDED] Closes any active modal
 function closeModal() {
     const modalContainer = document.getElementById('modal-container');
     if (modalContainer) modalContainer.innerHTML = '';
@@ -489,13 +509,17 @@ function renderAppSection(sectionId) {
         fetchAndRenderJobs();
     } else if (sectionId === 'post-job') {
         container.innerHTML = getPostJobTemplate();
-        document.getElementById('post-job-form').addEventListener('submit', handlePostJob);
+        // Placeholder: Add event listener for post-job form
+        // document.getElementById('post-job-form').addEventListener('submit', handlePostJob);
     } else if (sectionId === 'my-quotes') {
-        fetchAndRenderMyQuotes();
+        // Placeholder: fetchAndRenderMyQuotes();
+        container.innerHTML = '<h2>My Quotes</h2>';
     } else if (sectionId === 'approved-jobs') {
-        fetchAndRenderApprovedJobs();
+         // Placeholder: fetchAndRenderApprovedJobs();
+        container.innerHTML = '<h2>Approved Jobs</h2>';
     } else if (sectionId === 'messages') {
-        fetchAndRenderConversations();
+        // Placeholder: fetchAndRenderConversations();
+        container.innerHTML = '<h2>Messages</h2>';
     } else if (sectionId === 'estimation-tool') {
         container.innerHTML = getEstimationToolTemplate();
         setupEstimationToolEventListeners();
@@ -592,10 +616,27 @@ function renderEstimationResult(data) {
 }
 
 function showNotification(message, type = 'info', duration = 4000) {
-    // This function's logic remains the same
+    const container = document.getElementById('notification-container');
+    if (!container) return;
+
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.textContent = message;
+
+    container.appendChild(notification);
+
+    setTimeout(() => {
+        notification.classList.add('show');
+    }, 10);
+
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => {
+            container.removeChild(notification);
+        }, 500);
+    }, duration);
 }
 
-// UPDATED: Post Job Template with premium process steps
 function getPostJobTemplate() {
     return `
         <div class="section-header modern-header">
@@ -606,20 +647,11 @@ function getPostJobTemplate() {
         </div>
         
         <div class="process-steps">
-            <div class="step-item active">
-                <div class="step-icon"><i class="fas fa-pencil-alt"></i></div>
-                <div class="step-text"><h3>1. Define Project</h3><p>Provide project details and requirements.</p></div>
-            </div>
+            <div class="step-item active"><div class="step-icon"><i class="fas fa-pencil-alt"></i></div><div class="step-text"><h3>1. Define Project</h3><p>Provide project details and requirements.</p></div></div>
             <div class="step-connector"></div>
-            <div class="step-item">
-                <div class="step-icon"><i class="fas fa-users"></i></div>
-                <div class="step-text"><h3>2. Receive Quotes</h3><p>Get proposals from expert designers.</p></div>
-            </div>
+            <div class="step-item"><div class="step-icon"><i class="fas fa-users"></i></div><div class="step-text"><h3>2. Receive Quotes</h3><p>Get proposals from expert designers.</p></div></div>
             <div class="step-connector"></div>
-            <div class="step-item">
-                <div class="step-icon"><i class="fas fa-handshake"></i></div>
-                <div class="step-text"><h3>3. Approve & Collaborate</h3><p>Assign the project and manage communication.</p></div>
-            </div>
+            <div class="step-item"><div class="step-icon"><i class="fas fa-handshake"></i></div><div class="step-text"><h3>3. Approve & Collaborate</h3><p>Assign the project and manage communication.</p></div></div>
         </div>
 
         <div class="post-job-container">
@@ -641,7 +673,6 @@ function getPostJobTemplate() {
         </div>`;
 }
 
-// UPDATED: Estimation Tool Template with premium UI
 function getEstimationToolTemplate() {
     return `
         <div class="section-header modern-header">
@@ -652,51 +683,24 @@ function getEstimationToolTemplate() {
         </div>
 
         <div class="process-steps">
-            <div class="step-item active">
-                <div class="step-icon"><i class="fas fa-file-upload"></i></div>
-                <div class="step-text"><h3>1. Upload Drawings</h3><p>Provide your project details and PDF.</p></div>
-            </div>
+            <div class="step-item active"><div class="step-icon"><i class="fas fa-file-upload"></i></div><div class="step-text"><h3>1. Upload Drawings</h3><p>Provide your project details and PDF.</p></div></div>
             <div class="step-connector"></div>
-            <div class="step-item">
-                <div class="step-icon"><i class="fas fa-cogs"></i></div>
-                <div class="step-text"><h3>2. AI Analysis</h3><p>Our system extracts and analyzes the data.</p></div>
-            </div>
+            <div class="step-item"><div class="step-icon"><i class="fas fa-cogs"></i></div><div class="step-text"><h3>2. AI Analysis</h3><p>Our system extracts and analyzes the data.</p></div></div>
             <div class="step-connector"></div>
-            <div class="step-item">
-                <div class="step-icon"><i class="fas fa-file-invoice-dollar"></i></div>
-                <div class="step-text"><h3>3. Get Estimate</h3><p>Receive your detailed cost report instantly.</p></div>
-            </div>
+            <div class="step-item"><div class="step-icon"><i class="fas fa-file-invoice-dollar"></i></div><div class="step-text"><h3>3. Get Estimate</h3><p>Receive your detailed cost report instantly.</p></div></div>
         </div>
 
         <div class="premium-estimation-tool">
             <div class="estimation-form-section modern-form">
                 <h3>Project Information</h3>
                 <p>Tell us about your project.</p>
-
-                <div class="form-group">
-                    <label class="form-label"><i class="fas fa-heading"></i> Project Name</label>
-                    <input type="text" class="form-input" id="estimation-project-name" placeholder="e.g., Southern Vales Redevelopment">
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label"><i class="fas fa-align-left"></i> Project Description (Optional)</label>
-                    <textarea class="form-textarea" id="estimation-project-description" placeholder="Provide a brief description of the project scope..."></textarea>
-                </div>
-
+                <div class="form-group"><label class="form-label"><i class="fas fa-heading"></i> Project Name</label><input type="text" class="form-input" id="estimation-project-name" placeholder="e.g., Southern Vales Redevelopment"></div>
+                <div class="form-group"><label class="form-label"><i class="fas fa-align-left"></i> Project Description (Optional)</label><textarea class="form-textarea" id="estimation-project-description" placeholder="Provide a brief description of the project scope..."></textarea></div>
                 <div class="form-group">
                     <label class="form-label"><i class="fas fa-tasks"></i> What do you require?</label>
                     <div class="requirement-options">
-                        <input type="radio" id="req-mto" name="requirement" value="mto" checked>
-                        <label for="req-mto" class="req-option">
-                            <i class="fas fa-ruler-combined"></i>
-                            <div><strong>Material Take-Off (MTO)</strong><span>A detailed list of all steel components.</span></div>
-                        </label>
-                        
-                        <input type="radio" id="req-cost" name="requirement" value="cost">
-                        <label for="req-cost" class="req-option">
-                            <i class="fas fa-dollar-sign"></i>
-                            <div><strong>Full Cost Estimate</strong><span>A complete cost breakdown including materials and labor.</span></div>
-                        </label>
+                        <input type="radio" id="req-mto" name="requirement" value="mto" checked><label for="req-mto" class="req-option"><i class="fas fa-ruler-combined"></i><div><strong>Material Take-Off (MTO)</strong><span>A detailed list of all steel components.</span></div></label>
+                        <input type="radio" id="req-cost" name="requirement" value="cost"><label for="req-cost" class="req-option"><i class="fas fa-dollar-sign"></i><div><strong>Full Cost Estimate</strong><span>A complete cost breakdown including materials and labor.</span></div></label>
                     </div>
                 </div>
             </div>
@@ -704,19 +708,13 @@ function getEstimationToolTemplate() {
             <div class="estimation-upload-section">
                 <h3>Upload Your Drawing</h3>
                 <p>Drag and drop your PDF file below.</p>
-                
                 <div id="file-upload-area" class="file-upload-area premium-uploader">
-                    <input type="file" id="file-upload-input" accept=".pdf" />
-                    <div class="file-upload-icon"><i class="fas fa-cloud-upload-alt"></i></div>
-                    <h4>Drag & Drop PDF</h4>
-                    <p>or click to browse</p>
+                    <input type="file" id="file-upload-input" accept=".pdf" /><div class="file-upload-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+                    <h4>Drag & Drop PDF</h4><p>or click to browse</p>
                 </div>
-
                 <div id="file-info-container">
                     <span id="file-info"></span>
-                    <button id="generate-estimation-btn" class="btn btn-primary" disabled>
-                        <i class="fas fa-cogs"></i> Generate Estimation
-                    </button>
+                    <button id="generate-estimation-btn" class="btn btn-primary" disabled><i class="fas fa-cogs"></i> Generate Estimation</button>
                 </div>
             </div>
         </div>
