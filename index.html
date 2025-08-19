@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SteelConnect - Professional Steel & Rebar Design Marketplace</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" defer>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -330,7 +330,7 @@
             border-radius: 12px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
             border: 1px solid rgba(255, 255, 255, 0.3);
-            animation: float 6s ease-in-out infinite;
+            /* animation: float 6s ease-in-out infinite; */ /* FIX: 'float' animation is not defined */
             min-width: 180px;
             max-width: 200px;
             transition: all 0.3s ease;
@@ -784,6 +784,7 @@
 
         .convo-details {
             overflow: hidden;
+            flex-grow: 1;
         }
 
         .convo-details h4 {
@@ -825,6 +826,8 @@
             border-bottom: 1px solid var(--border-color);
             background-color: var(--bg-light);
             flex-shrink: 0;
+            display: flex;
+            align-items: center;
         }
 
         .chat-header .back-btn {
