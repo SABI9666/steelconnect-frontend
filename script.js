@@ -1,877 +1,1905 @@
-// script.js for the Enhanced SteelConnect Admin Panel - BACKEND COMPATIBLE VERSION
+let currentSlide = 0;
+const sliderWrapper = document.getElementById('slider-wrapper');
+const sliderDots = document.querySelectorAll('.slider-dot');
+const totalSlides = sliderWrapper ? sliderWrapper.children.length : 0;
 
-// --- CONFIGURATION & GLOBAL STATE ---
+function changeSlide(direction) {
+    if (!sliderWrapper) return;
+    currentSlide = (currentSlide + direction + totalSlides) % totalSlides;
+    goToSlide(currentSlide);
+}
+
+function goToSlide(slideIndex) {
+    if (!sliderWrapper) return;
+    sliderWrapper.style.transform = `translateX(-${slideIndex * 100}%)`;
+    sliderDots.forEach((dot, index) => {
+        dot.classList.toggle('active', index === slideIndex);
+    });
+    currentSlide = slideIndex;
+}
+
+if (totalSlides > 0) {
+    setInterval(() => changeSlide(1), 8000);
+}
+
+document.querySelectorAll('.nav-link[href^="#"]').forEach(link => {
+    link.addEventListener('click', function(e) {
+        e.preventDefault();
+        const targetId = this.getAttribute('href');
+        const targetSection = document.querySelector(targetId);
+        if (targetSection) {
+            targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    });
+});
+
+// --- FULL APPLICATION SCRIPT ---
+document.addEventListener('DOMContentLoaded', initializeApp);
+
+// --- CONSTANTS & STATE ---
+// DYNAMIC BACKEND URL: Checks if you are on localhost or a deployed site
+const IS_LOCAL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const PROD_BACKEND_URL = 'https://steelconnect-backend.onrender.com/api';
+const BACKEND_URL = IS_LOCAL ? 'http://localhost:10000/api' : PROD_BACKEND_URL;
+
 const appState = {
-    jwtToken: null,
     currentUser: null,
+    jwtToken: null,
+    jobs: [],
+    myQuotes: [],
+    approvedJobs: [],
+    conversations: [],
+    participants: {},
+    jobsPage: 1,
+    hasMoreJobs: true,
+    userSubmittedQuotes: new Set(), // Track which jobs user has already quoted
+    uploadedFile: null, // To hold the file for the estimation tool
 };
 
-const API_BASE_URL = 'https://steelconnect-backend.onrender.com/api';
+// --- INACTIVITY TIMER FOR AUTO-LOGOUT ---
+let inactivityTimer;
+function resetInactivityTimer() {
+    clearTimeout(inactivityTimer);
+    inactivityTimer = setTimeout(() => {
+        if (appState.currentUser) {
+            showNotification('You have been logged out due to inactivity.', 'info');
+            logout();
+        }
+    }, 300000); // 5 minutes
+}
 
-// This configuration can now be managed from the "Subscription Plans" section
-// It serves as a fallback or initial structure.
-const SUBSCRIPTION_PLANS = {
-    Designer: {
-        'submitting-quote': { name: 'Submitting Quote', types: ['PER QUOTE', 'MONTHLY'] },
-        'sending-messages': { name: 'Sending Messages', types: ['MONTHLY'] }
-    },
-    Contractor: {
-        'submitting-tender': { name: 'Submitting Tender', types: ['PER TENDER', 'MONTHLY'] },
-        'getting-estimation': { name: 'Getting Estimation', types: ['PER ESTIMATE', 'MONTHLY'] },
-        'sending-messages': { name: 'Sending Messages', types: ['MONTHLY'] }
+function initializeApp() {
+    console.log("SteelConnect App Initializing...");
+    
+    // Create notification container if it doesn't exist
+    if (!document.getElementById('notification-container')) {
+        const notificationContainer = document.createElement('div');
+        notificationContainer.id = 'notification-container';
+        notificationContainer.className = 'notification-container';
+        document.body.appendChild(notificationContainer);
     }
-};
+    
+    // Setup inactivity listeners
+    window.addEventListener('mousemove', resetInactivityTimer);
+    window.addEventListener('keydown', resetInactivityTimer);
+    window.addEventListener('click', resetInactivityTimer);
 
-// --- CORE UTILITY FUNCTIONS ---
-function showNotification(message, type = 'info') {
-    let container = document.getElementById('notification-container');
-    if (!container) {
-        container = document.createElement('div');
-        container.id = 'notification-container';
-        container.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 10000;
-            max-width: 400px;
-        `;
-        document.body.appendChild(container);
-    }
+    // FIX: Safely attach event listeners to prevent script errors
+    const signInBtn = document.getElementById('signin-btn');
+    if (signInBtn) signInBtn.addEventListener('click', () => showAuthModal('login'));
 
-    const notification = document.createElement('div');
-    notification.className = `notification notification-${type}`;
-    notification.style.cssText = `
-        padding: 12px 16px;
-        margin-bottom: 10px;
-        border-radius: 4px;
-        color: white;
-        font-weight: 500;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        word-wrap: break-word;
-        transition: opacity 0.3s ease;
-        ${type === 'success' ? 'background-color: #28a745;' : ''}
-        ${type === 'error' ? 'background-color: #dc3545;' : ''}
-        ${type === 'info' ? 'background-color: #007bff;' : ''}
-        ${type === 'warning' ? 'background-color: #ffc107; color: #212529;' : ''}
-    `;
-
-    notification.innerHTML = `
-        <span>${message}</span>
-        <button class="notification-close" style="background: none; border: none; color: inherit; float: right; font-size: 18px; line-height: 1; margin-left: 10px; cursor: pointer; opacity: 0.7;" onclick="this.parentElement.remove()">&times;</button>
-    `;
-
-    container.appendChild(notification);
-
-    setTimeout(() => {
-        notification.style.opacity = '0';
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.remove();
+    const joinBtn = document.getElementById('join-btn');
+    if (joinBtn) joinBtn.addEventListener('click', () => showAuthModal('register'));
+    
+    const getStartedBtn = document.getElementById('get-started-btn');
+    if (getStartedBtn) getStartedBtn.addEventListener('click', () => showAuthModal('register'));
+    
+    const logo = document.querySelector('.logo');
+    if (logo) {
+        logo.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (appState.currentUser) {
+                renderAppSection('jobs');
+            } else {
+                showLandingPageView();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
             }
-        }, 300);
-    }, 5000);
-}
-
-function hideGlobalLoader() {
-    const loader = document.getElementById('global-loader');
-    if (loader) {
-        loader.style.display = 'none';
+        });
     }
-}
+    
+    const logoutBtn = document.getElementById('logout-button');
+    if(logoutBtn) {
+        logoutBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            logout();
+        });
+    }
 
-async function apiCall(endpoint, method = 'GET', body = null, successMessage = null) {
+    // Check for existing user session
     const token = localStorage.getItem('jwtToken');
-    const fullUrl = `${API_BASE_URL}${endpoint}`;
-
-    console.log(`Making ${method} request to: ${fullUrl}`);
-
-    const options = {
-        method,
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        mode: 'cors',
-        credentials: 'omit',
-    };
-
-    if (token) {
-        options.headers['Authorization'] = `Bearer ${token}`;
+    const user = localStorage.getItem('currentUser');
+    
+    if (token && user) {
+        try {
+            appState.jwtToken = token;
+            appState.currentUser = JSON.parse(user);
+            showAppView();
+            resetInactivityTimer();
+        } catch (error) {
+            console.error("Error parsing user data from localStorage:", error);
+            logout();
+        }
+    } else {
+        showLandingPageView();
     }
+}
 
-    if (body) {
-        options.body = JSON.stringify(body);
-    }
-
+async function apiCall(endpoint, method, body = null, successMessage = null) {
     try {
-        const response = await fetch(fullUrl, options);
-        let responseData = null;
-        const contentType = response.headers.get("content-type");
-
-        if (contentType && contentType.includes("application/json")) {
-            responseData = await response.json();
-        } else {
-            const textResponse = await response.text();
-            try {
-                responseData = JSON.parse(textResponse);
-            } catch (e) {
-                responseData = { message: textResponse || 'No response data' };
+        const options = { method, headers: {} };
+        if (appState.jwtToken) {
+            options.headers['Authorization'] = `Bearer ${appState.jwtToken}`;
+        }
+        if (body) {
+            if (body instanceof FormData) {
+                // Let the browser set the Content-Type header for FormData
+                options.body = body;
+            } else {
+                options.headers['Content-Type'] = 'application/json';
+                options.body = JSON.stringify(body);
             }
         }
+        
+        const response = await fetch(BACKEND_URL + endpoint, options);
+
+        if (response.status === 204 || response.headers.get("content-length") === "0") {
+             if (!response.ok) {
+                const errorMsg = response.headers.get('X-Error-Message') || `Request failed with status ${response.status}`;
+                throw new Error(errorMsg);
+             }
+             if (successMessage) showNotification(successMessage, 'success');
+             return { success: true };
+        }
+
+        const responseData = await response.json();
 
         if (!response.ok) {
-            const errorMessage = responseData?.message || responseData?.error || `HTTP ${response.status}: ${response.statusText}`;
-            throw new Error(errorMessage);
+            throw new Error(responseData.message || responseData.error || `Request failed with status ${response.status}`);
         }
 
         if (successMessage) {
             showNotification(successMessage, 'success');
         }
-
+        
         return responseData;
 
     } catch (error) {
-        let errorMessage = error.message;
-        if (error.name === 'TypeError' && error.message.includes('fetch')) {
-            errorMessage = 'Network error: Unable to connect to server. Please check your internet connection.';
-        }
-        showNotification(errorMessage, 'error');
+        console.error(`API call to ${endpoint} failed:`, error);
+        showNotification(error.message, 'error');
         throw error;
     }
 }
 
-function logout() {
-    localStorage.removeItem('jwtToken');
-    localStorage.removeItem('currentUser');
-    appState.jwtToken = null;
-    appState.currentUser = null;
-    showNotification('You have been successfully logged out.', 'success');
-    setTimeout(() => {
-        window.location.href = 'index.html';
-    }, 1000);
-}
 
-
-// --- LOGIN PAGE LOGIC ---
-function initializeLoginPage() {
-    hideGlobalLoader();
-    const loginForm = document.getElementById('admin-login-form');
-    if (loginForm) {
-        loginForm.addEventListener('submit', handleAdminLogin);
-    }
-}
-
-async function handleAdminLogin(event) {
+async function handleRegister(event) {
     event.preventDefault();
-    const email = document.getElementById('email').value.trim();
-    const password = document.getElementById('password').value;
+    const form = event.target;
+    const userData = {
+        name: form.regName.value,
+        email: form.regEmail.value,
+        password: form.regPassword.value,
+        type: form.regRole.value,
+    };
+    await apiCall('/auth/register', 'POST', userData, 'Registration successful! Please sign in.')
+        .then(() => renderAuthForm('login'))
+        .catch(() => {});
+}
 
-    if (!email || !password) {
-        showNotification('Please enter both email and password', 'error');
-        return;
-    }
-
-    const loginButton = event.target.querySelector('button[type="submit"]');
-    loginButton.disabled = true;
-    loginButton.textContent = 'Logging in...';
-
+async function handleLogin(event) {
+    event.preventDefault();
+    const form = event.target;
+    const authData = { email: form.loginEmail.value, password: form.loginPassword.value };
     try {
-        const data = await apiCall('/auth/login/admin', 'POST', { email, password });
-
-        if (!data || !data.token || !data.user) {
-            throw new Error('Invalid response from server');
-        }
-
-        if (data.user.role !== 'admin' && data.user.type !== 'admin') {
-            throw new Error('Access denied: Admin privileges required');
-        }
-
-        localStorage.setItem('jwtToken', data.token);
-        localStorage.setItem('currentUser', JSON.stringify(data.user));
-        appState.jwtToken = data.token;
+        const data = await apiCall('/auth/login', 'POST', authData);
+        showNotification('Welcome back to SteelConnect!', 'success');
         appState.currentUser = data.user;
-
-        showNotification('Login successful! Redirecting...', 'success');
-        setTimeout(() => {
-            window.location.href = 'admin.html';
-        }, 1000);
-
-    } catch (error) {
-        loginButton.disabled = false;
-        loginButton.textContent = 'Login';
-        document.getElementById('password').value = '';
-    }
-}
-
-
-// --- ADMIN PANEL INITIALIZATION & SETUP ---
-function initializeAdminPage() {
-    const token = localStorage.getItem('jwtToken');
-    const userJson = localStorage.getItem('currentUser');
-
-    if (token && userJson) {
-        try {
-            const user = JSON.parse(userJson);
-            if (user.role === 'admin' || user.type === 'admin') {
-                appState.jwtToken = token;
-                appState.currentUser = user;
-                setupAdminPanel();
-            } else {
-                showAdminLoginPrompt("Access Denied: You do not have admin privileges.");
-            }
-        } catch (error) {
-            showAdminLoginPrompt("Invalid user data found. Please log in again.");
-        }
-    } else {
-        showAdminLoginPrompt();
-    }
-    hideGlobalLoader();
-}
-
-function showAdminLoginPrompt(message = null) {
-    hideGlobalLoader();
-    const loginPrompt = document.getElementById('admin-login-prompt');
-    const panelContainer = document.getElementById('admin-panel-container');
-
-    if (loginPrompt) loginPrompt.style.display = 'flex';
-    if (panelContainer) panelContainer.style.display = 'none';
-
-    if (message) {
-        const messageElement = document.querySelector('.login-prompt-box p');
-        if (messageElement) {
-            messageElement.textContent = message;
-            messageElement.style.color = '#dc3545';
-        }
-    }
-}
-
-function setupAdminPanel() {
-    hideGlobalLoader();
-    const loginPrompt = document.getElementById('admin-login-prompt');
-    const panelContainer = document.getElementById('admin-panel-container');
-
-    if (loginPrompt) loginPrompt.style.display = 'none';
-    if (panelContainer) panelContainer.style.display = 'flex';
-
-    const userInfoElement = document.getElementById('admin-user-info');
-    if (userInfoElement && appState.currentUser) {
-        userInfoElement.innerHTML = `
-            <strong>${appState.currentUser.name || 'Admin User'}</strong>
-            <small>${appState.currentUser.role || appState.currentUser.type || 'admin'}</small>
-        `;
-    }
-
-    document.getElementById('admin-logout-btn')?.addEventListener('click', logout);
-
-    const navLinks = document.querySelectorAll('.admin-nav-link');
-    navLinks.forEach(link => {
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-            navLinks.forEach(l => l.classList.remove('active'));
-            link.classList.add('active');
-            const section = link.dataset.section;
-            const sectionTitle = document.getElementById('admin-section-title');
-            if (sectionTitle) {
-                sectionTitle.textContent = link.textContent.trim();
-            }
-            renderAdminSection(section);
-        });
-    });
-
-    // Start on the dashboard
-    document.querySelector('.admin-nav-link[data-section="dashboard"]')?.click();
-}
-
-
-// --- DYNAMIC CONTENT RENDERING ---
-function renderAdminSection(section) {
-    const contentArea = document.getElementById('admin-content-area');
-    if (!contentArea) return;
-
-    contentArea.innerHTML = `<div class="loading-spinner" style="text-align: center; padding: 40px;">Loading...</div>`;
-
-    switch (section) {
-        case 'dashboard':
-            renderAdminDashboard();
-            break;
-        case 'users':
-            renderAdminUsers();
-            break;
-        case 'quotes':
-            renderAdminQuotes();
-            break;
-        case 'messages':
-            renderAdminMessages();
-            break;
-        case 'jobs':
-            renderAdminJobs();
-            break;
-        case 'subscriptions':
-            renderAdminSubscriptions();
-            break;
-        case 'subscription-plans':
-            renderAdminSubscriptionPlans();
-            break;
-        case 'system-stats':
-            renderAdminSystemStats();
-            break;
-        default:
-            contentArea.innerHTML = '<div class="error-state">Section not found.</div>';
-    }
-}
-
-async function renderAdminDashboard() {
-    const contentArea = document.getElementById('admin-content-area');
-    try {
-        const response = await apiCall('/admin/dashboard');
-        const stats = response.stats || {};
-        contentArea.innerHTML = `
-            <div class="admin-stats-grid">
-                <div class="admin-stat-card"><i class="fas fa-users"></i><div><span class="stat-value">${stats.totalUsers || 0}</span><span class="stat-label">Total Users</span></div></div>
-                <div class="admin-stat-card"><i class="fas fa-file-invoice-dollar"></i><div><span class="stat-value">${stats.totalQuotes || 0}</span><span class="stat-label">Total Quotes</span></div></div>
-                <div class="admin-stat-card"><i class="fas fa-comments"></i><div><span class="stat-value">${stats.totalMessages || 0}</span><span class="stat-label">Total Messages</span></div></div>
-                <div class="admin-stat-card"><i class="fas fa-briefcase"></i><div><span class="stat-value">${stats.totalJobs || 0}</span><span class="stat-label">Total Jobs</span></div></div>
-                <div class="admin-stat-card"><i class="fas fa-crown"></i><div><span class="stat-value">${stats.activeSubscriptions || 0}</span><span class="stat-label">Active Subscriptions</span></div></div>
-                <div class="admin-stat-card"><i class="fas fa-dollar-sign"></i><div><span class="stat-value">$${(stats.totalRevenue || 0).toFixed(2)}</span><span class="stat-label">Total Revenue</span></div></div>
-            </div>
-            <div class="admin-quick-actions">
-                <h3>Quick Actions</h3>
-                <div class="quick-action-buttons">
-                    <button class="btn btn-primary" onclick="document.querySelector('[data-section=\\"users\\"]').click()"><i class="fas fa-users"></i> Manage Users</button>
-                    <button class="btn btn-success" onclick="document.querySelector('[data-section=\\"subscriptions\\"]').click()"><i class="fas fa-crown"></i> User Subscriptions</button>
-                    <button class="btn btn-info" onclick="document.querySelector('[data-section=\\"subscription-plans\\"]').click()"><i class="fas fa-cogs"></i> Subscription Plans</button>
-                </div>
-            </div>`;
-    } catch (error) {
-        contentArea.innerHTML = '<div class="error-state">Failed to load dashboard data.</div>';
-    }
-}
-
-// --- USERS SECTION ---
-async function renderAdminUsers() {
-    const contentArea = document.getElementById('admin-content-area');
-    try {
-        const response = await apiCall('/admin/users');
-        const users = response.users || [];
-        if (users.length === 0) {
-            contentArea.innerHTML = '<div class="empty-state">No users found.</div>';
-            return;
-        }
-
-        contentArea.innerHTML = `
-            <div class="admin-table-container">
-                <div class="table-actions">
-                    <h3>Users Management</h3>
-                    <input type="text" placeholder="Search users..." class="search-input" onkeyup="filterTable(this.value, 'users-table')">
-                </div>
-                <div style="overflow-x: auto;">
-                    <table class="admin-table" id="users-table">
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Email</th>
-                                <th>Type</th>
-                                <th>Status</th>
-                                <th>Created</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${users.map(user => `
-                                <tr data-user-id="${user._id}">
-                                    <td>${user.name || 'N/A'}</td>
-                                    <td>${user.email || 'N/A'}</td>
-                                    <td><span class="user-type-badge ${user.type}">${user.type || 'user'}</span></td>
-                                    <td>
-                                        <select class="status-select" onchange="handleStatusUpdate('${user._id}', this.value)">
-                                            <option value="active" ${user.status === 'active' ? 'selected' : ''}>Active</option>
-                                            <option value="suspended" ${user.status === 'suspended' ? 'selected' : ''}>Suspended</option>
-                                        </select>
-                                    </td>
-                                    <td>${new Date(user.createdAt).toLocaleDateString()}</td>
-                                    <td>
-                                        <div class="action-buttons">
-                                            <button class="btn btn-info btn-sm" onclick="showUserDetails('${user._id}')"><i class="fas fa-eye"></i></button>
-                                            <button class="btn btn-danger btn-sm" onclick="handleUserDelete('${user._id}')"><i class="fas fa-trash"></i></button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            </div>`;
-    } catch (error) {
-        contentArea.innerHTML = '<div class="error-state">Failed to load user data.</div>';
-    }
-}
-
-
-// --- QUOTES SECTION ---
-async function renderAdminQuotes() {
-    const contentArea = document.getElementById('admin-content-area');
-    try {
-        const response = await apiCall('/admin/quotes');
-        const quotes = response.quotes || [];
-        if (quotes.length === 0) {
-            contentArea.innerHTML = '<div class="empty-state">No quotes found.</div>';
-            return;
-        }
-
-        contentArea.innerHTML = `
-            <div class="admin-table-container">
-                <div class="table-actions">
-                    <h3>Quotes Management</h3>
-                    <div>
-                        <input type="text" placeholder="Search quotes..." class="search-input" onkeyup="filterTable(this.value, 'quotes-table')">
-                        <select onchange="filterTableByStatus(this.value, 'quotes-table')" class="filter-select">
-                            <option value="">All Status</option>
-                            <option value="pending">Pending</option>
-                            <option value="approved">Approved</option>
-                            <option value="rejected">Rejected</option>
-                            <option value="completed">Completed</option>
-                        </select>
-                    </div>
-                </div>
-                <div style="overflow-x: auto;">
-                    <table class="admin-table" id="quotes-table">
-                        <thead>
-                            <tr>
-                                <th>User</th>
-                                <th>Details</th>
-                                <th>Amount</th>
-                                <th>Status</th>
-                                <th>Created</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${quotes.map(quote => `
-                                <tr data-quote-id="${quote._id}">
-                                    <td>${quote.userId?.name || 'N/A'}</td>
-                                    <td class="quote-details">
-                                        <div title="${quote.details || ''}">${quote.details?.substring(0, 50) + (quote.details?.length > 50 ? '...' : '') || 'No details'}</div>
-                                    </td>
-                                    <td><input type="number" class="amount-input" value="${quote.amount || 0}" onchange="updateQuoteAmount('${quote._id}', this.value)"></td>
-                                    <td>
-                                        <select class="status-select" onchange="updateQuoteStatus('${quote._id}', this.value)">
-                                            <option value="pending" ${quote.status === 'pending' ? 'selected' : ''}>Pending</option>
-                                            <option value="approved" ${quote.status === 'approved' ? 'selected' : ''}>Approved</option>
-                                            <option value="rejected" ${quote.status === 'rejected' ? 'selected' : ''}>Rejected</option>
-                                            <option value="completed" ${quote.status === 'completed' ? 'selected' : ''}>Completed</option>
-                                        </select>
-                                    </td>
-                                    <td>${new Date(quote.createdAt).toLocaleDateString()}</td>
-                                    <td>
-                                        <div class="action-buttons">
-                                            <button class="btn btn-info btn-sm" onclick="viewQuoteDetails('${quote._id}')"><i class="fas fa-eye"></i></button>
-                                            <button class="btn btn-danger btn-sm" onclick="deleteQuote('${quote._id}')"><i class="fas fa-trash"></i></button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            </div>`;
-    } catch (error) {
-        contentArea.innerHTML = '<div class="error-state">Failed to load quotes data.</div>';
-    }
-}
-
-// --- MESSAGES SECTION ---
-async function renderAdminMessages() {
-    const contentArea = document.getElementById('admin-content-area');
-    try {
-        const response = await apiCall('/admin/messages');
-        const messages = response.messages || [];
-        if (messages.length === 0) {
-            contentArea.innerHTML = '<div class="empty-state">No messages found.</div>';
-            return;
-        }
+        appState.jwtToken = data.token;
+        localStorage.setItem('currentUser', JSON.stringify(data.user));
+        localStorage.setItem('jwtToken', data.token);
+        closeModal();
+        showAppView();
         
-        // Deduplicate users for the filter dropdown
-        const users = [...new Map(messages.filter(m => m.senderId).map(m => [m.senderId._id, m.senderId])).values()];
-
-        contentArea.innerHTML = `
-            <div class="admin-table-container">
-                <div class="table-actions">
-                     <h3>Messages Management</h3>
-                     <div class="search-filter-row">
-                        <input type="text" placeholder="Search messages..." class="search-input" onkeyup="filterMessages()">
-                        <select onchange="filterMessages()" class="filter-select" id="message-user-filter">
-                            <option value="">All Users</option>
-                            ${users.map(user => `<option value="${user._id}">${user.name}</option>`).join('')}
-                        </select>
-                    </div>
-                </div>
-                <div class="messages-view">
-                    <div class="messages-list" id="messages-list">
-                        ${messages.map((message) => `
-                            <div class="message-item" 
-                                 data-message-id="${message._id}" 
-                                 data-user-id="${message.senderId?._id}" 
-                                 data-message-content="${encodeURIComponent(JSON.stringify(message))}" 
-                                 onclick="selectMessage(this)">
-                                <div class="message-header">
-                                    <strong class="sender-name">${message.senderId?.name || 'Unknown'} to ${message.receiverId?.name || 'Admin'}</strong>
-                                    <span class="message-date">${new Date(message.createdAt).toLocaleDateString()}</span>
-                                </div>
-                                <div class="message-preview">${message.content?.substring(0, 100) + (message.content?.length > 100 ? '...' : '')}</div>
-                            </div>
-                        `).join('')}
-                    </div>
-                    <div class="message-detail" id="message-detail">
-                        <div class="no-message-selected">Select a message to view details</div>
-                    </div>
-                </div>
-            </div>
-            <style>
-                .message-item.hidden { display: none; }
-            </style>
-        `;
-    } catch (error) {
-        contentArea.innerHTML = '<div class="error-state">Failed to load messages.</div>';
-    }
-}
-
-// --- SUBSCRIPTIONS SECTION (USER SUBSCRIPTIONS) ---
-async function renderAdminSubscriptions() {
-    const contentArea = document.getElementById('admin-content-area');
-    try {
-        const response = await apiCall('/admin/subscriptions');
-        const subscriptions = response.subscriptions || [];
-        if (subscriptions.length === 0) {
-            contentArea.innerHTML = '<div class="empty-state">No active user subscriptions found.</div>';
-            return;
+        // Load user's submitted quotes to track them
+        if (data.user.type === 'designer') {
+            loadUserQuotes();
         }
-
-        contentArea.innerHTML = `
-            <div class="admin-table-container">
-                <div class="table-actions">
-                    <h3>User Subscriptions Management</h3>
-                    <input type="text" placeholder="Search subscriptions..." class="search-input" onkeyup="filterTable(this.value, 'subscriptions-table')">
-                </div>
-                <div style="overflow-x: auto;">
-                    <table class="admin-table" id="subscriptions-table">
-                        <thead>
-                            <tr>
-                                <th>User</th>
-                                <th>Plan</th>
-                                <th>Amount</th>
-                                <th>Status</th>
-                                <th>Start Date</th>
-                                <th>End Date</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${subscriptions.map(sub => `
-                                <tr data-subscription-id="${sub._id}">
-                                    <td>${sub.user?.name || 'N/A'}</td>
-                                    <td>${sub.plan || 'N/A'}</td>
-                                    <td><input type="number" class="amount-input" value="${sub.amount || 0}" onchange="updateSubscriptionAmount('${sub._id}', this.value)"></td>
-                                    <td>
-                                        <select class="status-select" onchange="updateSubscriptionStatus('${sub._id}', this.value)">
-                                            <option value="active" ${sub.status === 'active' ? 'selected' : ''}>Active</option>
-                                            <option value="cancelled" ${sub.status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
-                                            <option value="expired" ${sub.status === 'expired' ? 'selected' : ''}>Expired</option>
-                                        </select>
-                                    </td>
-                                    <td>${new Date(sub.startDate).toLocaleDateString()}</td>
-                                    <td>${new Date(sub.endDate).toLocaleDateString()}</td>
-                                    <td>
-                                        <div class="action-buttons">
-                                            <button class="btn btn-warning btn-sm" onclick="extendSubscription('${sub._id}')">Extend</button>
-                                            <button class="btn btn-danger btn-sm" onclick="cancelSubscription('${sub._id}')">Cancel</button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            </div>`;
-    } catch (error) {
-        contentArea.innerHTML = '<div class="error-state">Failed to load subscriptions data.</div>';
+    } catch(error) {
+        // Error is already shown by apiCall
     }
 }
 
-// --- NEW: SUBSCRIPTION PLANS SECTION ---
-async function renderAdminSubscriptionPlans() {
-    const contentArea = document.getElementById('admin-content-area');
-    try {
-        // In a real app, you'd fetch this from an API, e.g., await apiCall('/admin/subscription-plans');
-        // For this example, we'll use the hardcoded SUBSCRIPTION_PLANS object.
-        const plansData = await Promise.resolve(SUBSCRIPTION_PLANS); // Simulating API call
-
-        let html = '<div class="subscription-plans-container">';
-
-        for (const userType in plansData) {
-            html += `
-                <div class="admin-table-container plan-group">
-                    <div class="table-actions">
-                        <h3>${userType} Plans</h3>
-                    </div>
-                    <div style="overflow-x: auto;">
-                        <table class="admin-table" id="${userType}-plans-table">
-                            <thead>
-                                <tr>
-                                    <th>Activity</th>
-                                    <th>Subscription Type</th>
-                                    <th>Amount</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>`;
-            
-            const activities = plansData[userType];
-            for (const activityKey in activities) {
-                const activity = activities[activityKey];
-                activity.types.forEach(type => {
-                    // Unique ID for each plan row
-                    const planId = `${userType}-${activityKey}-${type}`.replace(/\s+/g, '-');
-                    html += `
-                        <tr data-plan-id="${planId}">
-                            <td>${activity.name}</td>
-                            <td>${type}</td>
-                            <td><input type="text" class="amount-input" value="manual entry" placeholder="e.g., 50 or 5%"></td>
-                            <td>
-                                <label class="switch">
-                                  <input type="checkbox" checked>
-                                  <span class="slider round"></span>
-                                </label>
-                            </td>
-                        </tr>
-                    `;
-                });
-            }
-
-            html += `</tbody></table></div></div>`;
-        }
-
-        html += '</div>';
-        contentArea.innerHTML = html;
-
-    } catch (error) {
-        contentArea.innerHTML = '<div class="error-state">Failed to load subscription plans.</div>';
-    }
+function logout() {
+    appState.currentUser = null;
+    appState.jwtToken = null;
+    appState.userSubmittedQuotes.clear();
+    localStorage.clear();
+    clearTimeout(inactivityTimer);
+    showLandingPageView();
+    showNotification('You have been logged out successfully.', 'info');
 }
 
-
-function renderAdminSystemStats() {
-    const contentArea = document.getElementById('admin-content-area');
-    contentArea.innerHTML = '<div class="coming-soon">System statistics are coming soon.</div>';
-}
-
-// --- MESSAGE HANDLING FUNCTIONS ---
-function selectMessage(element) {
-    document.querySelectorAll('.message-item').forEach(el => el.classList.remove('active'));
-    element.classList.add('active');
-
-    const messageData = JSON.parse(decodeURIComponent(element.dataset.messageContent));
-    const detailView = document.getElementById('message-detail');
+// Load user's submitted quotes to track them
+async function loadUserQuotes() {
+    if (appState.currentUser.type !== 'designer') return;
     
-    // Simulate fetching the whole conversation thread
-    const conversationHtml = `
-        <div class="message-bubble received">
-            <p>${messageData.content}</p>
-            <span class="timestamp">${new Date(messageData.createdAt).toLocaleString()}</span>
-        </div>
-    `;
-
-    detailView.innerHTML = `
-        <div class="message-detail-header">
-            <h4>Conversation with ${messageData.senderId?.name || 'Unknown'}</h4>
-        </div>
-        <div class="message-detail-body">${conversationHtml}</div>
-        <div class="message-reply-form">
-            <textarea id="reply-textarea" placeholder="Type your reply here..."></textarea>
-            <button class="btn btn-primary" onclick="handleSendMessage('${messageData._id}')">
-                <i class="fas fa-paper-plane"></i> Send Reply
-            </button>
-        </div>
-    `;
+    try {
+        const response = await apiCall(`/quotes/user/${appState.currentUser.id}`, 'GET');
+        const quotes = response.data || [];
+        appState.userSubmittedQuotes.clear();
+        quotes.forEach(quote => {
+            if (quote.status === 'submitted') {
+                appState.userSubmittedQuotes.add(quote.jobId);
+            }
+        });
+    } catch (error) {
+        console.error('Error loading user quotes:', error);
+    }
 }
 
-async function handleSendMessage(messageId) {
-    const replyContent = document.getElementById('reply-textarea').value;
-    if (!replyContent.trim()) {
-        showNotification('Reply cannot be empty.', 'error');
+async function fetchAndRenderJobs(loadMore = false) {
+    const jobsListContainer = document.getElementById('jobs-list');
+    const loadMoreContainer = document.getElementById('load-more-container');
+
+    if (!loadMore) {
+        appState.jobs = [];
+        appState.jobsPage = 1;
+        appState.hasMoreJobs = true;
+        if (jobsListContainer) jobsListContainer.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Loading projects...</p></div>';
+    }
+
+    if (!jobsListContainer || !appState.hasMoreJobs) {
+        if(loadMoreContainer) loadMoreContainer.innerHTML = '';
         return;
     }
+
+    const user = appState.currentUser;
+    const endpoint = user.type === 'designer' 
+        ? `/jobs?page=${appState.jobsPage}&limit=6` 
+        : `/jobs/user/${user.id}`;
+    
+    if(loadMoreContainer) loadMoreContainer.innerHTML = `<button class="btn btn-loading" disabled><div class="btn-spinner"></div>Loading...</button>`;
+
     try {
-        // The API should handle associating this reply with the correct conversation/user
-        await apiCall(`/admin/messages/reply/${messageId}`, 'POST', { content: replyContent }, 'Reply sent successfully!');
-        document.getElementById('reply-textarea').value = '';
-        // Optionally, refresh the message view to show the new reply
-    } catch (error) {
-       // Error is handled by apiCall
-    }
-}
-
-function filterMessages() {
-    const searchText = document.querySelector('.search-input').value.toLowerCase();
-    const userId = document.getElementById('message-user-filter').value;
-    const messages = document.querySelectorAll('.message-item');
-
-    messages.forEach(message => {
-        const content = message.textContent.toLowerCase();
-        const msgUserId = message.dataset.userId;
+        const response = await apiCall(endpoint, 'GET');
+        const newJobs = response.data || [];
+        appState.jobs.push(...newJobs);
         
-        const matchesSearch = content.includes(searchText);
-        const matchesUser = !userId || msgUserId === userId;
-
-        if (matchesSearch && matchesUser) {
-            message.classList.remove('hidden');
+        if (user.type === 'designer') {
+            appState.hasMoreJobs = response.pagination.hasNext;
+            appState.jobsPage += 1;
         } else {
-            message.classList.add('hidden');
+            appState.hasMoreJobs = false;
         }
-    });
-}
-
-
-// --- UTILITY FUNCTIONS FOR ACTIONS ---
-function filterTable(searchValue, tableId) {
-    const table = document.getElementById(tableId);
-    if (!table) return;
-    const rows = table.querySelectorAll('tbody tr');
-    rows.forEach(row => {
-        row.style.display = row.textContent.toLowerCase().includes(searchValue.toLowerCase()) ? '' : 'none';
-    });
-}
-
-function filterTableByStatus(status, tableId) {
-    const rows = document.querySelectorAll(`#${tableId} tbody tr`);
-    rows.forEach(row => {
-        if (!status) {
-            row.style.display = '';
-        } else {
-            const statusSelect = row.querySelector('.status-select');
-            row.style.display = (statusSelect && statusSelect.value === status) ? '' : 'none';
+        
+        if (appState.jobs.length === 0) {
+            jobsListContainer.innerHTML = user.type === 'designer'
+                ? `<div class="empty-state">
+                     <div class="empty-icon"><i class="fas fa-briefcase"></i></div>
+                     <h3>No Projects Available</h3>
+                     <p>Check back later for new opportunities or try adjusting your search criteria.</p>
+                   </div>`
+                : `<div class="empty-state">
+                     <div class="empty-icon"><i class="fas fa-plus-circle"></i></div>
+                     <h3>You haven't posted any projects yet</h3>
+                     <p>Ready to get started? Post your first project and connect with talented professionals.</p>
+                     <button class="btn btn-primary" onclick="renderAppSection('post-job')">Post Your First Project</button>
+                   </div>`;
+            if (loadMoreContainer) loadMoreContainer.innerHTML = '';
+            return;
         }
-    });
+
+        const jobsHTML = appState.jobs.map(job => {
+            const hasUserQuoted = appState.userSubmittedQuotes.has(job.id);
+            const canQuote = user.type === 'designer' && job.status === 'open' && !hasUserQuoted;
+            const quoteButton = canQuote 
+                ? `<button class="btn btn-primary btn-submit-quote" onclick="showQuoteModal('${job.id}')">
+                     <i class="fas fa-file-invoice-dollar"></i> Submit Quote
+                   </button>`
+                : user.type === 'designer' && hasUserQuoted
+                ? `<button class="btn btn-outline btn-submitted" disabled>
+                     <i class="fas fa-check-circle"></i> Quote Submitted
+                   </button>`
+                : user.type === 'designer' && job.status === 'assigned'
+                ? `<span class="job-status-badge assigned">
+                     <i class="fas fa-user-check"></i> Job Assigned
+                   </span>`
+                : '';
+
+            const actions = user.type === 'designer'
+                ? quoteButton
+                : `<div class="job-actions-group">
+                     <button class="btn btn-outline" onclick="viewQuotes('${job.id}')">
+                       <i class="fas fa-eye"></i> View Quotes (${job.quotesCount || 0})
+                     </button>
+                     <button class="btn btn-danger" onclick="deleteJob('${job.id}')">
+                       <i class="fas fa-trash"></i> Delete
+                     </button>
+                   </div>`;
+            
+            const statusBadge = job.status !== 'open' 
+                ? `<span class="job-status-badge ${job.status}">
+                     <i class="fas ${job.status === 'assigned' ? 'fa-user-check' : 'fa-check-circle'}"></i>
+                     ${job.status.charAt(0).toUpperCase() + job.status.slice(1)}
+                   </span>` 
+                : `<span class="job-status-badge open">
+                     <i class="fas fa-clock"></i> Open
+                   </span>`;
+            
+            const attachmentLink = job.attachment 
+                ? `<div class="job-attachment">
+                     <i class="fas fa-paperclip"></i>
+                     <a href="${job.attachment}" target="_blank" rel="noopener noreferrer">View Attachment</a>
+                   </div>` 
+                : '';
+            
+            const skillsDisplay = job.skills?.length > 0 
+                ? `<div class="job-skills">
+                     <i class="fas fa-tools"></i>
+                     <span>Skills:</span>
+                     <div class="skills-tags">
+                       ${job.skills.map(skill => `<span class="skill-tag">${skill}</span>`).join('')}
+                     </div>
+                   </div>` 
+                : '';
+            
+            return `
+                <div class="job-card modern-card" data-job-id="${job.id}">
+                    <div class="job-header">
+                        <div class="job-title-section">
+                            <h3 class="job-title">${job.title}</h3>
+                            ${statusBadge}
+                        </div>
+                        <div class="job-budget-section">
+                            <span class="budget-label">Budget</span>
+                            <span class="budget-amount">${job.budget}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="job-meta">
+                        <div class="job-meta-item">
+                            <i class="fas fa-user"></i>
+                            <span>Posted by: <strong>${job.posterName || 'N/A'}</strong></span>
+                        </div>
+                        ${job.assignedToName ? `
+                            <div class="job-meta-item">
+                                <i class="fas fa-user-check"></i>
+                                <span>Assigned to: <strong>${job.assignedToName}</strong></span>
+                            </div>
+                        ` : ''}
+                        ${job.deadline ? `
+                            <div class="job-meta-item">
+                                <i class="fas fa-calendar-alt"></i>
+                                <span>Deadline: <strong>${new Date(job.deadline).toLocaleDateString()}</strong></span>
+                            </div>
+                        ` : ''}
+                    </div>
+                    
+                    <div class="job-description">
+                        <p>${job.description}</p>
+                    </div>
+                    
+                    ${skillsDisplay}
+                    
+                    ${job.link ? `
+                        <div class="job-link">
+                            <i class="fas fa-external-link-alt"></i>
+                            <a href="${job.link}" target="_blank" rel="noopener noreferrer">View Project Link</a>
+                        </div>
+                    ` : ''}
+                    
+                    ${attachmentLink}
+                    
+                    <div class="job-actions">${actions}</div>
+                </div>`;
+        }).join('');
+
+        if(jobsListContainer) jobsListContainer.innerHTML = jobsHTML;
+
+        if (loadMoreContainer) {
+            if (user.type === 'designer' && appState.hasMoreJobs) {
+                loadMoreContainer.innerHTML = `<button class="btn btn-outline btn-load-more" id="load-more-btn">
+                    <i class="fas fa-chevron-down"></i> Load More Projects
+                </button>`;
+                document.getElementById('load-more-btn').addEventListener('click', () => fetchAndRenderJobs(true));
+            } else {
+                loadMoreContainer.innerHTML = '';
+            }
+        }
+
+    } catch(error) {
+        if(jobsListContainer) {
+            jobsListContainer.innerHTML = `
+                <div class="error-state">
+                    <div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                    <h3>Error Loading Projects</h3>
+                    <p>We encountered an issue loading the projects. Please try again.</p>
+                    <button class="btn btn-primary" onclick="fetchAndRenderJobs()">Retry</button>
+                </div>`;
+        }
+    }
 }
 
-// --- MODAL & DETAIL VIEW FUNCTIONS ---
-function createModal(title, contentHtml) {
-    const modal = document.createElement('div');
-    modal.className = 'modal';
-    modal.style.display = 'flex';
-    modal.innerHTML = `
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>${title}</h3>
-                <button class="close-button" onclick="this.closest('.modal').remove()">&times;</button>
+async function fetchAndRenderApprovedJobs() {
+    const container = document.getElementById('app-container');
+    container.innerHTML = `
+        <div class="section-header modern-header">
+            <div class="header-content">
+                <h2><i class="fas fa-check-circle"></i> Approved Projects</h2>
+                <p class="header-subtitle">Manage your approved projects and communicate with designers</p>
             </div>
-            <div class="modal-body">${contentHtml}</div>
         </div>
-    `;
-    document.body.appendChild(modal);
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) modal.remove();
-    });
-}
-
-// --- ACTION HANDLERS ---
-async function handleStatusUpdate(userId, status) {
-    await apiCall(`/admin/users/${userId}/status`, 'PUT', { status }, 'User status updated.');
-}
-
-async function handleUserDelete(userId) {
-    if (confirm('Are you sure you want to delete this user? This cannot be undone.')) {
-        await apiCall(`/admin/users/${userId}`, 'DELETE', null, 'User deleted.');
-        renderAdminUsers(); // Refresh list
-    }
-}
-
-async function showUserDetails(userId) {
+        <div id="approved-jobs-list" class="jobs-grid"></div>`;
+    
+    const listContainer = document.getElementById('approved-jobs-list');
+    listContainer.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Loading approved projects...</p></div>';
+    
     try {
-        const response = await apiCall(`/admin/users/${userId}`);
-        const user = response.user;
-        const content = `
-            <p><strong>Name:</strong> ${user.name || 'N/A'}</p>
-            <p><strong>Email:</strong> ${user.email || 'N/A'}</p>
-            <p><strong>Type:</strong> ${user.type || 'N/A'}</p>
-            <p><strong>Status:</strong> ${user.status || 'active'}</p>
-            <p><strong>Created:</strong> ${new Date(user.createdAt).toLocaleString()}</p>
-        `;
-        createModal('User Details', content);
-    } catch (error) {
-        showNotification('Failed to load user details.', 'error');
+        const response = await apiCall(`/jobs/user/${appState.currentUser.id}`, 'GET');
+        const allJobs = response.data || [];
+        const approvedJobs = allJobs.filter(job => job.status === 'assigned');
+        appState.approvedJobs = approvedJobs;
+        
+        if (approvedJobs.length === 0) {
+            listContainer.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon"><i class="fas fa-clipboard-check"></i></div>
+                    <h3>No Approved Projects</h3>
+                    <p>Your approved projects will appear here once you accept quotes from designers.</p>
+                    <button class="btn btn-primary" onclick="renderAppSection('jobs')">View My Projects</button>
+                </div>`;
+            return;
+        }
+        
+        listContainer.innerHTML = approvedJobs.map(job => {
+            const attachmentLink = job.attachment 
+                ? `<div class="job-attachment">
+                     <i class="fas fa-paperclip"></i>
+                     <a href="${job.attachment}" target="_blank" rel="noopener noreferrer">View Attachment</a>
+                   </div>` 
+                : '';
+            
+            const skillsDisplay = job.skills?.length > 0 
+                ? `<div class="job-skills">
+                     <i class="fas fa-tools"></i>
+                     <span>Skills:</span>
+                     <div class="skills-tags">
+                       ${job.skills.map(skill => `<span class="skill-tag">${skill}</span>`).join('')}
+                     </div>
+                   </div>` 
+                : '';
+            
+            return `
+                <div class="job-card modern-card approved-job">
+                    <div class="job-header">
+                        <div class="job-title-section">
+                            <h3 class="job-title">${job.title}</h3>
+                            <span class="job-status-badge assigned">
+                                <i class="fas fa-user-check"></i> Assigned
+                            </span>
+                        </div>
+                        <div class="approved-amount">
+                            <span class="amount-label">Approved Amount</span>
+                            <span class="amount-value">$${job.approvedAmount}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="job-meta">
+                        <div class="job-meta-item">
+                            <i class="fas fa-user-cog"></i>
+                            <span>Assigned to: <strong>${job.assignedToName}</strong></span>
+                        </div>
+                    </div>
+                    
+                    <div class="job-description">
+                        <p>${job.description}</p>
+                    </div>
+                    
+                    ${skillsDisplay}
+                    
+                    ${job.link ? `
+                        <div class="job-link">
+                            <i class="fas fa-external-link-alt"></i>
+                            <a href="${job.link}" target="_blank" rel="noopener noreferrer">View Project Link</a>
+                        </div>
+                    ` : ''}
+                    
+                    ${attachmentLink}
+                    
+                    <div class="job-actions">
+                        <div class="job-actions-group">
+                            <button class="btn btn-primary" onclick="openConversation('${job.id}', '${job.assignedTo}')">
+                                <i class="fas fa-comments"></i> Message Designer
+                            </button>
+                            <button class="btn btn-success" onclick="markJobCompleted('${job.id}')">
+                                <i class="fas fa-check-double"></i> Mark Completed
+                            </button>
+                        </div>
+                    </div>
+                </div>`;
+        }).join('');
+    } catch(error) {
+        listContainer.innerHTML = `
+            <div class="error-state">
+                <div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                <h3>Error Loading Approved Projects</h3>
+                <p>Please try again later.</p>
+                <button class="btn btn-primary" onclick="fetchAndRenderApprovedJobs()">Retry</button>
+            </div>`;
     }
 }
 
-async function updateQuoteAmount(quoteId, amount) {
-    await apiCall(`/admin/quotes/${quoteId}/amount`, 'PUT', { amount }, 'Quote amount updated.');
+async function markJobCompleted(jobId) {
+    if (confirm('Are you sure you want to mark this job as completed? This action cannot be undone.')) {
+        await apiCall(`/jobs/${jobId}`, 'PUT', { status: 'completed' }, 'Project marked as completed successfully!')
+            .then(() => fetchAndRenderApprovedJobs())
+            .catch(() => {});
+    }
 }
 
-async function updateQuoteStatus(quoteId, status) {
-    await apiCall(`/admin/quotes/${quoteId}/status`, 'PUT', { status }, 'Quote status updated.');
+async function fetchAndRenderMyQuotes() {
+    const container = document.getElementById('app-container');
+    container.innerHTML = `
+        <div class="section-header modern-header">
+            <div class="header-content">
+                <h2><i class="fas fa-file-invoice-dollar"></i> My Submitted Quotes</h2>
+                <p class="header-subtitle">Track your quote submissions and manage communications</p>
+            </div>
+        </div>
+        <div id="my-quotes-list" class="jobs-grid"></div>`;
+    
+    const listContainer = document.getElementById('my-quotes-list');
+    listContainer.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Loading your quotes...</p></div>';
+    
+    try {
+        const response = await apiCall(`/quotes/user/${appState.currentUser.id}`, 'GET');
+        const quotes = response.data || [];
+        appState.myQuotes = quotes;
+        
+        if (quotes.length === 0) {
+            listContainer.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon"><i class="fas fa-file-invoice"></i></div>
+                    <h3>No Quotes Submitted</h3>
+                    <p>You haven't submitted any quotes yet. Browse available projects to get started.</p>
+                    <button class="btn btn-primary" onclick="renderAppSection('jobs')">Find Projects</button>
+                </div>`;
+            return;
+        }
+        
+        listContainer.innerHTML = quotes.map(quote => {
+            const attachments = quote.attachments || [];
+            let attachmentLink = attachments.length > 0
+                ? `<div class="quote-attachment">
+                     <i class="fas fa-paperclip"></i>
+                     <a href="${attachments[0]}" target="_blank" rel="noopener noreferrer">View Attachment</a>
+                   </div>`
+                : '';
+
+            const canDelete = quote.status === 'submitted';
+            const canEdit = quote.status === 'submitted';
+            
+            const statusIcon = {
+                'submitted': 'fa-clock',
+                'approved': 'fa-check-circle',
+                'rejected': 'fa-times-circle'
+            }[quote.status] || 'fa-question-circle';
+            
+            const statusClass = quote.status;
+            
+            const actionButtons = [];
+            
+            if (quote.status === 'approved') {
+                actionButtons.push(`
+                    <button class="btn btn-primary" onclick="openConversation('${quote.jobId}', '${quote.contractorId}')">
+                        <i class="fas fa-comments"></i> Message Client
+                    </button>
+                `);
+            }
+            
+            if (canEdit) {
+                actionButtons.push(`
+                    <button class="btn btn-outline" onclick="editQuote('${quote.id}')">
+                        <i class="fas fa-edit"></i> Edit Quote
+                    </button>
+                `);
+            }
+            
+            if (canDelete) {
+                actionButtons.push(`
+                    <button class="btn btn-danger" onclick="deleteQuote('${quote.id}')">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                `);
+            }
+            
+            return `
+                <div class="quote-card modern-card quote-status-${statusClass}">
+                    <div class="quote-header">
+                        <div class="quote-title-section">
+                            <h3 class="quote-title">Quote for: ${quote.jobTitle || 'Unknown Job'}</h3>
+                            <span class="quote-status-badge ${statusClass}">
+                                <i class="fas ${statusIcon}"></i> ${quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}
+                            </span>
+                        </div>
+                        <div class="quote-amount-section">
+                            <span class="amount-label">Quote Amount</span>
+                            <span class="amount-value">$${quote.quoteAmount}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="quote-meta">
+                        ${quote.timeline ? `
+                            <div class="quote-meta-item">
+                                <i class="fas fa-calendar-alt"></i>
+                                <span>Timeline: <strong>${quote.timeline} days</strong></span>
+                            </div>
+                        ` : ''}
+                        <div class="quote-meta-item">
+                            <i class="fas fa-clock"></i>
+                            <span>Submitted: <strong>${new Date(quote.createdAt?.toDate ? quote.createdAt.toDate() : quote.createdAt).toLocaleDateString()}</strong></span>
+                        </div>
+                    </div>
+                    
+                    <div class="quote-description">
+                        <p>${quote.description}</p>
+                    </div>
+                    
+                    ${attachmentLink}
+                    
+                    <div class="quote-actions">
+                        <div class="quote-actions-group">
+                            ${actionButtons.join('')}
+                        </div>
+                    </div>
+                </div>`;
+        }).join('');
+    } catch(error) {
+        listContainer.innerHTML = `
+            <div class="error-state">
+                <div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                <h3>Error Loading Quotes</h3>
+                <p>Please try again later.</p>
+                <button class="btn btn-primary" onclick="fetchAndRenderMyQuotes()">Retry</button>
+            </div>`;
+    }
+}
+
+async function editQuote(quoteId) {
+    try {
+        const response = await apiCall(`/quotes/${quoteId}`, 'GET');
+        const quote = response.data;
+        
+        const content = `
+            <div class="modal-header">
+                <h3><i class="fas fa-edit"></i> Edit Your Quote</h3>
+                <p class="modal-subtitle">Update your quote details for: <strong>${quote.jobTitle}</strong></p>
+            </div>
+            <form id="edit-quote-form" class="modern-form">
+                <input type="hidden" name="quoteId" value="${quote.id}">
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fas fa-dollar-sign"></i> Quote Amount ($)
+                        </label>
+                        <input type="number" class="form-input" name="amount" value="${quote.quoteAmount}" required min="1" step="0.01">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fas fa-calendar-alt"></i> Timeline (days)
+                        </label>
+                        <input type="number" class="form-input" name="timeline" value="${quote.timeline || ''}" required min="1">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">
+                        <i class="fas fa-file-alt"></i> Proposal Description
+                    </label>
+                    <textarea class="form-textarea" name="description" required placeholder="Describe your approach, methodology, and what you'll deliver...">${quote.description}</textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">
+                        <i class="fas fa-paperclip"></i> Attachments (Optional, max 5)
+                    </label>
+                    <input type="file" class="form-input file-input" name="attachments" multiple accept=".pdf,.doc,.docx,.dwg,.jpg,.jpeg,.png">
+                    <small class="form-help">Supported formats: PDF, DOC, DWG, Images</small>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Update Quote
+                    </button>
+                </div>
+            </form>`;
+        showGenericModal(content, 'max-width: 600px;');
+        document.getElementById('edit-quote-form').addEventListener('submit', handleQuoteEdit);
+    } catch (error) {
+        // Error handled by apiCall
+    }
+}
+
+async function handleQuoteEdit(event) {
+    event.preventDefault();
+    const form = event.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    
+    submitBtn.innerHTML = '<div class="btn-spinner"></div> Updating...';
+    submitBtn.disabled = true;
+
+    try {
+        const formData = new FormData();
+        formData.append('quoteAmount', form['amount'].value);
+        formData.append('timeline', form['timeline'].value);
+        formData.append('description', form['description'].value);
+
+        if (form.attachments.files.length > 0) {
+            for (let i = 0; i < form.attachments.files.length; i++) {
+                formData.append('attachments', form.attachments.files[i]);
+            }
+        }
+        
+        await apiCall(`/quotes/${form['quoteId'].value}`, 'PUT', formData, 'Quote updated successfully!');
+        closeModal();
+        fetchAndRenderMyQuotes();
+
+    } catch (error) {
+        console.error("Quote edit failed:", error);
+    } finally {
+        if (submitBtn) {
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        }
+    }
+}
+
+
+async function handlePostJob(event) {
+    event.preventDefault();
+    const form = event.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    
+    submitBtn.innerHTML = '<div class="btn-spinner"></div> Posting...';
+    submitBtn.disabled = true;
+    
+    try {
+        const formData = new FormData();
+        ['title', 'description', 'budget', 'deadline', 'skills', 'link'].forEach(field => {
+            if (form[field]) formData.append(field, form[field].value);
+        });
+        if (form.attachment.files.length > 0) {
+            formData.append('attachment', form.attachment.files[0]);
+        }
+        
+        await apiCall('/jobs', 'POST', formData, 'Project posted successfully!');
+        form.reset();
+        renderAppSection('jobs');
+    } catch(error) {
+        // Error handled by apiCall
+    } finally {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    }
+}
+
+async function deleteJob(jobId) {
+    if (confirm('Are you sure you want to delete this project? This will also delete all associated quotes and cannot be undone.')) {
+        await apiCall(`/jobs/${jobId}`, 'DELETE', null, 'Project deleted successfully.')
+            .then(() => fetchAndRenderJobs())
+            .catch(() => {});
+    }
 }
 
 async function deleteQuote(quoteId) {
-    if (confirm('Are you sure you want to delete this quote?')) {
-        await apiCall(`/admin/quotes/${quoteId}`, 'DELETE', null, 'Quote deleted.');
-        renderAdminQuotes();
+    if (confirm('Are you sure you want to delete this quote? This action cannot be undone.')) {
+        await apiCall(`/quotes/${quoteId}`, 'DELETE', null, 'Quote deleted successfully.')
+            .then(() => {
+                fetchAndRenderMyQuotes();
+                loadUserQuotes(); // Refresh the submitted quotes tracking
+            })
+            .catch(() => {});
     }
 }
 
-async function viewQuoteDetails(quoteId) {
+async function viewQuotes(jobId) {
     try {
-        const response = await apiCall(`/admin/quotes/${quoteId}`);
-        const quote = response.quote;
-        const content = `
-            <p><strong>User:</strong> ${quote.userId?.name || 'N/A'}</p>
-            <p><strong>Amount:</strong> $${quote.amount || 0}</p>
-            <p><strong>Status:</strong> ${quote.status || 'pending'}</p>
-            <p><strong>Created:</strong> ${new Date(quote.createdAt).toLocaleString()}</p>
-            <hr><h4 style="margin-bottom: 10px;">Details</h4>
-            <div class="details-box">${quote.details || 'No details.'}</div>
-        `;
-        createModal('Quote Details', content);
+        const response = await apiCall(`/quotes/job/${jobId}`, 'GET');
+        const quotes = response.data || [];
+        
+        let quotesHTML = `
+            <div class="modal-header">
+                <h3><i class="fas fa-file-invoice-dollar"></i> Received Quotes</h3>
+                <p class="modal-subtitle">Review and manage quotes for this project</p>
+            </div>`;
+            
+        if (quotes.length === 0) {
+            quotesHTML += `
+                <div class="empty-state">
+                    <div class="empty-icon"><i class="fas fa-file-invoice"></i></div>
+                    <h3>No Quotes Received</h3>
+                    <p>No quotes have been submitted for this project yet. Check back later.</p>
+                </div>`;
+        } else {
+            const job = appState.jobs.find(j => j.id === jobId);
+            quotesHTML += `<div class="quotes-list">`;
+            
+            quotesHTML += quotes.map(quote => {
+                const attachments = quote.attachments || [];
+                let attachmentLink = attachments.length > 0 
+                    ? `<div class="quote-attachment">
+                         <i class="fas fa-paperclip"></i>
+                         <a href="${attachments[0]}" target="_blank" rel="noopener noreferrer">View Attachment</a>
+                       </div>`
+                    : '';
+                
+                const canApprove = job && job.status === 'open' && quote.status === 'submitted';
+                let actionButtons = '';
+                
+                const messageButton = `
+                    <button class="btn btn-outline btn-sm" onclick="openConversation('${quote.jobId}', '${quote.designerId}')">
+                        <i class="fas fa-comments"></i> Message
+                    </button>
+                `;
+                
+                if(canApprove) {
+                    actionButtons = `
+                        <button class="btn btn-success btn-sm" onclick="approveQuote('${quote.id}', '${jobId}')">
+                            <i class="fas fa-check"></i> Approve Quote
+                        </button>
+                        ${messageButton}
+                    `;
+                } else if (quote.status === 'approved') {
+                    actionButtons = `
+                        <span class="status-approved">
+                            <i class="fas fa-check-circle"></i> Approved
+                        </span>
+                        ${messageButton}
+                    `;
+                } else {
+                    actionButtons = messageButton;
+                }
+
+                const statusClass = quote.status;
+                const statusIcon = {
+                    'submitted': 'fa-clock',
+                    'approved': 'fa-check-circle',
+                    'rejected': 'fa-times-circle'
+                }[quote.status] || 'fa-question-circle';
+                
+                return `
+                    <div class="quote-item quote-status-${statusClass}">
+                        <div class="quote-item-header">
+                            <div class="designer-info">
+                                <div class="designer-avatar">${quote.designerName.charAt(0).toUpperCase()}</div>
+                                <div class="designer-details">
+                                    <h4>${quote.designerName}</h4>
+                                    <span class="quote-status-badge ${statusClass}">
+                                        <i class="fas ${statusIcon}"></i> ${quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="quote-amount">
+                                <span class="amount-label">Quote</span>
+                                <span class="amount-value">${quote.quoteAmount}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="quote-details">
+                            ${quote.timeline ? `
+                                <div class="quote-meta-item">
+                                    <i class="fas fa-calendar-alt"></i>
+                                    <span>Timeline: <strong>${quote.timeline} days</strong></span>
+                                </div>
+                            ` : ''}
+                            
+                            <div class="quote-description">
+                                <p>${quote.description}</p>
+                            </div>
+                            
+                            ${attachmentLink}
+                        </div>
+                        
+                        <div class="quote-actions">
+                            ${actionButtons}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            quotesHTML += `</div>`;
+        }
+        
+        showGenericModal(quotesHTML, 'max-width: 800px;');
     } catch (error) {
-        showNotification('Failed to load quote details.', 'error');
+        showGenericModal(`
+            <div class="modal-header">
+                <h3><i class="fas fa-exclamation-triangle"></i> Error</h3>
+            </div>
+            <div class="error-state">
+                <p>Could not load quotes for this project. Please try again later.</p>
+            </div>
+        `);
     }
 }
 
-async function updateSubscriptionAmount(subId, amount) {
-    await apiCall(`/admin/subscriptions/${subId}/amount`, 'PUT', { amount }, 'Subscription amount updated.');
-}
-
-async function updateSubscriptionStatus(subId, status) {
-    await apiCall(`/admin/subscriptions/${subId}/status`, 'PUT', { status }, 'Subscription status updated.');
-}
-
-async function extendSubscription(subId) {
-    const months = prompt('Enter number of months to extend:', '1');
-    if (months && !isNaN(months) && parseInt(months) > 0) {
-        await apiCall(`/admin/subscriptions/${subId}/extend`, 'PUT', { months: parseInt(months) }, 'Subscription extended.');
-        renderAdminSubscriptions();
+async function approveQuote(quoteId, jobId) {
+    if (confirm('Are you sure you want to approve this quote? This will assign the job to the designer and reject other quotes.')) {
+        await apiCall(`/quotes/${quoteId}/approve`, 'PUT', { jobId }, 'Quote approved successfully!')
+            .then(() => {
+                closeModal();
+                fetchAndRenderJobs();
+                showNotification('Project has been assigned! You can now communicate with the designer.', 'success');
+            })
+            .catch(() => {});
     }
 }
 
-async function cancelSubscription(subId) {
-    if (confirm('Are you sure you want to cancel this subscription?')) {
-        await apiCall(`/admin/subscriptions/${subId}/cancel`, 'PUT', null, 'Subscription cancelled.');
-        renderAdminSubscriptions();
+function showQuoteModal(jobId) {
+    const content = `
+        <div class="modal-header">
+            <h3><i class="fas fa-file-invoice-dollar"></i> Submit Your Quote</h3>
+            <p class="modal-subtitle">Provide your best proposal for this project</p>
+        </div>
+        <form id="quote-form" class="modern-form">
+            <input type="hidden" name="jobId" value="${jobId}">
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">
+                        <i class="fas fa-dollar-sign"></i> Quote Amount ($)
+                    </label>
+                    <input type="number" class="form-input" name="amount" required min="1" step="0.01" placeholder="Enter your quote amount">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">
+                        <i class="fas fa-calendar-alt"></i> Timeline (days)
+                    </label>
+                    <input type="number" class="form-input" name="timeline" required min="1" placeholder="Project duration">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">
+                    <i class="fas fa-file-alt"></i> Proposal Description
+                </label>
+                <textarea class="form-textarea" name="description" required placeholder="Describe your approach, methodology, experience, and what you'll deliver for this project..."></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">
+                    <i class="fas fa-paperclip"></i> Attachments (Optional, max 5)
+                </label>
+                <input type="file" class="form-input file-input" name="attachments" multiple accept=".pdf,.doc,.docx,.dwg,.jpg,.jpeg,.png">
+                <small class="form-help">Upload portfolio samples, certifications, or relevant documents</small>
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-paper-plane"></i> Submit Quote
+                </button>
+            </div>
+        </form>`;
+    showGenericModal(content, 'max-width: 600px;');
+    document.getElementById('quote-form').addEventListener('submit', handleQuoteSubmit);
+}
+
+async function handleQuoteSubmit(event) {
+    event.preventDefault();
+    const form = event.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    
+    submitBtn.innerHTML = '<div class="btn-spinner"></div> Submitting...';
+    submitBtn.disabled = true;
+
+    try {
+        const formData = new FormData();
+        formData.append('jobId', form['jobId'].value);
+        formData.append('quoteAmount', form['amount'].value);
+        formData.append('timeline', form['timeline'].value);
+        formData.append('description', form['description'].value);
+
+        if (form.attachments.files.length > 0) {
+            for (let i = 0; i < form.attachments.files.length; i++) {
+                formData.append('attachments', form.attachments.files[i]);
+            }
+        }
+        
+        await apiCall('/quotes', 'POST', formData, 'Quote submitted successfully!');
+        
+        // Add to submitted quotes tracking
+        appState.userSubmittedQuotes.add(form['jobId'].value);
+        
+        closeModal();
+        fetchAndRenderJobs(); // Refresh to show updated job status
+        showNotification('Your quote has been submitted! You can track its status in "My Quotes".', 'success');
+
+    } catch (error) {
+        console.error("Quote submission failed:", error);
+    } finally {
+        if(submitBtn) {
+           submitBtn.innerHTML = originalText;
+           submitBtn.disabled = false;
+        }
     }
 }
 
-// --- INITIALIZATION ---
-document.addEventListener('DOMContentLoaded', function() {
-    if (document.getElementById('admin-panel-container')) {
-        initializeAdminPage();
-    } else if (document.getElementById('admin-login-form')) {
-        initializeLoginPage();
-    }
-});
 
-// --- GLOBAL ERROR HANDLING ---
-window.addEventListener('error', (event) => {
-    console.error('Global error:', event.error);
-    showNotification('An unexpected error occurred. Please refresh.', 'error');
-});
-window.addEventListener('unhandledrejection', (event) => {
-    console.error('Unhandled promise rejection:', event.reason);
-    showNotification('A network or server error occurred. Please try again.', 'error');
-});
+// --- ENHANCED MESSAGING SYSTEM ---
+
+async function openConversation(jobId, recipientId) {
+    try {
+        showNotification('Opening conversation...', 'info');
+        const response = await apiCall('/messages/find', 'POST', { jobId, recipientId });
+        if (response.success) {
+            renderConversationView(response.data);
+        }
+    } catch (error) {
+        // Error is handled by apiCall
+    }
+}
+
+async function fetchAndRenderConversations() {
+    const container = document.getElementById('app-container');
+    container.innerHTML = `
+        <div class="section-header modern-header">
+            <div class="header-content">
+                <h2><i class="fas fa-comments"></i> Messages</h2>
+                <p class="header-subtitle">Communicate with clients and designers</p>
+            </div>
+        </div>
+        <div id="conversations-list" class="conversations-container"></div>`;
+    
+    const listContainer = document.getElementById('conversations-list');
+    listContainer.innerHTML = `<div class="loading-spinner"><div class="spinner"></div><p>Loading conversations...</p></div>`;
+
+    try {
+        const response = await apiCall('/messages', 'GET');
+        appState.conversations = response.data || [];
+
+        if (appState.conversations.length === 0) {
+            listContainer.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon"><i class="fas fa-comments"></i></div>
+                    <h3>No Conversations Yet</h3>
+                    <p>Start collaborating with professionals by messaging them from job quotes.</p>
+                    <button class="btn btn-primary" onclick="renderAppSection('jobs')">Browse Projects</button>
+                </div>`;
+            return;
+        }
+
+        const conversationsHTML = appState.conversations.map(convo => {
+            const otherParticipant = convo.participants.find(p => p.id !== appState.currentUser.id);
+            const otherParticipantName = otherParticipant ? otherParticipant.name : 'Unknown User';
+            const lastMessage = convo.lastMessage ? 
+                (convo.lastMessage.length > 60 ? convo.lastMessage.substring(0, 60) + '...' : convo.lastMessage) : 
+                'No messages yet.';
+            const timeAgo = getTimeAgo(convo.updatedAt);
+            const avatarColor = getAvatarColor(otherParticipantName);
+            const isUnread = convo.lastMessageBy && convo.lastMessageBy !== appState.currentUser.name;
+
+            return `
+                <div class="conversation-card modern-card ${isUnread ? 'unread' : ''}" onclick="renderConversationView('${convo.id}')">
+                    <div class="convo-avatar" style="background-color: ${avatarColor}">
+                        ${otherParticipantName.charAt(0).toUpperCase()}
+                        ${isUnread ? '<div class="unread-indicator"></div>' : ''}
+                    </div>
+                    <div class="convo-details">
+                        <div class="convo-header">
+                            <h4>${otherParticipantName}</h4>
+                            <div class="convo-meta">
+                                <span class="participant-type">${otherParticipant ? otherParticipant.type : ''}</span>
+                                <span class="convo-time">${timeAgo}</span>
+                            </div>
+                        </div>
+                        <p class="convo-project">
+                            <i class="fas fa-briefcase"></i>
+                            <strong>${convo.jobTitle}</strong>
+                        </p>
+                        <p class="convo-preview">
+                            ${convo.lastMessageBy && convo.lastMessageBy !== appState.currentUser.name ? 
+                                `<strong>${convo.lastMessageBy}:</strong> ` : ''}
+                            ${lastMessage}
+                        </p>
+                    </div>
+                    <div class="convo-arrow">
+                        <i class="fas fa-chevron-right"></i>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        listContainer.innerHTML = conversationsHTML;
+    } catch (error) {
+        listContainer.innerHTML = `
+            <div class="error-state">
+                <div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                <h3>Error Loading Conversations</h3>
+                <p>Please try again later.</p>
+                <button class="btn btn-primary" onclick="fetchAndRenderConversations()">Retry</button>
+            </div>`;
+    }
+}
+
+function getTimeAgo(timestamp) {
+    const now = new Date();
+    const time = timestamp?.toDate ? timestamp.toDate() : new Date(timestamp);
+    const diffInMinutes = Math.floor((now - time) / (1000 * 60));
+    
+    if (diffInMinutes < 1) return 'Just now';
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
+    if (diffInMinutes < 10080) return `${Math.floor(diffInMinutes / 1440)}d ago`;
+    return time.toLocaleDateString();
+}
+
+function getAvatarColor(name) {
+    const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#84CC16', '#F97316'];
+    const index = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
+    return colors[index];
+}
+
+async function renderConversationView(conversationOrId) {
+    let conversation;
+    if (typeof conversationOrId === 'string') {
+        conversation = appState.conversations.find(c => c.id === conversationOrId) || { id: conversationOrId };
+    } else {
+        conversation = conversationOrId;
+    }
+    
+    if (!conversation.participants) {
+        try {
+            const response = await apiCall('/messages', 'GET');
+            appState.conversations = response.data || [];
+            conversation = appState.conversations.find(c => c.id === conversation.id);
+        } catch(e) { /* error handled by apiCall */ }
+        if(!conversation) {
+            showNotification('Conversation not found.', 'error');
+            return;
+        }
+    }
+
+    const container = document.getElementById('app-container');
+    const otherParticipant = conversation.participants.find(p => p.id !== appState.currentUser.id);
+    const avatarColor = getAvatarColor(otherParticipant ? otherParticipant.name : 'Unknown');
+    
+    container.innerHTML = `
+        <div class="chat-container modern-chat">
+            <div class="chat-header">
+                <button onclick="renderAppSection('messages')" class="back-btn">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <div class="chat-header-info">
+                    <div class="chat-avatar" style="background-color: ${avatarColor}">
+                        ${otherParticipant ? otherParticipant.name.charAt(0).toUpperCase() : '?'}
+                    </div>
+                    <div class="chat-details">
+                        <h3>${otherParticipant ? otherParticipant.name : 'Conversation'}</h3>
+                        <p class="chat-project">
+                            <i class="fas fa-briefcase"></i>
+                            ${conversation.jobTitle || ''}
+                        </p>
+                    </div>
+                </div>
+                <div class="chat-actions">
+                    <span class="participant-type-badge ${otherParticipant ? otherParticipant.type : ''}">
+                        <i class="fas ${otherParticipant && otherParticipant.type === 'designer' ? 'fa-drafting-compass' : 'fa-building'}"></i>
+                        ${otherParticipant ? otherParticipant.type : ''}
+                    </span>
+                </div>
+            </div>
+            
+            <div class="chat-messages" id="chat-messages-container">
+                <div class="loading-messages">
+                    <div class="spinner"></div>
+                    <p>Loading messages...</p>
+                </div>
+            </div>
+            
+            <div class="chat-input-area">
+                <form id="send-message-form" class="message-form">
+                    <div class="message-input-container">
+                        <input type="text" id="message-text-input" placeholder="Type your message..." required autocomplete="off">
+                        <button type="submit" class="send-button" title="Send message">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+
+    document.getElementById('send-message-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        handleSendMessage(conversation.id);
+    });
+
+    const messagesContainer = document.getElementById('chat-messages-container');
+    try {
+        const response = await apiCall(`/messages/${conversation.id}/messages`, 'GET');
+        const messages = response.data || [];
+        
+        if (messages.length === 0) {
+            messagesContainer.innerHTML = `
+                <div class="empty-messages">
+                    <div class="empty-icon"><i class="fas fa-comment-dots"></i></div>
+                    <h4>Start the conversation</h4>
+                    <p>Send your first message to begin collaborating on this project.</p>
+                </div>`;
+        } else {
+            messagesContainer.innerHTML = messages.map((msg, index) => {
+                const isMine = msg.senderId === appState.currentUser.id;
+                const time = msg.createdAt?.toDate ? msg.createdAt.toDate() : new Date(msg.createdAt);
+                const prevMsg = messages[index - 1];
+                const showAvatar = !prevMsg || prevMsg.senderId !== msg.senderId;
+                const avatarColor = getAvatarColor(msg.senderName);
+                
+                return `
+                    <div class="message-wrapper ${isMine ? 'me' : 'them'}">
+                        ${showAvatar ? `
+                            <div class="message-avatar" style="background-color: ${avatarColor}">
+                                ${msg.senderName.charAt(0).toUpperCase()}
+                            </div>
+                        ` : '<div class="message-avatar-spacer"></div>'}
+                        <div class="message-content">
+                            ${showAvatar && !isMine ? `<div class="message-sender">${msg.senderName}</div>` : ''}
+                            <div class="message-bubble ${isMine ? 'me' : 'them'}">
+                                ${msg.text}
+                            </div>
+                            <div class="message-meta">
+                                ${time.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    } catch (error) {
+        messagesContainer.innerHTML = `
+            <div class="error-messages">
+                <div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                <h4>Error loading messages</h4>
+                <p>Please try again later.</p>
+            </div>`;
+    }
+}
+
+async function handleSendMessage(conversationId) {
+    const input = document.getElementById('message-text-input');
+    const sendBtn = document.querySelector('.send-button');
+    const text = input.value.trim();
+    if (!text) return;
+
+    // Disable input and show sending state
+    input.disabled = true;
+    sendBtn.disabled = true;
+    sendBtn.innerHTML = '<div class="btn-spinner"></div>';
+
+    try {
+        const response = await apiCall(`/messages/${conversationId}/messages`, 'POST', { text });
+        input.value = '';
+        
+        const messagesContainer = document.getElementById('chat-messages-container');
+        const newMessage = response.data;
+        
+        // Remove empty state if it exists
+        if(messagesContainer.querySelector('.empty-messages')) {
+            messagesContainer.innerHTML = '';
+        }
+        
+        const messageBubble = document.createElement('div');
+        messageBubble.className = 'message-wrapper me';
+        const time = newMessage.createdAt?.toDate ? newMessage.createdAt.toDate() : new Date(newMessage.createdAt);
+        const avatarColor = getAvatarColor(newMessage.senderName);
+        
+        messageBubble.innerHTML = `
+            <div class="message-avatar" style="background-color: ${avatarColor}">
+                ${newMessage.senderName.charAt(0).toUpperCase()}
+            </div>
+            <div class="message-content">
+                <div class="message-bubble me">
+                    ${newMessage.text}
+                </div>
+                <div class="message-meta">
+                    ${time.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                </div>
+            </div>
+        `;
+        
+        messagesContainer.appendChild(messageBubble);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        
+    } catch(error) {
+        // Error handled by apiCall
+    } finally {
+        // Re-enable input
+        input.disabled = false;
+        sendBtn.disabled = false;
+        sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
+        input.focus();
+    }
+}
+
+
+// --- ENHANCED UI & MODAL FUNCTIONS ---
+
+function showAuthModal(view) {
+    const modalContainer = document.getElementById('modal-container');
+    if(modalContainer) {
+        modalContainer.innerHTML = `
+            <div class="modal-overlay">
+                <div class="modal-content modern-modal" onclick="event.stopPropagation()">
+                    <button class="modal-close-button" onclick="closeModal()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    <div id="modal-form-container"></div>
+                </div>
+            </div>`;
+        modalContainer.querySelector('.modal-overlay').addEventListener('click', closeModal);
+        renderAuthForm(view);
+    }
+}
+
+function renderAuthForm(view) {
+    const container = document.getElementById('modal-form-container');
+    if (!container) return;
+    container.innerHTML = view === 'login' ? getLoginTemplate() : getRegisterTemplate();
+    const formId = view === 'login' ? 'login-form' : 'register-form';
+    const handler = view === 'login' ? handleLogin : handleRegister;
+    document.getElementById(formId).addEventListener('submit', handler);
+}
+
+function showGenericModal(innerHTML, style = '') {
+    const modalContainer = document.getElementById('modal-container');
+    if(modalContainer) {
+        modalContainer.innerHTML = `
+            <div class="modal-overlay">
+                <div class="modal-content modern-modal" style="${style}" onclick="event.stopPropagation()">
+                    <button class="modal-close-button" onclick="closeModal()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    ${innerHTML}
+                </div>
+            </div>`;
+        modalContainer.querySelector('.modal-overlay').addEventListener('click', closeModal);
+    }
+}
+
+function closeModal() {
+    const modalContainer = document.getElementById('modal-container');
+    if (modalContainer) modalContainer.innerHTML = '';
+}
+
+function showAppView() {
+    document.getElementById('landing-page-content').style.display = 'none';
+    document.getElementById('app-content').style.display = 'flex';
+    document.getElementById('auth-buttons-container').style.display = 'none';
+    document.getElementById('user-info').style.display = 'flex';
+    
+    const navMenu = document.getElementById('main-nav-menu');
+    if (navMenu) navMenu.innerHTML = '';
+    
+    const user = appState.currentUser;
+    document.getElementById('userName').textContent = user.name;
+    document.getElementById('userType').textContent = user.type;
+    document.getElementById('userAvatar').textContent = (user.name || "A").charAt(0).toUpperCase();
+    document.getElementById('sidebarUserName').textContent = user.name;
+    document.getElementById('sidebarUserType').textContent = user.type;
+    document.getElementById('sidebarUserAvatar').textContent = (user.name || "A").charAt(0).toUpperCase();
+    
+    buildSidebarNav();
+    renderAppSection('jobs');
+    
+    // Load user quotes for tracking if designer
+    if (user.type === 'designer') {
+        loadUserQuotes();
+    }
+}
+
+function showLandingPageView() {
+    document.getElementById('landing-page-content').style.display = 'block';
+    document.getElementById('app-content').style.display = 'none';
+    document.getElementById('auth-buttons-container').style.display = 'flex';
+    document.getElementById('user-info').style.display = 'none';
+    
+    const navMenu = document.getElementById('main-nav-menu');
+    if (navMenu) {
+        navMenu.innerHTML = `
+            <a href="#how-it-works" class="nav-link">How It Works</a>
+            <a href="#why-steelconnect" class="nav-link">Why Choose Us</a>
+            <a href="#showcase" class="nav-link">Showcase</a>`;
+    }
+}
+
+function buildSidebarNav() {
+    const navContainer = document.getElementById('sidebar-nav-menu');
+    const role = appState.currentUser.type;
+    let links = (role === 'designer')
+        ? `<a href="#" class="sidebar-nav-link" data-section="jobs">
+             <i class="fas fa-search fa-fw"></i> 
+             <span>Find Projects</span>
+           </a>
+           <a href="#" class="sidebar-nav-link" data-section="my-quotes">
+             <i class="fas fa-file-invoice-dollar fa-fw"></i> 
+             <span>My Quotes</span>
+           </a>`
+        : `<a href="#" class="sidebar-nav-link" data-section="jobs">
+             <i class="fas fa-tasks fa-fw"></i> 
+             <span>My Projects</span>
+           </a>
+           <a href="#" class="sidebar-nav-link" data-section="approved-jobs">
+             <i class="fas fa-check-circle fa-fw"></i> 
+             <span>Approved Projects</span>
+           </a>
+           <a href="#" class="sidebar-nav-link" data-section="post-job">
+             <i class="fas fa-plus-circle fa-fw"></i> 
+             <span>Post Project</span>
+           </a>
+           <a href="#" class="sidebar-nav-link" data-section="estimation-tool">
+             <i class="fas fa-calculator fa-fw"></i> 
+             <span>Estimation Tool</span>
+           </a>`;
+    
+    links += `<a href="#" class="sidebar-nav-link" data-section="messages">
+                <i class="fas fa-comments fa-fw"></i> 
+                <span>Messages</span>
+              </a>`;
+
+    navContainer.innerHTML = links;
+    navContainer.querySelectorAll('.sidebar-nav-link').forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            renderAppSection(link.dataset.section);
+        });
+    });
+}
+
+function renderAppSection(sectionId) {
+    const container = document.getElementById('app-container');
+    document.querySelectorAll('.sidebar-nav-link').forEach(link => {
+        link.classList.toggle('active', link.dataset.section === sectionId);
+    });
+    
+    const userRole = appState.currentUser.type;
+    if (sectionId === 'jobs') {
+        const title = userRole === 'designer' ? 'Available Projects' : 'My Posted Projects';
+        const subtitle = userRole === 'designer' ? 'Browse and submit quotes for engineering projects' : 'Manage your project listings and review quotes';
+        container.innerHTML = `
+            <div class="section-header modern-header">
+                <div class="header-content">
+                    <h2><i class="fas ${userRole === 'designer' ? 'fa-search' : 'fa-tasks'}"></i> ${title}</h2>
+                    <p class="header-subtitle">${subtitle}</p>
+                </div>
+            </div>
+            <div id="jobs-list" class="jobs-grid"></div>
+            <div id="load-more-container" class="load-more-section"></div>`;
+        fetchAndRenderJobs();
+    } else if (sectionId === 'post-job') {
+        container.innerHTML = getPostJobTemplate();
+        document.getElementById('post-job-form').addEventListener('submit', handlePostJob);
+    } else if (sectionId === 'my-quotes') {
+        fetchAndRenderMyQuotes();
+    } else if (sectionId === 'approved-jobs') {
+        fetchAndRenderApprovedJobs();
+    } else if (sectionId === 'messages') {
+        fetchAndRenderConversations();
+    } else if (sectionId === 'estimation-tool') {
+        container.innerHTML = getEstimationToolTemplate();
+        setupEstimationToolEventListeners();
+    }
+}
+
+// --- NEW: ESTIMATION TOOL FUNCTIONS ---
+
+function setupEstimationToolEventListeners() {
+    const uploadArea = document.getElementById('file-upload-area');
+    const fileInput = document.getElementById('file-upload-input');
+    
+    uploadArea.addEventListener('click', () => fileInput.click());
+    
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.classList.add('drag-over');
+    });
+
+    uploadArea.addEventListener('dragleave', () => {
+        uploadArea.classList.remove('drag-over');
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('drag-over');
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            handleFileSelect(files[0]);
+        }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            handleFileSelect(e.target.files[0]);
+        }
+    });
+
+    document.getElementById('generate-estimation-btn').addEventListener('click', handleGenerateEstimation);
+}
+
+function handleFileSelect(file) {
+    if (file && file.type === 'application/pdf') {
+        appState.uploadedFile = file;
+        document.getElementById('file-info-container').style.display = 'flex';
+        document.getElementById('file-info').innerHTML = `<i class="fas fa-file-pdf"></i> ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+        document.getElementById('generate-estimation-btn').disabled = false;
+        showNotification('File selected. Ready to generate estimation.', 'success');
+    } else {
+        showNotification('Please select a valid PDF file.', 'error');
+        appState.uploadedFile = null;
+        document.getElementById('file-info-container').style.display = 'none';
+        document.getElementById('generate-estimation-btn').disabled = true;
+    }
+}
+
+async function handleGenerateEstimation() {
+    if (!appState.uploadedFile) {
+        showNotification('Please select a file first.', 'warning');
+        return;
+    }
+
+    const generateBtn = document.getElementById('generate-estimation-btn');
+    const resultsContainer = document.getElementById('estimation-results-container');
+
+    // Show loading state
+    generateBtn.disabled = true;
+    generateBtn.innerHTML = '<div class="btn-spinner"></div> Generating...';
+    resultsContainer.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Analyzing PDF and generating estimation... This may take a moment.</p></div>';
+
+    const formData = new FormData();
+    formData.append('drawing', appState.uploadedFile);
+    formData.append('projectName', 'Automated Estimation');
+    formData.append('location', 'Sydney'); // Or get this from user input
+
+    try {
+        const response = await apiCall('/estimation/generate-from-upload', 'POST', formData);
+        renderEstimationResult(response.estimationData);
+        showNotification('Estimation generated successfully!', 'success');
+    } catch (error) {
+        resultsContainer.innerHTML = `
+            <div class="error-state">
+                <div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                <h3>Estimation Failed</h3>
+                <p>${error.message || 'An unknown error occurred during estimation.'}</p>
+                <button class="btn btn-primary" onclick="handleGenerateEstimation()">Retry</button>
+            </div>`;
+    } finally {
+        generateBtn.disabled = false;
+        generateBtn.innerHTML = '<i class="fas fa-cogs"></i> Generate Estimation';
+    }
+}
+
+function renderEstimationResult(data) {
+    const resultsContainer = document.getElementById('estimation-results-container');
+    const totalCost = data.cost_summary.total_inc_gst || 0;
+    const confidence = data.confidence_score || 0;
+    const items = data.items || [];
+    
+    const formattedTotalCost = new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(totalCost);
+
+    resultsContainer.innerHTML = `
+        <div class="estimation-report">
+            <div class="report-header">
+                <h3>Estimation Result</h3>
+            </div>
+            <div class="report-summary">
+                <div class="summary-item">
+                    <div class="label">Total Estimated Cost (inc. GST)</div>
+                    <div class="value total">${formattedTotalCost}</div>
+                </div>
+                <div class="summary-item">
+                    <div class="label">Confidence Score</div>
+                    <div class="value">${(confidence * 100).toFixed(0)}%</div>
+                </div>
+                <div class="summary-item">
+                    <div class="label">Total Line Items</div>
+                    <div class="value">${items.length}</div>
+                </div>
+            </div>
+            <div class="report-details">
+                <h4>Cost Breakdown</h4>
+                <table class="report-table">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Description</th>
+                            <th class="currency">Cost</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${items.map(item => `
+                            <tr>
+                                <td>${item.category}</td>
+                                <td>${item.description}</td>
+                                <td class="currency">${new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(item.totalCost)}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                    <tfoot>
+                        <tr class="total-row">
+                            <td colspan="2">Subtotal (ex. GST)</td>
+                            <td class="currency">${new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(data.cost_summary.subtotal_ex_gst)}</td>
+                        </tr>
+                         <tr class="total-row">
+                            <td colspan="2">GST</td>
+                            <td class="currency">${new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(data.cost_summary.gst)}</td>
+                        </tr>
+                        <tr class="total-row">
+                            <td colspan="2"><strong>Total Estimated Cost</strong></td>
+                            <td class="currency"><strong>${formattedTotalCost}</strong></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>`;
+}
+
+// --- Enhanced notification system
+function showNotification(message, type = 'info', duration = 4000) {
+    const notificationContainer = document.getElementById('notification-container');
+    if (!notificationContainer) return;
+    
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    
+    const icons = {
+        success: 'fa-check-circle',
+        error: 'fa-exclamation-triangle',
+        warning: 'fa-exclamation-circle',
+        info: 'fa-info-circle'
+    };
+    
+    notification.innerHTML = `
+        <div class="notification-content">
+            <i class="fas ${icons[type]}"></i>
+            <span>${message}</span>
+        </div>
+        <button class="notification-close" onclick="this.parentElement.remove()">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    
+    notificationContainer.appendChild(notification);
+    
+    // Auto-remove after duration
+    setTimeout(() => {
+        if (notification.parentElement) {
+            notification.style.opacity = '0';
+            notification.style.transform = 'translateX(100%)';
+            setTimeout(() => notification.remove(), 300);
+        }
+    }, duration);
+}
+
+// Legacy function for compatibility
+function showAlert(message, type = 'info') {
+    showNotification(message, type);
+}
+
+// --- TEMPLATE GETTERS ---
+
+function getLoginTemplate() {
+    return `
+        <div class="auth-header">
+            <h2><i class="fas fa-sign-in-alt"></i> Welcome Back</h2>
+            <p>Sign in to your SteelConnect account</p>
+        </div>
+        <form id="login-form" class="modern-form">
+            <div class="form-group">
+                <label class="form-label">
+                    <i class="fas fa-envelope"></i> Email Address
+                </label>
+                <input type="email" class="form-input" name="loginEmail" required placeholder="Enter your email">
+            </div>
+            <div class="form-group">
+                <label class="form-label">
+                    <i class="fas fa-lock"></i> Password
+                </label>
+                <input type="password" class="form-input" name="loginPassword" required placeholder="Enter your password">
+            </div>
+            <button type="submit" class="btn btn-primary btn-full">
+                <i class="fas fa-sign-in-alt"></i> Sign In
+            </button>
+        </form>
+        <div class="auth-switch">
+            Don't have an account? 
+            <a onclick="renderAuthForm('register')" class="auth-link">Create Account</a>
+        </div>`;
+}
+
+function getRegisterTemplate() {
+    return `
+        <div class="auth-header">
+            <h2><i class="fas fa-user-plus"></i> Join SteelConnect</h2>
+            <p>Create your professional account</p>
+        </div>
+        <form id="register-form" class="modern-form">
+            <div class="form-group">
+                <label class="form-label">
+                    <i class="fas fa-user"></i> Full Name
+                </label>
+                <input type="text" class="form-input" name="regName" required placeholder="Enter your full name">
+            </div>
+            <div class="form-group">
+                <label class="form-label">
+                    <i class="fas fa-envelope"></i> Email Address
+                </label>
+                <input type="email" class="form-input" name="regEmail" required placeholder="Enter your email">
+            </div>
+            <div class="form-group">
+                <label class="form-label">
+                    <i class="fas fa-lock"></i> Password
+                </label>
+                <input type="password" class="form-input" name="regPassword" required placeholder="Create a strong password">
+            </div>
+            <div class="form-group">
+                <label class="form-label">
+                    <i class="fas fa-user-tag"></i> I am a...
+                </label>
+                <select class="form-select" name="regRole" required>
+                    <option value="" disabled selected>Select your role</option>
+                    <option value="contractor"><i class="fas fa-building"></i> Client / Contractor</option>
+                    <option value="designer"><i class="fas fa-drafting-compass"></i> Designer / Engineer</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary btn-full">
+                <i class="fas fa-user-plus"></i> Create Account
+            </button>
+        </form>
+        <div class="auth-switch">
+            Already have an account? 
+            <a onclick="renderAuthForm('login')" class="auth-link">Sign In</a>
+        </div>`;
+}
+
+function getPostJobTemplate() {
+    return `
+        <div class="section-header modern-header">
+            <div class="header-content">
+                <h2><i class="fas fa-plus-circle"></i> Post a New Project</h2>
+                <p class="header-subtitle">Create a detailed project listing to attract qualified professionals</p>
+            </div>
+        </div>
+        
+        <div class="post-job-container">
+            <form id="post-job-form" class="modern-form post-job-form">
+                <div class="form-section">
+                    <h3><i class="fas fa-info-circle"></i> Project Details</h3>
+                    
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fas fa-heading"></i> Project Title
+                        </label>
+                        <input type="text" class="form-input" name="title" required 
+                               placeholder="e.g., Structural Steel Design for Warehouse Extension">
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-dollar-sign"></i> Budget Range
+                            </label>
+                            <input type="text" class="form-input" name="budget" required 
+                                   placeholder="e.g., $5,000 - $10,000">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-calendar-alt"></i> Project Deadline
+                            </label>
+                            <input type="date" class="form-input" name="deadline" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fas fa-tools"></i> Required Skills
+                        </label>
+                        <input type="text" class="form-input" name="skills" 
+                               placeholder="e.g., AutoCAD, Revit, Structural Analysis, Steel Design">
+                        <small class="form-help">Separate skills with commas</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fas fa-external-link-alt"></i> Project Link (Optional)
+                        </label>
+                        <input type="url" class="form-input" name="link" 
+                               placeholder="https://example.com/project-details">
+                        <small class="form-help">Link to additional project information or resources</small>
+                    </div>
+                </div>
+                
+                <div class="form-section">
+                    <h3><i class="fas fa-file-alt"></i> Project Description</h3>
+                    
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fas fa-align-left"></i> Detailed Description
+                        </label>
+                        <textarea class="form-textarea" name="description" required 
+                                  placeholder="Provide a comprehensive description of your project including:&#10;• Project scope and objectives&#10;• Technical requirements&#10;• Deliverables expected&#10;• Any specific standards or codes to follow&#10;• Timeline and milestones"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fas fa-paperclip"></i> Project Attachments
+                        </label>
+                        <input type="file" class="form-input file-input" name="attachment" 
+                               accept=".pdf,.doc,.docx,.dwg,.jpg,.jpeg,.png">
+                        <small class="form-help">Upload drawings, specifications, or reference documents (Max 10MB)</small>
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary btn-large">
+                        <i class="fas fa-rocket"></i> Post Project
+                    </button>
+                </div>
+            </form>
+        </div>`;
+}
+
+// --- NEW: ESTIMATION TOOL TEMPLATE ---
+function getEstimationToolTemplate() {
+    return `
+        <div class="section-header modern-header">
+            <div class="header-content">
+                <h2><i class="fas fa-calculator"></i> AI Cost Estimation Tool</h2>
+                <p class="header-subtitle">Upload your structural drawing (PDF) to get an instant cost estimate.</p>
+            </div>
+        </div>
+
+        <div class="estimation-tool-container">
+            <div class="file-upload-section">
+                <div id="file-upload-area" class="file-upload-area">
+                    <input type="file" id="file-upload-input" accept=".pdf" />
+                    <div class="file-upload-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+                    <h3>Drag & Drop your PDF here</h3>
+                    <p>or click to browse your files</p>
+                    <small>Maximum file size: 15MB</small>
+                </div>
+
+                <div id="file-info-container">
+                    <span id="file-info"></span>
+                    <button id="generate-estimation-btn" class="btn btn-primary" disabled>
+                        <i class="fas fa-cogs"></i> Generate Estimation
+                    </button>
+                </div>
+            </div>
+
+            <div id="estimation-results-container" class="estimation-results-container">
+                 <div class="empty-state">
+                    <div class="empty-icon"><i class="fas fa-file-import"></i></div>
+                    <h3>Your Estimation Report Will Appear Here</h3>
+                    <p>Upload a structural drawing PDF to get started.</p>
+                </div>
+            </div>
+        </div>
+    `;
+}
