@@ -37,7 +37,6 @@ document.querySelectorAll('.nav-link[href^="#"]').forEach(link => {
 document.addEventListener('DOMContentLoaded', initializeApp);
 
 // --- CONSTANTS & STATE ---
-// DYNAMIC BACKEND URL: Checks if you are on localhost or a deployed site
 const IS_LOCAL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 const PROD_BACKEND_URL = 'https://steelconnect-backend.onrender.com/api';
 const BACKEND_URL = IS_LOCAL ? 'http://localhost:10000/api' : PROD_BACKEND_URL;
@@ -52,9 +51,43 @@ const appState = {
     participants: {},
     jobsPage: 1,
     hasMoreJobs: true,
-    userSubmittedQuotes: new Set(), // Track which jobs user has already quoted
-    uploadedFile: null, // To hold the file for the estimation tool
+    userSubmittedQuotes: new Set(),
+    uploadedFile: null,
+    myEstimations: [], // Track user's estimation requests
+    currentHeaderSlide: 0, // For dynamic header
 };
+
+// Professional Features Header Data
+const headerFeatures = [
+    {
+        icon: 'fa-calculator',
+        title: 'AI Cost Estimation',
+        subtitle: 'Advanced algorithms for precise cost analysis',
+        description: 'Upload your drawings and get instant, accurate estimates powered by machine learning',
+        gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+    },
+    {
+        icon: 'fa-drafting-compass',
+        title: 'Expert Engineering',
+        subtitle: 'Connect with certified professionals',
+        description: 'Access a network of qualified structural engineers and designers worldwide',
+        gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
+    },
+    {
+        icon: 'fa-comments',
+        title: 'Real-time Collaboration',
+        subtitle: 'Seamless project communication',
+        description: 'Built-in messaging system for efficient project coordination and updates',
+        gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'
+    },
+    {
+        icon: 'fa-shield-alt',
+        title: 'Secure & Reliable',
+        subtitle: 'Enterprise-grade security',
+        description: 'Your project data is protected with bank-level encryption and security',
+        gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)'
+    }
+];
 
 // --- INACTIVITY TIMER FOR AUTO-LOGOUT ---
 let inactivityTimer;
@@ -132,6 +165,41 @@ function initializeApp() {
     } else {
         showLandingPageView();
     }
+    
+    // Initialize dynamic header rotation
+    initializeHeaderRotation();
+}
+
+// --- DYNAMIC HEADER SYSTEM ---
+function initializeHeaderRotation() {
+    setInterval(() => {
+        appState.currentHeaderSlide = (appState.currentHeaderSlide + 1) % headerFeatures.length;
+        updateDynamicHeader();
+    }, 5000);
+}
+
+function updateDynamicHeader() {
+    const headerElement = document.getElementById('dynamic-feature-header');
+    if (headerElement) {
+        const feature = headerFeatures[appState.currentHeaderSlide];
+        headerElement.innerHTML = `
+            <div class="feature-header-content" style="background: ${feature.gradient};">
+                <div class="feature-icon-container">
+                    <i class="fas ${feature.icon}"></i>
+                </div>
+                <div class="feature-text-content">
+                    <h2 class="feature-title">${feature.title}</h2>
+                    <p class="feature-subtitle">${feature.subtitle}</p>
+                    <p class="feature-description">${feature.description}</p>
+                </div>
+                <div class="feature-indicators">
+                    ${headerFeatures.map((_, index) => 
+                        `<div class="indicator ${index === appState.currentHeaderSlide ? 'active' : ''}"></div>`
+                    ).join('')}
+                </div>
+            </div>
+        `;
+    }
 }
 
 async function apiCall(endpoint, method, body = null, successMessage = null) {
@@ -142,7 +210,6 @@ async function apiCall(endpoint, method, body = null, successMessage = null) {
         }
         if (body) {
             if (body instanceof FormData) {
-                // Let the browser set the Content-Type header for FormData
                 options.body = body;
             } else {
                 options.headers['Content-Type'] = 'application/json';
@@ -180,7 +247,6 @@ async function apiCall(endpoint, method, body = null, successMessage = null) {
     }
 }
 
-
 async function handleRegister(event) {
     event.preventDefault();
     const form = event.target;
@@ -209,7 +275,6 @@ async function handleLogin(event) {
         closeModal();
         showAppView();
         
-        // Load user's submitted quotes to track them
         if (data.user.type === 'designer') {
             loadUserQuotes();
         }
@@ -222,13 +287,13 @@ function logout() {
     appState.currentUser = null;
     appState.jwtToken = null;
     appState.userSubmittedQuotes.clear();
+    appState.myEstimations = [];
     localStorage.clear();
     clearTimeout(inactivityTimer);
     showLandingPageView();
     showNotification('You have been logged out successfully.', 'info');
 }
 
-// Load user's submitted quotes to track them
 async function loadUserQuotes() {
     if (appState.currentUser.type !== 'designer') return;
     
@@ -246,6 +311,212 @@ async function loadUserQuotes() {
     }
 }
 
+// --- ENHANCED ESTIMATION SYSTEM ---
+async function loadUserEstimations() {
+    if (!appState.currentUser) return;
+    
+    try {
+        const response = await apiCall(`/estimation/contractor/${appState.currentUser.email}`, 'GET');
+        appState.myEstimations = response.estimations || [];
+    } catch (error) {
+        console.error('Error loading user estimations:', error);
+        appState.myEstimations = [];
+    }
+}
+
+async function fetchAndRenderMyEstimations() {
+    const container = document.getElementById('app-container');
+    container.innerHTML = `
+        <div id="dynamic-feature-header" class="dynamic-feature-header"></div>
+        <div class="section-header modern-header">
+            <div class="header-content">
+                <h2><i class="fas fa-file-invoice-dollar"></i> My Estimation Requests</h2>
+                <p class="header-subtitle">Track your cost estimation submissions and results</p>
+            </div>
+            <div class="header-actions">
+                <button class="btn btn-primary" onclick="renderAppSection('estimation-tool')">
+                    <i class="fas fa-plus"></i> New Estimation Request
+                </button>
+            </div>
+        </div>
+        <div id="estimations-list" class="estimations-grid"></div>`;
+    
+    updateDynamicHeader();
+    
+    const listContainer = document.getElementById('estimations-list');
+    listContainer.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Loading your estimation requests...</p></div>';
+    
+    try {
+        await loadUserEstimations();
+        
+        if (appState.myEstimations.length === 0) {
+            listContainer.innerHTML = `
+                <div class="empty-state premium-empty">
+                    <div class="empty-icon">
+                        <i class="fas fa-calculator"></i>
+                    </div>
+                    <h3>No Estimation Requests Yet</h3>
+                    <p>Start by uploading your project drawings to get accurate cost estimates from our AI-powered system.</p>
+                    <button class="btn btn-primary btn-large" onclick="renderAppSection('estimation-tool')">
+                        <i class="fas fa-upload"></i> Upload First Project
+                    </button>
+                </div>`;
+            return;
+        }
+        
+        listContainer.innerHTML = appState.myEstimations.map(estimation => {
+            const statusConfig = getEstimationStatusConfig(estimation.status);
+            const createdDate = new Date(estimation.createdAt).toLocaleDateString();
+            const updatedDate = new Date(estimation.updatedAt).toLocaleDateString();
+            
+            const hasFiles = estimation.uploadedFiles && estimation.uploadedFiles.length > 0;
+            const hasResult = estimation.resultFile;
+            
+            return `
+                <div class="estimation-card premium-card">
+                    <div class="estimation-header">
+                        <div class="estimation-title-section">
+                            <h3 class="estimation-title">${estimation.projectTitle}</h3>
+                            <span class="estimation-status-badge ${estimation.status}">
+                                <i class="fas ${statusConfig.icon}"></i> ${statusConfig.label}
+                            </span>
+                        </div>
+                        ${estimation.estimatedAmount ? `
+                            <div class="estimation-amount">
+                                <span class="amount-label">Estimated Cost</span>
+                                <span class="amount-value">$${estimation.estimatedAmount.toLocaleString()}</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                    
+                    <div class="estimation-description">
+                        <p>${estimation.description}</p>
+                    </div>
+                    
+                    <div class="estimation-meta">
+                        <div class="meta-item">
+                            <i class="fas fa-calendar-plus"></i>
+                            <span>Submitted: ${createdDate}</span>
+                        </div>
+                        <div class="meta-item">
+                            <i class="fas fa-clock"></i>
+                            <span>Updated: ${updatedDate}</span>
+                        </div>
+                        ${hasFiles ? `
+                            <div class="meta-item">
+                                <i class="fas fa-paperclip"></i>
+                                <span>${estimation.uploadedFiles.length} file(s) uploaded</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                    
+                    <div class="estimation-actions">
+                        <div class="action-buttons">
+                            ${hasFiles ? `
+                                <button class="btn btn-outline btn-sm" onclick="viewEstimationFiles('${estimation._id}')">
+                                    <i class="fas fa-eye"></i> View Files
+                                </button>
+                            ` : ''}
+                            ${hasResult ? `
+                                <button class="btn btn-success btn-sm" onclick="downloadEstimationResult('${estimation._id}')">
+                                    <i class="fas fa-download"></i> Download Result
+                                </button>
+                            ` : ''}
+                            ${estimation.status === 'pending' ? `
+                                <button class="btn btn-danger btn-sm" onclick="deleteEstimation('${estimation._id}')">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+    } catch (error) {
+        listContainer.innerHTML = `
+            <div class="error-state premium-error">
+                <div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                <h3>Error Loading Estimations</h3>
+                <p>We couldn't load your estimation requests. Please try again.</p>
+                <button class="btn btn-primary" onclick="fetchAndRenderMyEstimations()">Retry</button>
+            </div>`;
+    }
+}
+
+function getEstimationStatusConfig(status) {
+    const configs = {
+        'pending': { icon: 'fa-clock', label: 'Under Review' },
+        'in-progress': { icon: 'fa-cogs', label: 'Processing' },
+        'completed': { icon: 'fa-check-circle', label: 'Complete' },
+        'rejected': { icon: 'fa-times-circle', label: 'Rejected' },
+        'cancelled': { icon: 'fa-ban', label: 'Cancelled' }
+    };
+    return configs[status] || { icon: 'fa-question-circle', label: status };
+}
+
+async function viewEstimationFiles(estimationId) {
+    try {
+        const response = await apiCall(`/estimation/${estimationId}/files`, 'GET');
+        const files = response.files || [];
+        
+        const content = `
+            <div class="modal-header">
+                <h3><i class="fas fa-folder-open"></i> Uploaded Project Files</h3>
+                <p class="modal-subtitle">Files submitted with your estimation request</p>
+            </div>
+            <div class="files-list premium-files">
+                ${files.length === 0 ? `
+                    <div class="empty-state">
+                        <i class="fas fa-file"></i>
+                        <p>No files found for this estimation.</p>
+                    </div>
+                ` : files.map(file => `
+                    <div class="file-item">
+                        <div class="file-info">
+                            <i class="fas fa-file-pdf"></i>
+                            <div class="file-details">
+                                <h4>${file.name}</h4>
+                                <span class="file-date">Uploaded: ${new Date(file.uploadedAt).toLocaleDateString()}</span>
+                            </div>
+                        </div>
+                        <a href="${file.url}" target="_blank" class="btn btn-outline btn-sm">
+                            <i class="fas fa-external-link-alt"></i> View
+                        </a>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+        
+        showGenericModal(content, 'max-width: 600px;');
+    } catch (error) {
+        showNotification('Error loading files', 'error');
+    }
+}
+
+async function downloadEstimationResult(estimationId) {
+    try {
+        const response = await apiCall(`/estimation/${estimationId}/result`, 'GET');
+        if (response.success && response.resultFile) {
+            window.open(response.resultFile.url, '_blank');
+        }
+    } catch (error) {
+        showNotification('Error downloading result file', 'error');
+    }
+}
+
+async function deleteEstimation(estimationId) {
+    if (confirm('Are you sure you want to delete this estimation request? This action cannot be undone.')) {
+        try {
+            await apiCall(`/estimation/${estimationId}`, 'DELETE', null, 'Estimation deleted successfully');
+            fetchAndRenderMyEstimations();
+        } catch (error) {
+            // Error handled by apiCall
+        }
+    }
+}
+
+// Continue with existing job functions...
 async function fetchAndRenderJobs(loadMore = false) {
     const jobsListContainer = document.getElementById('jobs-list');
     const loadMoreContainer = document.getElementById('load-more-container');
@@ -283,12 +554,12 @@ async function fetchAndRenderJobs(loadMore = false) {
         
         if (appState.jobs.length === 0) {
             jobsListContainer.innerHTML = user.type === 'designer'
-                ? `<div class="empty-state">
+                ? `<div class="empty-state premium-empty">
                         <div class="empty-icon"><i class="fas fa-briefcase"></i></div>
                         <h3>No Projects Available</h3>
                         <p>Check back later for new opportunities or try adjusting your search criteria.</p>
                       </div>`
-                : `<div class="empty-state">
+                : `<div class="empty-state premium-empty">
                         <div class="empty-icon"><i class="fas fa-plus-circle"></i></div>
                         <h3>You haven't posted any projects yet</h3>
                         <p>Ready to get started? Post your first project and connect with talented professionals.</p>
@@ -353,7 +624,7 @@ async function fetchAndRenderJobs(loadMore = false) {
                 : '';
             
             return `
-                <div class="job-card modern-card" data-job-id="${job.id}">
+                <div class="job-card premium-card" data-job-id="${job.id}">
                     <div class="job-header">
                         <div class="job-title-section">
                             <h3 class="job-title">${job.title}</h3>
@@ -419,7 +690,7 @@ async function fetchAndRenderJobs(loadMore = false) {
     } catch(error) {
         if(jobsListContainer) {
             jobsListContainer.innerHTML = `
-                <div class="error-state">
+                <div class="error-state premium-error">
                     <div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div>
                     <h3>Error Loading Projects</h3>
                     <p>We encountered an issue loading the projects. Please try again.</p>
@@ -429,9 +700,11 @@ async function fetchAndRenderJobs(loadMore = false) {
     }
 }
 
+// Continue with other existing functions...
 async function fetchAndRenderApprovedJobs() {
     const container = document.getElementById('app-container');
     container.innerHTML = `
+        <div id="dynamic-feature-header" class="dynamic-feature-header"></div>
         <div class="section-header modern-header">
             <div class="header-content">
                 <h2><i class="fas fa-check-circle"></i> Approved Projects</h2>
@@ -439,6 +712,8 @@ async function fetchAndRenderApprovedJobs() {
             </div>
         </div>
         <div id="approved-jobs-list" class="jobs-grid"></div>`;
+    
+    updateDynamicHeader();
     
     const listContainer = document.getElementById('approved-jobs-list');
     listContainer.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Loading approved projects...</p></div>';
@@ -451,7 +726,7 @@ async function fetchAndRenderApprovedJobs() {
         
         if (approvedJobs.length === 0) {
             listContainer.innerHTML = `
-                <div class="empty-state">
+                <div class="empty-state premium-empty">
                     <div class="empty-icon"><i class="fas fa-clipboard-check"></i></div>
                     <h3>No Approved Projects</h3>
                     <p>Your approved projects will appear here once you accept quotes from designers.</p>
@@ -479,7 +754,7 @@ async function fetchAndRenderApprovedJobs() {
                 : '';
             
             return `
-                <div class="job-card modern-card approved-job">
+                <div class="job-card premium-card approved-job">
                     <div class="job-header">
                         <div class="job-title-section">
                             <h3 class="job-title">${job.title}</h3>
@@ -489,7 +764,7 @@ async function fetchAndRenderApprovedJobs() {
                         </div>
                         <div class="approved-amount">
                             <span class="amount-label">Approved Amount</span>
-                            <span class="amount-value">$${job.approvedAmount}</span>
+                            <span class="amount-value">${job.approvedAmount}</span>
                         </div>
                     </div>
                     
@@ -529,7 +804,7 @@ async function fetchAndRenderApprovedJobs() {
         }).join('');
     } catch(error) {
         listContainer.innerHTML = `
-            <div class="error-state">
+            <div class="error-state premium-error">
                 <div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div>
                 <h3>Error Loading Approved Projects</h3>
                 <p>Please try again later.</p>
@@ -549,6 +824,7 @@ async function markJobCompleted(jobId) {
 async function fetchAndRenderMyQuotes() {
     const container = document.getElementById('app-container');
     container.innerHTML = `
+        <div id="dynamic-feature-header" class="dynamic-feature-header"></div>
         <div class="section-header modern-header">
             <div class="header-content">
                 <h2><i class="fas fa-file-invoice-dollar"></i> My Submitted Quotes</h2>
@@ -556,6 +832,8 @@ async function fetchAndRenderMyQuotes() {
             </div>
         </div>
         <div id="my-quotes-list" class="jobs-grid"></div>`;
+    
+    updateDynamicHeader();
     
     const listContainer = document.getElementById('my-quotes-list');
     listContainer.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Loading your quotes...</p></div>';
@@ -567,7 +845,7 @@ async function fetchAndRenderMyQuotes() {
         
         if (quotes.length === 0) {
             listContainer.innerHTML = `
-                <div class="empty-state">
+                <div class="empty-state premium-empty">
                     <div class="empty-icon"><i class="fas fa-file-invoice"></i></div>
                     <h3>No Quotes Submitted</h3>
                     <p>You haven't submitted any quotes yet. Browse available projects to get started.</p>
@@ -623,7 +901,7 @@ async function fetchAndRenderMyQuotes() {
             }
             
             return `
-                <div class="quote-card modern-card quote-status-${statusClass}">
+                <div class="quote-card premium-card quote-status-${statusClass}">
                     <div class="quote-header">
                         <div class="quote-title-section">
                             <h3 class="quote-title">Quote for: ${quote.jobTitle || 'Unknown Job'}</h3>
@@ -633,7 +911,7 @@ async function fetchAndRenderMyQuotes() {
                         </div>
                         <div class="quote-amount-section">
                             <span class="amount-label">Quote Amount</span>
-                            <span class="amount-value">$${quote.quoteAmount}</span>
+                            <span class="amount-value">${quote.quoteAmount}</span>
                         </div>
                     </div>
                     
@@ -665,7 +943,7 @@ async function fetchAndRenderMyQuotes() {
         }).join('');
     } catch(error) {
         listContainer.innerHTML = `
-            <div class="error-state">
+            <div class="error-state premium-error">
                 <div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div>
                 <h3>Error Loading Quotes</h3>
                 <p>Please try again later.</p>
@@ -680,11 +958,11 @@ async function editQuote(quoteId) {
         const quote = response.data;
         
         const content = `
-            <div class="modal-header">
+            <div class="modal-header premium-modal-header">
                 <h3><i class="fas fa-edit"></i> Edit Your Quote</h3>
                 <p class="modal-subtitle">Update your quote details for: <strong>${quote.jobTitle}</strong></p>
             </div>
-            <form id="edit-quote-form" class="modern-form">
+            <form id="edit-quote-form" class="premium-form">
                 <input type="hidden" name="quoteId" value="${quote.id}">
                 
                 <div class="form-row">
@@ -767,7 +1045,6 @@ async function handleQuoteEdit(event) {
     }
 }
 
-
 async function handlePostJob(event) {
     event.preventDefault();
     const form = event.target;
@@ -810,7 +1087,7 @@ async function deleteQuote(quoteId) {
         await apiCall(`/quotes/${quoteId}`, 'DELETE', null, 'Quote deleted successfully.')
             .then(() => {
                 fetchAndRenderMyQuotes();
-                loadUserQuotes(); // Refresh the submitted quotes tracking
+                loadUserQuotes();
             })
             .catch(() => {});
     }
@@ -822,21 +1099,21 @@ async function viewQuotes(jobId) {
         const quotes = response.data || [];
         
         let quotesHTML = `
-            <div class="modal-header">
+            <div class="modal-header premium-modal-header">
                 <h3><i class="fas fa-file-invoice-dollar"></i> Received Quotes</h3>
                 <p class="modal-subtitle">Review and manage quotes for this project</p>
             </div>`;
             
         if (quotes.length === 0) {
             quotesHTML += `
-                <div class="empty-state">
+                <div class="empty-state premium-empty">
                     <div class="empty-icon"><i class="fas fa-file-invoice"></i></div>
                     <h3>No Quotes Received</h3>
                     <p>No quotes have been submitted for this project yet. Check back later.</p>
                 </div>`;
         } else {
             const job = appState.jobs.find(j => j.id === jobId);
-            quotesHTML += `<div class="quotes-list">`;
+            quotesHTML += `<div class="quotes-list premium-quotes">`;
             
             quotesHTML += quotes.map(quote => {
                 const attachments = quote.attachments || [];
@@ -882,7 +1159,7 @@ async function viewQuotes(jobId) {
                 }[quote.status] || 'fa-question-circle';
                 
                 return `
-                    <div class="quote-item quote-status-${statusClass}">
+                    <div class="quote-item premium-quote-item quote-status-${statusClass}">
                         <div class="quote-item-header">
                             <div class="designer-info">
                                 <div class="designer-avatar">${quote.designerName.charAt(0).toUpperCase()}</div>
@@ -924,13 +1201,13 @@ async function viewQuotes(jobId) {
             quotesHTML += `</div>`;
         }
         
-        showGenericModal(quotesHTML, 'max-width: 800px;');
+        showGenericModal(quotesHTML, 'max-width: 900px;');
     } catch (error) {
         showGenericModal(`
-            <div class="modal-header">
+            <div class="modal-header premium-modal-header">
                 <h3><i class="fas fa-exclamation-triangle"></i> Error</h3>
             </div>
-            <div class="error-state">
+            <div class="error-state premium-error">
                 <p>Could not load quotes for this project. Please try again later.</p>
             </div>
         `);
@@ -951,11 +1228,11 @@ async function approveQuote(quoteId, jobId) {
 
 function showQuoteModal(jobId) {
     const content = `
-        <div class="modal-header">
+        <div class="modal-header premium-modal-header">
             <h3><i class="fas fa-file-invoice-dollar"></i> Submit Your Quote</h3>
             <p class="modal-subtitle">Provide your best proposal for this project</p>
         </div>
-        <form id="quote-form" class="modern-form">
+        <form id="quote-form" class="premium-form">
             <input type="hidden" name="jobId" value="${jobId}">
             
             <div class="form-row">
@@ -1024,11 +1301,10 @@ async function handleQuoteSubmit(event) {
         
         await apiCall('/quotes', 'POST', formData, 'Quote submitted successfully!');
         
-        // Add to submitted quotes tracking
         appState.userSubmittedQuotes.add(form['jobId'].value);
         
         closeModal();
-        fetchAndRenderJobs(); // Refresh to show updated job status
+        fetchAndRenderJobs();
         showNotification('Your quote has been submitted! You can track its status in "My Quotes".', 'success');
 
     } catch (error) {
@@ -1041,9 +1317,7 @@ async function handleQuoteSubmit(event) {
     }
 }
 
-
 // --- ENHANCED MESSAGING SYSTEM ---
-
 async function openConversation(jobId, recipientId) {
     try {
         showNotification('Opening conversation...', 'info');
@@ -1059,13 +1333,16 @@ async function openConversation(jobId, recipientId) {
 async function fetchAndRenderConversations() {
     const container = document.getElementById('app-container');
     container.innerHTML = `
+        <div id="dynamic-feature-header" class="dynamic-feature-header"></div>
         <div class="section-header modern-header">
             <div class="header-content">
                 <h2><i class="fas fa-comments"></i> Messages</h2>
                 <p class="header-subtitle">Communicate with clients and designers</p>
             </div>
         </div>
-        <div id="conversations-list" class="conversations-container"></div>`;
+        <div id="conversations-list" class="conversations-container premium-conversations"></div>`;
+    
+    updateDynamicHeader();
     
     const listContainer = document.getElementById('conversations-list');
     listContainer.innerHTML = `<div class="loading-spinner"><div class="spinner"></div><p>Loading conversations...</p></div>`;
@@ -1076,7 +1353,7 @@ async function fetchAndRenderConversations() {
 
         if (appState.conversations.length === 0) {
             listContainer.innerHTML = `
-                <div class="empty-state">
+                <div class="empty-state premium-empty">
                     <div class="empty-icon"><i class="fas fa-comments"></i></div>
                     <h3>No Conversations Yet</h3>
                     <p>Start collaborating with professionals by messaging them from job quotes.</p>
@@ -1096,7 +1373,7 @@ async function fetchAndRenderConversations() {
             const isUnread = convo.lastMessageBy && convo.lastMessageBy !== appState.currentUser.name;
 
             return `
-                <div class="conversation-card modern-card ${isUnread ? 'unread' : ''}" onclick="renderConversationView('${convo.id}')">
+                <div class="conversation-card premium-card ${isUnread ? 'unread' : ''}" onclick="renderConversationView('${convo.id}')">
                     <div class="convo-avatar" style="background-color: ${avatarColor}">
                         ${otherParticipantName.charAt(0).toUpperCase()}
                         ${isUnread ? '<div class="unread-indicator"></div>' : ''}
@@ -1105,7 +1382,7 @@ async function fetchAndRenderConversations() {
                         <div class="convo-header">
                             <h4>${otherParticipantName}</h4>
                             <div class="convo-meta">
-                                <span class="participant-type">${otherParticipant ? otherParticipant.type : ''}</span>
+                                <span class="participant-type ${otherParticipant ? otherParticipant.type : ''}">${otherParticipant ? otherParticipant.type : ''}</span>
                                 <span class="convo-time">${timeAgo}</span>
                             </div>
                         </div>
@@ -1129,7 +1406,7 @@ async function fetchAndRenderConversations() {
         listContainer.innerHTML = conversationsHTML;
     } catch (error) {
         listContainer.innerHTML = `
-            <div class="error-state">
+            <div class="error-state premium-error">
                 <div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div>
                 <h3>Error Loading Conversations</h3>
                 <p>Please try again later.</p>
@@ -1181,14 +1458,15 @@ async function renderConversationView(conversationOrId) {
     const avatarColor = getAvatarColor(otherParticipant ? otherParticipant.name : 'Unknown');
     
     container.innerHTML = `
-        <div class="chat-container modern-chat">
-            <div class="chat-header">
-                <button onclick="renderAppSection('messages')" class="back-btn">
+        <div class="chat-container premium-chat">
+            <div class="chat-header premium-chat-header">
+                <button onclick="renderAppSection('messages')" class="back-btn premium-back-btn">
                     <i class="fas fa-arrow-left"></i>
                 </button>
                 <div class="chat-header-info">
-                    <div class="chat-avatar" style="background-color: ${avatarColor}">
+                    <div class="chat-avatar premium-avatar" style="background-color: ${avatarColor}">
                         ${otherParticipant ? otherParticipant.name.charAt(0).toUpperCase() : '?'}
+                        <div class="online-indicator"></div>
                     </div>
                     <div class="chat-details">
                         <h3>${otherParticipant ? otherParticipant.name : 'Conversation'}</h3>
@@ -1196,28 +1474,38 @@ async function renderConversationView(conversationOrId) {
                             <i class="fas fa-briefcase"></i>
                             ${conversation.jobTitle || ''}
                         </p>
+                        <span class="chat-status">Active now</span>
                     </div>
                 </div>
                 <div class="chat-actions">
-                    <span class="participant-type-badge ${otherParticipant ? otherParticipant.type : ''}">
+                    <span class="participant-type-badge premium-badge ${otherParticipant ? otherParticipant.type : ''}">
                         <i class="fas ${otherParticipant && otherParticipant.type === 'designer' ? 'fa-drafting-compass' : 'fa-building'}"></i>
                         ${otherParticipant ? otherParticipant.type : ''}
                     </span>
+                    <button class="chat-options-btn">
+                        <i class="fas fa-ellipsis-v"></i>
+                    </button>
                 </div>
             </div>
             
-            <div class="chat-messages" id="chat-messages-container">
+            <div class="chat-messages premium-messages" id="chat-messages-container">
                 <div class="loading-messages">
                     <div class="spinner"></div>
                     <p>Loading messages...</p>
                 </div>
             </div>
             
-            <div class="chat-input-area">
-                <form id="send-message-form" class="message-form">
+            <div class="chat-input-area premium-input-area">
+                <form id="send-message-form" class="message-form premium-message-form">
                     <div class="message-input-container">
+                        <button type="button" class="attachment-btn" title="Add attachment">
+                            <i class="fas fa-paperclip"></i>
+                        </button>
                         <input type="text" id="message-text-input" placeholder="Type your message..." required autocomplete="off">
-                        <button type="submit" class="send-button" title="Send message">
+                        <button type="button" class="emoji-btn" title="Add emoji">
+                            <i class="fas fa-smile"></i>
+                        </button>
+                        <button type="submit" class="send-button premium-send-btn" title="Send message">
                             <i class="fas fa-paper-plane"></i>
                         </button>
                     </div>
@@ -1238,7 +1526,7 @@ async function renderConversationView(conversationOrId) {
         
         if (messages.length === 0) {
             messagesContainer.innerHTML = `
-                <div class="empty-messages">
+                <div class="empty-messages premium-empty-messages">
                     <div class="empty-icon"><i class="fas fa-comment-dots"></i></div>
                     <h4>Start the conversation</h4>
                     <p>Send your first message to begin collaborating on this project.</p>
@@ -1252,16 +1540,19 @@ async function renderConversationView(conversationOrId) {
                 const avatarColor = getAvatarColor(msg.senderName);
                 
                 return `
-                    <div class="message-wrapper ${isMine ? 'me' : 'them'}">
+                    <div class="message-wrapper premium-message ${isMine ? 'me' : 'them'}">
                         ${showAvatar ? `
-                            <div class="message-avatar" style="background-color: ${avatarColor}">
+                            <div class="message-avatar premium-msg-avatar" style="background-color: ${avatarColor}">
                                 ${msg.senderName.charAt(0).toUpperCase()}
                             </div>
                         ` : '<div class="message-avatar-spacer"></div>'}
                         <div class="message-content">
                             ${showAvatar && !isMine ? `<div class="message-sender">${msg.senderName}</div>` : ''}
-                            <div class="message-bubble ${isMine ? 'me' : 'them'}">
+                            <div class="message-bubble premium-bubble ${isMine ? 'me' : 'them'}">
                                 ${msg.text}
+                                <div class="message-status">
+                                    ${isMine ? '<i class="fas fa-check-double"></i>' : ''}
+                                </div>
                             </div>
                             <div class="message-meta">
                                 ${time.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
@@ -1274,7 +1565,7 @@ async function renderConversationView(conversationOrId) {
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
     } catch (error) {
         messagesContainer.innerHTML = `
-            <div class="error-messages">
+            <div class="error-messages premium-error-messages">
                 <div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div>
                 <h4>Error loading messages</h4>
                 <p>Please try again later.</p>
@@ -1306,17 +1597,20 @@ async function handleSendMessage(conversationId) {
         }
         
         const messageBubble = document.createElement('div');
-        messageBubble.className = 'message-wrapper me';
+        messageBubble.className = 'message-wrapper premium-message me';
         const time = newMessage.createdAt?.toDate ? newMessage.createdAt.toDate() : new Date(newMessage.createdAt);
         const avatarColor = getAvatarColor(newMessage.senderName);
         
         messageBubble.innerHTML = `
-            <div class="message-avatar" style="background-color: ${avatarColor}">
+            <div class="message-avatar premium-msg-avatar" style="background-color: ${avatarColor}">
                 ${newMessage.senderName.charAt(0).toUpperCase()}
             </div>
             <div class="message-content">
-                <div class="message-bubble me">
+                <div class="message-bubble premium-bubble me">
                     ${newMessage.text}
+                    <div class="message-status">
+                        <i class="fas fa-check-double"></i>
+                    </div>
                 </div>
                 <div class="message-meta">
                     ${time.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
@@ -1338,16 +1632,14 @@ async function handleSendMessage(conversationId) {
     }
 }
 
-
 // --- ENHANCED UI & MODAL FUNCTIONS ---
-
 function showAuthModal(view) {
     const modalContainer = document.getElementById('modal-container');
     if(modalContainer) {
         modalContainer.innerHTML = `
-            <div class="modal-overlay">
-                <div class="modal-content modern-modal" onclick="event.stopPropagation()">
-                    <button class="modal-close-button" onclick="closeModal()">
+            <div class="modal-overlay premium-overlay">
+                <div class="modal-content premium-modal" onclick="event.stopPropagation()">
+                    <button class="modal-close-button premium-close" onclick="closeModal()">
                         <i class="fas fa-times"></i>
                     </button>
                     <div id="modal-form-container"></div>
@@ -1371,9 +1663,9 @@ function showGenericModal(innerHTML, style = '') {
     const modalContainer = document.getElementById('modal-container');
     if(modalContainer) {
         modalContainer.innerHTML = `
-            <div class="modal-overlay">
-                <div class="modal-content modern-modal" style="${style}" onclick="event.stopPropagation()">
-                    <button class="modal-close-button" onclick="closeModal()">
+            <div class="modal-overlay premium-overlay">
+                <div class="modal-content premium-modal" style="${style}" onclick="event.stopPropagation()">
+                    <button class="modal-close-button premium-close" onclick="closeModal()">
                         <i class="fas fa-times"></i>
                     </button>
                     ${innerHTML}
@@ -1411,6 +1703,11 @@ function showAppView() {
     // Load user quotes for tracking if designer
     if (user.type === 'designer') {
         loadUserQuotes();
+    }
+    
+    // Load user estimations if contractor
+    if (user.type === 'contractor') {
+        loadUserEstimations();
     }
 }
 
@@ -1455,7 +1752,11 @@ function buildSidebarNav() {
            </a>
            <a href="#" class="sidebar-nav-link" data-section="estimation-tool">
              <i class="fas fa-calculator fa-fw"></i> 
-             <span>Estimation Tool</span>
+             <span>AI Cost Estimation</span>
+           </a>
+           <a href="#" class="sidebar-nav-link" data-section="my-estimations">
+             <i class="fas fa-file-invoice fa-fw"></i> 
+             <span>My Estimations</span>
            </a>`;
     
     links += `<a href="#" class="sidebar-nav-link" data-section="messages">
@@ -1483,6 +1784,7 @@ function renderAppSection(sectionId) {
         const title = userRole === 'designer' ? 'Available Projects' : 'My Posted Projects';
         const subtitle = userRole === 'designer' ? 'Browse and submit quotes for engineering projects' : 'Manage your project listings and review quotes';
         container.innerHTML = `
+            ${userRole === 'contractor' ? '<div id="dynamic-feature-header" class="dynamic-feature-header"></div>' : ''}
             <div class="section-header modern-header">
                 <div class="header-content">
                     <h2><i class="fas ${userRole === 'designer' ? 'fa-search' : 'fa-tasks'}"></i> ${title}</h2>
@@ -1491,6 +1793,7 @@ function renderAppSection(sectionId) {
             </div>
             <div id="jobs-list" class="jobs-grid"></div>
             <div id="load-more-container" class="load-more-section"></div>`;
+        if (userRole === 'contractor') updateDynamicHeader();
         fetchAndRenderJobs();
     } else if (sectionId === 'post-job') {
         container.innerHTML = getPostJobTemplate();
@@ -1504,11 +1807,12 @@ function renderAppSection(sectionId) {
     } else if (sectionId === 'estimation-tool') {
         container.innerHTML = getEstimationToolTemplate();
         setupEstimationToolEventListeners();
+    } else if (sectionId === 'my-estimations') {
+        fetchAndRenderMyEstimations();
     }
 }
 
-// --- NEW: ESTIMATION TOOL FUNCTIONS ---
-
+// --- ENHANCED ESTIMATION TOOL FUNCTIONS ---
 function setupEstimationToolEventListeners() {
     const uploadArea = document.getElementById('file-upload-area');
     const fileInput = document.getElementById('file-upload-input');
@@ -1530,7 +1834,7 @@ function setupEstimationToolEventListeners() {
             uploadArea.classList.remove('drag-over');
             const files = e.dataTransfer.files;
             if (files.length > 0) {
-                handleFileSelect(files[0]);
+                handleFileSelect(files);
             }
         });
     }
@@ -1538,162 +1842,126 @@ function setupEstimationToolEventListeners() {
     if (fileInput) {
         fileInput.addEventListener('change', (e) => {
             if (e.target.files.length > 0) {
-                handleFileSelect(e.target.files[0]);
+                handleFileSelect(e.target.files);
             }
         });
     }
 
-    const generateBtn = document.getElementById('generate-estimation-btn');
-    if (generateBtn) {
-        generateBtn.addEventListener('click', handleGenerateEstimation);
+    const submitBtn = document.getElementById('submit-estimation-btn');
+    if (submitBtn) {
+        submitBtn.addEventListener('click', handleEstimationSubmit);
     }
 }
 
+function handleFileSelect(files) {
+    const fileList = document.getElementById('selected-files-list');
+    const submitBtn = document.getElementById('submit-estimation-btn');
+    
+    appState.uploadedFile = files;
+    
+    let filesHTML = '';
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const fileSize = (file.size / 1024 / 1024).toFixed(2);
+        const fileType = file.type === 'application/pdf' ? 'fa-file-pdf' : 'fa-file';
+        
+        filesHTML += `
+            <div class="selected-file-item">
+                <div class="file-info">
+                    <i class="fas ${fileType}"></i>
+                    <div class="file-details">
+                        <span class="file-name">${file.name}</span>
+                        <span class="file-size">${fileSize} MB</span>
+                    </div>
+                </div>
+                <button type="button" class="remove-file-btn" onclick="removeFile(${i})">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+    }
+    
+    fileList.innerHTML = filesHTML;
+    document.getElementById('file-info-container').style.display = 'block';
+    submitBtn.disabled = false;
+    showNotification(`${files.length} file(s) selected for estimation`, 'success');
+}
 
-function handleFileSelect(file) {
-    if (file && file.type === 'application/pdf') {
-        appState.uploadedFile = file;
-        document.getElementById('file-info-container').style.display = 'flex';
-        document.getElementById('file-info').innerHTML = `<i class="fas fa-file-pdf"></i> ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
-        document.getElementById('generate-estimation-btn').disabled = false;
-        showNotification('File selected. Ready to generate estimation.', 'success');
-    } else {
-        showNotification('Please select a valid PDF file.', 'error');
+function removeFile(index) {
+    // Convert FileList to Array, remove item, and update
+    const filesArray = Array.from(appState.uploadedFile);
+    filesArray.splice(index, 1);
+    
+    if (filesArray.length === 0) {
         appState.uploadedFile = null;
         document.getElementById('file-info-container').style.display = 'none';
-        document.getElementById('generate-estimation-btn').disabled = true;
+        document.getElementById('submit-estimation-btn').disabled = true;
+    } else {
+        // Create new FileList-like object
+        const dt = new DataTransfer();
+        filesArray.forEach(file => dt.items.add(file));
+        appState.uploadedFile = dt.files;
+        handleFileSelect(appState.uploadedFile);
     }
 }
 
-async function handleGenerateEstimation() {
-    if (!appState.uploadedFile) {
-        showNotification('Please select a file first.', 'warning');
+async function handleEstimationSubmit() {
+    const form = document.getElementById('estimation-form');
+    const submitBtn = document.getElementById('submit-estimation-btn');
+    
+    if (!appState.uploadedFile || appState.uploadedFile.length === 0) {
+        showNotification('Please select files for estimation', 'warning');
         return;
     }
 
-    const generateBtn = document.getElementById('generate-estimation-btn');
-    const resultsContainer = document.getElementById('estimation-results-container');
+    const projectTitle = form.projectTitle.value.trim();
+    const description = form.description.value.trim();
+    
+    if (!projectTitle || !description) {
+        showNotification('Please fill in all required fields', 'warning');
+        return;
+    }
 
-    // Show loading state
-    generateBtn.disabled = true;
-    generateBtn.innerHTML = '<div class="btn-spinner"></div> Generating...';
-    resultsContainer.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Analyzing PDF and generating estimation... This may take a moment.</p></div>';
-
-    const formData = new FormData();
-    // **FIX**: Use 'estimationFile' to match backend middleware
-    formData.append('estimationFile', appState.uploadedFile); 
-    // **FIX**: Add required fields for the '/submit' route
-    formData.append('projectTitle', `Automated Estimation for ${appState.uploadedFile.name}`);
-    formData.append('description', 'This is an automated estimation generated by the AI Cost Estimation Tool.');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<div class="btn-spinner"></div> Submitting Request...';
 
     try {
-        // **FIX**: Changed endpoint to the correct, existing one.
-        const response = await apiCall('/estimation/submit', 'POST', formData);
+        const formData = new FormData();
+        formData.append('projectTitle', projectTitle);
+        formData.append('description', description);
+        formData.append('contractorName', appState.currentUser.name);
+        formData.append('contractorEmail', appState.currentUser.email);
+
+        // Append all selected files
+        for (let i = 0; i < appState.uploadedFile.length; i++) {
+            formData.append('files', appState.uploadedFile[i]);
+        }
+
+        await apiCall('/estimation/contractor/submit', 'POST', formData, 'Estimation request submitted successfully!');
         
-        // **FIX**: The response is the new estimation object. We can simulate the old structure
-        // or create a new rendering function. For simplicity, we'll simulate it.
-        const simulatedEstimationData = {
-            cost_summary: {
-                total_inc_gst: response.data.budget || 25000, // Placeholder if no budget
-                subtotal_ex_gst: (response.data.budget || 25000) / 1.1,
-                gst: (response.data.budget || 25000) * 0.1,
-            },
-            confidence_score: 0.85, // Placeholder
-            items: [ // Placeholder items
-                { category: 'Structural Steel', description: 'Main Beams & Columns', totalCost: (response.data.budget || 25000) * 0.6 },
-                { category: 'Fabrication', description: 'Welding and Assembly', totalCost: (response.data.budget || 25000) * 0.25 },
-                { category: 'Logistics', description: 'Delivery to Site', totalCost: (response.data.budget || 25000) * 0.15 },
-            ]
-        };
-        renderEstimationResult(simulatedEstimationData);
-        showNotification('Estimation request submitted successfully!', 'success');
+        // Reset form
+        form.reset();
+        appState.uploadedFile = null;
+        document.getElementById('file-info-container').style.display = 'none';
+        
+        // Navigate to my estimations
+        renderAppSection('my-estimations');
+
     } catch (error) {
-        resultsContainer.innerHTML = `
-            <div class="error-state">
-                <div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div>
-                <h3>Estimation Failed</h3>
-                <p>${error.message || 'An unknown error occurred during estimation.'}</p>
-                <button class="btn btn-primary" onclick="handleGenerateEstimation()">Retry</button>
-            </div>`;
+        console.error('Estimation submission failed:', error);
     } finally {
-        generateBtn.disabled = false;
-        generateBtn.innerHTML = '<i class="fas fa-cogs"></i> Generate Estimation';
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Estimation Request';
     }
 }
 
-
-function renderEstimationResult(data) {
-    const resultsContainer = document.getElementById('estimation-results-container');
-    const totalCost = data.cost_summary.total_inc_gst || 0;
-    const confidence = data.confidence_score || 0;
-    const items = data.items || [];
-    
-    const formattedTotalCost = new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(totalCost);
-
-    resultsContainer.innerHTML = `
-        <div class="estimation-report">
-            <div class="report-header">
-                <h3>Estimation Result</h3>
-            </div>
-            <div class="report-summary">
-                <div class="summary-item">
-                    <div class="label">Total Estimated Cost (inc. GST)</div>
-                    <div class="value total">${formattedTotalCost}</div>
-                </div>
-                <div class="summary-item">
-                    <div class="label">Confidence Score</div>
-                    <div class="value">${(confidence * 100).toFixed(0)}%</div>
-                </div>
-                <div class="summary-item">
-                    <div class="label">Total Line Items</div>
-                    <div class="value">${items.length}</div>
-                </div>
-            </div>
-            <div class="report-details">
-                <h4>Cost Breakdown</h4>
-                <table class="report-table">
-                    <thead>
-                        <tr>
-                            <th>Category</th>
-                            <th>Description</th>
-                            <th class="currency">Cost</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${items.map(item => `
-                            <tr>
-                                <td>${item.category}</td>
-                                <td>${item.description}</td>
-                                <td class="currency">${new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(item.totalCost)}</td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                    <tfoot>
-                        <tr class="total-row">
-                            <td colspan="2">Subtotal (ex. GST)</td>
-                            <td class="currency">${new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(data.cost_summary.subtotal_ex_gst)}</td>
-                        </tr>
-                         <tr class="total-row">
-                            <td colspan="2">GST</td>
-                            <td class="currency">${new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(data.cost_summary.gst)}</td>
-                        </tr>
-                        <tr class="total-row">
-                            <td colspan="2"><strong>Total Estimated Cost</strong></td>
-                            <td class="currency"><strong>${formattedTotalCost}</strong></td>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
-        </div>`;
-}
-
-// --- Enhanced notification system
+// Enhanced notification system
 function showNotification(message, type = 'info', duration = 4000) {
     const notificationContainer = document.getElementById('notification-container');
     if (!notificationContainer) return;
     
     const notification = document.createElement('div');
-    notification.className = `notification notification-${type}`;
+    notification.className = `notification premium-notification notification-${type}`;
     
     const icons = {
         success: 'fa-check-circle',
@@ -1730,27 +1998,29 @@ function showAlert(message, type = 'info') {
 }
 
 // --- TEMPLATE GETTERS ---
-
 function getLoginTemplate() {
     return `
-        <div class="auth-header">
-            <h2><i class="fas fa-sign-in-alt"></i> Welcome Back</h2>
+        <div class="auth-header premium-auth-header">
+            <div class="auth-logo">
+                <i class="fas fa-drafting-compass"></i>
+            </div>
+            <h2>Welcome Back</h2>
             <p>Sign in to your SteelConnect account</p>
         </div>
-        <form id="login-form" class="modern-form">
+        <form id="login-form" class="premium-form">
             <div class="form-group">
                 <label class="form-label">
                     <i class="fas fa-envelope"></i> Email Address
                 </label>
-                <input type="email" class="form-input" name="loginEmail" required placeholder="Enter your email">
+                <input type="email" class="form-input premium-input" name="loginEmail" required placeholder="Enter your email">
             </div>
             <div class="form-group">
                 <label class="form-label">
                     <i class="fas fa-lock"></i> Password
                 </label>
-                <input type="password" class="form-input" name="loginPassword" required placeholder="Enter your password">
+                <input type="password" class="form-input premium-input" name="loginPassword" required placeholder="Enter your password">
             </div>
-            <button type="submit" class="btn btn-primary btn-full">
+            <button type="submit" class="btn btn-primary btn-full premium-btn">
                 <i class="fas fa-sign-in-alt"></i> Sign In
             </button>
         </form>
@@ -1762,40 +2032,43 @@ function getLoginTemplate() {
 
 function getRegisterTemplate() {
     return `
-        <div class="auth-header">
-            <h2><i class="fas fa-user-plus"></i> Join SteelConnect</h2>
+        <div class="auth-header premium-auth-header">
+            <div class="auth-logo">
+                <i class="fas fa-drafting-compass"></i>
+            </div>
+            <h2>Join SteelConnect</h2>
             <p>Create your professional account</p>
         </div>
-        <form id="register-form" class="modern-form">
+        <form id="register-form" class="premium-form">
             <div class="form-group">
                 <label class="form-label">
                     <i class="fas fa-user"></i> Full Name
                 </label>
-                <input type="text" class="form-input" name="regName" required placeholder="Enter your full name">
+                <input type="text" class="form-input premium-input" name="regName" required placeholder="Enter your full name">
             </div>
             <div class="form-group">
                 <label class="form-label">
                     <i class="fas fa-envelope"></i> Email Address
                 </label>
-                <input type="email" class="form-input" name="regEmail" required placeholder="Enter your email">
+                <input type="email" class="form-input premium-input" name="regEmail" required placeholder="Enter your email">
             </div>
             <div class="form-group">
                 <label class="form-label">
                     <i class="fas fa-lock"></i> Password
                 </label>
-                <input type="password" class="form-input" name="regPassword" required placeholder="Create a strong password">
+                <input type="password" class="form-input premium-input" name="regPassword" required placeholder="Create a strong password">
             </div>
             <div class="form-group">
                 <label class="form-label">
                     <i class="fas fa-user-tag"></i> I am a...
                 </label>
-                <select class="form-select" name="regRole" required>
+                <select class="form-select premium-select" name="regRole" required>
                     <option value="" disabled selected>Select your role</option>
-                    <option value="contractor"><i class="fas fa-building"></i> Client / Contractor</option>
-                    <option value="designer"><i class="fas fa-drafting-compass"></i> Designer / Engineer</option>
+                    <option value="contractor">Client / Contractor</option>
+                    <option value="designer">Designer / Engineer</option>
                 </select>
             </div>
-            <button type="submit" class="btn btn-primary btn-full">
+            <button type="submit" class="btn btn-primary btn-full premium-btn">
                 <i class="fas fa-user-plus"></i> Create Account
             </button>
         </form>
@@ -1807,6 +2080,7 @@ function getRegisterTemplate() {
 
 function getPostJobTemplate() {
     return `
+        <div id="dynamic-feature-header" class="dynamic-feature-header"></div>
         <div class="section-header modern-header">
             <div class="header-content">
                 <h2><i class="fas fa-plus-circle"></i> Post a New Project</h2>
@@ -1814,16 +2088,16 @@ function getPostJobTemplate() {
             </div>
         </div>
         
-        <div class="post-job-container">
-            <form id="post-job-form" class="modern-form post-job-form">
-                <div class="form-section">
+        <div class="post-job-container premium-container">
+            <form id="post-job-form" class="premium-form post-job-form">
+                <div class="form-section premium-section">
                     <h3><i class="fas fa-info-circle"></i> Project Details</h3>
                     
                     <div class="form-group">
                         <label class="form-label">
                             <i class="fas fa-heading"></i> Project Title
                         </label>
-                        <input type="text" class="form-input" name="title" required 
+                        <input type="text" class="form-input premium-input" name="title" required 
                                placeholder="e.g., Structural Steel Design for Warehouse Extension">
                     </div>
                     
@@ -1832,7 +2106,7 @@ function getPostJobTemplate() {
                             <label class="form-label">
                                 <i class="fas fa-dollar-sign"></i> Budget Range
                             </label>
-                            <input type="text" class="form-input" name="budget" required 
+                            <input type="text" class="form-input premium-input" name="budget" required 
                                    placeholder="e.g., $5,000 - $10,000">
                         </div>
                         
@@ -1840,7 +2114,7 @@ function getPostJobTemplate() {
                             <label class="form-label">
                                 <i class="fas fa-calendar-alt"></i> Project Deadline
                             </label>
-                            <input type="date" class="form-input" name="deadline" required>
+                            <input type="date" class="form-input premium-input" name="deadline" required>
                         </div>
                     </div>
                     
@@ -1848,7 +2122,7 @@ function getPostJobTemplate() {
                         <label class="form-label">
                             <i class="fas fa-tools"></i> Required Skills
                         </label>
-                        <input type="text" class="form-input" name="skills" 
+                        <input type="text" class="form-input premium-input" name="skills" 
                                placeholder="e.g., AutoCAD, Revit, Structural Analysis, Steel Design">
                         <small class="form-help">Separate skills with commas</small>
                     </div>
@@ -1857,20 +2131,20 @@ function getPostJobTemplate() {
                         <label class="form-label">
                             <i class="fas fa-external-link-alt"></i> Project Link (Optional)
                         </label>
-                        <input type="url" class="form-input" name="link" 
+                        <input type="url" class="form-input premium-input" name="link" 
                                placeholder="https://example.com/project-details">
                         <small class="form-help">Link to additional project information or resources</small>
                     </div>
                 </div>
                 
-                <div class="form-section">
+                <div class="form-section premium-section">
                     <h3><i class="fas fa-file-alt"></i> Project Description</h3>
                     
                     <div class="form-group">
                         <label class="form-label">
                             <i class="fas fa-align-left"></i> Detailed Description
                         </label>
-                        <textarea class="form-textarea" name="description" required 
+                        <textarea class="form-textarea premium-textarea" name="description" required 
                                   placeholder="Provide a comprehensive description of your project including:
 • Project scope and objectives
 • Technical requirements
@@ -1883,14 +2157,14 @@ function getPostJobTemplate() {
                         <label class="form-label">
                             <i class="fas fa-paperclip"></i> Project Attachments
                         </label>
-                        <input type="file" class="form-input file-input" name="attachment" 
+                        <input type="file" class="form-input file-input premium-file-input" name="attachment" 
                                accept=".pdf,.doc,.docx,.dwg,.jpg,.jpeg,.png">
                         <small class="form-help">Upload drawings, specifications, or reference documents (Max 10MB)</small>
                     </div>
                 </div>
                 
                 <div class="form-actions">
-                    <button type="submit" class="btn btn-primary btn-large">
+                    <button type="submit" class="btn btn-primary btn-large premium-btn">
                         <i class="fas fa-rocket"></i> Post Project
                     </button>
                 </div>
@@ -1898,41 +2172,689 @@ function getPostJobTemplate() {
         </div>`;
 }
 
-// --- NEW: ESTIMATION TOOL TEMPLATE ---
+// --- ENHANCED ESTIMATION TOOL TEMPLATE ---
 function getEstimationToolTemplate() {
     return `
+        <div id="dynamic-feature-header" class="dynamic-feature-header"></div>
         <div class="section-header modern-header">
             <div class="header-content">
-                <h2><i class="fas fa-calculator"></i> AI Cost Estimation Tool</h2>
-                <p class="header-subtitle">Upload your structural drawing (PDF) to get an instant cost estimate.</p>
+                <h2><i class="fas fa-calculator"></i> AI-Powered Cost Estimation</h2>
+                <p class="header-subtitle">Upload your structural drawings and project details to get instant, accurate cost estimates</p>
             </div>
         </div>
 
-        <div class="estimation-tool-container">
-            <div class="file-upload-section">
-                <div id="file-upload-area" class="file-upload-area">
-                    <input type="file" id="file-upload-input" accept=".pdf" />
-                    <div class="file-upload-icon"><i class="fas fa-cloud-upload-alt"></i></div>
-                    <h3>Drag & Drop your PDF here</h3>
-                    <p>or click to browse your files</p>
-                    <small>Maximum file size: 15MB</small>
+        <div class="estimation-tool-container premium-estimation-container">
+            <div class="estimation-steps">
+                <div class="step active">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h4>Upload Files</h4>
+                        <p>Add your project drawings and documents</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h4>Project Details</h4>
+                        <p>Describe your project requirements</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h4>Get Estimate</h4>
+                        <p>Receive detailed cost breakdown</p>
+                    </div>
+                </div>
+            </div>
+
+            <form id="estimation-form" class="premium-estimation-form">
+                <div class="form-section premium-section">
+                    <h3><i class="fas fa-upload"></i> Upload Project Files</h3>
+                    
+                    <div class="file-upload-section premium-upload-section">
+                        <div id="file-upload-area" class="file-upload-area premium-upload-area">
+                            <input type="file" id="file-upload-input" accept=".pdf,.dwg,.doc,.docx,.jpg,.jpeg,.png" multiple />
+                            <div class="upload-content">
+                                <div class="file-upload-icon">
+                                    <i class="fas fa-cloud-upload-alt"></i>
+                                </div>
+                                <h3>Drag & Drop Your Files Here</h3>
+                                <p>or click to browse your computer</p>
+                                <div class="supported-formats">
+                                    <span class="format-badge">PDF</span>
+                                    <span class="format-badge">DWG</span>
+                                    <span class="format-badge">DOC</span>
+                                    <span class="format-badge">Images</span>
+                                </div>
+                                <small class="upload-limit">Maximum 10 files, 15MB each</small>
+                            </div>
+                        </div>
+
+                        <div id="file-info-container" class="selected-files-container" style="display: none;">
+                            <h4><i class="fas fa-files"></i> Selected Files</h4>
+                            <div id="selected-files-list" class="selected-files-list"></div>
+                        </div>
+                    </div>
                 </div>
 
-                <div id="file-info-container">
-                    <span id="file-info"></span>
-                    <button id="generate-estimation-btn" class="btn btn-primary" disabled>
-                        <i class="fas fa-cogs"></i> Generate Estimation
+                <div class="form-section premium-section">
+                    <h3><i class="fas fa-info-circle"></i> Project Information</h3>
+                    
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fas fa-heading"></i> Project Title
+                        </label>
+                        <input type="text" class="form-input premium-input" name="projectTitle" required 
+                               placeholder="e.g., Commercial Building Steel Framework Estimation">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fas fa-file-alt"></i> Project Description
+                        </label>
+                        <textarea class="form-textarea premium-textarea" name="description" required 
+                                  placeholder="Describe your project in detail:
+• Building type and size
+• Structural requirements
+• Location and site conditions
+• Special considerations
+• Timeline requirements"></textarea>
+                    </div>
+                </div>
+
+                <div class="estimation-features">
+                    <div class="feature-item">
+                        <i class="fas fa-robot"></i>
+                        <div>
+                            <h4>AI-Powered Analysis</h4>
+                            <p>Advanced machine learning algorithms analyze your drawings</p>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-chart-line"></i>
+                        <div>
+                            <h4>Detailed Breakdown</h4>
+                            <p>Get itemized costs for materials, labor, and logistics</p>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-clock"></i>
+                        <div>
+                            <h4>Instant Results</h4>
+                            <p>Receive your estimation within minutes, not days</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions estimation-actions">
+                    <button type="button" id="submit-estimation-btn" class="btn btn-primary btn-large premium-btn" disabled>
+                        <i class="fas fa-paper-plane"></i> Submit Estimation Request
                     </button>
+                    <p class="estimation-note">
+                        <i class="fas fa-info-circle"></i>
+                        Our expert team will review your submission and provide a detailed cost analysis within 24 hours.
+                    </p>
                 </div>
-            </div>
-
-            <div id="estimation-results-container" class="estimation-results-container">
-                 <div class="empty-state">
-                    <div class="empty-icon"><i class="fas fa-file-import"></i></div>
-                    <h3>Your Estimation Report Will Appear Here</h3>
-                    <p>Upload a structural drawing PDF to get started.</p>
-                </div>
-            </div>
-        </div>
-    `;
+            </form>
+        </div>`;
 }
+
+// Add styles for the new premium UI components
+const premiumStyles = `
+<style>
+/* Dynamic Feature Header */
+.dynamic-feature-header {
+    margin-bottom: 2rem;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+}
+
+.feature-header-content {
+    padding: 3rem 2rem;
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.feature-header-content::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.1);
+    backdrop-filter: blur(10px);
+}
+
+.feature-icon-container {
+    font-size: 4rem;
+    opacity: 0.9;
+    z-index: 1;
+}
+
+.feature-text-content {
+    flex: 1;
+    z-index: 1;
+}
+
+.feature-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem 0;
+}
+
+.feature-subtitle {
+    font-size: 1.25rem;
+    margin: 0 0 1rem 0;
+    opacity: 0.9;
+}
+
+.feature-description {
+    font-size: 1rem;
+    opacity: 0.8;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.feature-indicators {
+    display: flex;
+    gap: 0.5rem;
+    z-index: 1;
+}
+
+.indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.3);
+    transition: all 0.3s ease;
+}
+
+.indicator.active {
+    background: white;
+    transform: scale(1.2);
+}
+
+/* Premium Cards */
+.premium-card {
+    background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    transition: all 0.3s ease;
+    overflow: hidden;
+    position: relative;
+}
+
+.premium-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #3B82F6, #10B981, #F59E0B);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.premium-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.premium-card:hover::before {
+    opacity: 1;
+}
+
+/* Premium Forms */
+.premium-form {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.premium-input, .premium-textarea, .premium-select {
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    background: #f8fafc;
+}
+
+.premium-input:focus, .premium-textarea:focus, .premium-select:focus {
+    border-color: #3B82F6;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    outline: none;
+}
+
+.premium-btn {
+    background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
+    border: none;
+    border-radius: 12px;
+    padding: 1rem 2rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3);
+}
+
+.premium-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 15px -3px rgba(59, 130, 246, 0.4);
+}
+
+/* Premium Empty States */
+.premium-empty {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+    border-radius: 16px;
+    border: 2px dashed #cbd5e1;
+}
+
+.premium-empty .empty-icon {
+    font-size: 4rem;
+    color: #94a3b8;
+    margin-bottom: 1rem;
+}
+
+/* Premium Chat */
+.premium-chat {
+    background: white;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+}
+
+.premium-chat-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 1.5rem;
+}
+
+.premium-avatar {
+    position: relative;
+    border: 3px solid rgba(255,255,255,0.3);
+}
+
+.online-indicator {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    width: 12px;
+    height: 12px;
+    background: #10B981;
+    border: 2px solid white;
+    border-radius: 50%;
+}
+
+.premium-messages {
+    background: linear-gradient(to bottom, #f8fafc, #ffffff);
+}
+
+.premium-message {
+    margin: 1rem 0;
+}
+
+.premium-bubble {
+    border-radius: 18px;
+    position: relative;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.premium-bubble.me {
+    background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
+    color: white;
+}
+
+.premium-bubble.them {
+    background: white;
+    border: 1px solid #e2e8f0;
+}
+
+.message-status {
+    position: absolute;
+    bottom: 4px;
+    right: 8px;
+    font-size: 0.75rem;
+    opacity: 0.7;
+}
+
+.premium-input-area {
+    background: white;
+    border-top: 1px solid #e2e8f0;
+    padding: 1rem;
+}
+
+.premium-message-form .message-input-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #f8fafc;
+    border-radius: 25px;
+    padding: 0.5rem;
+    border: 2px solid #e2e8f0;
+}
+
+.premium-send-btn {
+    background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+
+/* Premium Modals */
+.premium-overlay {
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(4px);
+}
+
+.premium-modal {
+    border-radius: 20px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    border: 1px solid #e2e8f0;
+}
+
+.premium-modal-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 20px 20px 0 0;
+    margin: -2rem -2rem 2rem -2rem;
+}
+
+.premium-close {
+    background: rgba(255,255,255,0.2);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: white;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+}
+
+/* Premium Notifications */
+.premium-notification {
+    border-radius: 12px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.2);
+}
+
+/* Premium Estimation Tool */
+.premium-estimation-container {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.estimation-steps {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 3rem;
+    position: relative;
+}
+
+.estimation-steps::before {
+    content: '';
+    position: absolute;
+    top: 25px;
+    left: 25px;
+    right: 25px;
+    height: 2px;
+    background: #e2e8f0;
+    z-index: 0;
+}
+
+.step {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: white;
+    padding: 1rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    position: relative;
+    z-index: 1;
+}
+
+.step.active {
+    background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
+    color: white;
+}
+
+.step-number {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.25rem;
+}
+
+.step.active .step-number {
+    background: rgba(255,255,255,0.2);
+    color: white;
+}
+
+.premium-upload-area {
+    border: 3px dashed #cbd5e1;
+    border-radius: 16px;
+    background: linear-gradient(145deg, #f8fafc 0%, #ffffff 100%);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.premium-upload-area::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(45deg, transparent, rgba(59, 130, 246, 0.1), transparent);
+    transform: rotate(45deg);
+    transition: all 0.3s ease;
+    opacity: 0;
+}
+
+.premium-upload-area:hover::before {
+    opacity: 1;
+    animation: shimmer 2s infinite;
+}
+
+.premium-upload-area:hover, .premium-upload-area.drag-over {
+    border-color: #3B82F6;
+    background: linear-gradient(145deg, #dbeafe 0%, #f0f9ff 100%);
+}
+
+.upload-content {
+    text-align: center;
+    padding: 3rem 2rem;
+    position: relative;
+    z-index: 1;
+}
+
+.file-upload-icon {
+    font-size: 4rem;
+    color: #64748b;
+    margin-bottom: 1rem;
+}
+
+.supported-formats {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin: 1rem 0;
+}
+
+.format-badge {
+    background: #3B82F6;
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.selected-files-container {
+    margin-top: 2rem;
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 1.5rem;
+}
+
+.selected-file-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: white;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.file-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.file-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.file-name {
+    font-weight: 500;
+    color: #1f2937;
+}
+
+.file-size {
+    font-size: 0.875rem;
+    color: #64748b;
+}
+
+.remove-file-btn {
+    background: #ef4444;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.remove-file-btn:hover {
+    background: #dc2626;
+    transform: scale(1.1);
+}
+
+.estimation-features {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin: 2rem 0;
+}
+
+.feature-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    border-left: 4px solid #3B82F6;
+}
+
+.feature-item i {
+    font-size: 2rem;
+    color: #3B82F6;
+}
+
+.feature-item h4 {
+    margin: 0 0 0.5rem 0;
+    color: #1f2937;
+}
+
+.feature-item p {
+    margin: 0;
+    color: #64748b;
+    font-size: 0.875rem;
+}
+
+.estimation-actions {
+    text-align: center;
+    padding: 2rem 0;
+}
+
+.estimation-note {
+    margin-top: 1rem;
+    color: #64748b;
+    font-size: 0.875rem;
+}
+
+@keyframes shimmer {
+    0% { transform: translateX(-100%) rotate(45deg); }
+    100% { transform: translateX(100%) rotate(45deg); }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .feature-header-content {
+        flex-direction: column;
+        text-align: center;
+        gap: 1rem;
+        padding: 2rem 1rem;
+    }
+    
+    .feature-title {
+        font-size: 2rem;
+    }
+    
+    .estimation-steps {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .estimation-steps::before {
+        display: none;
+    }
+    
+    .estimation-features {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+`;
+
+// Inject the premium styles
+if (!document.getElementById('premium-styles')) {
+    const styleSheet = document.createElement('style');
+    styleSheet.id = 'premium-styles';
+    styleSheet.innerHTML = premiumStyles;
+    document.head.appendChild(styleSheet);
+}
+        
