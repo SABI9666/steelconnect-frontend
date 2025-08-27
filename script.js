@@ -104,7 +104,6 @@ function resetInactivityTimer() {
 function initializeApp() {
     console.log("SteelConnect App Initializing...");
     
-    // Create notification container if it doesn't exist
     if (!document.getElementById('notification-container')) {
         const notificationContainer = document.createElement('div');
         notificationContainer.id = 'notification-container';
@@ -112,12 +111,10 @@ function initializeApp() {
         document.body.appendChild(notificationContainer);
     }
     
-    // Setup inactivity listeners
     window.addEventListener('mousemove', resetInactivityTimer);
     window.addEventListener('keydown', resetInactivityTimer);
     window.addEventListener('click', resetInactivityTimer);
 
-    // FIX: Safely attach event listeners to prevent script errors
     const signInBtn = document.getElementById('signin-btn');
     if (signInBtn) signInBtn.addEventListener('click', () => showAuthModal('login'));
 
@@ -132,7 +129,7 @@ function initializeApp() {
         logo.addEventListener('click', (e) => {
             e.preventDefault();
             if (appState.currentUser) {
-                renderAppSection('jobs');
+                renderAppSection('dashboard');
             } else {
                 showLandingPageView();
                 window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -140,15 +137,6 @@ function initializeApp() {
         });
     }
     
-    const logoutBtn = document.getElementById('logout-button');
-    if(logoutBtn) {
-        logoutBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            logout();
-        });
-    }
-
-    // Check for existing user session
     const token = localStorage.getItem('jwtToken');
     const user = localStorage.getItem('currentUser');
     
@@ -166,7 +154,6 @@ function initializeApp() {
         showLandingPageView();
     }
     
-    // Initialize dynamic header rotation
     initializeHeaderRotation();
 }
 
@@ -267,7 +254,7 @@ async function handleLogin(event) {
     const authData = { email: form.loginEmail.value, password: form.loginPassword.value };
     try {
         const data = await apiCall('/auth/login', 'POST', authData);
-        showNotification('Welcome back to SteelConnect!', 'success');
+        showNotification(`Welcome back to SteelConnect, ${data.user.name}!`, 'success');
         appState.currentUser = data.user;
         appState.jwtToken = data.token;
         localStorage.setItem('currentUser', JSON.stringify(data.user));
@@ -388,49 +375,20 @@ async function fetchAndRenderMyEstimations() {
                             </div>
                         ` : ''}
                     </div>
-                    
-                    <div class="estimation-description">
-                        <p>${estimation.description}</p>
-                    </div>
-                    
+                    <div class="estimation-description"><p>${estimation.description}</p></div>
                     <div class="estimation-meta">
-                        <div class="meta-item">
-                            <i class="fas fa-calendar-plus"></i>
-                            <span>Submitted: ${createdDate}</span>
-                        </div>
-                        <div class="meta-item">
-                            <i class="fas fa-clock"></i>
-                            <span>Updated: ${updatedDate}</span>
-                        </div>
-                        ${hasFiles ? `
-                            <div class="meta-item">
-                                <i class="fas fa-paperclip"></i>
-                                <span>${estimation.uploadedFiles.length} file(s) uploaded</span>
-                            </div>
-                        ` : ''}
+                        <div class="meta-item"><i class="fas fa-calendar-plus"></i><span>Submitted: ${createdDate}</span></div>
+                        <div class="meta-item"><i class="fas fa-clock"></i><span>Updated: ${updatedDate}</span></div>
+                        ${hasFiles ? `<div class="meta-item"><i class="fas fa-paperclip"></i><span>${estimation.uploadedFiles.length} file(s) uploaded</span></div>` : ''}
                     </div>
-                    
                     <div class="estimation-actions">
                         <div class="action-buttons">
-                            ${hasFiles ? `
-                                <button class="btn btn-outline btn-sm" onclick="viewEstimationFiles('${estimation._id}')">
-                                    <i class="fas fa-eye"></i> View Files
-                                </button>
-                            ` : ''}
-                            ${hasResult ? `
-                                <button class="btn btn-success btn-sm" onclick="downloadEstimationResult('${estimation._id}')">
-                                    <i class="fas fa-download"></i> Download Result
-                                </button>
-                            ` : ''}
-                            ${estimation.status === 'pending' ? `
-                                <button class="btn btn-danger btn-sm" onclick="deleteEstimation('${estimation._id}')">
-                                    <i class="fas fa-trash"></i> Delete
-                                </button>
-                            ` : ''}
+                            ${hasFiles ? `<button class="btn btn-outline btn-sm" onclick="viewEstimationFiles('${estimation._id}')"><i class="fas fa-eye"></i> View Files</button>` : ''}
+                            ${hasResult ? `<button class="btn btn-success btn-sm" onclick="downloadEstimationResult('${estimation._id}')"><i class="fas fa-download"></i> Download Result</button>` : ''}
+                            ${estimation.status === 'pending' ? `<button class="btn btn-danger btn-sm" onclick="deleteEstimation('${estimation._id}')"><i class="fas fa-trash"></i> Delete</button>` : ''}
                         </div>
                     </div>
-                </div>
-            `;
+                </div>`;
         }).join('');
         
     } catch (error) {
@@ -459,35 +417,15 @@ async function viewEstimationFiles(estimationId) {
     try {
         const response = await apiCall(`/estimation/${estimationId}/files`, 'GET');
         const files = response.files || [];
-        
         const content = `
-            <div class="modal-header">
-                <h3><i class="fas fa-folder-open"></i> Uploaded Project Files</h3>
-                <p class="modal-subtitle">Files submitted with your estimation request</p>
-            </div>
+            <div class="modal-header"><h3><i class="fas fa-folder-open"></i> Uploaded Project Files</h3><p class="modal-subtitle">Files submitted with your estimation request</p></div>
             <div class="files-list premium-files">
-                ${files.length === 0 ? `
-                    <div class="empty-state">
-                        <i class="fas fa-file"></i>
-                        <p>No files found for this estimation.</p>
-                    </div>
-                ` : files.map(file => `
+                ${files.length === 0 ? `<div class="empty-state"><i class="fas fa-file"></i><p>No files found for this estimation.</p></div>` : files.map(file => `
                     <div class="file-item">
-                        <div class="file-info">
-                            <i class="fas fa-file-pdf"></i>
-                            <div class="file-details">
-                                <h4>${file.name}</h4>
-                                <span class="file-date">Uploaded: ${new Date(file.uploadedAt).toLocaleDateString()}</span>
-                            </div>
-                        </div>
-                        <a href="${file.url}" target="_blank" class="btn btn-outline btn-sm">
-                            <i class="fas fa-external-link-alt"></i> View
-                        </a>
-                    </div>
-                `).join('')}
-            </div>
-        `;
-        
+                        <div class="file-info"><i class="fas fa-file-pdf"></i><div class="file-details"><h4>${file.name}</h4><span class="file-date">Uploaded: ${new Date(file.uploadedAt).toLocaleDateString()}</span></div></div>
+                        <a href="${file.url}" target="_blank" class="btn btn-outline btn-sm"><i class="fas fa-external-link-alt"></i> View</a>
+                    </div>`).join('')}
+            </div>`;
         showGenericModal(content, 'max-width: 600px;');
     } catch (error) {
         showNotification('Error loading files', 'error');
@@ -510,9 +448,7 @@ async function deleteEstimation(estimationId) {
         try {
             await apiCall(`/estimation/${estimationId}`, 'DELETE', null, 'Estimation deleted successfully');
             fetchAndRenderMyEstimations();
-        } catch (error) {
-            // Error handled by apiCall
-        }
+        } catch (error) {}
     }
 }
 
@@ -554,17 +490,8 @@ async function fetchAndRenderJobs(loadMore = false) {
         
         if (appState.jobs.length === 0) {
             jobsListContainer.innerHTML = user.type === 'designer'
-                ? `<div class="empty-state premium-empty">
-                        <div class="empty-icon"><i class="fas fa-briefcase"></i></div>
-                        <h3>No Projects Available</h3>
-                        <p>Check back later for new opportunities or try adjusting your search criteria.</p>
-                      </div>`
-                : `<div class="empty-state premium-empty">
-                        <div class="empty-icon"><i class="fas fa-plus-circle"></i></div>
-                        <h3>You haven't posted any projects yet</h3>
-                        <p>Ready to get started? Post your first project and connect with talented professionals.</p>
-                        <button class="btn btn-primary" onclick="renderAppSection('post-job')">Post Your First Project</button>
-                      </div>`;
+                ? `<div class="empty-state premium-empty"><div class="empty-icon"><i class="fas fa-briefcase"></i></div><h3>No Projects Available</h3><p>Check back later for new opportunities or try adjusting your search criteria.</p></div>`
+                : `<div class="empty-state premium-empty"><div class="empty-icon"><i class="fas fa-plus-circle"></i></div><h3>You haven't posted any projects yet</h3><p>Ready to get started? Post your first project and connect with talented professionals.</p><button class="btn btn-primary" onclick="renderAppSection('post-job')">Post Your First Project</button></div>`;
             if (loadMoreContainer) loadMoreContainer.innerHTML = '';
             return;
         }
@@ -573,103 +500,34 @@ async function fetchAndRenderJobs(loadMore = false) {
             const hasUserQuoted = appState.userSubmittedQuotes.has(job.id);
             const canQuote = user.type === 'designer' && job.status === 'open' && !hasUserQuoted;
             const quoteButton = canQuote 
-                ? `<button class="btn btn-primary btn-submit-quote" onclick="showQuoteModal('${job.id}')">
-                       <i class="fas fa-file-invoice-dollar"></i> Submit Quote
-                     </button>`
+                ? `<button class="btn btn-primary btn-submit-quote" onclick="showQuoteModal('${job.id}')"><i class="fas fa-file-invoice-dollar"></i> Submit Quote</button>`
                 : user.type === 'designer' && hasUserQuoted
-                ? `<button class="btn btn-outline btn-submitted" disabled>
-                       <i class="fas fa-check-circle"></i> Quote Submitted
-                     </button>`
+                ? `<button class="btn btn-outline btn-submitted" disabled><i class="fas fa-check-circle"></i> Quote Submitted</button>`
                 : user.type === 'designer' && job.status === 'assigned'
-                ? `<span class="job-status-badge assigned">
-                       <i class="fas fa-user-check"></i> Job Assigned
-                     </span>`
+                ? `<span class="job-status-badge assigned"><i class="fas fa-user-check"></i> Job Assigned</span>`
                 : '';
-
-            const actions = user.type === 'designer'
-                ? quoteButton
-                : `<div class="job-actions-group">
-                       <button class="btn btn-outline" onclick="viewQuotes('${job.id}')">
-                           <i class="fas fa-eye"></i> View Quotes (${job.quotesCount || 0})
-                       </button>
-                       <button class="btn btn-danger" onclick="deleteJob('${job.id}')">
-                           <i class="fas fa-trash"></i> Delete
-                       </button>
-                     </div>`;
-            
+            const actions = user.type === 'designer' ? quoteButton : `<div class="job-actions-group"><button class="btn btn-outline" onclick="viewQuotes('${job.id}')"><i class="fas fa-eye"></i> View Quotes (${job.quotesCount || 0})</button><button class="btn btn-danger" onclick="deleteJob('${job.id}')"><i class="fas fa-trash"></i> Delete</button></div>`;
             const statusBadge = job.status !== 'open' 
-                ? `<span class="job-status-badge ${job.status}">
-                       <i class="fas ${job.status === 'assigned' ? 'fa-user-check' : 'fa-check-circle'}"></i>
-                       ${job.status.charAt(0).toUpperCase() + job.status.slice(1)}
-                     </span>` 
-                : `<span class="job-status-badge open">
-                       <i class="fas fa-clock"></i> Open
-                     </span>`;
-            
-            const attachmentLink = job.attachment 
-                ? `<div class="job-attachment">
-                       <i class="fas fa-paperclip"></i>
-                       <a href="${job.attachment}" target="_blank" rel="noopener noreferrer">View Attachment</a>
-                     </div>` 
-                : '';
-            
-            const skillsDisplay = job.skills?.length > 0 
-                ? `<div class="job-skills">
-                       <i class="fas fa-tools"></i>
-                       <span>Skills:</span>
-                       <div class="skills-tags">
-                           ${job.skills.map(skill => `<span class="skill-tag">${skill}</span>`).join('')}
-                       </div>
-                     </div>` 
-                : '';
+                ? `<span class="job-status-badge ${job.status}"><i class="fas ${job.status === 'assigned' ? 'fa-user-check' : 'fa-check-circle'}"></i> ${job.status.charAt(0).toUpperCase() + job.status.slice(1)}</span>` 
+                : `<span class="job-status-badge open"><i class="fas fa-clock"></i> Open</span>`;
+            const attachmentLink = job.attachment ? `<div class="job-attachment"><i class="fas fa-paperclip"></i><a href="${job.attachment}" target="_blank" rel="noopener noreferrer">View Attachment</a></div>` : '';
+            const skillsDisplay = job.skills?.length > 0 ? `<div class="job-skills"><i class="fas fa-tools"></i><span>Skills:</span><div class="skills-tags">${job.skills.map(skill => `<span class="skill-tag">${skill}</span>`).join('')}</div></div>` : '';
             
             return `
                 <div class="job-card premium-card" data-job-id="${job.id}">
                     <div class="job-header">
-                        <div class="job-title-section">
-                            <h3 class="job-title">${job.title}</h3>
-                            ${statusBadge}
-                        </div>
-                        <div class="job-budget-section">
-                            <span class="budget-label">Budget</span>
-                            <span class="budget-amount">${job.budget}</span>
-                        </div>
+                        <div class="job-title-section"><h3 class="job-title">${job.title}</h3>${statusBadge}</div>
+                        <div class="job-budget-section"><span class="budget-label">Budget</span><span class="budget-amount">${job.budget}</span></div>
                     </div>
-                    
                     <div class="job-meta">
-                        <div class="job-meta-item">
-                            <i class="fas fa-user"></i>
-                            <span>Posted by: <strong>${job.posterName || 'N/A'}</strong></span>
-                        </div>
-                        ${job.assignedToName ? `
-                            <div class="job-meta-item">
-                                <i class="fas fa-user-check"></i>
-                                <span>Assigned to: <strong>${job.assignedToName}</strong></span>
-                            </div>
-                        ` : ''}
-                        ${job.deadline ? `
-                            <div class="job-meta-item">
-                                <i class="fas fa-calendar-alt"></i>
-                                <span>Deadline: <strong>${new Date(job.deadline).toLocaleDateString()}</strong></span>
-                            </div>
-                        ` : ''}
+                        <div class="job-meta-item"><i class="fas fa-user"></i><span>Posted by: <strong>${job.posterName || 'N/A'}</strong></span></div>
+                        ${job.assignedToName ? `<div class="job-meta-item"><i class="fas fa-user-check"></i><span>Assigned to: <strong>${job.assignedToName}</strong></span></div>` : ''}
+                        ${job.deadline ? `<div class="job-meta-item"><i class="fas fa-calendar-alt"></i><span>Deadline: <strong>${new Date(job.deadline).toLocaleDateString()}</strong></span></div>` : ''}
                     </div>
-                    
-                    <div class="job-description">
-                        <p>${job.description}</p>
-                    </div>
-                    
+                    <div class="job-description"><p>${job.description}</p></div>
                     ${skillsDisplay}
-                    
-                    ${job.link ? `
-                        <div class="job-link">
-                            <i class="fas fa-external-link-alt"></i>
-                            <a href="${job.link}" target="_blank" rel="noopener noreferrer">View Project Link</a>
-                        </div>
-                    ` : ''}
-                    
+                    ${job.link ? `<div class="job-link"><i class="fas fa-external-link-alt"></i><a href="${job.link}" target="_blank" rel="noopener noreferrer">View Project Link</a></div>` : ''}
                     ${attachmentLink}
-                    
                     <div class="job-actions">${actions}</div>
                 </div>`;
         }).join('');
@@ -678,9 +536,7 @@ async function fetchAndRenderJobs(loadMore = false) {
 
         if (loadMoreContainer) {
             if (user.type === 'designer' && appState.hasMoreJobs) {
-                loadMoreContainer.innerHTML = `<button class="btn btn-outline btn-load-more" id="load-more-btn">
-                    <i class="fas fa-chevron-down"></i> Load More Projects
-                </button>`;
+                loadMoreContainer.innerHTML = `<button class="btn btn-outline btn-load-more" id="load-more-btn"><i class="fas fa-chevron-down"></i> Load More Projects</button>`;
                 document.getElementById('load-more-btn').addEventListener('click', () => fetchAndRenderJobs(true));
             } else {
                 loadMoreContainer.innerHTML = '';
@@ -689,13 +545,7 @@ async function fetchAndRenderJobs(loadMore = false) {
 
     } catch(error) {
         if(jobsListContainer) {
-            jobsListContainer.innerHTML = `
-                <div class="error-state premium-error">
-                    <div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div>
-                    <h3>Error Loading Projects</h3>
-                    <p>We encountered an issue loading the projects. Please try again.</p>
-                    <button class="btn btn-primary" onclick="fetchAndRenderJobs()">Retry</button>
-                </div>`;
+            jobsListContainer.innerHTML = `<div class="error-state premium-error"><div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div><h3>Error Loading Projects</h3><p>We encountered an issue loading the projects. Please try again.</p><button class="btn btn-primary" onclick="fetchAndRenderJobs()">Retry</button></div>`;
         }
     }
 }
@@ -705,16 +555,9 @@ async function fetchAndRenderApprovedJobs() {
     const container = document.getElementById('app-container');
     container.innerHTML = `
         <div id="dynamic-feature-header" class="dynamic-feature-header"></div>
-        <div class="section-header modern-header">
-            <div class="header-content">
-                <h2><i class="fas fa-check-circle"></i> Approved Projects</h2>
-                <p class="header-subtitle">Manage your approved projects and communicate with designers</p>
-            </div>
-        </div>
+        <div class="section-header modern-header"><div class="header-content"><h2><i class="fas fa-check-circle"></i> Approved Projects</h2><p class="header-subtitle">Manage your approved projects and communicate with designers</p></div></div>
         <div id="approved-jobs-list" class="jobs-grid"></div>`;
-    
     updateDynamicHeader();
-    
     const listContainer = document.getElementById('approved-jobs-list');
     listContainer.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Loading approved projects...</p></div>';
     
@@ -725,91 +568,29 @@ async function fetchAndRenderApprovedJobs() {
         appState.approvedJobs = approvedJobs;
         
         if (approvedJobs.length === 0) {
-            listContainer.innerHTML = `
-                <div class="empty-state premium-empty">
-                    <div class="empty-icon"><i class="fas fa-clipboard-check"></i></div>
-                    <h3>No Approved Projects</h3>
-                    <p>Your approved projects will appear here once you accept quotes from designers.</p>
-                    <button class="btn btn-primary" onclick="renderAppSection('jobs')">View My Projects</button>
-                </div>`;
+            listContainer.innerHTML = `<div class="empty-state premium-empty"><div class="empty-icon"><i class="fas fa-clipboard-check"></i></div><h3>No Approved Projects</h3><p>Your approved projects will appear here once you accept quotes from designers.</p><button class="btn btn-primary" onclick="renderAppSection('jobs')">View My Projects</button></div>`;
             return;
         }
         
         listContainer.innerHTML = approvedJobs.map(job => {
-            const attachmentLink = job.attachment 
-                ? `<div class="job-attachment">
-                       <i class="fas fa-paperclip"></i>
-                       <a href="${job.attachment}" target="_blank" rel="noopener noreferrer">View Attachment</a>
-                     </div>` 
-                : '';
-            
-            const skillsDisplay = job.skills?.length > 0 
-                ? `<div class="job-skills">
-                       <i class="fas fa-tools"></i>
-                       <span>Skills:</span>
-                       <div class="skills-tags">
-                           ${job.skills.map(skill => `<span class="skill-tag">${skill}</span>`).join('')}
-                       </div>
-                     </div>` 
-                : '';
-            
+            const attachmentLink = job.attachment ? `<div class="job-attachment"><i class="fas fa-paperclip"></i><a href="${job.attachment}" target="_blank" rel="noopener noreferrer">View Attachment</a></div>` : '';
+            const skillsDisplay = job.skills?.length > 0 ? `<div class="job-skills"><i class="fas fa-tools"></i><span>Skills:</span><div class="skills-tags">${job.skills.map(skill => `<span class="skill-tag">${skill}</span>`).join('')}</div></div>` : '';
             return `
                 <div class="job-card premium-card approved-job">
                     <div class="job-header">
-                        <div class="job-title-section">
-                            <h3 class="job-title">${job.title}</h3>
-                            <span class="job-status-badge assigned">
-                                <i class="fas fa-user-check"></i> Assigned
-                            </span>
-                        </div>
-                        <div class="approved-amount">
-                            <span class="amount-label">Approved Amount</span>
-                            <span class="amount-value">${job.approvedAmount}</span>
-                        </div>
+                        <div class="job-title-section"><h3 class="job-title">${job.title}</h3><span class="job-status-badge assigned"><i class="fas fa-user-check"></i> Assigned</span></div>
+                        <div class="approved-amount"><span class="amount-label">Approved Amount</span><span class="amount-value">${job.approvedAmount}</span></div>
                     </div>
-                    
-                    <div class="job-meta">
-                        <div class="job-meta-item">
-                            <i class="fas fa-user-cog"></i>
-                            <span>Assigned to: <strong>${job.assignedToName}</strong></span>
-                        </div>
-                    </div>
-                    
-                    <div class="job-description">
-                        <p>${job.description}</p>
-                    </div>
-                    
+                    <div class="job-meta"><div class="job-meta-item"><i class="fas fa-user-cog"></i><span>Assigned to: <strong>${job.assignedToName}</strong></span></div></div>
+                    <div class="job-description"><p>${job.description}</p></div>
                     ${skillsDisplay}
-                    
-                    ${job.link ? `
-                        <div class="job-link">
-                            <i class="fas fa-external-link-alt"></i>
-                            <a href="${job.link}" target="_blank" rel="noopener noreferrer">View Project Link</a>
-                        </div>
-                    ` : ''}
-                    
+                    ${job.link ? `<div class="job-link"><i class="fas fa-external-link-alt"></i><a href="${job.link}" target="_blank" rel="noopener noreferrer">View Project Link</a></div>` : ''}
                     ${attachmentLink}
-                    
-                    <div class="job-actions">
-                        <div class="job-actions-group">
-                            <button class="btn btn-primary" onclick="openConversation('${job.id}', '${job.assignedTo}')">
-                                <i class="fas fa-comments"></i> Message Designer
-                            </button>
-                            <button class="btn btn-success" onclick="markJobCompleted('${job.id}')">
-                                <i class="fas fa-check-double"></i> Mark Completed
-                            </button>
-                        </div>
-                    </div>
+                    <div class="job-actions"><div class="job-actions-group"><button class="btn btn-primary" onclick="openConversation('${job.id}', '${job.assignedTo}')"><i class="fas fa-comments"></i> Message Designer</button><button class="btn btn-success" onclick="markJobCompleted('${job.id}')"><i class="fas fa-check-double"></i> Mark Completed</button></div></div>
                 </div>`;
         }).join('');
     } catch(error) {
-        listContainer.innerHTML = `
-            <div class="error-state premium-error">
-                <div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div>
-                <h3>Error Loading Approved Projects</h3>
-                <p>Please try again later.</p>
-                <button class="btn btn-primary" onclick="fetchAndRenderApprovedJobs()">Retry</button>
-            </div>`;
+        listContainer.innerHTML = `<div class="error-state premium-error"><div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div><h3>Error Loading Approved Projects</h3><p>Please try again later.</p><button class="btn btn-primary" onclick="fetchAndRenderApprovedJobs()">Retry</button></div>`;
     }
 }
 
@@ -825,16 +606,9 @@ async function fetchAndRenderMyQuotes() {
     const container = document.getElementById('app-container');
     container.innerHTML = `
         <div id="dynamic-feature-header" class="dynamic-feature-header"></div>
-        <div class="section-header modern-header">
-            <div class="header-content">
-                <h2><i class="fas fa-file-invoice-dollar"></i> My Submitted Quotes</h2>
-                <p class="header-subtitle">Track your quote submissions and manage communications</p>
-            </div>
-        </div>
+        <div class="section-header modern-header"><div class="header-content"><h2><i class="fas fa-file-invoice-dollar"></i> My Submitted Quotes</h2><p class="header-subtitle">Track your quote submissions and manage communications</p></div></div>
         <div id="my-quotes-list" class="jobs-grid"></div>`;
-    
     updateDynamicHeader();
-    
     const listContainer = document.getElementById('my-quotes-list');
     listContainer.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Loading your quotes...</p></div>';
     
@@ -844,111 +618,44 @@ async function fetchAndRenderMyQuotes() {
         appState.myQuotes = quotes;
         
         if (quotes.length === 0) {
-            listContainer.innerHTML = `
-                <div class="empty-state premium-empty">
-                    <div class="empty-icon"><i class="fas fa-file-invoice"></i></div>
-                    <h3>No Quotes Submitted</h3>
-                    <p>You haven't submitted any quotes yet. Browse available projects to get started.</p>
-                    <button class="btn btn-primary" onclick="renderAppSection('jobs')">Find Projects</button>
-                </div>`;
+            listContainer.innerHTML = `<div class="empty-state premium-empty"><div class="empty-icon"><i class="fas fa-file-invoice"></i></div><h3>No Quotes Submitted</h3><p>You haven't submitted any quotes yet. Browse available projects to get started.</p><button class="btn btn-primary" onclick="renderAppSection('jobs')">Find Projects</button></div>`;
             return;
         }
         
         listContainer.innerHTML = quotes.map(quote => {
             const attachments = quote.attachments || [];
-            let attachmentLink = attachments.length > 0
-                ? `<div class="quote-attachment">
-                       <i class="fas fa-paperclip"></i>
-                       <a href="${attachments[0]}" target="_blank" rel="noopener noreferrer">View Attachment</a>
-                     </div>`
-                : '';
-
+            let attachmentLink = attachments.length > 0 ? `<div class="quote-attachment"><i class="fas fa-paperclip"></i><a href="${attachments[0]}" target="_blank" rel="noopener noreferrer">View Attachment</a></div>` : '';
             const canDelete = quote.status === 'submitted';
             const canEdit = quote.status === 'submitted';
-            
-            const statusIcon = {
-                'submitted': 'fa-clock',
-                'approved': 'fa-check-circle',
-                'rejected': 'fa-times-circle'
-            }[quote.status] || 'fa-question-circle';
-            
+            const statusIcon = {'submitted': 'fa-clock', 'approved': 'fa-check-circle', 'rejected': 'fa-times-circle'}[quote.status] || 'fa-question-circle';
             const statusClass = quote.status;
-            
             const actionButtons = [];
-            
             if (quote.status === 'approved') {
-                actionButtons.push(`
-                    <button class="btn btn-primary" onclick="openConversation('${quote.jobId}', '${quote.contractorId}')">
-                        <i class="fas fa-comments"></i> Message Client
-                    </button>
-                `);
+                actionButtons.push(`<button class="btn btn-primary" onclick="openConversation('${quote.jobId}', '${quote.contractorId}')"><i class="fas fa-comments"></i> Message Client</button>`);
             }
-            
             if (canEdit) {
-                actionButtons.push(`
-                    <button class="btn btn-outline" onclick="editQuote('${quote.id}')">
-                        <i class="fas fa-edit"></i> Edit Quote
-                    </button>
-                `);
+                actionButtons.push(`<button class="btn btn-outline" onclick="editQuote('${quote.id}')"><i class="fas fa-edit"></i> Edit Quote</button>`);
             }
-            
             if (canDelete) {
-                actionButtons.push(`
-                    <button class="btn btn-danger" onclick="deleteQuote('${quote.id}')">
-                        <i class="fas fa-trash"></i> Delete
-                    </button>
-                `);
+                actionButtons.push(`<button class="btn btn-danger" onclick="deleteQuote('${quote.id}')"><i class="fas fa-trash"></i> Delete</button>`);
             }
-            
             return `
                 <div class="quote-card premium-card quote-status-${statusClass}">
                     <div class="quote-header">
-                        <div class="quote-title-section">
-                            <h3 class="quote-title">Quote for: ${quote.jobTitle || 'Unknown Job'}</h3>
-                            <span class="quote-status-badge ${statusClass}">
-                                <i class="fas ${statusIcon}"></i> ${quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}
-                            </span>
-                        </div>
-                        <div class="quote-amount-section">
-                            <span class="amount-label">Quote Amount</span>
-                            <span class="amount-value">${quote.quoteAmount}</span>
-                        </div>
+                        <div class="quote-title-section"><h3 class="quote-title">Quote for: ${quote.jobTitle || 'Unknown Job'}</h3><span class="quote-status-badge ${statusClass}"><i class="fas ${statusIcon}"></i> ${quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}</span></div>
+                        <div class="quote-amount-section"><span class="amount-label">Quote Amount</span><span class="amount-value">${quote.quoteAmount}</span></div>
                     </div>
-                    
                     <div class="quote-meta">
-                        ${quote.timeline ? `
-                            <div class="quote-meta-item">
-                                <i class="fas fa-calendar-alt"></i>
-                                <span>Timeline: <strong>${quote.timeline} days</strong></span>
-                            </div>
-                        ` : ''}
-                        <div class="quote-meta-item">
-                            <i class="fas fa-clock"></i>
-                            <span>Submitted: <strong>${new Date(quote.createdAt?.toDate ? quote.createdAt.toDate() : quote.createdAt).toLocaleDateString()}</strong></span>
-                        </div>
+                        ${quote.timeline ? `<div class="quote-meta-item"><i class="fas fa-calendar-alt"></i><span>Timeline: <strong>${quote.timeline} days</strong></span></div>` : ''}
+                        <div class="quote-meta-item"><i class="fas fa-clock"></i><span>Submitted: <strong>${new Date(quote.createdAt?.toDate ? quote.createdAt.toDate() : quote.createdAt).toLocaleDateString()}</strong></span></div>
                     </div>
-                    
-                    <div class="quote-description">
-                        <p>${quote.description}</p>
-                    </div>
-                    
+                    <div class="quote-description"><p>${quote.description}</p></div>
                     ${attachmentLink}
-                    
-                    <div class="quote-actions">
-                        <div class="quote-actions-group">
-                            ${actionButtons.join('')}
-                        </div>
-                    </div>
+                    <div class="quote-actions"><div class="quote-actions-group">${actionButtons.join('')}</div></div>
                 </div>`;
         }).join('');
     } catch(error) {
-        listContainer.innerHTML = `
-            <div class="error-state premium-error">
-                <div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div>
-                <h3>Error Loading Quotes</h3>
-                <p>Please try again later.</p>
-                <button class="btn btn-primary" onclick="fetchAndRenderMyQuotes()">Retry</button>
-            </div>`;
+        listContainer.innerHTML = `<div class="error-state premium-error"><div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div><h3>Error Loading Quotes</h3><p>Please try again later.</p><button class="btn btn-primary" onclick="fetchAndRenderMyQuotes()">Retry</button></div>`;
     }
 }
 
@@ -958,56 +665,20 @@ async function editQuote(quoteId) {
         const quote = response.data;
         
         const content = `
-            <div class="modal-header premium-modal-header">
-                <h3><i class="fas fa-edit"></i> Edit Your Quote</h3>
-                <p class="modal-subtitle">Update your quote details for: <strong>${quote.jobTitle}</strong></p>
-            </div>
+            <div class="modal-header premium-modal-header"><h3><i class="fas fa-edit"></i> Edit Your Quote</h3><p class="modal-subtitle">Update your quote details for: <strong>${quote.jobTitle}</strong></p></div>
             <form id="edit-quote-form" class="premium-form">
                 <input type="hidden" name="quoteId" value="${quote.id}">
-                
                 <div class="form-row">
-                    <div class="form-group">
-                        <label class="form-label">
-                            <i class="fas fa-dollar-sign"></i> Quote Amount ($)
-                        </label>
-                        <input type="number" class="form-input" name="amount" value="${quote.quoteAmount}" required min="1" step="0.01">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label">
-                            <i class="fas fa-calendar-alt"></i> Timeline (days)
-                        </label>
-                        <input type="number" class="form-input" name="timeline" value="${quote.timeline || ''}" required min="1">
-                    </div>
+                    <div class="form-group"><label class="form-label"><i class="fas fa-dollar-sign"></i> Quote Amount ($)</label><input type="number" class="form-input" name="amount" value="${quote.quoteAmount}" required min="1" step="0.01"></div>
+                    <div class="form-group"><label class="form-label"><i class="fas fa-calendar-alt"></i> Timeline (days)</label><input type="number" class="form-input" name="timeline" value="${quote.timeline || ''}" required min="1"></div>
                 </div>
-                
-                <div class="form-group">
-                    <label class="form-label">
-                        <i class="fas fa-file-alt"></i> Proposal Description
-                    </label>
-                    <textarea class="form-textarea" name="description" required placeholder="Describe your approach, methodology, and what you'll deliver...">${quote.description}</textarea>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">
-                        <i class="fas fa-paperclip"></i> Attachments (Optional, max 5)
-                    </label>
-                    <input type="file" class="form-input file-input" name="attachments" multiple accept=".pdf,.doc,.docx,.dwg,.jpg,.jpeg,.png">
-                    <small class="form-help">Supported formats: PDF, DOC, DWG, Images</small>
-                </div>
-                
-                <div class="form-actions">
-                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save"></i> Update Quote
-                    </button>
-                </div>
+                <div class="form-group"><label class="form-label"><i class="fas fa-file-alt"></i> Proposal Description</label><textarea class="form-textarea" name="description" required placeholder="Describe your approach...">${quote.description}</textarea></div>
+                <div class="form-group"><label class="form-label"><i class="fas fa-paperclip"></i> Attachments (Optional, max 5)</label><input type="file" class="form-input file-input" name="attachments" multiple accept=".pdf,.doc,.docx,.dwg,.jpg,.jpeg,.png"><small class="form-help">Supported formats: PDF, DOC, DWG, Images</small></div>
+                <div class="form-actions"><button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button><button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Update Quote</button></div>
             </form>`;
         showGenericModal(content, 'max-width: 600px;');
         document.getElementById('edit-quote-form').addEventListener('submit', handleQuoteEdit);
-    } catch (error) {
-        // Error handled by apiCall
-    }
+    } catch (error) {}
 }
 
 async function handleQuoteEdit(event) {
@@ -1015,7 +686,6 @@ async function handleQuoteEdit(event) {
     const form = event.target;
     const submitBtn = form.querySelector('button[type="submit"]');
     const originalText = submitBtn.innerHTML;
-    
     submitBtn.innerHTML = '<div class="btn-spinner"></div> Updating...';
     submitBtn.disabled = true;
 
@@ -1024,17 +694,14 @@ async function handleQuoteEdit(event) {
         formData.append('quoteAmount', form['amount'].value);
         formData.append('timeline', form['timeline'].value);
         formData.append('description', form['description'].value);
-
         if (form.attachments.files.length > 0) {
             for (let i = 0; i < form.attachments.files.length; i++) {
                 formData.append('attachments', form.attachments.files[i]);
             }
         }
-        
         await apiCall(`/quotes/${form['quoteId'].value}`, 'PUT', formData, 'Quote updated successfully!');
         closeModal();
         fetchAndRenderMyQuotes();
-
     } catch (error) {
         console.error("Quote edit failed:", error);
     } finally {
@@ -1050,7 +717,6 @@ async function handlePostJob(event) {
     const form = event.target;
     const submitBtn = form.querySelector('button[type="submit"]');
     const originalText = submitBtn.innerHTML;
-    
     submitBtn.innerHTML = '<div class="btn-spinner"></div> Posting...';
     submitBtn.disabled = true;
     
@@ -1062,13 +728,10 @@ async function handlePostJob(event) {
         if (form.attachment.files.length > 0) {
             formData.append('attachment', form.attachment.files[0]);
         }
-        
         await apiCall('/jobs', 'POST', formData, 'Project posted successfully!');
         form.reset();
         renderAppSection('jobs');
-    } catch(error) {
-        // Error handled by apiCall
-    } finally {
+    } catch(error) {} finally {
         submitBtn.innerHTML = originalText;
         submitBtn.disabled = false;
     }
@@ -1098,119 +761,46 @@ async function viewQuotes(jobId) {
         const response = await apiCall(`/quotes/job/${jobId}`, 'GET');
         const quotes = response.data || [];
         
-        let quotesHTML = `
-            <div class="modal-header premium-modal-header">
-                <h3><i class="fas fa-file-invoice-dollar"></i> Received Quotes</h3>
-                <p class="modal-subtitle">Review and manage quotes for this project</p>
-            </div>`;
-            
+        let quotesHTML = `<div class="modal-header premium-modal-header"><h3><i class="fas fa-file-invoice-dollar"></i> Received Quotes</h3><p class="modal-subtitle">Review and manage quotes for this project</p></div>`;
         if (quotes.length === 0) {
-            quotesHTML += `
-                <div class="empty-state premium-empty">
-                    <div class="empty-icon"><i class="fas fa-file-invoice"></i></div>
-                    <h3>No Quotes Received</h3>
-                    <p>No quotes have been submitted for this project yet. Check back later.</p>
-                </div>`;
+            quotesHTML += `<div class="empty-state premium-empty"><div class="empty-icon"><i class="fas fa-file-invoice"></i></div><h3>No Quotes Received</h3><p>No quotes have been submitted for this project yet. Check back later.</p></div>`;
         } else {
             const job = appState.jobs.find(j => j.id === jobId);
             quotesHTML += `<div class="quotes-list premium-quotes">`;
-            
             quotesHTML += quotes.map(quote => {
                 const attachments = quote.attachments || [];
-                let attachmentLink = attachments.length > 0 
-                    ? `<div class="quote-attachment">
-                           <i class="fas fa-paperclip"></i>
-                           <a href="${attachments[0]}" target="_blank" rel="noopener noreferrer">View Attachment</a>
-                         </div>`
-                    : '';
-                
+                let attachmentLink = attachments.length > 0 ? `<div class="quote-attachment"><i class="fas fa-paperclip"></i><a href="${attachments[0]}" target="_blank" rel="noopener noreferrer">View Attachment</a></div>` : '';
                 const canApprove = job && job.status === 'open' && quote.status === 'submitted';
                 let actionButtons = '';
-                
-                const messageButton = `
-                    <button class="btn btn-outline btn-sm" onclick="openConversation('${quote.jobId}', '${quote.designerId}')">
-                        <i class="fas fa-comments"></i> Message
-                    </button>
-                `;
-                
+                const messageButton = `<button class="btn btn-outline btn-sm" onclick="openConversation('${quote.jobId}', '${quote.designerId}')"><i class="fas fa-comments"></i> Message</button>`;
                 if(canApprove) {
-                    actionButtons = `
-                        <button class="btn btn-success btn-sm" onclick="approveQuote('${quote.id}', '${jobId}')">
-                            <i class="fas fa-check"></i> Approve Quote
-                        </button>
-                        ${messageButton}
-                    `;
+                    actionButtons = `<button class="btn btn-success btn-sm" onclick="approveQuote('${quote.id}', '${jobId}')"><i class="fas fa-check"></i> Approve Quote</button>${messageButton}`;
                 } else if (quote.status === 'approved') {
-                    actionButtons = `
-                        <span class="status-approved">
-                            <i class="fas fa-check-circle"></i> Approved
-                        </span>
-                        ${messageButton}
-                    `;
+                    actionButtons = `<span class="status-approved"><i class="fas fa-check-circle"></i> Approved</span>${messageButton}`;
                 } else {
                     actionButtons = messageButton;
                 }
-
                 const statusClass = quote.status;
-                const statusIcon = {
-                    'submitted': 'fa-clock',
-                    'approved': 'fa-check-circle',
-                    'rejected': 'fa-times-circle'
-                }[quote.status] || 'fa-question-circle';
-                
+                const statusIcon = {'submitted': 'fa-clock', 'approved': 'fa-check-circle', 'rejected': 'fa-times-circle'}[quote.status] || 'fa-question-circle';
                 return `
                     <div class="quote-item premium-quote-item quote-status-${statusClass}">
                         <div class="quote-item-header">
-                            <div class="designer-info">
-                                <div class="designer-avatar">${quote.designerName.charAt(0).toUpperCase()}</div>
-                                <div class="designer-details">
-                                    <h4>${quote.designerName}</h4>
-                                    <span class="quote-status-badge ${statusClass}">
-                                        <i class="fas ${statusIcon}"></i> ${quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}
-                                    </span>
-                                </div>
-                            </div>
-                            <div class="quote-amount">
-                                <span class="amount-label">Quote</span>
-                                <span class="amount-value">${quote.quoteAmount}</span>
-                            </div>
+                            <div class="designer-info"><div class="designer-avatar">${quote.designerName.charAt(0).toUpperCase()}</div><div class="designer-details"><h4>${quote.designerName}</h4><span class="quote-status-badge ${statusClass}"><i class="fas ${statusIcon}"></i> ${quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}</span></div></div>
+                            <div class="quote-amount"><span class="amount-label">Quote</span><span class="amount-value">${quote.quoteAmount}</span></div>
                         </div>
-                        
                         <div class="quote-details">
-                            ${quote.timeline ? `
-                                <div class="quote-meta-item">
-                                    <i class="fas fa-calendar-alt"></i>
-                                    <span>Timeline: <strong>${quote.timeline} days</strong></span>
-                                </div>
-                            ` : ''}
-                            
-                            <div class="quote-description">
-                                <p>${quote.description}</p>
-                            </div>
-                            
+                            ${quote.timeline ? `<div class="quote-meta-item"><i class="fas fa-calendar-alt"></i><span>Timeline: <strong>${quote.timeline} days</strong></span></div>` : ''}
+                            <div class="quote-description"><p>${quote.description}</p></div>
                             ${attachmentLink}
                         </div>
-                        
-                        <div class="quote-actions">
-                            ${actionButtons}
-                        </div>
-                    </div>
-                `;
+                        <div class="quote-actions">${actionButtons}</div>
+                    </div>`;
             }).join('');
-            
             quotesHTML += `</div>`;
         }
-        
         showGenericModal(quotesHTML, 'max-width: 900px;');
     } catch (error) {
-        showGenericModal(`
-            <div class="modal-header premium-modal-header">
-                <h3><i class="fas fa-exclamation-triangle"></i> Error</h3>
-            </div>
-            <div class="error-state premium-error">
-                <p>Could not load quotes for this project. Please try again later.</p>
-            </div>
-        `);
+        showGenericModal(`<div class="modal-header premium-modal-header"><h3><i class="fas fa-exclamation-triangle"></i> Error</h3></div><div class="error-state premium-error"><p>Could not load quotes for this project. Please try again later.</p></div>`);
     }
 }
 
@@ -1228,50 +818,16 @@ async function approveQuote(quoteId, jobId) {
 
 function showQuoteModal(jobId) {
     const content = `
-        <div class="modal-header premium-modal-header">
-            <h3><i class="fas fa-file-invoice-dollar"></i> Submit Your Quote</h3>
-            <p class="modal-subtitle">Provide your best proposal for this project</p>
-        </div>
+        <div class="modal-header premium-modal-header"><h3><i class="fas fa-file-invoice-dollar"></i> Submit Your Quote</h3><p class="modal-subtitle">Provide your best proposal for this project</p></div>
         <form id="quote-form" class="premium-form">
             <input type="hidden" name="jobId" value="${jobId}">
-            
             <div class="form-row">
-                <div class="form-group">
-                    <label class="form-label">
-                        <i class="fas fa-dollar-sign"></i> Quote Amount ($)
-                    </label>
-                    <input type="number" class="form-input" name="amount" required min="1" step="0.01" placeholder="Enter your quote amount">
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">
-                        <i class="fas fa-calendar-alt"></i> Timeline (days)
-                    </label>
-                    <input type="number" class="form-input" name="timeline" required min="1" placeholder="Project duration">
-                </div>
+                <div class="form-group"><label class="form-label"><i class="fas fa-dollar-sign"></i> Quote Amount ($)</label><input type="number" class="form-input" name="amount" required min="1" step="0.01" placeholder="Enter your quote amount"></div>
+                <div class="form-group"><label class="form-label"><i class="fas fa-calendar-alt"></i> Timeline (days)</label><input type="number" class="form-input" name="timeline" required min="1" placeholder="Project duration"></div>
             </div>
-            
-            <div class="form-group">
-                <label class="form-label">
-                    <i class="fas fa-file-alt"></i> Proposal Description
-                </label>
-                <textarea class="form-textarea" name="description" required placeholder="Describe your approach, methodology, experience, and what you'll deliver for this project..."></textarea>
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label">
-                    <i class="fas fa-paperclip"></i> Attachments (Optional, max 5)
-                </label>
-                <input type="file" class="form-input file-input" name="attachments" multiple accept=".pdf,.doc,.docx,.dwg,.jpg,.jpeg,.png">
-                <small class="form-help">Upload portfolio samples, certifications, or relevant documents</small>
-            </div>
-            
-            <div class="form-actions">
-                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-                <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-paper-plane"></i> Submit Quote
-                </button>
-            </div>
+            <div class="form-group"><label class="form-label"><i class="fas fa-file-alt"></i> Proposal Description</label><textarea class="form-textarea" name="description" required placeholder="Describe your approach..."></textarea></div>
+            <div class="form-group"><label class="form-label"><i class="fas fa-paperclip"></i> Attachments (Optional, max 5)</label><input type="file" class="form-input file-input" name="attachments" multiple accept=".pdf,.doc,.docx,.dwg,.jpg,.jpeg,.png"><small class="form-help">Upload portfolio samples or relevant documents</small></div>
+            <div class="form-actions"><button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button><button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane"></i> Submit Quote</button></div>
         </form>`;
     showGenericModal(content, 'max-width: 600px;');
     document.getElementById('quote-form').addEventListener('submit', handleQuoteSubmit);
@@ -1282,31 +838,24 @@ async function handleQuoteSubmit(event) {
     const form = event.target;
     const submitBtn = form.querySelector('button[type="submit"]');
     const originalText = submitBtn.innerHTML;
-    
     submitBtn.innerHTML = '<div class="btn-spinner"></div> Submitting...';
     submitBtn.disabled = true;
-
     try {
         const formData = new FormData();
         formData.append('jobId', form['jobId'].value);
         formData.append('quoteAmount', form['amount'].value);
         formData.append('timeline', form['timeline'].value);
         formData.append('description', form['description'].value);
-
         if (form.attachments.files.length > 0) {
             for (let i = 0; i < form.attachments.files.length; i++) {
                 formData.append('attachments', form.attachments.files[i]);
             }
         }
-        
         await apiCall('/quotes', 'POST', formData, 'Quote submitted successfully!');
-        
         appState.userSubmittedQuotes.add(form['jobId'].value);
-        
         closeModal();
         fetchAndRenderJobs();
         showNotification('Your quote has been submitted! You can track its status in "My Quotes".', 'success');
-
     } catch (error) {
         console.error("Quote submission failed:", error);
     } finally {
@@ -1325,9 +874,7 @@ async function openConversation(jobId, recipientId) {
         if (response.success) {
             renderConversationView(response.data);
         }
-    } catch (error) {
-        // Error is handled by apiCall
-    }
+    } catch (error) {}
 }
 
 async function fetchAndRenderConversations() {
@@ -1335,83 +882,40 @@ async function fetchAndRenderConversations() {
     container.innerHTML = `
         <div id="dynamic-feature-header" class="dynamic-feature-header"></div>
         <div class="section-header modern-header">
-            <div class="header-content">
-                <h2><i class="fas fa-comments"></i> Messages</h2>
-                <p class="header-subtitle">Communicate with clients and designers</p>
-            </div>
+            <div class="header-content"><h2><i class="fas fa-comments"></i> Messages</h2><p class="header-subtitle">Communicate with clients and designers</p></div>
         </div>
         <div id="conversations-list" class="conversations-container premium-conversations"></div>`;
-    
     updateDynamicHeader();
-    
     const listContainer = document.getElementById('conversations-list');
     listContainer.innerHTML = `<div class="loading-spinner"><div class="spinner"></div><p>Loading conversations...</p></div>`;
-
     try {
         const response = await apiCall('/messages', 'GET');
         appState.conversations = response.data || [];
-
         if (appState.conversations.length === 0) {
-            listContainer.innerHTML = `
-                <div class="empty-state premium-empty">
-                    <div class="empty-icon"><i class="fas fa-comments"></i></div>
-                    <h3>No Conversations Yet</h3>
-                    <p>Start collaborating with professionals by messaging them from job quotes.</p>
-                    <button class="btn btn-primary" onclick="renderAppSection('jobs')">Browse Projects</button>
-                </div>`;
+            listContainer.innerHTML = `<div class="empty-state premium-empty"><div class="empty-icon"><i class="fas fa-comments"></i></div><h3>No Conversations Yet</h3><p>Start collaborating with professionals by messaging them from job quotes.</p><button class="btn btn-primary" onclick="renderAppSection('jobs')">Browse Projects</button></div>`;
             return;
         }
-
         const conversationsHTML = appState.conversations.map(convo => {
             const otherParticipant = convo.participants.find(p => p.id !== appState.currentUser.id);
             const otherParticipantName = otherParticipant ? otherParticipant.name : 'Unknown User';
-            const lastMessage = convo.lastMessage ? 
-                (convo.lastMessage.length > 60 ? convo.lastMessage.substring(0, 60) + '...' : convo.lastMessage) : 
-                'No messages yet.';
+            const lastMessage = convo.lastMessage ? (convo.lastMessage.length > 60 ? convo.lastMessage.substring(0, 60) + '...' : convo.lastMessage) : 'No messages yet.';
             const timeAgo = getTimeAgo(convo.updatedAt);
             const avatarColor = getAvatarColor(otherParticipantName);
             const isUnread = convo.lastMessageBy && convo.lastMessageBy !== appState.currentUser.name;
-
             return `
                 <div class="conversation-card premium-card ${isUnread ? 'unread' : ''}" onclick="renderConversationView('${convo.id}')">
-                    <div class="convo-avatar" style="background-color: ${avatarColor}">
-                        ${otherParticipantName.charAt(0).toUpperCase()}
-                        ${isUnread ? '<div class="unread-indicator"></div>' : ''}
-                    </div>
+                    <div class="convo-avatar" style="background-color: ${avatarColor}">${otherParticipantName.charAt(0).toUpperCase()}${isUnread ? '<div class="unread-indicator"></div>' : ''}</div>
                     <div class="convo-details">
-                        <div class="convo-header">
-                            <h4>${otherParticipantName}</h4>
-                            <div class="convo-meta">
-                                <span class="participant-type ${otherParticipant ? otherParticipant.type : ''}">${otherParticipant ? otherParticipant.type : ''}</span>
-                                <span class="convo-time">${timeAgo}</span>
-                            </div>
-                        </div>
-                        <p class="convo-project">
-                            <i class="fas fa-briefcase"></i>
-                            <strong>${convo.jobTitle}</strong>
-                        </p>
-                        <p class="convo-preview">
-                            ${convo.lastMessageBy && convo.lastMessageBy !== appState.currentUser.name ? 
-                                `<strong>${convo.lastMessageBy}:</strong> ` : ''}
-                            ${lastMessage}
-                        </p>
+                        <div class="convo-header"><h4>${otherParticipantName}</h4><div class="convo-meta"><span class="participant-type ${otherParticipant ? otherParticipant.type : ''}">${otherParticipant ? otherParticipant.type : ''}</span><span class="convo-time">${timeAgo}</span></div></div>
+                        <p class="convo-project"><i class="fas fa-briefcase"></i><strong>${convo.jobTitle}</strong></p>
+                        <p class="convo-preview">${convo.lastMessageBy && convo.lastMessageBy !== appState.currentUser.name ? `<strong>${convo.lastMessageBy}:</strong> ` : ''}${lastMessage}</p>
                     </div>
-                    <div class="convo-arrow">
-                        <i class="fas fa-chevron-right"></i>
-                    </div>
-                </div>
-            `;
+                    <div class="convo-arrow"><i class="fas fa-chevron-right"></i></div>
+                </div>`;
         }).join('');
-
         listContainer.innerHTML = conversationsHTML;
     } catch (error) {
-        listContainer.innerHTML = `
-            <div class="error-state premium-error">
-                <div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div>
-                <h3>Error Loading Conversations</h3>
-                <p>Please try again later.</p>
-                <button class="btn btn-primary" onclick="fetchAndRenderConversations()">Retry</button>
-            </div>`;
+        listContainer.innerHTML = `<div class="error-state premium-error"><div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div><h3>Error Loading Conversations</h3><p>Please try again later.</p><button class="btn btn-primary" onclick="fetchAndRenderConversations()">Retry</button></div>`;
     }
 }
 
@@ -1419,7 +923,6 @@ function getTimeAgo(timestamp) {
     const now = new Date();
     const time = timestamp?.toDate ? timestamp.toDate() : new Date(timestamp);
     const diffInMinutes = Math.floor((now - time) / (1000 * 60));
-    
     if (diffInMinutes < 1) return 'Just now';
     if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
     if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
@@ -1446,7 +949,7 @@ async function renderConversationView(conversationOrId) {
             const response = await apiCall('/messages', 'GET');
             appState.conversations = response.data || [];
             conversation = appState.conversations.find(c => c.id === conversation.id);
-        } catch(e) { /* error handled by apiCall */ }
+        } catch(e) {}
         if(!conversation) {
             showNotification('Conversation not found.', 'error');
             return;
@@ -1460,59 +963,28 @@ async function renderConversationView(conversationOrId) {
     container.innerHTML = `
         <div class="chat-container premium-chat">
             <div class="chat-header premium-chat-header">
-                <button onclick="renderAppSection('messages')" class="back-btn premium-back-btn">
-                    <i class="fas fa-arrow-left"></i>
-                </button>
+                <button onclick="renderAppSection('messages')" class="back-btn premium-back-btn"><i class="fas fa-arrow-left"></i></button>
                 <div class="chat-header-info">
-                    <div class="chat-avatar premium-avatar" style="background-color: ${avatarColor}">
-                        ${otherParticipant ? otherParticipant.name.charAt(0).toUpperCase() : '?'}
-                        <div class="online-indicator"></div>
-                    </div>
-                    <div class="chat-details">
-                        <h3>${otherParticipant ? otherParticipant.name : 'Conversation'}</h3>
-                        <p class="chat-project">
-                            <i class="fas fa-briefcase"></i>
-                            ${conversation.jobTitle || ''}
-                        </p>
-                        <span class="chat-status">Active now</span>
-                    </div>
+                    <div class="chat-avatar premium-avatar" style="background-color: ${avatarColor}">${otherParticipant ? otherParticipant.name.charAt(0).toUpperCase() : '?'}<div class="online-indicator"></div></div>
+                    <div class="chat-details"><h3>${otherParticipant ? otherParticipant.name : 'Conversation'}</h3><p class="chat-project"><i class="fas fa-briefcase"></i> ${conversation.jobTitle || ''}</p><span class="chat-status">Active now</span></div>
                 </div>
                 <div class="chat-actions">
-                    <span class="participant-type-badge premium-badge ${otherParticipant ? otherParticipant.type : ''}">
-                        <i class="fas ${otherParticipant && otherParticipant.type === 'designer' ? 'fa-drafting-compass' : 'fa-building'}"></i>
-                        ${otherParticipant ? otherParticipant.type : ''}
-                    </span>
-                    <button class="chat-options-btn">
-                        <i class="fas fa-ellipsis-v"></i>
-                    </button>
+                    <span class="participant-type-badge premium-badge ${otherParticipant ? otherParticipant.type : ''}"><i class="fas ${otherParticipant && otherParticipant.type === 'designer' ? 'fa-drafting-compass' : 'fa-building'}"></i> ${otherParticipant ? otherParticipant.type : ''}</span>
+                    <button class="chat-options-btn"><i class="fas fa-ellipsis-v"></i></button>
                 </div>
             </div>
-            
-            <div class="chat-messages premium-messages" id="chat-messages-container">
-                <div class="loading-messages">
-                    <div class="spinner"></div>
-                    <p>Loading messages...</p>
-                </div>
-            </div>
-            
+            <div class="chat-messages premium-messages" id="chat-messages-container"><div class="loading-messages"><div class="spinner"></div><p>Loading messages...</p></div></div>
             <div class="chat-input-area premium-input-area">
                 <form id="send-message-form" class="message-form premium-message-form">
                     <div class="message-input-container">
-                        <button type="button" class="attachment-btn" title="Add attachment">
-                            <i class="fas fa-paperclip"></i>
-                        </button>
+                        <button type="button" class="attachment-btn" title="Add attachment"><i class="fas fa-paperclip"></i></button>
                         <input type="text" id="message-text-input" placeholder="Type your message..." required autocomplete="off">
-                        <button type="button" class="emoji-btn" title="Add emoji">
-                            <i class="fas fa-smile"></i>
-                        </button>
-                        <button type="submit" class="send-button premium-send-btn" title="Send message">
-                            <i class="fas fa-paper-plane"></i>
-                        </button>
+                        <button type="button" class="emoji-btn" title="Add emoji"><i class="fas fa-smile"></i></button>
+                        <button type="submit" class="send-button premium-send-btn" title="Send message"><i class="fas fa-paper-plane"></i></button>
                     </div>
                 </form>
             </div>
-        </div>
-    `;
+        </div>`;
 
     document.getElementById('send-message-form').addEventListener('submit', (e) => {
         e.preventDefault();
@@ -1525,12 +997,7 @@ async function renderConversationView(conversationOrId) {
         const messages = response.data || [];
         
         if (messages.length === 0) {
-            messagesContainer.innerHTML = `
-                <div class="empty-messages premium-empty-messages">
-                    <div class="empty-icon"><i class="fas fa-comment-dots"></i></div>
-                    <h4>Start the conversation</h4>
-                    <p>Send your first message to begin collaborating on this project.</p>
-                </div>`;
+            messagesContainer.innerHTML = `<div class="empty-messages premium-empty-messages"><div class="empty-icon"><i class="fas fa-comment-dots"></i></div><h4>Start the conversation</h4><p>Send your first message to begin collaborating on this project.</p></div>`;
         } else {
             messagesContainer.innerHTML = messages.map((msg, index) => {
                 const isMine = msg.senderId === appState.currentUser.id;
@@ -1538,38 +1005,20 @@ async function renderConversationView(conversationOrId) {
                 const prevMsg = messages[index - 1];
                 const showAvatar = !prevMsg || prevMsg.senderId !== msg.senderId;
                 const avatarColor = getAvatarColor(msg.senderName);
-                
                 return `
                     <div class="message-wrapper premium-message ${isMine ? 'me' : 'them'}">
-                        ${showAvatar ? `
-                            <div class="message-avatar premium-msg-avatar" style="background-color: ${avatarColor}">
-                                ${msg.senderName.charAt(0).toUpperCase()}
-                            </div>
-                        ` : '<div class="message-avatar-spacer"></div>'}
+                        ${showAvatar ? `<div class="message-avatar premium-msg-avatar" style="background-color: ${avatarColor}">${msg.senderName.charAt(0).toUpperCase()}</div>` : '<div class="message-avatar-spacer"></div>'}
                         <div class="message-content">
                             ${showAvatar && !isMine ? `<div class="message-sender">${msg.senderName}</div>` : ''}
-                            <div class="message-bubble premium-bubble ${isMine ? 'me' : 'them'}">
-                                ${msg.text}
-                                <div class="message-status">
-                                    ${isMine ? '<i class="fas fa-check-double"></i>' : ''}
-                                </div>
-                            </div>
-                            <div class="message-meta">
-                                ${time.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                            </div>
+                            <div class="message-bubble premium-bubble ${isMine ? 'me' : 'them'}">${msg.text}<div class="message-status">${isMine ? '<i class="fas fa-check-double"></i>' : ''}</div></div>
+                            <div class="message-meta">${time.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
                         </div>
-                    </div>
-                `;
+                    </div>`;
             }).join('');
         }
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
     } catch (error) {
-        messagesContainer.innerHTML = `
-            <div class="error-messages premium-error-messages">
-                <div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div>
-                <h4>Error loading messages</h4>
-                <p>Please try again later.</p>
-            </div>`;
+        messagesContainer.innerHTML = `<div class="error-messages premium-error-messages"><div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div><h4>Error loading messages</h4><p>Please try again later.</p></div>`;
     }
 }
 
@@ -1578,53 +1027,30 @@ async function handleSendMessage(conversationId) {
     const sendBtn = document.querySelector('.send-button');
     const text = input.value.trim();
     if (!text) return;
-
-    // Disable input and show sending state
     input.disabled = true;
     sendBtn.disabled = true;
     sendBtn.innerHTML = '<div class="btn-spinner"></div>';
-
     try {
         const response = await apiCall(`/messages/${conversationId}/messages`, 'POST', { text });
         input.value = '';
-        
         const messagesContainer = document.getElementById('chat-messages-container');
         const newMessage = response.data;
-        
-        // Remove empty state if it exists
         if(messagesContainer.querySelector('.empty-messages')) {
             messagesContainer.innerHTML = '';
         }
-        
         const messageBubble = document.createElement('div');
         messageBubble.className = 'message-wrapper premium-message me';
         const time = newMessage.createdAt?.toDate ? newMessage.createdAt.toDate() : new Date(newMessage.createdAt);
         const avatarColor = getAvatarColor(newMessage.senderName);
-        
         messageBubble.innerHTML = `
-            <div class="message-avatar premium-msg-avatar" style="background-color: ${avatarColor}">
-                ${newMessage.senderName.charAt(0).toUpperCase()}
-            </div>
+            <div class="message-avatar premium-msg-avatar" style="background-color: ${avatarColor}">${newMessage.senderName.charAt(0).toUpperCase()}</div>
             <div class="message-content">
-                <div class="message-bubble premium-bubble me">
-                    ${newMessage.text}
-                    <div class="message-status">
-                        <i class="fas fa-check-double"></i>
-                    </div>
-                </div>
-                <div class="message-meta">
-                    ${time.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                </div>
-            </div>
-        `;
-        
+                <div class="message-bubble premium-bubble me">${newMessage.text}<div class="message-status"><i class="fas fa-check-double"></i></div></div>
+                <div class="message-meta">${time.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+            </div>`;
         messagesContainer.appendChild(messageBubble);
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        
-    } catch(error) {
-        // Error handled by apiCall
-    } finally {
-        // Re-enable input
+    } catch(error) {} finally {
         input.disabled = false;
         sendBtn.disabled = false;
         sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
@@ -1639,9 +1065,7 @@ function showAuthModal(view) {
         modalContainer.innerHTML = `
             <div class="modal-overlay premium-overlay">
                 <div class="modal-content premium-modal" onclick="event.stopPropagation()">
-                    <button class="modal-close-button premium-close" onclick="closeModal()">
-                        <i class="fas fa-times"></i>
-                    </button>
+                    <button class="modal-close-button premium-close" onclick="closeModal()"><i class="fas fa-times"></i></button>
                     <div id="modal-form-container"></div>
                 </div>
             </div>`;
@@ -1665,9 +1089,7 @@ function showGenericModal(innerHTML, style = '') {
         modalContainer.innerHTML = `
             <div class="modal-overlay premium-overlay">
                 <div class="modal-content premium-modal" style="${style}" onclick="event.stopPropagation()">
-                    <button class="modal-close-button premium-close" onclick="closeModal()">
-                        <i class="fas fa-times"></i>
-                    </button>
+                    <button class="modal-close-button premium-close" onclick="closeModal()"><i class="fas fa-times"></i></button>
                     ${innerHTML}
                 </div>
             </div>`;
@@ -1684,28 +1106,40 @@ function showAppView() {
     document.getElementById('landing-page-content').style.display = 'none';
     document.getElementById('app-content').style.display = 'flex';
     document.getElementById('auth-buttons-container').style.display = 'none';
-    document.getElementById('user-info').style.display = 'flex';
+    document.getElementById('user-info-container').style.display = 'flex';
     
     const navMenu = document.getElementById('main-nav-menu');
     if (navMenu) navMenu.innerHTML = '';
     
     const user = appState.currentUser;
-    document.getElementById('userName').textContent = user.name;
-    document.getElementById('userType').textContent = user.type;
-    document.getElementById('userAvatar').textContent = (user.name || "A").charAt(0).toUpperCase();
+    document.getElementById('user-info-name').textContent = user.name;
+    document.getElementById('user-info-avatar').textContent = (user.name || "A").charAt(0).toUpperCase();
+    
+    // Setup user dropdown
+    document.getElementById('user-settings-link').addEventListener('click', (e) => {
+        e.preventDefault();
+        renderAppSection('settings');
+        document.getElementById('user-info-dropdown').classList.remove('active');
+    });
+    document.getElementById('user-logout-link').addEventListener('click', (e) => {
+        e.preventDefault();
+        logout();
+    });
+     document.getElementById('user-info').addEventListener('click', () => {
+        document.getElementById('user-info-dropdown').classList.toggle('active');
+    });
+
     document.getElementById('sidebarUserName').textContent = user.name;
     document.getElementById('sidebarUserType').textContent = user.type;
     document.getElementById('sidebarUserAvatar').textContent = (user.name || "A").charAt(0).toUpperCase();
     
     buildSidebarNav();
-    renderAppSection('jobs');
+    // **MODIFICATION**: Default to dashboard instead of jobs
+    renderAppSection('dashboard');
     
-    // Load user quotes for tracking if designer
     if (user.type === 'designer') {
         loadUserQuotes();
     }
-    
-    // Load user estimations if contractor
     if (user.type === 'contractor') {
         loadUserEstimations();
     }
@@ -1715,7 +1149,7 @@ function showLandingPageView() {
     document.getElementById('landing-page-content').style.display = 'block';
     document.getElementById('app-content').style.display = 'none';
     document.getElementById('auth-buttons-container').style.display = 'flex';
-    document.getElementById('user-info').style.display = 'none';
+    document.getElementById('user-info-container').style.display = 'none';
     
     const navMenu = document.getElementById('main-nav-menu');
     if (navMenu) {
@@ -1729,40 +1163,24 @@ function showLandingPageView() {
 function buildSidebarNav() {
     const navContainer = document.getElementById('sidebar-nav-menu');
     const role = appState.currentUser.type;
-    let links = (role === 'designer')
-        ? `<a href="#" class="sidebar-nav-link" data-section="jobs">
-             <i class="fas fa-search fa-fw"></i> 
-             <span>Find Projects</span>
-           </a>
-           <a href="#" class="sidebar-nav-link" data-section="my-quotes">
-             <i class="fas fa-file-invoice-dollar fa-fw"></i> 
-             <span>My Quotes</span>
-           </a>`
-        : `<a href="#" class="sidebar-nav-link" data-section="jobs">
-             <i class="fas fa-tasks fa-fw"></i> 
-             <span>My Projects</span>
-           </a>
-           <a href="#" class="sidebar-nav-link" data-section="approved-jobs">
-             <i class="fas fa-check-circle fa-fw"></i> 
-             <span>Approved Projects</span>
-           </a>
-           <a href="#" class="sidebar-nav-link" data-section="post-job">
-             <i class="fas fa-plus-circle fa-fw"></i> 
-             <span>Post Project</span>
-           </a>
-           <a href="#" class="sidebar-nav-link" data-section="estimation-tool">
-             <i class="fas fa-calculator fa-fw"></i> 
-             <span>AI Cost Estimation</span>
-           </a>
-           <a href="#" class="sidebar-nav-link" data-section="my-estimations">
-             <i class="fas fa-file-invoice fa-fw"></i> 
-             <span>My Estimations</span>
-           </a>`;
+    let links = `<a href="#" class="sidebar-nav-link" data-section="dashboard"><i class="fas fa-tachometer-alt fa-fw"></i><span>Dashboard</span></a>`;
+
+    if (role === 'designer') {
+        links += `
+           <a href="#" class="sidebar-nav-link" data-section="jobs"><i class="fas fa-search fa-fw"></i><span>Find Projects</span></a>
+           <a href="#" class="sidebar-nav-link" data-section="my-quotes"><i class="fas fa-file-invoice-dollar fa-fw"></i><span>My Quotes</span></a>`;
+    } else {
+        links += `
+           <a href="#" class="sidebar-nav-link" data-section="jobs"><i class="fas fa-tasks fa-fw"></i><span>My Projects</span></a>
+           <a href="#" class="sidebar-nav-link" data-section="approved-jobs"><i class="fas fa-check-circle fa-fw"></i><span>Approved Projects</span></a>
+           <a href="#" class="sidebar-nav-link" data-section="post-job"><i class="fas fa-plus-circle fa-fw"></i><span>Post Project</span></a>
+           <a href="#" class="sidebar-nav-link" data-section="estimation-tool"><i class="fas fa-calculator fa-fw"></i><span>AI Cost Estimation</span></a>
+           <a href="#" class="sidebar-nav-link" data-section="my-estimations"><i class="fas fa-file-invoice fa-fw"></i><span>My Estimations</span></a>`;
+    }
     
-    links += `<a href="#" class="sidebar-nav-link" data-section="messages">
-              <i class="fas fa-comments fa-fw"></i> 
-              <span>Messages</span>
-            </a>`;
+    links += `<a href="#" class="sidebar-nav-link" data-section="messages"><i class="fas fa-comments fa-fw"></i><span>Messages</span></a>`;
+    links += `<hr class="sidebar-divider">`;
+    links += `<a href="#" class="sidebar-nav-link" data-section="settings"><i class="fas fa-cog fa-fw"></i><span>Settings</span></a>`;
 
     navContainer.innerHTML = links;
     navContainer.querySelectorAll('.sidebar-nav-link').forEach(link => {
@@ -1780,16 +1198,16 @@ function renderAppSection(sectionId) {
     });
     
     const userRole = appState.currentUser.type;
-    if (sectionId === 'jobs') {
+    if (sectionId === 'dashboard') {
+        container.innerHTML = getDashboardTemplate(appState.currentUser);
+        renderRecentActivityWidgets();
+    } else if (sectionId === 'jobs') {
         const title = userRole === 'designer' ? 'Available Projects' : 'My Posted Projects';
         const subtitle = userRole === 'designer' ? 'Browse and submit quotes for engineering projects' : 'Manage your project listings and review quotes';
         container.innerHTML = `
             ${userRole === 'contractor' ? '<div id="dynamic-feature-header" class="dynamic-feature-header"></div>' : ''}
             <div class="section-header modern-header">
-                <div class="header-content">
-                    <h2><i class="fas ${userRole === 'designer' ? 'fa-search' : 'fa-tasks'}"></i> ${title}</h2>
-                    <p class="header-subtitle">${subtitle}</p>
-                </div>
+                <div class="header-content"><h2><i class="fas ${userRole === 'designer' ? 'fa-search' : 'fa-tasks'}"></i> ${title}</h2><p class="header-subtitle">${subtitle}</p></div>
             </div>
             <div id="jobs-list" class="jobs-grid"></div>
             <div id="load-more-container" class="load-more-section"></div>`;
@@ -1809,6 +1227,67 @@ function renderAppSection(sectionId) {
         setupEstimationToolEventListeners();
     } else if (sectionId === 'my-estimations') {
         fetchAndRenderMyEstimations();
+    } else if (sectionId === 'settings') {
+        container.innerHTML = getSettingsTemplate(appState.currentUser);
+    }
+}
+
+// --- NEW: RENDER DASHBOARD WIDGETS ---
+async function renderRecentActivityWidgets() {
+    const user = appState.currentUser;
+    const recentProjectsContainer = document.getElementById('recent-projects-widget');
+    const recentQuotesContainer = document.getElementById('recent-quotes-widget');
+    
+    if (user.type === 'contractor') {
+        if(recentProjectsContainer) recentProjectsContainer.innerHTML = '<div class="widget-loader"><div class="spinner"></div></div>';
+        try {
+            const endpoint = `/jobs/user/${user.id}?limit=3`;
+            const response = await apiCall(endpoint, 'GET');
+            const recentJobs = (response.data || []).slice(0, 3);
+            if (recentJobs.length > 0) {
+                recentProjectsContainer.innerHTML = recentJobs.map(job => `
+                    <div class="widget-list-item">
+                        <div class="widget-item-info">
+                            <i class="fas fa-briefcase widget-item-icon"></i>
+                            <div>
+                                <p class="widget-item-title">${job.title}</p>
+                                <span class="widget-item-meta">Budget: ${job.budget}</span>
+                            </div>
+                        </div>
+                        <span class="widget-item-status ${job.status}">${job.status}</span>
+                    </div>
+                `).join('');
+            } else {
+                recentProjectsContainer.innerHTML = '<p class="widget-empty-text">No recent projects found.</p>';
+            }
+        } catch(e) {
+            recentProjectsContainer.innerHTML = '<p class="widget-empty-text">Could not load projects.</p>';
+        }
+    } else if (user.type === 'designer') {
+        if(recentQuotesContainer) recentQuotesContainer.innerHTML = '<div class="widget-loader"><div class="spinner"></div></div>';
+        try {
+            const endpoint = `/quotes/user/${user.id}?limit=3`;
+            const response = await apiCall(endpoint, 'GET');
+            const recentQuotes = (response.data || []).slice(0, 3);
+             if (recentQuotes.length > 0) {
+                recentQuotesContainer.innerHTML = recentQuotes.map(quote => `
+                    <div class="widget-list-item">
+                         <div class="widget-item-info">
+                            <i class="fas fa-file-invoice-dollar widget-item-icon"></i>
+                            <div>
+                                <p class="widget-item-title">Quote for: ${quote.jobTitle}</p>
+                                <span class="widget-item-meta">Amount: ${quote.quoteAmount}</span>
+                            </div>
+                        </div>
+                        <span class="widget-item-status ${quote.status}">${quote.status}</span>
+                    </div>
+                `).join('');
+            } else {
+                recentQuotesContainer.innerHTML = '<p class="widget-empty-text">No recent quotes found.</p>';
+            }
+        } catch(e) {
+            recentQuotesContainer.innerHTML = '<p class="widget-empty-text">Could not load quotes.</p>';
+        }
     }
 }
 
@@ -1819,68 +1298,40 @@ function setupEstimationToolEventListeners() {
     
     if (uploadArea) {
         uploadArea.addEventListener('click', () => fileInput.click());
-        
-        uploadArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            uploadArea.classList.add('drag-over');
-        });
-
-        uploadArea.addEventListener('dragleave', () => {
-            uploadArea.classList.remove('drag-over');
-        });
-
+        uploadArea.addEventListener('dragover', (e) => { e.preventDefault(); uploadArea.classList.add('drag-over'); });
+        uploadArea.addEventListener('dragleave', () => { uploadArea.classList.remove('drag-over'); });
         uploadArea.addEventListener('drop', (e) => {
             e.preventDefault();
             uploadArea.classList.remove('drag-over');
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                handleFileSelect(files);
-            }
+            if (e.dataTransfer.files.length > 0) handleFileSelect(e.dataTransfer.files);
         });
     }
 
     if (fileInput) {
         fileInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) {
-                handleFileSelect(e.target.files);
-            }
+            if (e.target.files.length > 0) handleFileSelect(e.target.files);
         });
     }
 
     const submitBtn = document.getElementById('submit-estimation-btn');
-    if (submitBtn) {
-        submitBtn.addEventListener('click', handleEstimationSubmit);
-    }
+    if (submitBtn) submitBtn.addEventListener('click', handleEstimationSubmit);
 }
 
 function handleFileSelect(files) {
     const fileList = document.getElementById('selected-files-list');
     const submitBtn = document.getElementById('submit-estimation-btn');
-    
     appState.uploadedFile = files;
-    
     let filesHTML = '';
     for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const fileSize = (file.size / 1024 / 1024).toFixed(2);
         const fileType = file.type === 'application/pdf' ? 'fa-file-pdf' : 'fa-file';
-        
         filesHTML += `
             <div class="selected-file-item">
-                <div class="file-info">
-                    <i class="fas ${fileType}"></i>
-                    <div class="file-details">
-                        <span class="file-name">${file.name}</span>
-                        <span class="file-size">${fileSize} MB</span>
-                    </div>
-                </div>
-                <button type="button" class="remove-file-btn" onclick="removeFile(${i})">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-        `;
+                <div class="file-info"><i class="fas ${fileType}"></i><div class="file-details"><span class="file-name">${file.name}</span><span class="file-size">${fileSize} MB</span></div></div>
+                <button type="button" class="remove-file-btn" onclick="removeFile(${i})"><i class="fas fa-times"></i></button>
+            </div>`;
     }
-    
     fileList.innerHTML = filesHTML;
     document.getElementById('file-info-container').style.display = 'block';
     submitBtn.disabled = false;
@@ -1888,7 +1339,6 @@ function handleFileSelect(files) {
 }
 
 function removeFile(index) {
-    // Convert FileList to Array, remove item, and update
     const filesArray = Array.from(appState.uploadedFile);
     filesArray.splice(index, 1);
     
@@ -1897,7 +1347,6 @@ function removeFile(index) {
         document.getElementById('file-info-container').style.display = 'none';
         document.getElementById('submit-estimation-btn').disabled = true;
     } else {
-        // Create new FileList-like object
         const dt = new DataTransfer();
         filesArray.forEach(file => dt.items.add(file));
         appState.uploadedFile = dt.files;
@@ -1913,10 +1362,8 @@ async function handleEstimationSubmit() {
         showNotification('Please select files for estimation', 'warning');
         return;
     }
-
     const projectTitle = form.projectTitle.value.trim();
     const description = form.description.value.trim();
-    
     if (!projectTitle || !description) {
         showNotification('Please fill in all required fields', 'warning');
         return;
@@ -1931,22 +1378,14 @@ async function handleEstimationSubmit() {
         formData.append('description', description);
         formData.append('contractorName', appState.currentUser.name);
         formData.append('contractorEmail', appState.currentUser.email);
-
-        // Append all selected files
         for (let i = 0; i < appState.uploadedFile.length; i++) {
             formData.append('files', appState.uploadedFile[i]);
         }
-
         await apiCall('/estimation/contractor/submit', 'POST', formData, 'Estimation request submitted successfully!');
-        
-        // Reset form
         form.reset();
         appState.uploadedFile = null;
         document.getElementById('file-info-container').style.display = 'none';
-        
-        // Navigate to my estimations
         renderAppSection('my-estimations');
-
     } catch (error) {
         console.error('Estimation submission failed:', error);
     } finally {
@@ -1959,30 +1398,13 @@ async function handleEstimationSubmit() {
 function showNotification(message, type = 'info', duration = 4000) {
     const notificationContainer = document.getElementById('notification-container');
     if (!notificationContainer) return;
-    
     const notification = document.createElement('div');
     notification.className = `notification premium-notification notification-${type}`;
-    
-    const icons = {
-        success: 'fa-check-circle',
-        error: 'fa-exclamation-triangle',
-        warning: 'fa-exclamation-circle',
-        info: 'fa-info-circle'
-    };
-    
+    const icons = { success: 'fa-check-circle', error: 'fa-exclamation-triangle', warning: 'fa-exclamation-circle', info: 'fa-info-circle' };
     notification.innerHTML = `
-        <div class="notification-content">
-            <i class="fas ${icons[type]}"></i>
-            <span>${message}</span>
-        </div>
-        <button class="notification-close" onclick="this.parentElement.remove()">
-            <i class="fas fa-times"></i>
-        </button>
-    `;
-    
+        <div class="notification-content"><i class="fas ${icons[type]}"></i><span>${message}</span></div>
+        <button class="notification-close" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>`;
     notificationContainer.appendChild(notification);
-    
-    // Auto-remove after duration
     setTimeout(() => {
         if (notification.parentElement) {
             notification.style.opacity = '0';
@@ -2001,851 +1423,437 @@ function showAlert(message, type = 'info') {
 function getLoginTemplate() {
     return `
         <div class="auth-header premium-auth-header">
-            <div class="auth-logo">
-                <i class="fas fa-drafting-compass"></i>
-            </div>
-            <h2>Welcome Back</h2>
-            <p>Sign in to your SteelConnect account</p>
+            <div class="auth-logo"><i class="fas fa-drafting-compass"></i></div>
+            <h2>Welcome Back</h2><p>Sign in to your SteelConnect account</p>
         </div>
         <form id="login-form" class="premium-form">
-            <div class="form-group">
-                <label class="form-label">
-                    <i class="fas fa-envelope"></i> Email Address
-                </label>
-                <input type="email" class="form-input premium-input" name="loginEmail" required placeholder="Enter your email">
-            </div>
-            <div class="form-group">
-                <label class="form-label">
-                    <i class="fas fa-lock"></i> Password
-                </label>
-                <input type="password" class="form-input premium-input" name="loginPassword" required placeholder="Enter your password">
-            </div>
-            <button type="submit" class="btn btn-primary btn-full premium-btn">
-                <i class="fas fa-sign-in-alt"></i> Sign In
-            </button>
+            <div class="form-group"><label class="form-label"><i class="fas fa-envelope"></i> Email Address</label><input type="email" class="form-input premium-input" name="loginEmail" required placeholder="Enter your email"></div>
+            <div class="form-group"><label class="form-label"><i class="fas fa-lock"></i> Password</label><input type="password" class="form-input premium-input" name="loginPassword" required placeholder="Enter your password"></div>
+            <button type="submit" class="btn btn-primary btn-full premium-btn"><i class="fas fa-sign-in-alt"></i> Sign In</button>
         </form>
-        <div class="auth-switch">
-            Don't have an account? 
-            <a onclick="renderAuthForm('register')" class="auth-link">Create Account</a>
-        </div>`;
+        <div class="auth-switch">Don't have an account? <a onclick="renderAuthForm('register')" class="auth-link">Create Account</a></div>`;
 }
 
 function getRegisterTemplate() {
     return `
         <div class="auth-header premium-auth-header">
-            <div class="auth-logo">
-                <i class="fas fa-drafting-compass"></i>
-            </div>
-            <h2>Join SteelConnect</h2>
-            <p>Create your professional account</p>
+            <div class="auth-logo"><i class="fas fa-drafting-compass"></i></div>
+            <h2>Join SteelConnect</h2><p>Create your professional account</p>
         </div>
         <form id="register-form" class="premium-form">
-            <div class="form-group">
-                <label class="form-label">
-                    <i class="fas fa-user"></i> Full Name
-                </label>
-                <input type="text" class="form-input premium-input" name="regName" required placeholder="Enter your full name">
-            </div>
-            <div class="form-group">
-                <label class="form-label">
-                    <i class="fas fa-envelope"></i> Email Address
-                </label>
-                <input type="email" class="form-input premium-input" name="regEmail" required placeholder="Enter your email">
-            </div>
-            <div class="form-group">
-                <label class="form-label">
-                    <i class="fas fa-lock"></i> Password
-                </label>
-                <input type="password" class="form-input premium-input" name="regPassword" required placeholder="Create a strong password">
-            </div>
-            <div class="form-group">
-                <label class="form-label">
-                    <i class="fas fa-user-tag"></i> I am a...
-                </label>
-                <select class="form-select premium-select" name="regRole" required>
-                    <option value="" disabled selected>Select your role</option>
-                    <option value="contractor">Client / Contractor</option>
-                    <option value="designer">Designer / Engineer</option>
-                </select>
-            </div>
-            <button type="submit" class="btn btn-primary btn-full premium-btn">
-                <i class="fas fa-user-plus"></i> Create Account
-            </button>
+            <div class="form-group"><label class="form-label"><i class="fas fa-user"></i> Full Name</label><input type="text" class="form-input premium-input" name="regName" required placeholder="Enter your full name"></div>
+            <div class="form-group"><label class="form-label"><i class="fas fa-envelope"></i> Email Address</label><input type="email" class="form-input premium-input" name="regEmail" required placeholder="Enter your email"></div>
+            <div class="form-group"><label class="form-label"><i class="fas fa-lock"></i> Password</label><input type="password" class="form-input premium-input" name="regPassword" required placeholder="Create a strong password"></div>
+            <div class="form-group"><label class="form-label"><i class="fas fa-user-tag"></i> I am a...</label><select class="form-select premium-select" name="regRole" required><option value="" disabled selected>Select your role</option><option value="contractor">Client / Contractor</option><option value="designer">Designer / Engineer</option></select></div>
+            <button type="submit" class="btn btn-primary btn-full premium-btn"><i class="fas fa-user-plus"></i> Create Account</button>
         </form>
-        <div class="auth-switch">
-            Already have an account? 
-            <a onclick="renderAuthForm('login')" class="auth-link">Sign In</a>
-        </div>`;
+        <div class="auth-switch">Already have an account? <a onclick="renderAuthForm('login')" class="auth-link">Sign In</a></div>`;
 }
 
 function getPostJobTemplate() {
     return `
         <div id="dynamic-feature-header" class="dynamic-feature-header"></div>
         <div class="section-header modern-header">
-            <div class="header-content">
-                <h2><i class="fas fa-plus-circle"></i> Post a New Project</h2>
-                <p class="header-subtitle">Create a detailed project listing to attract qualified professionals</p>
-            </div>
+            <div class="header-content"><h2><i class="fas fa-plus-circle"></i> Post a New Project</h2><p class="header-subtitle">Create a detailed project listing to attract qualified professionals</p></div>
         </div>
-        
         <div class="post-job-container premium-container">
             <form id="post-job-form" class="premium-form post-job-form">
                 <div class="form-section premium-section">
                     <h3><i class="fas fa-info-circle"></i> Project Details</h3>
-                    
-                    <div class="form-group">
-                        <label class="form-label">
-                            <i class="fas fa-heading"></i> Project Title
-                        </label>
-                        <input type="text" class="form-input premium-input" name="title" required 
-                               placeholder="e.g., Structural Steel Design for Warehouse Extension">
-                    </div>
-                    
+                    <div class="form-group"><label class="form-label"><i class="fas fa-heading"></i> Project Title</label><input type="text" class="form-input premium-input" name="title" required placeholder="e.g., Structural Steel Design for Warehouse"></div>
                     <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label">
-                                <i class="fas fa-dollar-sign"></i> Budget Range
-                            </label>
-                            <input type="text" class="form-input premium-input" name="budget" required 
-                                   placeholder="e.g., $5,000 - $10,000">
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label">
-                                <i class="fas fa-calendar-alt"></i> Project Deadline
-                            </label>
-                            <input type="date" class="form-input premium-input" name="deadline" required>
-                        </div>
+                        <div class="form-group"><label class="form-label"><i class="fas fa-dollar-sign"></i> Budget Range</label><input type="text" class="form-input premium-input" name="budget" required placeholder="e.g., $5,000 - $10,000"></div>
+                        <div class="form-group"><label class="form-label"><i class="fas fa-calendar-alt"></i> Project Deadline</label><input type="date" class="form-input premium-input" name="deadline" required></div>
                     </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label">
-                            <i class="fas fa-tools"></i> Required Skills
-                        </label>
-                        <input type="text" class="form-input premium-input" name="skills" 
-                               placeholder="e.g., AutoCAD, Revit, Structural Analysis, Steel Design">
-                        <small class="form-help">Separate skills with commas</small>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label">
-                            <i class="fas fa-external-link-alt"></i> Project Link (Optional)
-                        </label>
-                        <input type="url" class="form-input premium-input" name="link" 
-                               placeholder="https://example.com/project-details">
-                        <small class="form-help">Link to additional project information or resources</small>
-                    </div>
+                    <div class="form-group"><label class="form-label"><i class="fas fa-tools"></i> Required Skills</label><input type="text" class="form-input premium-input" name="skills" placeholder="e.g., AutoCAD, Revit, Structural Analysis"><small class="form-help">Separate skills with commas</small></div>
+                    <div class="form-group"><label class="form-label"><i class="fas fa-external-link-alt"></i> Project Link (Optional)</label><input type="url" class="form-input premium-input" name="link" placeholder="https://example.com/project-details"><small class="form-help">Link to additional project information</small></div>
                 </div>
-                
                 <div class="form-section premium-section">
                     <h3><i class="fas fa-file-alt"></i> Project Description</h3>
-                    
-                    <div class="form-group">
-                        <label class="form-label">
-                            <i class="fas fa-align-left"></i> Detailed Description
-                        </label>
-                        <textarea class="form-textarea premium-textarea" name="description" required 
-                                  placeholder="Provide a comprehensive description of your project including:
-• Project scope and objectives
-• Technical requirements
-• Deliverables expected
-• Any specific standards or codes to follow
-• Timeline and milestones"></textarea>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label">
-                            <i class="fas fa-paperclip"></i> Project Attachments
-                        </label>
-                        <input type="file" class="form-input file-input premium-file-input" name="attachment" 
-                               accept=".pdf,.doc,.docx,.dwg,.jpg,.jpeg,.png">
-                        <small class="form-help">Upload drawings, specifications, or reference documents (Max 10MB)</small>
-                    </div>
+                    <div class="form-group"><label class="form-label"><i class="fas fa-align-left"></i> Detailed Description</label><textarea class="form-textarea premium-textarea" name="description" required placeholder="Provide a comprehensive description of your project..."></textarea></div>
+                    <div class="form-group"><label class="form-label"><i class="fas fa-paperclip"></i> Project Attachments</label><input type="file" class="form-input file-input premium-file-input" name="attachment" accept=".pdf,.doc,.docx,.dwg,.jpg,.jpeg,.png"><small class="form-help">Upload drawings or specifications (Max 10MB)</small></div>
                 </div>
-                
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary btn-large premium-btn">
-                        <i class="fas fa-rocket"></i> Post Project
-                    </button>
-                </div>
+                <div class="form-actions"><button type="submit" class="btn btn-primary btn-large premium-btn"><i class="fas fa-rocket"></i> Post Project</button></div>
             </form>
         </div>`;
 }
 
-// --- ENHANCED ESTIMATION TOOL TEMPLATE ---
 function getEstimationToolTemplate() {
     return `
         <div id="dynamic-feature-header" class="dynamic-feature-header"></div>
         <div class="section-header modern-header">
-            <div class="header-content">
-                <h2><i class="fas fa-calculator"></i> AI-Powered Cost Estimation</h2>
-                <p class="header-subtitle">Upload your structural drawings and project details to get instant, accurate cost estimates</p>
-            </div>
+            <div class="header-content"><h2><i class="fas fa-calculator"></i> AI-Powered Cost Estimation</h2><p class="header-subtitle">Upload your structural drawings to get instant, accurate cost estimates</p></div>
         </div>
-
         <div class="estimation-tool-container premium-estimation-container">
             <div class="estimation-steps">
-                <div class="step active">
-                    <div class="step-number">1</div>
-                    <div class="step-content">
-                        <h4>Upload Files</h4>
-                        <p>Add your project drawings and documents</p>
-                    </div>
-                </div>
-                <div class="step">
-                    <div class="step-number">2</div>
-                    <div class="step-content">
-                        <h4>Project Details</h4>
-                        <p>Describe your project requirements</p>
-                    </div>
-                </div>
-                <div class="step">
-                    <div class="step-number">3</div>
-                    <div class="step-content">
-                        <h4>Get Estimate</h4>
-                        <p>Receive detailed cost breakdown</p>
-                    </div>
-                </div>
+                <div class="step active"><div class="step-number">1</div><div class="step-content"><h4>Upload Files</h4><p>Add your project drawings</p></div></div>
+                <div class="step"><div class="step-number">2</div><div class="step-content"><h4>Project Details</h4><p>Describe your requirements</p></div></div>
+                <div class="step"><div class="step-number">3</div><div class="step-content"><h4>Get Estimate</h4><p>Receive detailed cost breakdown</p></div></div>
             </div>
-
             <form id="estimation-form" class="premium-estimation-form">
                 <div class="form-section premium-section">
                     <h3><i class="fas fa-upload"></i> Upload Project Files</h3>
-                    
                     <div class="file-upload-section premium-upload-section">
                         <div id="file-upload-area" class="file-upload-area premium-upload-area">
                             <input type="file" id="file-upload-input" accept=".pdf,.dwg,.doc,.docx,.jpg,.jpeg,.png" multiple />
                             <div class="upload-content">
-                                <div class="file-upload-icon">
-                                    <i class="fas fa-cloud-upload-alt"></i>
-                                </div>
-                                <h3>Drag & Drop Your Files Here</h3>
-                                <p>or click to browse your computer</p>
-                                <div class="supported-formats">
-                                    <span class="format-badge">PDF</span>
-                                    <span class="format-badge">DWG</span>
-                                    <span class="format-badge">DOC</span>
-                                    <span class="format-badge">Images</span>
-                                </div>
+                                <div class="file-upload-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+                                <h3>Drag & Drop Your Files Here</h3><p>or click to browse</p>
+                                <div class="supported-formats"><span class="format-badge">PDF</span><span class="format-badge">DWG</span><span class="format-badge">DOC</span><span class="format-badge">Images</span></div>
                                 <small class="upload-limit">Maximum 10 files, 15MB each</small>
                             </div>
                         </div>
-
-                        <div id="file-info-container" class="selected-files-container" style="display: none;">
-                            <h4><i class="fas fa-files"></i> Selected Files</h4>
-                            <div id="selected-files-list" class="selected-files-list"></div>
-                        </div>
+                        <div id="file-info-container" class="selected-files-container" style="display: none;"><h4><i class="fas fa-files"></i> Selected Files</h4><div id="selected-files-list" class="selected-files-list"></div></div>
                     </div>
                 </div>
-
                 <div class="form-section premium-section">
                     <h3><i class="fas fa-info-circle"></i> Project Information</h3>
-                    
-                    <div class="form-group">
-                        <label class="form-label">
-                            <i class="fas fa-heading"></i> Project Title
-                        </label>
-                        <input type="text" class="form-input premium-input" name="projectTitle" required 
-                               placeholder="e.g., Commercial Building Steel Framework Estimation">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label">
-                            <i class="fas fa-file-alt"></i> Project Description
-                        </label>
-                        <textarea class="form-textarea premium-textarea" name="description" required 
-                                  placeholder="Describe your project in detail:
-• Building type and size
-• Structural requirements
-• Location and site conditions
-• Special considerations
-• Timeline requirements"></textarea>
-                    </div>
+                    <div class="form-group"><label class="form-label"><i class="fas fa-heading"></i> Project Title</label><input type="text" class="form-input premium-input" name="projectTitle" required placeholder="e.g., Commercial Building Steel Framework"></div>
+                    <div class="form-group"><label class="form-label"><i class="fas fa-file-alt"></i> Project Description</label><textarea class="form-textarea premium-textarea" name="description" required placeholder="Describe your project in detail..."></textarea></div>
                 </div>
-
                 <div class="estimation-features">
-                    <div class="feature-item">
-                        <i class="fas fa-robot"></i>
-                        <div>
-                            <h4>AI-Powered Analysis</h4>
-                            <p>Advanced machine learning algorithms analyze your drawings</p>
-                        </div>
-                    </div>
-                    <div class="feature-item">
-                        <i class="fas fa-chart-line"></i>
-                        <div>
-                            <h4>Detailed Breakdown</h4>
-                            <p>Get itemized costs for materials, labor, and logistics</p>
-                        </div>
-                    </div>
-                    <div class="feature-item">
-                        <i class="fas fa-clock"></i>
-                        <div>
-                            <h4>Instant Results</h4>
-                            <p>Receive your estimation within minutes, not days</p>
-                        </div>
-                    </div>
+                    <div class="feature-item"><i class="fas fa-robot"></i><div><h4>AI-Powered Analysis</h4><p>Advanced algorithms analyze your drawings</p></div></div>
+                    <div class="feature-item"><i class="fas fa-chart-line"></i><div><h4>Detailed Breakdown</h4><p>Get itemized costs for materials, labor, and logistics</p></div></div>
+                    <div class="feature-item"><i class="fas fa-clock"></i><div><h4>Instant Results</h4><p>Receive your estimation within minutes</p></div></div>
                 </div>
-
                 <div class="form-actions estimation-actions">
-                    <button type="button" id="submit-estimation-btn" class="btn btn-primary btn-large premium-btn" disabled>
-                        <i class="fas fa-paper-plane"></i> Submit Estimation Request
-                    </button>
-                    <p class="estimation-note">
-                        <i class="fas fa-info-circle"></i>
-                        Our expert team will review your submission and provide a detailed cost analysis within 24 hours.
-                    </p>
+                    <button type="button" id="submit-estimation-btn" class="btn btn-primary btn-large premium-btn" disabled><i class="fas fa-paper-plane"></i> Submit Estimation Request</button>
+                    <p class="estimation-note"><i class="fas fa-info-circle"></i> Our expert team will review your submission and provide a detailed cost analysis.</p>
                 </div>
             </form>
         </div>`;
 }
+
+// --- NEW TEMPLATES FOR DASHBOARD AND SETTINGS ---
+
+function getDashboardTemplate(user) {
+    const isContractor = user.type === 'contractor';
+    const name = user.name.split(' ')[0];
+
+    // Contractor specific elements
+    const contractorQuickActions = `
+        <div class="quick-action-card" onclick="renderAppSection('post-job')">
+            <i class="fas fa-plus-circle card-icon"></i>
+            <h3>Create New Project</h3>
+            <p>Post a new listing for designers to quote on.</p>
+        </div>
+        <div class="quick-action-card" onclick="renderAppSection('jobs')">
+            <i class="fas fa-tasks card-icon"></i>
+            <h3>My Projects</h3>
+            <p>View and manage all your active projects.</p>
+        </div>
+        <div class="quick-action-card" onclick="renderAppSection('estimation-tool')">
+            <i class="fas fa-calculator card-icon"></i>
+            <h3>AI Estimation</h3>
+            <p>Get instant cost estimates for your drawings.</p>
+        </div>
+        <div class="quick-action-card" onclick="renderAppSection('approved-jobs')">
+            <i class="fas fa-check-circle card-icon"></i>
+            <h3>Approved Projects</h3>
+            <p>Track progress and communicate on assigned work.</p>
+        </div>`;
+    
+    const contractorWidgets = `
+        <div class="widget-card">
+            <h3><i class="fas fa-history"></i> Recent Projects</h3>
+            <div id="recent-projects-widget" class="widget-content"></div>
+        </div>`;
+
+    // Designer specific elements
+    const designerQuickActions = `
+        <div class="quick-action-card" onclick="renderAppSection('jobs')">
+            <i class="fas fa-search card-icon"></i>
+            <h3>Browse Projects</h3>
+            <p>Find new opportunities and submit quotes.</p>
+        </div>
+        <div class="quick-action-card" onclick="renderAppSection('my-quotes')">
+            <i class="fas fa-file-invoice-dollar card-icon"></i>
+            <h3>My Quotes</h3>
+            <p>Track the status of your submitted quotes.</p>
+        </div>
+        <div class="quick-action-card" onclick="showNotification('Feature coming soon!', 'info')">
+            <i class="fas fa-upload card-icon"></i>
+            <h3>Submit Work</h3>
+            <p>Upload deliverables for your assigned projects.</p>
+        </div>
+        <div class="quick-action-card" onclick="renderAppSection('messages')">
+            <i class="fas fa-comments card-icon"></i>
+            <h3>Messages</h3>
+            <p>Communicate with clients about projects.</p>
+        </div>`;
+        
+    const designerWidgets = `
+        <div class="widget-card">
+            <h3><i class="fas fa-history"></i> Recent Quotes</h3>
+            <div id="recent-quotes-widget" class="widget-content"></div>
+        </div>`;
+
+    return `
+        <div class="dashboard-container">
+            <div class="dashboard-hero">
+                <div>
+                    <h2>Welcome back, ${name} 👋</h2>
+                    <p>You are logged in to your <strong>${isContractor ? 'Contractor' : 'Designer'} Portal</strong>. Manage your workflows seamlessly.</p>
+                </div>
+                <div class="subscription-badge">
+                    <i class="fas fa-star"></i> Pro Plan
+                </div>
+            </div>
+
+            <h3 class="dashboard-section-title">Quick Actions</h3>
+            <div class="dashboard-grid">
+                ${isContractor ? contractorQuickActions : designerQuickActions}
+            </div>
+
+            <div class="dashboard-columns">
+                ${isContractor ? contractorWidgets : designerWidgets}
+
+                <div class="widget-card">
+                    <h3><i class="fas fa-user-circle"></i> Your Profile</h3>
+                    <div class="widget-content">
+                        <p>Complete your profile to attract more opportunities.</p>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar" style="width: 75%;"></div>
+                        </div>
+                        <p class="progress-label">75% Complete</p>
+                        <button class="btn btn-outline" onclick="renderAppSection('settings')">
+                            <i class="fas fa-edit"></i> Update Profile
+                        </button>
+                        <hr class="widget-divider">
+                        <p>Upgrade your plan for advanced features.</p>
+                        <button class="btn btn-primary" onclick="renderAppSection('settings')">
+                           <i class="fas fa-arrow-up"></i> Upgrade Subscription
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+}
+
+function getSettingsTemplate(user) {
+    // NOTE: This is a placeholder UI. Saving data would require new API endpoints.
+    return `
+        <div class="section-header modern-header">
+            <div class="header-content">
+                <h2><i class="fas fa-cog"></i> Settings</h2>
+                <p class="header-subtitle">Manage your account, profile, and subscription details</p>
+            </div>
+        </div>
+        <div class="settings-container">
+            <div class="settings-card">
+                <h3><i class="fas fa-user-edit"></i> Personal Information</h3>
+                <form class="premium-form" onsubmit="event.preventDefault(); showNotification('Profile updated successfully!', 'success');">
+                    <div class="form-group">
+                        <label class="form-label">Full Name</label>
+                        <input type="text" class="form-input" value="${user.name}" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Email Address</label>
+                        <input type="email" class="form-input" value="${user.email}" disabled>
+                        <small class="form-help">Email cannot be changed.</small>
+                    </div>
+                     <div class="form-group">
+                        <label class="form-label">Company Name (Optional)</label>
+                        <input type="text" class="form-input" placeholder="Your Company LLC">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </form>
+            </div>
+            
+            <div class="settings-card">
+                <h3><i class="fas fa-shield-alt"></i> Security</h3>
+                 <form class="premium-form" onsubmit="event.preventDefault(); showNotification('Password functionality not implemented.', 'info');">
+                    <div class="form-group">
+                        <label class="form-label">Current Password</label>
+                        <input type="password" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">New Password</label>
+                        <input type="password" class="form-input">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Change Password</button>
+                </form>
+            </div>
+
+            <div class="settings-card subscription-card">
+                <h3><i class="fas fa-gem"></i> Subscription & Billing</h3>
+                <p>You are currently on the <strong>Pro Plan</strong>. This gives you access to unlimited projects and AI estimations.</p>
+                <div class="subscription-plans">
+                    <div class="plan-card">
+                        <h4>Basic</h4>
+                        <p class="price">Free</p>
+                        <ul>
+                            <li><i class="fas fa-check"></i> 3 Projects / month</li>
+                            <li><i class="fas fa-times"></i> AI Estimations</li>
+                            <li><i class="fas fa-check"></i> Standard Support</li>
+                        </ul>
+                        <button class="btn btn-outline" disabled>Current Plan</button>
+                    </div>
+                    <div class="plan-card active">
+                        <h4>Pro</h4>
+                        <p class="price">$49<span>/mo</span></p>
+                        <ul>
+                            <li><i class="fas fa-check"></i> Unlimited Projects</li>
+                            <li><i class="fas fa-check"></i> AI Estimations</li>
+                            <li><i class="fas fa-check"></i> Priority Support</li>
+                        </ul>
+                         <button class="btn btn-success" onclick="showNotification('You are on the best plan!', 'info')">Your Plan</button>
+                    </div>
+                     <div class="plan-card">
+                        <h4>Enterprise</h4>
+                        <p class="price">Contact Us</p>
+                        <ul>
+                            <li><i class="fas fa-check"></i> Team Accounts</li>
+                            <li><i class="fas fa-check"></i> Advanced Analytics</li>
+                            <li><i class="fas fa-check"></i> Dedicated Support</li>
+                        </ul>
+                         <button class="btn btn-primary" onclick="showNotification('Contacting sales...', 'info')">Get a Quote</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
 
 // Add styles for the new premium UI components
 const premiumStyles = `
 <style>
 /* Dynamic Feature Header */
-.dynamic-feature-header {
-    margin-bottom: 2rem;
-    border-radius: 16px;
-    overflow: hidden;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-}
-
-.feature-header-content {
-    padding: 3rem 2rem;
-    color: white;
-    display: flex;
-    align-items: center;
-    gap: 2rem;
-    position: relative;
-    overflow: hidden;
-}
-
-.feature-header-content::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0,0,0,0.1);
-    backdrop-filter: blur(10px);
-}
-
-.feature-icon-container {
-    font-size: 4rem;
-    opacity: 0.9;
-    z-index: 1;
-}
-
-.feature-text-content {
-    flex: 1;
-    z-index: 1;
-}
-
-.feature-title {
-    font-size: 2.5rem;
-    font-weight: 700;
-    margin: 0 0 0.5rem 0;
-}
-
-.feature-subtitle {
-    font-size: 1.25rem;
-    margin: 0 0 1rem 0;
-    opacity: 0.9;
-}
-
-.feature-description {
-    font-size: 1rem;
-    opacity: 0.8;
-    line-height: 1.5;
-    margin: 0;
-}
-
-.feature-indicators {
-    display: flex;
-    gap: 0.5rem;
-    z-index: 1;
-}
-
-.indicator {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.3);
-    transition: all 0.3s ease;
-}
-
-.indicator.active {
-    background: white;
-    transform: scale(1.2);
-}
-
+.dynamic-feature-header { margin-bottom: 2rem; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.1); }
+.feature-header-content { padding: 3rem 2rem; color: white; display: flex; align-items: center; gap: 2rem; position: relative; overflow: hidden; }
+.feature-header-content::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.1); backdrop-filter: blur(10px); }
+.feature-icon-container { font-size: 4rem; opacity: 0.9; z-index: 1; }
+.feature-text-content { flex: 1; z-index: 1; }
+.feature-title { font-size: 2.5rem; font-weight: 700; margin: 0 0 0.5rem 0; }
+.feature-subtitle { font-size: 1.25rem; margin: 0 0 1rem 0; opacity: 0.9; }
+.feature-description { font-size: 1rem; opacity: 0.8; line-height: 1.5; margin: 0; }
+.feature-indicators { display: flex; gap: 0.5rem; z-index: 1; }
+.indicator { width: 12px; height: 12px; border-radius: 50%; background: rgba(255,255,255,0.3); transition: all 0.3s ease; }
+.indicator.active { background: white; transform: scale(1.2); }
 /* Premium Cards */
-.premium-card {
-    background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
-    border: 1px solid #e2e8f0;
-    border-radius: 16px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    transition: all 0.3s ease;
-    overflow: hidden;
-    position: relative;
-}
-
-.premium-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, #3B82F6, #10B981, #F59E0B);
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-.premium-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-}
-
-.premium-card:hover::before {
-    opacity: 1;
-}
-
+.premium-card { background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%); border: 1px solid #e2e8f0; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); transition: all 0.3s ease; overflow: hidden; position: relative; }
+.premium-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, #3B82F6, #10B981, #F59E0B); opacity: 0; transition: opacity 0.3s ease; }
+.premium-card:hover { transform: translateY(-4px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); }
+.premium-card:hover::before { opacity: 1; }
 /* Premium Forms */
-.premium-form {
-    background: white;
-    border-radius: 16px;
-    padding: 2rem;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-}
-
-.premium-input, .premium-textarea, .premium-select {
-    border: 2px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 1rem 1.25rem;
-    font-size: 1rem;
-    transition: all 0.3s ease;
-    background: #f8fafc;
-}
-
-.premium-input:focus, .premium-textarea:focus, .premium-select:focus {
-    border-color: #3B82F6;
-    background: white;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-    outline: none;
-}
-
-.premium-btn {
-    background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
-    border: none;
-    border-radius: 12px;
-    padding: 1rem 2rem;
-    font-weight: 600;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3);
-}
-
-.premium-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 15px -3px rgba(59, 130, 246, 0.4);
-}
-
+.premium-form { background: white; border-radius: 16px; padding: 2rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+.premium-input, .premium-textarea, .premium-select { border: 2px solid #e2e8f0; border-radius: 12px; padding: 1rem 1.25rem; font-size: 1rem; transition: all 0.3s ease; background: #f8fafc; }
+.premium-input:focus, .premium-textarea:focus, .premium-select:focus { border-color: #3B82F6; background: white; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); outline: none; }
+.premium-btn { background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%); border: none; border-radius: 12px; padding: 1rem 2rem; font-weight: 600; transition: all 0.3s ease; box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3); }
+.premium-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 15px -3px rgba(59, 130, 246, 0.4); }
 /* Premium Empty States */
-.premium-empty {
-    text-align: center;
-    padding: 4rem 2rem;
-    background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
-    border-radius: 16px;
-    border: 2px dashed #cbd5e1;
-}
-
-.premium-empty .empty-icon {
-    font-size: 4rem;
-    color: #94a3b8;
-    margin-bottom: 1rem;
-}
-
+.premium-empty { text-align: center; padding: 4rem 2rem; background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%); border-radius: 16px; border: 2px dashed #cbd5e1; }
+.premium-empty .empty-icon { font-size: 4rem; color: #94a3b8; margin-bottom: 1rem; }
 /* Premium Chat */
-.premium-chat {
-    background: white;
-    border-radius: 16px;
-    overflow: hidden;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-}
-
-.premium-chat-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 1.5rem;
-}
-
-.premium-avatar {
-    position: relative;
-    border: 3px solid rgba(255,255,255,0.3);
-}
-
-.online-indicator {
-    position: absolute;
-    bottom: 2px;
-    right: 2px;
-    width: 12px;
-    height: 12px;
-    background: #10B981;
-    border: 2px solid white;
-    border-radius: 50%;
-}
-
-.premium-messages {
-    background: linear-gradient(to bottom, #f8fafc, #ffffff);
-}
-
-.premium-message {
-    margin: 1rem 0;
-}
-
-.premium-bubble {
-    border-radius: 18px;
-    position: relative;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-.premium-bubble.me {
-    background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
-    color: white;
-}
-
-.premium-bubble.them {
-    background: white;
-    border: 1px solid #e2e8f0;
-}
-
-.message-status {
-    position: absolute;
-    bottom: 4px;
-    right: 8px;
-    font-size: 0.75rem;
-    opacity: 0.7;
-}
-
-.premium-input-area {
-    background: white;
-    border-top: 1px solid #e2e8f0;
-    padding: 1rem;
-}
-
-.premium-message-form .message-input-container {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    background: #f8fafc;
-    border-radius: 25px;
-    padding: 0.5rem;
-    border: 2px solid #e2e8f0;
-}
-
-.premium-send-btn {
-    background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
-    border: none;
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-}
-
+.premium-chat { background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.1); }
+.premium-chat-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1.5rem; }
+.premium-avatar { position: relative; border: 3px solid rgba(255,255,255,0.3); }
+.online-indicator { position: absolute; bottom: 2px; right: 2px; width: 12px; height: 12px; background: #10B981; border: 2px solid white; border-radius: 50%; }
+.premium-messages { background: linear-gradient(to bottom, #f8fafc, #ffffff); }
+.premium-message { margin: 1rem 0; }
+.premium-bubble { border-radius: 18px; position: relative; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+.premium-bubble.me { background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%); color: white; }
+.premium-bubble.them { background: white; border: 1px solid #e2e8f0; }
+.message-status { position: absolute; bottom: 4px; right: 8px; font-size: 0.75rem; opacity: 0.7; }
+.premium-input-area { background: white; border-top: 1px solid #e2e8f0; padding: 1rem; }
+.premium-message-form .message-input-container { display: flex; align-items: center; gap: 0.5rem; background: #f8fafc; border-radius: 25px; padding: 0.5rem; border: 2px solid #e2e8f0; }
+.premium-send-btn { background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%); border: none; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; color: white; }
 /* Premium Modals */
-.premium-overlay {
-    background: rgba(0,0,0,0.6);
-    backdrop-filter: blur(4px);
-}
-
-.premium-modal {
-    border-radius: 20px;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-    border: 1px solid #e2e8f0;
-}
-
-.premium-modal-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 2rem;
-    border-radius: 20px 20px 0 0;
-    margin: -2rem -2rem 2rem -2rem;
-}
-
-.premium-close {
-    background: rgba(255,255,255,0.2);
-    border: 1px solid rgba(255,255,255,0.3);
-    color: white;
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-}
-
+.premium-overlay { background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); }
+.premium-modal { border-radius: 20px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); border: 1px solid #e2e8f0; }
+.premium-modal-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 2rem; border-radius: 20px 20px 0 0; margin: -2rem -2rem 2rem -2rem; }
+.premium-close { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; border-radius: 50%; width: 40px; height: 40px; }
 /* Premium Notifications */
-.premium-notification {
-    border-radius: 12px;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255,255,255,0.2);
-}
-
+.premium-notification { border-radius: 12px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); }
 /* Premium Estimation Tool */
-.premium-estimation-container {
-    max-width: 1000px;
-    margin: 0 auto;
-}
+.premium-estimation-container { max-width: 1000px; margin: 0 auto; }
+.estimation-steps { display: flex; justify-content: space-between; margin-bottom: 3rem; position: relative; }
+.estimation-steps::before { content: ''; position: absolute; top: 25px; left: 25px; right: 25px; height: 2px; background: #e2e8f0; z-index: 0; }
+.step { display: flex; align-items: center; gap: 1rem; background: white; padding: 1rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); position: relative; z-index: 1; }
+.step.active { background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%); color: white; }
+.step-number { width: 50px; height: 50px; border-radius: 50%; background: #f1f5f9; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.25rem; }
+.step.active .step-number { background: rgba(255,255,255,0.2); color: white; }
+.premium-upload-area { border: 3px dashed #cbd5e1; border-radius: 16px; background: linear-gradient(145deg, #f8fafc 0%, #ffffff 100%); transition: all 0.3s ease; position: relative; overflow: hidden; }
+.premium-upload-area:hover, .premium-upload-area.drag-over { border-color: #3B82F6; background: linear-gradient(145deg, #dbeafe 0%, #f0f9ff 100%); }
+.upload-content { text-align: center; padding: 3rem 2rem; position: relative; z-index: 1; }
+.file-upload-icon { font-size: 4rem; color: #64748b; margin-bottom: 1rem; }
+.supported-formats { display: flex; justify-content: center; gap: 0.5rem; margin: 1rem 0; }
+.format-badge { background: #3B82F6; color: white; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.875rem; font-weight: 500; }
+.selected-files-container { margin-top: 2rem; background: #f8fafc; border-radius: 12px; padding: 1.5rem; }
+.selected-file-item { display: flex; justify-content: space-between; align-items: center; background: white; padding: 1rem; border-radius: 8px; margin-bottom: 0.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.file-info { display: flex; align-items: center; gap: 0.75rem; }
+.file-details { display: flex; flex-direction: column; }
+.file-name { font-weight: 500; color: #1f2937; }
+.file-size { font-size: 0.875rem; color: #64748b; }
+.remove-file-btn { background: #ef4444; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease; }
+.remove-file-btn:hover { background: #dc2626; transform: scale(1.1); }
+.estimation-features { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin: 2rem 0; }
+.feature-item { display: flex; align-items: center; gap: 1rem; background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-left: 4px solid #3B82F6; }
+.feature-item i { font-size: 2rem; color: #3B82F6; }
+.feature-item h4 { margin: 0 0 0.5rem 0; color: #1f2937; }
+.feature-item p { margin: 0; color: #64748b; font-size: 0.875rem; }
+.estimation-actions { text-align: center; padding: 2rem 0; }
+.estimation-note { margin-top: 1rem; color: #64748b; font-size: 0.875rem; }
 
-.estimation-steps {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 3rem;
-    position: relative;
-}
+/* NEW DASHBOARD STYLES */
+.dashboard-hero { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 2rem; border-radius: 16px; margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; }
+.dashboard-hero h2 { margin: 0; font-size: 2rem; }
+.dashboard-hero p { margin: 0.5rem 0 0; opacity: 0.9; }
+.subscription-badge { background: rgba(255,255,255,0.2); padding: 0.5rem 1rem; border-radius: 20px; font-weight: 500; }
+.dashboard-section-title { font-size: 1.5rem; margin-bottom: 1rem; color: #334155; }
+.dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+.quick-action-card { background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 1.5rem; text-align: center; transition: all 0.3s ease; cursor: pointer; }
+.quick-action-card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-color: #3B82F6; }
+.quick-action-card .card-icon { font-size: 2.5rem; color: #3B82F6; margin-bottom: 1rem; }
+.quick-action-card h3 { margin: 0 0 0.5rem; font-size: 1.2rem; }
+.quick-action-card p { margin: 0; color: #64748b; font-size: 0.9rem; }
+.dashboard-columns { display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; }
+.widget-card { background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 1.5rem; }
+.widget-card h3 { margin: 0 0 1rem; display: flex; align-items: center; gap: 0.5rem; }
+.widget-loader { display: flex; justify-content: center; align-items: center; min-height: 100px; }
+.widget-list-item { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; border-bottom: 1px solid #f1f5f9; }
+.widget-list-item:last-child { border: none; }
+.widget-item-info { display: flex; align-items: center; gap: 1rem; }
+.widget-item-icon { font-size: 1.5rem; color: #94a3b8; }
+.widget-item-title { margin: 0; font-weight: 500; }
+.widget-item-meta { font-size: 0.8rem; color: #64748b; }
+.widget-item-status { font-size: 0.8rem; font-weight: bold; padding: 0.2rem 0.5rem; border-radius: 10px; text-transform: capitalize; }
+.widget-item-status.open, .widget-item-status.submitted { background-color: #e0f2fe; color: #0284c7; }
+.widget-item-status.assigned, .widget-item-status.approved { background-color: #dcfce7; color: #16a34a; }
+.widget-item-status.completed { background-color: #e5e7eb; color: #4b5563; }
+.widget-empty-text { color: #64748b; text-align: center; padding: 2rem 0; }
+.progress-bar-container { background: #e2e8f0; border-radius: 10px; height: 10px; overflow: hidden; margin: 1rem 0 0.5rem; }
+.progress-bar { background: #10B981; height: 100%; }
+.progress-label { text-align: right; font-size: 0.8rem; color: #64748b; }
+.widget-divider { border: none; border-top: 1px solid #f1f5f9; margin: 1rem 0; }
 
-.estimation-steps::before {
-    content: '';
-    position: absolute;
-    top: 25px;
-    left: 25px;
-    right: 25px;
-    height: 2px;
-    background: #e2e8f0;
-    z-index: 0;
-}
-
-.step {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    background: white;
-    padding: 1rem;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    position: relative;
-    z-index: 1;
-}
-
-.step.active {
-    background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
-    color: white;
-}
-
-.step-number {
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    background: #f1f5f9;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    font-size: 1.25rem;
-}
-
-.step.active .step-number {
-    background: rgba(255,255,255,0.2);
-    color: white;
-}
-
-.premium-upload-area {
-    border: 3px dashed #cbd5e1;
-    border-radius: 16px;
-    background: linear-gradient(145deg, #f8fafc 0%, #ffffff 100%);
-    transition: all 0.3s ease;
-    position: relative;
-    overflow: hidden;
-}
-
-.premium-upload-area::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: linear-gradient(45deg, transparent, rgba(59, 130, 246, 0.1), transparent);
-    transform: rotate(45deg);
-    transition: all 0.3s ease;
-    opacity: 0;
-}
-
-.premium-upload-area:hover::before {
-    opacity: 1;
-    animation: shimmer 2s infinite;
-}
-
-.premium-upload-area:hover, .premium-upload-area.drag-over {
-    border-color: #3B82F6;
-    background: linear-gradient(145deg, #dbeafe 0%, #f0f9ff 100%);
-}
-
-.upload-content {
-    text-align: center;
-    padding: 3rem 2rem;
-    position: relative;
-    z-index: 1;
-}
-
-.file-upload-icon {
-    font-size: 4rem;
-    color: #64748b;
-    margin-bottom: 1rem;
-}
-
-.supported-formats {
-    display: flex;
-    justify-content: center;
-    gap: 0.5rem;
-    margin: 1rem 0;
-}
-
-.format-badge {
-    background: #3B82F6;
-    color: white;
-    padding: 0.25rem 0.75rem;
-    border-radius: 20px;
-    font-size: 0.875rem;
-    font-weight: 500;
-}
-
-.selected-files-container {
-    margin-top: 2rem;
-    background: #f8fafc;
-    border-radius: 12px;
-    padding: 1.5rem;
-}
-
-.selected-file-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: white;
-    padding: 1rem;
-    border-radius: 8px;
-    margin-bottom: 0.5rem;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
-.file-info {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
-
-.file-details {
-    display: flex;
-    flex-direction: column;
-}
-
-.file-name {
-    font-weight: 500;
-    color: #1f2937;
-}
-
-.file-size {
-    font-size: 0.875rem;
-    color: #64748b;
-}
-
-.remove-file-btn {
-    background: #ef4444;
-    color: white;
-    border: none;
-    border-radius: 50%;
-    width: 30px;
-    height: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.remove-file-btn:hover {
-    background: #dc2626;
-    transform: scale(1.1);
-}
-
-.estimation-features {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 1.5rem;
-    margin: 2rem 0;
-}
-
-.feature-item {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    background: white;
-    padding: 1.5rem;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    border-left: 4px solid #3B82F6;
-}
-
-.feature-item i {
-    font-size: 2rem;
-    color: #3B82F6;
-}
-
-.feature-item h4 {
-    margin: 0 0 0.5rem 0;
-    color: #1f2937;
-}
-
-.feature-item p {
-    margin: 0;
-    color: #64748b;
-    font-size: 0.875rem;
-}
-
-.estimation-actions {
-    text-align: center;
-    padding: 2rem 0;
-}
-
-.estimation-note {
-    margin-top: 1rem;
-    color: #64748b;
-    font-size: 0.875rem;
-}
-
-@keyframes shimmer {
-    0% { transform: translateX(-100%) rotate(45deg); }
-    100% { transform: translateX(100%) rotate(45deg); }
-}
+/* NEW SETTINGS STYLES */
+.settings-container { display: grid; gap: 2rem; }
+.settings-card { background: white; border-radius: 16px; padding: 2rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+.settings-card h3 { margin-top: 0; border-bottom: 1px solid #f1f5f9; padding-bottom: 1rem; margin-bottom: 1.5rem; }
+.subscription-plans { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-top: 1.5rem; }
+.plan-card { border: 2px solid #e2e8f0; padding: 1.5rem; border-radius: 12px; text-align: center; }
+.plan-card.active { border-color: #3B82F6; box-shadow: 0 0 15px rgba(59,130,246,0.2); }
+.plan-card h4 { font-size: 1.25rem; margin: 0; }
+.plan-card .price { font-size: 2.5rem; font-weight: bold; margin: 0.5rem 0; }
+.plan-card .price span { font-size: 1rem; font-weight: normal; color: #64748b; }
+.plan-card ul { list-style: none; padding: 0; margin: 1rem 0; text-align: left; }
+.plan-card li { margin-bottom: 0.5rem; }
+.plan-card li i { color: #10B981; margin-right: 0.5rem; }
+.plan-card li i.fa-times { color: #ef4444; }
 
 /* Responsive Design */
+@media (max-width: 992px) {
+    .dashboard-columns { grid-template-columns: 1fr; }
+}
 @media (max-width: 768px) {
-    .feature-header-content {
-        flex-direction: column;
-        text-align: center;
-        gap: 1rem;
-        padding: 2rem 1rem;
-    }
-    
-    .feature-title {
-        font-size: 2rem;
-    }
-    
-    .estimation-steps {
-        flex-direction: column;
-        gap: 1rem;
-    }
-    
-    .estimation-steps::before {
-        display: none;
-    }
-    
-    .estimation-features {
-        grid-template-columns: 1fr;
-    }
+    .feature-header-content { flex-direction: column; text-align: center; gap: 1rem; padding: 2rem 1rem; }
+    .feature-title { font-size: 2rem; }
+    .estimation-steps { flex-direction: column; gap: 1rem; }
+    .estimation-steps::before { display: none; }
+    .estimation-features { grid-template-columns: 1fr; }
+    .dashboard-hero { flex-direction: column; text-align: center; gap: 1rem; }
 }
 </style>
 `;
@@ -2857,4 +1865,3 @@ if (!document.getElementById('premium-styles')) {
     styleSheet.innerHTML = premiumStyles;
     document.head.appendChild(styleSheet);
 }
-        
