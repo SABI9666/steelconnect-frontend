@@ -8,151 +8,15 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
     <style>
-        /* --- GLOBAL STYLES & VARIABLES --- */
+        /* --- AI ESTIMATION & NOTIFICATION STYLES --- */
         :root {
-            --primary-color: #1e40af;
-            --primary-hover: #1d4ed8;
-            --primary-light: #dbeafe;
-            --secondary-color: #0f766e;
-            --secondary-hover: #0d9488;
-            --accent-color: #0891b2;
-            --accent-light: #cffafe;
-            --gold-accent: #f59e0b;
-            --text-dark: #0f172a;
-            --text-gray: #64748b;
-            --text-light: #94a3b8;
-            --bg-white: #ffffff;
-            --bg-light: #f8fafc;
-            --bg-gray: #f1f5f9;
-            --bg-dark: #0f172a;
-            --border-color: #e2e8f0;
-            --border-light: #f1f5f9;
-            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-            --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-            --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
             --ai-gradient: linear-gradient(135deg, #8b5cf6, #ec4899, #f59e0b);
             --ai-light: #fdf4ff;
             --ai-purple: #8b5cf6;
         }
-        
-        html { scroll-behavior: smooth; }
-        body { 
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
-            background-color: var(--bg-light); 
-            color: var(--text-dark); 
-            line-height: 1.6; 
-            margin: 0;
-            padding: 0;
-        }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
 
-        /* --- HEADER --- */
-        .header { 
-            background: rgba(248, 250, 252, 0.95); 
-            border-bottom: 1px solid var(--border-light); 
-            position: sticky; 
-            top: 0; 
-            z-index: 1000; 
-            backdrop-filter: blur(20px); 
-        }
-        .header-container { 
-            max-width: 1400px; 
-            margin: 0 auto; 
-            padding: 0 24px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: space-between; 
-            height: 72px; 
-        }
-        .logo { 
-            display: flex; 
-            align-items: center; 
-            gap: 12px; 
-            font-size: 28px; 
-            font-weight: 800; 
-            color: var(--text-dark); 
-            text-decoration: none; 
-            cursor: pointer; 
-        }
-        .logo-icon { 
-            width: 40px; 
-            height: 40px; 
-            background: linear-gradient(135deg, var(--primary-color), var(--accent-color)); 
-            border-radius: 12px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            color: white; 
-            font-weight: 700; 
-            box-shadow: var(--shadow-lg);
-        }
-        .nav-menu { 
-            flex-grow: 1; 
-            display: flex; 
-            justify-content: center; 
-            gap: 8px; 
-        }
-        .nav-link { 
-            padding: 12px 20px; 
-            border-radius: 8px; 
-            color: var(--text-gray); 
-            font-weight: 600; 
-            font-size: 15px; 
-            cursor: pointer; 
-            background: none; 
-            border: none; 
-            text-decoration: none; 
-            transition: all 0.3s ease;
-        }
-        .nav-link:hover { 
-            color: var(--primary-color); 
-            background: var(--accent-light);
-        }
-        .auth-buttons { 
-            display: flex; 
-            gap: 16px; 
-        }
-
-        /* --- BUTTONS --- */
-        .btn { 
-            padding: 14px 28px; 
-            border-radius: 12px; 
-            font-weight: 600; 
-            font-size: 16px; 
-            cursor: pointer; 
-            border: 2px solid transparent; 
-            display: inline-flex; 
-            align-items: center; 
-            gap: 10px; 
-            transition: all 0.3s ease; 
-            text-decoration: none;
-        }
-        .btn:hover { 
-            transform: translateY(-2px); 
-            box-shadow: var(--shadow-lg); 
-        }
-        .btn-outline { 
-            background: transparent; 
-            color: var(--primary-color); 
-            border-color: var(--primary-color); 
-        }
-        .btn-outline:hover { 
-            background: var(--primary-color); 
-            color: white; 
-        }
-        .btn-primary { 
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); 
-            color: white; 
-            box-shadow: var(--shadow-lg);
-        }
-        .btn-primary:hover { 
-            background: linear-gradient(135deg, var(--primary-hover), var(--secondary-hover)); 
-            box-shadow: var(--shadow-xl);
-            transform: translateY(-3px);
-        }
         .btn-ai {
             background: var(--ai-gradient);
             color: white;
@@ -163,126 +27,24 @@
         .btn-ai::before {
             content: '';
             position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
             background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
             transition: left 0.6s;
         }
-        .btn-ai:hover::before {
-            left: 100%;
-        }
+        .btn-ai:hover::before { left: 100%; }
         .btn-ai:hover {
             transform: translateY(-3px);
             box-shadow: 0 12px 32px rgba(139, 92, 246, 0.4);
         }
-        .btn-large {
-            padding: 18px 36px;
-            font-size: 18px;
-        }
-        .btn-full {
-            width: 100%;
-            justify-content: center;
-        }
 
-        /* --- HERO SECTION --- */
-        .hero { 
-            position: relative;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 30%, #334155 70%, #475569 100%);
-            overflow: hidden;
-        }
-        .hero::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: 
-                radial-gradient(circle at 20% 80%, rgba(30, 64, 175, 0.4) 0%, transparent 50%),
-                radial-gradient(circle at 80% 20%, rgba(15, 118, 110, 0.3) 0%, transparent 50%),
-                radial-gradient(circle at 40% 40%, rgba(8, 145, 178, 0.2) 0%, transparent 50%);
-            z-index: 1;
-        }
-        .hero-background {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: url('https://images.unsplash.com/photo-1541888946425-d81bb19240f5?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3') center/cover;
-            opacity: 0.2;
-            z-index: 0;
-        }
-        .hero-content { 
-            position: relative;
-            z-index: 2;
-            max-width: 1400px; 
-            margin: 0 auto; 
-            padding: 0 24px;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 80px;
-            align-items: center;
-        }
-        .hero-text {
-            color: white;
-        }
-        .hero-text h1 { 
-            font-size: 68px; 
-            font-weight: 900; 
-            line-height: 1.1; 
-            margin-bottom: 32px; 
-            background: linear-gradient(135deg, #ffffff 0%, #e2e8f0 50%, #f59e0b 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-        .hero-text .highlight {
-            background: linear-gradient(135deg, #f59e0b, #eab308);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
         .hero-text .ai-highlight {
             background: var(--ai-gradient);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
-        .hero-text p { 
-            font-size: 22px; 
-            opacity: 0.95; 
-            margin-bottom: 48px; 
-            color: #e2e8f0;
-            line-height: 1.7;
-        }
-        .hero-cta {
-            display: flex;
-            gap: 20px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-        .hero-cta .btn-primary {
-            padding: 20px 40px;
-            font-size: 18px;
-            font-weight: 700;
-            border-radius: 16px;
-            background: linear-gradient(135deg, #f59e0b 0%, #eab308 50%, #d97706 100%);
-            box-shadow: 0 8px 24px rgba(245, 158, 11, 0.4);
-        }
-        .hero-cta .btn-ai {
-            padding: 20px 40px;
-            font-size: 18px;
-            font-weight: 700;
-            border-radius: 16px;
-        }
 
-        /* --- AI ESTIMATION SECTION --- */
         .ai-estimation {
             padding: 120px 24px;
             background: var(--ai-light);
@@ -328,9 +90,7 @@
             box-shadow: var(--shadow-xl);
             border: 2px solid rgba(139, 92, 246, 0.2);
         }
-        .ai-input-group {
-            margin-bottom: 20px;
-        }
+        .ai-input-group { margin-bottom: 20px; }
         .ai-input-group label {
             display: block;
             font-weight: 600;
@@ -379,12 +139,10 @@
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
         }
-
-        /* --- MODALS & FORMS --- */
+        
         .notification-container {
             position: fixed;
-            top: 80px;
-            right: 24px;
+            top: 80px; right: 24px;
             z-index: 2000;
             display: flex;
             flex-direction: column;
@@ -396,6 +154,7 @@
             font-weight: 500;
             display: flex;
             align-items: center;
+            justify-content: space-between;
             gap: 12px;
             min-width: 300px;
             box-shadow: var(--shadow-lg);
@@ -407,160 +166,15 @@
             from { opacity: 0; transform: translateX(100%); }
             to { opacity: 1; transform: translateX(0); }
         }
-        .notification-success { 
-            background: rgba(220, 252, 231, 0.95); 
-            color: #065f46; 
-            border-color: #10b981; 
-        }
-        .notification-info { 
-            background: rgba(224, 242, 254, 0.95); 
-            color: #075985; 
-            border-color: #0ea5e9; 
-        }
-        .notification-warning {
-            background: rgba(254, 243, 199, 0.95);
-            color: #92400e;
-            border-color: #f59e0b;
-        }
-        .modal-overlay { 
-            position: fixed; 
-            top: 0; 
-            left: 0; 
-            width: 100%; 
-            height: 100%; 
-            background: rgba(15, 23, 42, 0.7); 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            z-index: 1100; 
-            backdrop-filter: blur(5px); 
-        }
-        .modal-content { 
-            background: var(--bg-white); 
-            padding: 40px; 
-            border-radius: 16px; 
-            max-width: 450px; 
-            width: 90%; 
-            position: relative; 
-            box-shadow: var(--shadow-2xl); 
-        }
-        .modal-close-button { 
-            position: absolute; 
-            top: 16px; 
-            right: 16px; 
-            background: none; 
-            border: none; 
-            font-size: 24px; 
-            cursor: pointer; 
-            color: var(--text-gray); 
-        }
-        .auth-header {
-            text-align: center;
-            margin-bottom: 2rem;
-        }
-        .auth-logo {
-            width: 60px;
-            height: 60px;
-            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 24px;
-            margin: 0 auto 1rem;
-        }
-        .form-grid { display: grid; gap: 20px; }
-        .form-group { display: flex; flex-direction: column; gap: 8px; }
-        .form-label { font-weight: 500; font-size: 14px; display: flex; align-items: center; gap: 8px; }
-        .form-input, .form-select, .form-textarea { 
-            padding: 12px; 
-            border: 1px solid var(--border-color); 
-            border-radius: 8px; 
-            font-size: 15px; 
-            width: 100%; 
-            transition: all 0.2s ease; 
-        }
-        .form-input:focus, .form-select:focus, .form-textarea:focus { 
-            outline: none; 
-            border-color: var(--primary-color); 
-            box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.2); 
-        }
-        .auth-switch { text-align: center; margin-top: 16px; font-size: 14px; }
-        .auth-link { color: var(--primary-color); cursor: pointer; font-weight: 500; text-decoration: none; }
-
-        /* --- APP LAYOUT --- */
-        .main-layout { display: flex; }
-        .sidebar { 
-            width: 260px; 
-            background: var(--bg-white); 
-            border-right: 1px solid var(--border-color); 
-            padding: 24px; 
-            height: calc(100vh - 72px); 
-            position: sticky; 
-            top: 72px; 
-        }
-        .main-content { 
-            flex-grow: 1; 
-            padding: 40px; 
-            background-color: var(--bg-light); 
-        }
-        .sidebar-user-profile { text-align: center; margin-bottom: 30px; }
-        .sidebar-avatar { 
-            width: 80px; 
-            height: 80px; 
-            background: var(--primary-color); 
-            border-radius: 50%; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            color: white; 
-            font-weight: 600; 
-            font-size: 32px; 
-            margin: 0 auto 10px; 
-        }
-        .sidebar-nav { display: flex; flex-direction: column; gap: 8px; }
-        .sidebar-nav-link { 
-            display: flex; 
-            align-items: center; 
-            gap: 12px; 
-            padding: 12px 16px; 
-            border-radius: 8px; 
-            color: var(--text-gray); 
-            font-weight: 500; 
-            font-size: 15px; 
-            cursor: pointer; 
-            text-decoration: none; 
-            transition: all 0.2s; 
-        }
-        .sidebar-nav-link:hover { background: var(--primary-light); color: var(--primary-color); }
-        .sidebar-nav-link.active { background: var(--primary-color); color: white; }
-        .user-profile-menu { display: flex; align-items: center; gap: 12px; }
-        .avatar { 
-            width: 40px; 
-            height: 40px; 
-            background-color: var(--primary-color); 
-            color: white; 
-            border-radius: 50%; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            font-weight: 600; 
-        }
-        .section-header { margin-bottom: 32px; padding-bottom: 16px; border-bottom: 1px solid var(--border-color); }
-
-        /* --- RESPONSIVE --- */
-        @media (max-width: 768px) {
-            .hero-content { grid-template-columns: 1fr; }
-            .hero-text h1 { font-size: 36px; }
-            .ai-content { grid-template-columns: 1fr; }
-            .main-layout { flex-direction: column; }
-            .sidebar { position: static; width: 100%; height: auto; }
-        }
+        .notification-content { display: flex; align-items: center; gap: 10px; }
+        .notification-close { background: none; border: none; cursor: pointer; color: inherit; opacity: 0.7; font-size: 16px; }
+        .notification-success { background: rgba(220, 252, 231, 0.95); color: #065f46; border-color: #10b981; }
+        .notification-error { background: rgba(254, 226, 226, 0.95); color: #991b1b; border-color: #ef4444; }
+        .notification-info { background: rgba(224, 242, 254, 0.95); color: #075985; border-color: #0ea5e9; }
+        .notification-warning { background: rgba(254, 243, 199, 0.95); color: #92400e; border-color: #f59e0b; }
     </style>
 </head>
 <body>
-    <div id="notification-container" class="notification-container"></div>
     <div id="modal-container"></div>
 
     <header class="header">
@@ -601,41 +215,45 @@
                             <button id="get-started-btn" class="btn btn-primary">
                                 Start Building Today <i class="fas fa-rocket"></i>
                             </button>
-                            <button id="try-ai-btn" class="btn btn-ai">
+                             <a href="#ai-estimation" class="btn btn-ai">
                                 Try AI Estimation <i class="fas fa-brain"></i>
-                            </button>
+                            </a>
                         </div>
                     </div>
                     <div class="hero-visual">
-                        <div style="position: relative; width: 100%; height: 100%; border-radius: 24px; overflow: hidden; box-shadow: 0 24px 64px rgba(0, 0, 0, 0.3);">
-                            <img src="https://images.unsplash.com/photo-1504307651254-35680f356dfd?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3" alt="Steel construction" style="width: 100%; height: 100%; object-fit: cover;">
+                        <div class="hero-image-container">
+                            <img src="https://images.unsplash.com/photo-1504307651254-35680f356dfd?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3" alt="Steel construction professionals at work" class="hero-image">
                         </div>
                     </div>
                 </div>
             </section>
-
+            
             <section id="ai-estimation" class="ai-estimation">
                 <div class="ai-section-container">
                     <h2 class="ai-section-title">AI-Powered Steel Estimation</h2>
-                    <p class="ai-section-subtitle">Get instant, accurate cost estimates for your steel construction projects using our advanced machine learning algorithms.</p>
+                    <p class="ai-section-subtitle">Get instant, accurate cost estimates for your steel construction projects by providing a few key details. Our AI analyzes the data to give you a preliminary budget and timeline.</p>
                     
                     <div class="ai-content">
                         <div style="display: flex; flex-direction: column; gap: 32px;">
                             <div style="display: flex; align-items: flex-start; gap: 20px; padding: 24px; background: var(--bg-white); border-radius: 16px; box-shadow: var(--shadow-lg);">
-                                <div style="width: 48px; height: 48px; background: var(--ai-gradient); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px;"><i class="fas fa-lightning-bolt"></i></div>
-                                <div><h3>Instant Analysis</h3><p>Get preliminary cost estimates in seconds using machine learning.</p></div>
+                                <div style="width: 48px; height: 48px; background: var(--ai-gradient); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; flex-shrink: 0;"><i class="fas fa-bolt"></i></div>
+                                <div><h3 style="margin-bottom: 4px;">Instant Analysis</h3><p style="color: var(--text-gray); margin:0;">Our AI provides preliminary cost and timeline estimates in seconds, helping you make quicker decisions.</p></div>
+                            </div>
+                             <div style="display: flex; align-items: flex-start; gap: 20px; padding: 24px; background: var(--bg-white); border-radius: 16px; box-shadow: var(--shadow-lg);">
+                                <div style="width: 48px; height: 48px; background: var(--ai-gradient); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; flex-shrink: 0;"><i class="fas fa-file-upload"></i></div>
+                                <div><h3 style="margin-bottom: 4px;">PDF Uploads for Pros</h3><p style="color: var(--text-gray); margin:0;">Registered users can upload structural drawings directly for a more detailed and accurate AI-powered cost breakdown.</p></div>
                             </div>
                         </div>
                         
                         <div class="ai-demo">
                             <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border-color);">
                                 <div style="width: 40px; height: 40px; background: var(--ai-gradient); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white;"><i class="fas fa-calculator"></i></div>
-                                <div style="font-size: 18px; font-weight: 700;">Steel Project Estimator</div>
+                                <div style="font-size: 18px; font-weight: 700;">Quick Project Estimator</div>
                             </div>
                             
                             <div class="ai-input-group">
                                 <label>Project Type</label>
-                                <select id="project-type" class="ai-input">
+                                <select id="preview-project-type" class="ai-input">
                                     <option value="">Select project type</option>
                                     <option value="residential">Residential Building</option>
                                     <option value="commercial">Commercial Complex</option>
@@ -644,49 +262,63 @@
                             </div>
                             
                             <div class="ai-input-group">
-                                <label>Steel Tonnage (tons)</label>
-                                <input type="number" id="steel-tonnage" class="ai-input" placeholder="e.g., 150" min="1">
+                                <label>Estimated Steel Tonnage (tons)</label>
+                                <input type="number" id="preview-steel-tonnage" class="ai-input" placeholder="e.g., 150" min="1">
                             </div>
-                            
-                            <div class="ai-input-group">
-                                <label>Location</label>
-                                <select id="project-location" class="ai-input">
-                                    <option value="">Select location</option>
-                                    <option value="us-northeast">US Northeast</option>
-                                    <option value="us-west">US West</option>
-                                    <option value="europe">Europe</option>
-                                </select>
-                            </div>
-                            
-                            <button class="ai-estimate-btn" onclick="handleAIEstimateClick()">
-                                <i class="fas fa-brain"></i> Generate AI Estimate
+                                                        
+                            <button class="ai-estimate-btn" id="preview-generate-btn">
+                                <i class="fas fa-brain"></i> Generate AI Preview
                             </button>
                             
-                            <div id="ai-result" class="ai-result">
+                            <div id="preview-ai-result" class="ai-result">
                                 <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
                                     <i class="fas fa-check-circle" style="color: var(--ai-purple);"></i>
                                     <h4>AI Analysis Complete</h4>
                                 </div>
                                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
                                     <div style="text-align: center; padding: 12px; background: var(--bg-white); border-radius: 8px;">
-                                        <span id="estimated-cost" style="font-size: 24px; font-weight: 900; background: var(--ai-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: block;">$0</span>
+                                        <span id="preview-estimated-cost" style="font-size: 24px; font-weight: 900; background: var(--ai-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: block;">$0</span>
                                         <span style="font-size: 12px; color: var(--text-gray);">Estimated Cost</span>
                                     </div>
                                     <div style="text-align: center; padding: 12px; background: var(--bg-white); border-radius: 8px;">
-                                        <span id="timeline-estimate" style="font-size: 24px; font-weight: 900; background: var(--ai-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: block;">0 weeks</span>
+                                        <span id="preview-timeline-estimate" style="font-size: 24px; font-weight: 900; background: var(--ai-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: block;">0 weeks</span>
                                         <span style="font-size: 12px; color: var(--text-gray);">Timeline</span>
                                     </div>
                                 </div>
                                 <p style="font-size: 12px; color: var(--text-gray); margin-top: 16px; text-align: center;">
-                                    *Preview only. <a href="#" onclick="showAuthModal('register')" style="color: var(--primary-color);">Sign up</a> for full access.
+                                    *This is a preview. <a href="#" id="signup-link" style="color: var(--primary-color);">Sign up</a> for the full tool with PDF uploads.
                                 </p>
                             </div>
                         </div>
                     </div>
                 </div>
             </section>
-        </main
-            </div>
+
+            <section id="how-it-works" class="how-it-works">
+                 <div class="section-container">
+                    <h2 class="section-title">How It Works</h2>
+                    <p class="section-subtitle">A simple, streamlined process to connect with the right professionals for your steel construction needs.</p>
+                    <div class="steps-container">
+                        <div class="step-card"><div class="step-number">1</div><h3>Post Your Project</h3><p>Contractors describe their project needs, set a budget, and upload drawings. Use our AI tool for a preliminary estimate.</p></div>
+                        <div class="step-card"><div class="step-number">2</div><h3>Receive Quotes</h3><p>Vetted steel designers and structural engineers review the project and submit detailed, competitive proposals.</p></div>
+                        <div class="step-card"><div class="step-number">3</div><h3>Collaborate & Deliver</h3><p>Choose the best professional, communicate via our secure platform, and manage the project to successful completion.</p></div>
+                    </div>
+                </div>
+            </section>
+            
+            <section id="showcase" class="showcase">
+                <div class="section-container">
+                    <h2 class="section-title">Industry Excellence Showcase</h2>
+                    <p class="section-subtitle" style="color: var(--text-light);">Explore a selection of successful projects facilitated through the SteelConnect platform.</p>
+                    <div class="showcase-grid">
+                        <div class="showcase-card"><img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2940&auto=format&fit=crop" alt="Modern skyscraper" class="showcase-image"><div class="showcase-content"><h3>High-Rise Construction</h3><p>Structural steel design for towers and commercial buildings with advanced seismic engineering and wind load analysis.</p></div></div>
+                        <div class="showcase-card"><img src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?q=80&w=2940&auto=format&fit=crop" alt="Steel bridge" class="showcase-image"><div class="showcase-content"><h3>Infrastructure Projects</h3><p>Complex bridge design, highway infrastructure, and transportation networks engineered for safety and longevity.</p></div></div>
+                        <div class="showcase-card"><img src="https://images.unsplash.com/photo-1565008447742-97f6f38c985c?q=80&w=2940&auto=format&fit=crop" alt="Industrial facility" class="showcase-image"><div class="showcase-content"><h3>Industrial Facilities</h3><p>Manufacturing plants, warehouses, and industrial complexes with specialized steel frame solutions and heavy load engineering.</p></div></div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
 
     <div id="app-content" class="main-layout" style="display: none;">
         <aside class="sidebar">
@@ -698,548 +330,53 @@
             <nav id="sidebar-nav-menu" class="sidebar-nav"></nav>
         </aside>
         <main class="main-content">
-            <div id="app-container" style="max-width: 1200px; margin: 0 auto;"></div>
+            <div id="app-container" class="main-container"></div>
         </main>
     </div>
 
+    <script src="script.js" defer></script>
     <script>
-        // Global state
-        let isAuthenticated = false;
-        let currentUser = null;
+        // This script handles the AI preview on the landing page
+        document.addEventListener('DOMContentLoaded', () => {
+            const generateBtn = document.getElementById('preview-generate-btn');
+            const signupLink = document.getElementById('signup-link');
 
-        // Initialize app
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log("SteelConnect App Initializing...");
-            
-            // Check for existing session
-            const storedUser = localStorage.getItem('currentUser');
-            if (storedUser) {
-                try {
-                    currentUser = JSON.parse(storedUser);
-                    isAuthenticated = true;
-                    showAppView();
-                } catch (error) {
-                    localStorage.removeItem('currentUser');
-                }
-            }
-            
-            setupEventListeners();
-        });
+            if (generateBtn) {
+                generateBtn.addEventListener('click', () => {
+                    const projectType = document.getElementById('preview-project-type').value;
+                    const tonnage = parseFloat(document.getElementById('preview-steel-tonnage').value);
 
-        function setupEventListeners() {
-            // Auth buttons
-            document.getElementById('signin-btn')?.addEventListener('click', () => showAuthModal('login'));
-            document.getElementById('join-btn')?.addEventListener('click', () => showAuthModal('register'));
-            document.getElementById('get-started-btn')?.addEventListener('click', () => showAuthModal('register'));
-            document.getElementById('try-ai-btn')?.addEventListener('click', handleTryAIClick);
-            document.getElementById('logout-button')?.addEventListener('click', logout);
+                    if (!projectType || !tonnage) {
+                        // The main script.js will handle the notification display
+                         if (typeof showNotification === 'function') {
+                            showNotification('Please fill in all fields for the preview.', 'warning');
+                        }
+                        return;
+                    }
 
-            // Logo click
-            document.querySelector('.logo')?.addEventListener('click', (e) => {
-                e.preventDefault();
-                isAuthenticated ? showAppView() : showLandingView();
-            });
+                    // Simple estimation logic for preview
+                    const baseCost = tonnage * (2200 + Math.random() * 800);
+                    const multiplier = projectType === 'commercial' ? 1.3 : (projectType === 'industrial' ? 1.5 : 1.0);
+                    const totalCost = baseCost * multiplier;
+                    const timeline = Math.ceil(tonnage / 18 + 2);
 
-            // Smooth scrolling
-            document.querySelectorAll('.nav-link[href^="#"]').forEach(link => {
-                link.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const target = document.querySelector(this.getAttribute('href'));
-                    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    document.getElementById('preview-estimated-cost').textContent = '$' + Math.round(totalCost).toLocaleString();
+                    document.getElementById('preview-timeline-estimate').textContent = timeline + ' weeks';
+                    
+                    document.getElementById('preview-ai-result').classList.add('show');
                 });
-            });
-        }
-
-        function handleTryAIClick() {
-            if (isAuthenticated) {
-                document.getElementById('ai-estimation').scrollIntoView({ behavior: 'smooth' });
-            } else {
-                showNotification('Sign up to access our full AI estimation tool!', 'info');
-                showAuthModal('register');
             }
-        }
 
-        function handleAIEstimateClick() {
-            if (isAuthenticated) {
-                generateAIEstimate();
-            } else {
-                showNotification('Please sign up to access our AI estimation tool!', 'info');
-                showAuthModal('register');
-            }
-        }
-
-        // Authentication
-        function showAuthModal(type) {
-            const content = type === 'login' ? getLoginTemplate() : getRegisterTemplate();
-            showModal(content);
-        }
-
-        function getLoginTemplate() {
-            return `
-                <div class="auth-header">
-                    <div class="auth-logo"><i class="fas fa-drafting-compass"></i></div>
-                    <h2>Welcome Back</h2>
-                    <p>Sign in to your SteelConnect account</p>
-                </div>
-                <form id="login-form" class="form-grid">
-                    <div class="form-group">
-                        <label class="form-label"><i class="fas fa-envelope"></i> Email</label>
-                        <input type="email" class="form-input" name="email" required placeholder="Enter your email">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label"><i class="fas fa-lock"></i> Password</label>
-                        <input type="password" class="form-input" name="password" required placeholder="Enter your password">
-                    </div>
-                    <button type="submit" class="btn btn-primary btn-full">
-                        <i class="fas fa-sign-in-alt"></i> Sign In
-                    </button>
-                </form>
-                <div class="auth-switch">
-                    Don't have an account? <a onclick="showAuthModal('register')" class="auth-link">Create Account</a>
-                </div>`;
-        }
-
-        function getRegisterTemplate() {
-            return `
-                <div class="auth-header">
-                    <div class="auth-logo"><i class="fas fa-drafting-compass"></i></div>
-                    <h2>Join SteelConnect</h2>
-                    <p>Create your professional account</p>
-                </div>
-                <form id="register-form" class="form-grid">
-                    <div class="form-group">
-                        <label class="form-label"><i class="fas fa-user"></i> Full Name</label>
-                        <input type="text" class="form-input" name="name" required placeholder="Enter your full name">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label"><i class="fas fa-envelope"></i> Email</label>
-                        <input type="email" class="form-input" name="email" required placeholder="Enter your email">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label"><i class="fas fa-lock"></i> Password</label>
-                        <input type="password" class="form-input" name="password" required placeholder="Create a password">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label"><i class="fas fa-user-tag"></i> I am a...</label>
-                        <select class="form-select" name="role" required>
-                            <option value="">Select your role</option>
-                            <option value="contractor">Client / Contractor</option>
-                            <option value="designer">Designer / Engineer</option>
-                        </select>
-                    </div>
-                    <button type="submit" class="btn btn-primary btn-full">
-                        <i class="fas fa-user-plus"></i> Create Account
-                    </button>
-                </form>
-                <div class="auth-switch">
-                    Already have an account? <a onclick="showAuthModal('login')" class="auth-link">Sign In</a>
-                </div>`;
-        }
-
-        function showModal(content) {
-            document.getElementById('modal-container').innerHTML = `
-                <div class="modal-overlay" onclick="closeModal()">
-                    <div class="modal-content" onclick="event.stopPropagation()">
-                        <button class="modal-close-button" onclick="closeModal()">&times;</button>
-                        ${content}
-                    </div>
-                </div>`;
-
-            // Add form listeners
-            document.getElementById('login-form')?.addEventListener('submit', handleLogin);
-            document.getElementById('register-form')?.addEventListener('submit', handleRegister);
-        }
-
-        function closeModal() {
-            document.getElementById('modal-container').innerHTML = '';
-        }
-
-        function handleLogin(event) {
-            event.preventDefault();
-            const formData = new FormData(event.target);
-            
-            currentUser = {
-                id: Date.now(),
-                name: formData.get('email').split('@')[0],
-                email: formData.get('email'),
-                type: 'contractor'
-            };
-            
-            isAuthenticated = true;
-            localStorage.setItem('currentUser', JSON.stringify(currentUser));
-            
-            showNotification('Welcome back to SteelConnect!', 'success');
-            closeModal();
-            showAppView();
-        }
-
-        function handleRegister(event) {
-            event.preventDefault();
-            const formData = new FormData(event.target);
-            
-            currentUser = {
-                id: Date.now(),
-                name: formData.get('name'),
-                email: formData.get('email'),
-                type: formData.get('role')
-            };
-            
-            isAuthenticated = true;
-            localStorage.setItem('currentUser', JSON.stringify(currentUser));
-            
-            showNotification('Welcome to SteelConnect! Account created successfully.', 'success');
-            closeModal();
-            showAppView();
-        }
-
-        function logout() {
-            currentUser = null;
-            isAuthenticated = false;
-            localStorage.removeItem('currentUser');
-            showNotification('Logged out successfully.', 'info');
-            showLandingView();
-        }
-
-        function showAppView() {
-            document.getElementById('landing-page-content').style.display = 'none';
-            document.getElementById('app-content').style.display = 'flex';
-            document.getElementById('auth-buttons-container').style.display = 'none';
-            document.getElementById('user-info').style.display = 'flex';
-            
-            // Update user display
-            const initials = currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase();
-            document.getElementById('userAvatar').textContent = initials;
-            document.getElementById('sidebarUserAvatar').textContent = initials;
-            document.getElementById('userName').textContent = currentUser.name;
-            document.getElementById('sidebarUserName').textContent = currentUser.name;
-            document.getElementById('userType').textContent = currentUser.type;
-            document.getElementById('sidebarUserType').textContent = currentUser.type;
-
-            setupSidebarNav();
-            loadDashboard();
-        }
-
-        function showLandingView() {
-            document.getElementById('landing-page-content').style.display = 'block';
-            document.getElementById('app-content').style.display = 'none';
-            document.getElementById('auth-buttons-container').style.display = 'flex';
-            document.getElementById('user-info').style.display = 'none';
-        }
-
-        function setupSidebarNav() {
-            const navItems = currentUser.type === 'contractor' 
-                ? [
-                    { icon: 'fas fa-home', text: 'Dashboard', id: 'dashboard' },
-                    { icon: 'fas fa-calculator', text: 'AI Estimation', id: 'ai-estimation' },
-                    { icon: 'fas fa-plus-circle', text: 'Post Job', id: 'post-job' },
-                    { icon: 'fas fa-briefcase', text: 'My Jobs', id: 'my-jobs' }
-                ]
-                : [
-                    { icon: 'fas fa-home', text: 'Dashboard', id: 'dashboard' },
-                    { icon: 'fas fa-search', text: 'Find Jobs', id: 'find-jobs' },
-                    { icon: 'fas fa-file-invoice', text: 'My Quotes', id: 'my-quotes' }
-                ];
-
-            const sidebarNav = document.getElementById('sidebar-nav-menu');
-            sidebarNav.innerHTML = navItems.map(item => 
-                `<a href="#" class="sidebar-nav-link" data-view="${item.id}">
-                    <i class="${item.icon}"></i> ${item.text}
-                </a>`
-            ).join('');
-
-            sidebarNav.addEventListener('click', (e) => {
-                if (e.target.classList.contains('sidebar-nav-link')) {
+            if (signupLink) {
+                // The main script.js has the showAuthModal function
+                signupLink.addEventListener('click', (e) => {
                     e.preventDefault();
-                    const viewId = e.target.getAttribute('data-view');
-                    
-                    sidebarNav.querySelectorAll('.sidebar-nav-link').forEach(link => 
-                        link.classList.remove('active'));
-                    e.target.classList.add('active');
-                    
-                    loadView(viewId);
-                }
-            });
-
-            sidebarNav.querySelector('[data-view="dashboard"]')?.classList.add('active');
-        }
-
-        function loadView(viewId) {
-            switch(viewId) {
-                case 'dashboard': loadDashboard(); break;
-                case 'ai-estimation': loadAIEstimation(); break;
-                case 'post-job': loadPostJob(); break;
-                case 'my-jobs': loadMyJobs(); break;
-                case 'find-jobs': loadFindJobs(); break;
-                case 'my-quotes': loadMyQuotes(); break;
+                    if (typeof showAuthModal === 'function') {
+                        showAuthModal('register');
+                    }
+                });
             }
-        }
-
-        function loadDashboard() {
-            document.getElementById('app-container').innerHTML = `
-                <div class="section-header">
-                    <h2>Welcome back, ${currentUser.name}!</h2>
-                    <p>Your SteelConnect dashboard</p>
-                </div>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 24px;">
-                    <div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px;">
-                        <h3 style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
-                            <i class="fas fa-brain" style="color: #8b5cf6;"></i> AI Estimation Tool
-                        </h3>
-                        <p style="color: #64748b; margin-bottom: 16px;">Get instant project cost estimates using our AI.</p>
-                        <button class="btn btn-ai" onclick="loadView('ai-estimation')">Try AI Estimator</button>
-                    </div>
-                    <div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px;">
-                        <h3 style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
-                            <i class="fas fa-chart-line" style="color: #1e40af;"></i> Quick Stats
-                        </h3>
-                        <p style="color: #64748b;">Track your projects and quotes in real-time.</p>
-                    </div>
-                </div>`;
-        }
-
-        function loadAIEstimation() {
-            document.getElementById('app-container').innerHTML = `
-                <div class="section-header">
-                    <h2><i class="fas fa-brain"></i> AI Cost Estimation</h2>
-                    <p>Get instant, accurate cost estimates for your projects</p>
-                </div>
-                <div style="max-width: 800px; margin: 0 auto; background: white; border-radius: 16px; padding: 32px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);">
-                    <h3 style="text-align: center; margin-bottom: 24px;">Professional Steel Estimator</h3>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label class="form-label">Project Type</label>
-                            <select id="app-project-type" class="form-select">
-                                <option value="">Select project type</option>
-                                <option value="residential">Residential Building</option>
-                                <option value="commercial">Commercial Complex</option>
-                                <option value="industrial">Industrial Facility</option>
-                            </select>
-                        </div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                            <div class="form-group">
-                                <label class="form-label">Steel Tonnage</label>
-                                <input type="number" id="app-steel-tonnage" class="form-input" placeholder="e.g., 150">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Timeline (weeks)</label>
-                                <input type="number" id="app-timeline" class="form-input" placeholder="e.g., 12">
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Project Description</label>
-                            <textarea id="app-description" class="form-textarea" rows="3" placeholder="Describe your project..."></textarea>
-                        </div>
-                        <button class="btn btn-primary btn-large" onclick="generateAppAIEstimate()">
-                            <i class="fas fa-brain"></i> Generate Professional Estimate
-                        </button>
-                        <div id="app-ai-result" class="ai-result">
-                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
-                                <i class="fas fa-check-circle" style="color: #10b981;"></i>
-                                <h4>Professional Analysis Complete</h4>
-                            </div>
-                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px;">
-                                <div style="text-align: center; padding: 16px; background: var(--bg-light); border-radius: 8px;">
-                                    <span id="app-estimated-cost" style="font-size: 24px; font-weight: 900; color: #1e40af; display: block;">$0</span>
-                                    <span style="font-size: 12px; color: var(--text-gray);">Total Cost</span>
-                                </div>
-                                <div style="text-align: center; padding: 16px; background: var(--bg-light); border-radius: 8px;">
-                                    <span id="app-timeline-estimate" style="font-size: 24px; font-weight: 900; color: #0f766e; display: block;">0 weeks</span>
-                                    <span style="font-size: 12px; color: var(--text-gray);">Timeline</span>
-                                </div>
-                            </div>
-                            <div style="text-align: center; margin-top: 20px;">
-                                <button class="btn btn-primary" onclick="loadView('post-job')">
-                                    <i class="fas fa-plus"></i> Post This Project
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>`;
-        }
-
-        function loadPostJob() {
-            document.getElementById('app-container').innerHTML = `
-                <div class="section-header">
-                    <h2>Post New Project</h2>
-                    <p>Create a detailed project listing</p>
-                </div>
-                <div style="max-width: 800px; margin: 0 auto; background: white; border-radius: 16px; padding: 32px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);">
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label class="form-label">Project Title</label>
-                            <input type="text" class="form-input" placeholder="e.g., Steel Frame Design for Commercial Building">
-                        </div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                            <div class="form-group">
-                                <label class="form-label">Budget Range</label>
-                                <select class="form-select">
-                                    <option>$5,000 - $15,000</option>
-                                    <option>$15,000 - $50,000</option>
-                                    <option>$50,000+</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Timeline</label>
-                                <select class="form-select">
-                                    <option>1-3 months</option>
-                                    <option>3-6 months</option>
-                                    <option>6+ months</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Project Description</label>
-                            <textarea class="form-textarea" rows="4" placeholder="Detailed project requirements..."></textarea>
-                        </div>
-                        <button class="btn btn-primary btn-large" onclick="showNotification('Project posted successfully!', 'success')">
-                            <i class="fas fa-rocket"></i> Post Project
-                        </button>
-                    </div>
-                </div>`;
-        }
-
-        function loadMyJobs() {
-            document.getElementById('app-container').innerHTML = `
-                <div class="section-header">
-                    <h2>My Projects</h2>
-                    <p>Manage your posted projects</p>
-                </div>
-                <div style="display: grid; gap: 24px;">
-                    <div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px;">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 16px;">
-                            <h3>Commercial Steel Frame</h3>
-                            <span style="background: #dbeafe; color: #1e40af; padding: 6px 12px; border-radius: 20px;">$45,000</span>
-                        </div>
-                        <p style="color: #64748b; margin-bottom: 16px;">3-story commercial building steel design project.</p>
-                        <div style="border-top: 1px solid #e2e8f0; padding-top: 16px; display: flex; justify-content: space-between;">
-                            <span style="background: #dcfce7; color: #16a34a; padding: 4px 12px; border-radius: 20px; font-size: 14px;">5 Proposals</span>
-                            <button class="btn btn-outline">View Proposals</button>
-                        </div>
-                    </div>
-                </div>`;
-        }
-
-        function loadFindJobs() {
-            document.getElementById('app-container').innerHTML = `
-                <div class="section-header">
-                    <h2>Available Projects</h2>
-                    <p>Browse and submit proposals</p>
-                </div>
-                <div style="display: grid; gap: 24px;">
-                    <div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px;">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 16px;">
-                            <h3>Residential Steel Framing</h3>
-                            <span style="background: #dbeafe; color: #1e40af; padding: 6px 12px; border-radius: 20px;">$25,000</span>
-                        </div>
-                        <p style="color: #64748b; margin-bottom: 16px;">Modern residential steel frame design needed.</p>
-                        <div style="border-top: 1px solid #e2e8f0; padding-top: 16px; display: flex; justify-content: space-between;">
-                            <span style="background: #dcfce7; color: #16a34a; padding: 4px 12px; border-radius: 20px; font-size: 14px;">Open</span>
-                            <button class="btn btn-primary" onclick="showNotification('Proposal submitted!', 'success')">Submit Proposal</button>
-                        </div>
-                    </div>
-                </div>`;
-        }
-
-        function loadMyQuotes() {
-            document.getElementById('app-container').innerHTML = `
-                <div class="section-header">
-                    <h2>My Quotes</h2>
-                    <p>Track your submitted quotes</p>
-                </div>
-                <div style="display: grid; gap: 24px;">
-                    <div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px;">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 16px;">
-                            <h3>Office Building Design</h3>
-                            <span style="background: #dbeafe; color: #1e40af; padding: 6px 12px; border-radius: 20px;">$35,000</span>
-                        </div>
-                        <p style="color: #64748b; margin-bottom: 16px;">Downtown office building steel frame proposal.</p>
-                        <div style="border-top: 1px solid #e2e8f0; padding-top: 16px; display: flex; justify-content: space-between;">
-                            <span style="background: #dcfce7; color: #16a34a; padding: 4px 12px; border-radius: 20px; font-size: 14px;">Accepted</span>
-                            <button class="btn btn-primary">View Contract</button>
-                        </div>
-                    </div>
-                </div>`;
-        }
-
-        function generateAppAIEstimate() {
-            const tonnage = parseFloat(document.getElementById('app-steel-tonnage').value);
-            if (!tonnage) {
-                showNotification('Please enter steel tonnage', 'warning');
-                return;
-            }
-            
-            showNotification('Generating professional estimate...', 'info');
-            
-            setTimeout(() => {
-                const totalCost = tonnage * (2000 + Math.random() * 1000);
-                const timeline = Math.ceil(tonnage / 15);
-                
-                document.getElementById('app-estimated-cost').textContent = 
-                    '$' + Math.round(totalCost).toLocaleString();
-                document.getElementById('app-timeline-estimate').textContent = timeline + ' weeks';
-                
-                document.getElementById('app-ai-result').classList.add('show');
-                showNotification('Professional estimate generated!', 'success');
-            }, 2000);
-        }
-
-        function generateAIEstimate() {
-            const projectType = document.getElementById('project-type').value;
-            const tonnage = parseFloat(document.getElementById('steel-tonnage').value);
-            const location = document.getElementById('project-location').value;
-            
-            if (!projectType || !tonnage || !location) {
-                showNotification('Please fill in all fields', 'warning');
-                return;
-            }
-            
-            setTimeout(() => {
-                const baseCost = tonnage * 2500;
-                const multiplier = projectType === 'commercial' ? 1.3 : 1.0;
-                const totalCost = baseCost * multiplier;
-                const timeline = Math.ceil(tonnage / 20);
-                
-                document.getElementById('estimated-cost').textContent = '$' + Math.round(totalCost).toLocaleString();
-                document.getElementById('timeline-estimate').textContent = timeline + ' weeks';
-                
-                document.getElementById('ai-result').classList.add('show');
-                
-                setTimeout(() => {
-                    showNotification('This is a preview! Sign up for full access and professional connections.', 'info');
-                }, 2000);
-            }, 1500);
-        }
-
-        function showNotification(message, type = 'info', duration = 4000) {
-            const container = document.getElementById('notification-container');
-            const notification = document.createElement('div');
-            notification.className = `notification notification-${type}`;
-            
-            const icons = {
-                success: 'fa-check-circle',
-                info: 'fa-info-circle',
-                warning: 'fa-exclamation-circle'
-            };
-            
-            notification.innerHTML = `
-                <div class="notification-content">
-                    <i class="fas ${icons[type]}"></i>
-                    <span>${message}</span>
-                </div>
-                <button class="notification-close" onclick="this.parentElement.remove()">
-                    <i class="fas fa-times"></i>
-                </button>`;
-            
-            container.appendChild(notification);
-            
-            setTimeout(() => {
-                if (notification.parentElement) {
-                    notification.style.opacity = '0';
-                    notification.style.transform = 'translateX(100%)';
-                    setTimeout(() => notification.remove(), 300);
-                }
-            }, duration);
-        }
+        });
     </script>
 </body>
 </html>
