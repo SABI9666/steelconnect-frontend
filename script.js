@@ -1,3 +1,4 @@
+// --- LANDING PAGE SLIDER & SMOOTH SCROLL ---
 let currentSlide = 0;
 const sliderWrapper = document.getElementById('slider-wrapper');
 const sliderDots = document.querySelectorAll('.slider-dot');
@@ -53,8 +54,8 @@ const appState = {
     hasMoreJobs: true,
     userSubmittedQuotes: new Set(),
     uploadedFile: null,
-    myEstimations: [], // Track user's estimation requests
-    currentHeaderSlide: 0, // For dynamic header
+    myEstimations: [],
+    currentHeaderSlide: 0,
 };
 
 // Professional Features Header Data
@@ -91,6 +92,8 @@ const headerFeatures = [
 
 // --- INACTIVITY TIMER FOR AUTO-LOGOUT ---
 let inactivityTimer;
+let notificationInterval; // To hold the notification timer
+
 function resetInactivityTimer() {
     clearTimeout(inactivityTimer);
     inactivityTimer = setTimeout(() => {
@@ -104,6 +107,7 @@ function resetInactivityTimer() {
 function initializeApp() {
     console.log("SteelConnect App Initializing...");
     
+    // The notification container is now in the HTML, so this check is a fallback.
     if (!document.getElementById('notification-container')) {
         const notificationContainer = document.createElement('div');
         notificationContainer.id = 'notification-container';
@@ -208,8 +212,8 @@ async function apiCall(endpoint, method, body = null, successMessage = null) {
 
         if (response.status === 204 || response.headers.get("content-length") === "0") {
              if (!response.ok) {
-                 const errorMsg = response.headers.get('X-Error-Message') || `Request failed with status ${response.status}`;
-                 throw new Error(errorMsg);
+                const errorMsg = response.headers.get('X-Error-Message') || `Request failed with status ${response.status}`;
+                throw new Error(errorMsg);
              }
              if (successMessage) showNotification(successMessage, 'success');
              return { success: true };
@@ -265,6 +269,11 @@ async function handleLogin(event) {
         if (data.user.type === 'designer') {
             loadUserQuotes();
         }
+
+        // **NOTIFICATION FIX**: Start checking for notifications after login.
+        fetchAndUpdateNotifications(); // Check once immediately
+        notificationInterval = setInterval(fetchAndUpdateNotifications, 60000); // Check every 60 seconds
+
     } catch(error) {
         // Error is already shown by apiCall
     }
@@ -277,6 +286,7 @@ function logout() {
     appState.myEstimations = [];
     localStorage.clear();
     clearTimeout(inactivityTimer);
+    clearInterval(notificationInterval); // **NOTIFICATION FIX**: Stop checking on logout
     showLandingPageView();
     showNotification('You have been logged out successfully.', 'info');
 }
@@ -297,6 +307,37 @@ async function loadUserQuotes() {
         console.error('Error loading user quotes:', error);
     }
 }
+
+// --- NOTIFICATION SYSTEM ---
+async function fetchAndUpdateNotifications() {
+    if (!appState.currentUser) return;
+
+    // This is a placeholder. A real implementation requires a backend API endpoint
+    // like GET /api/notifications/unread to return the count of new events.
+    try {
+        // Example of what a real API call would look like:
+        // const response = await apiCall('/notifications/unread', 'GET');
+        // const { unreadCount } = response.data;
+
+        // --- MOCK DATA FOR DEMONSTRATION ---
+        // To test, you can change this number. In a real app, it would come from the server.
+        const unreadCount = 3; 
+        // --- END MOCK DATA ---
+
+        const badge = document.querySelector('.notification-badge');
+        if (badge) {
+            if (unreadCount > 0) {
+                badge.textContent = unreadCount;
+                badge.style.display = 'flex';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+    } catch (error) {
+        console.error("Could not fetch notifications:", error);
+    }
+}
+
 
 // --- ENHANCED ESTIMATION SYSTEM ---
 async function loadUserEstimations() {
@@ -1126,7 +1167,7 @@ function showAppView() {
         logout();
     });
      document.getElementById('user-info').addEventListener('click', () => {
-        document.getElementById('user-info-dropdown').classList.toggle('active');
+         document.getElementById('user-info-dropdown').classList.toggle('active');
     });
 
     document.getElementById('sidebarUserName').textContent = user.name;
@@ -1134,7 +1175,6 @@ function showAppView() {
     document.getElementById('sidebarUserAvatar').textContent = (user.name || "A").charAt(0).toUpperCase();
     
     buildSidebarNav();
-    // **MODIFICATION**: Default to dashboard instead of jobs
     renderAppSection('dashboard');
     
     if (user.type === 'designer') {
@@ -1154,6 +1194,7 @@ function showLandingPageView() {
     const navMenu = document.getElementById('main-nav-menu');
     if (navMenu) {
         navMenu.innerHTML = `
+            <a href="#ai-estimation" class="nav-link">AI Estimation</a>
             <a href="#how-it-works" class="nav-link">How It Works</a>
             <a href="#why-steelconnect" class="nav-link">Why Choose Us</a>
             <a href="#showcase" class="nav-link">Showcase</a>`;
@@ -1167,15 +1208,15 @@ function buildSidebarNav() {
 
     if (role === 'designer') {
         links += `
-           <a href="#" class="sidebar-nav-link" data-section="jobs"><i class="fas fa-search fa-fw"></i><span>Find Projects</span></a>
-           <a href="#" class="sidebar-nav-link" data-section="my-quotes"><i class="fas fa-file-invoice-dollar fa-fw"></i><span>My Quotes</span></a>`;
+          <a href="#" class="sidebar-nav-link" data-section="jobs"><i class="fas fa-search fa-fw"></i><span>Find Projects</span></a>
+          <a href="#" class="sidebar-nav-link" data-section="my-quotes"><i class="fas fa-file-invoice-dollar fa-fw"></i><span>My Quotes</span></a>`;
     } else {
         links += `
-           <a href="#" class="sidebar-nav-link" data-section="jobs"><i class="fas fa-tasks fa-fw"></i><span>My Projects</span></a>
-           <a href="#" class="sidebar-nav-link" data-section="approved-jobs"><i class="fas fa-check-circle fa-fw"></i><span>Approved Projects</span></a>
-           <a href="#" class="sidebar-nav-link" data-section="post-job"><i class="fas fa-plus-circle fa-fw"></i><span>Post Project</span></a>
-           <a href="#" class="sidebar-nav-link" data-section="estimation-tool"><i class="fas fa-calculator fa-fw"></i><span>AI Cost Estimation</span></a>
-           <a href="#" class="sidebar-nav-link" data-section="my-estimations"><i class="fas fa-file-invoice fa-fw"></i><span>My Estimations</span></a>`;
+          <a href="#" class="sidebar-nav-link" data-section="jobs"><i class="fas fa-tasks fa-fw"></i><span>My Projects</span></a>
+          <a href="#" class="sidebar-nav-link" data-section="approved-jobs"><i class="fas fa-check-circle fa-fw"></i><span>Approved Projects</span></a>
+          <a href="#" class="sidebar-nav-link" data-section="post-job"><i class="fas fa-plus-circle fa-fw"></i><span>Post Project</span></a>
+          <a href="#" class="sidebar-nav-link" data-section="estimation-tool"><i class="fas fa-calculator fa-fw"></i><span>AI Cost Estimation</span></a>
+          <a href="#" class="sidebar-nav-link" data-section="my-estimations"><i class="fas fa-file-invoice fa-fw"></i><span>My Estimations</span></a>`;
     }
     
     links += `<a href="#" class="sidebar-nav-link" data-section="messages"><i class="fas fa-comments fa-fw"></i><span>Messages</span></a>`;
@@ -1232,7 +1273,7 @@ function renderAppSection(sectionId) {
     }
 }
 
-// --- NEW: RENDER DASHBOARD WIDGETS ---
+// --- DASHBOARD WIDGETS ---
 async function renderRecentActivityWidgets() {
     const user = appState.currentUser;
     const recentProjectsContainer = document.getElementById('recent-projects-widget');
@@ -1246,7 +1287,7 @@ async function renderRecentActivityWidgets() {
             const recentJobs = (response.data || []).slice(0, 3);
             if (recentJobs.length > 0) {
                 recentProjectsContainer.innerHTML = recentJobs.map(job => `
-                    <div class="widget-list-item">
+                    <div class="widget-list-item" onclick="renderAppSection('jobs')" style="cursor: pointer;">
                         <div class="widget-item-info">
                             <i class="fas fa-briefcase widget-item-icon"></i>
                             <div>
@@ -1271,7 +1312,7 @@ async function renderRecentActivityWidgets() {
             const recentQuotes = (response.data || []).slice(0, 3);
              if (recentQuotes.length > 0) {
                 recentQuotesContainer.innerHTML = recentQuotes.map(quote => `
-                    <div class="widget-list-item">
+                    <div class="widget-list-item" onclick="renderAppSection('my-quotes')" style="cursor: pointer;">
                          <div class="widget-item-info">
                             <i class="fas fa-file-invoice-dollar widget-item-icon"></i>
                             <div>
@@ -1291,7 +1332,8 @@ async function renderRecentActivityWidgets() {
     }
 }
 
-// --- ENHANCED ESTIMATION TOOL FUNCTIONS ---
+
+// --- ESTIMATION TOOL FUNCTIONS ---
 function setupEstimationToolEventListeners() {
     const uploadArea = document.getElementById('file-upload-area');
     const fileInput = document.getElementById('file-upload-input');
@@ -1414,11 +1456,6 @@ function showNotification(message, type = 'info', duration = 4000) {
     }, duration);
 }
 
-// Legacy function for compatibility
-function showAlert(message, type = 'info') {
-    showNotification(message, type);
-}
-
 // --- TEMPLATE GETTERS ---
 function getLoginTemplate() {
     return `
@@ -1524,13 +1561,10 @@ function getEstimationToolTemplate() {
         </div>`;
 }
 
-// --- NEW TEMPLATES FOR DASHBOARD AND SETTINGS ---
-
 function getDashboardTemplate(user) {
     const isContractor = user.type === 'contractor';
     const name = user.name.split(' ')[0];
 
-    // Contractor specific elements
     const contractorQuickActions = `
         <div class="quick-action-card" onclick="renderAppSection('post-job')">
             <i class="fas fa-plus-circle card-icon"></i>
@@ -1559,7 +1593,6 @@ function getDashboardTemplate(user) {
             <div id="recent-projects-widget" class="widget-content"></div>
         </div>`;
 
-    // Designer specific elements
     const designerQuickActions = `
         <div class="quick-action-card" onclick="renderAppSection('jobs')">
             <i class="fas fa-search card-icon"></i>
@@ -1631,7 +1664,6 @@ function getDashboardTemplate(user) {
 }
 
 function getSettingsTemplate(user) {
-    // NOTE: This is a placeholder UI. Saving data would require new API endpoints.
     return `
         <div class="section-header modern-header">
             <div class="header-content">
@@ -1713,155 +1745,4 @@ function getSettingsTemplate(user) {
             </div>
         </div>
     `;
-}
-
-
-// Add styles for the new premium UI components
-const premiumStyles = `
-<style>
-/* Dynamic Feature Header */
-.dynamic-feature-header { margin-bottom: 2rem; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.1); }
-.feature-header-content { padding: 3rem 2rem; color: white; display: flex; align-items: center; gap: 2rem; position: relative; overflow: hidden; }
-.feature-header-content::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.1); backdrop-filter: blur(10px); }
-.feature-icon-container { font-size: 4rem; opacity: 0.9; z-index: 1; }
-.feature-text-content { flex: 1; z-index: 1; }
-.feature-title { font-size: 2.5rem; font-weight: 700; margin: 0 0 0.5rem 0; }
-.feature-subtitle { font-size: 1.25rem; margin: 0 0 1rem 0; opacity: 0.9; }
-.feature-description { font-size: 1rem; opacity: 0.8; line-height: 1.5; margin: 0; }
-.feature-indicators { display: flex; gap: 0.5rem; z-index: 1; }
-.indicator { width: 12px; height: 12px; border-radius: 50%; background: rgba(255,255,255,0.3); transition: all 0.3s ease; }
-.indicator.active { background: white; transform: scale(1.2); }
-/* Premium Cards */
-.premium-card { background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%); border: 1px solid #e2e8f0; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); transition: all 0.3s ease; overflow: hidden; position: relative; }
-.premium-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, #3B82F6, #10B981, #F59E0B); opacity: 0; transition: opacity 0.3s ease; }
-.premium-card:hover { transform: translateY(-4px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); }
-.premium-card:hover::before { opacity: 1; }
-/* Premium Forms */
-.premium-form { background: white; border-radius: 16px; padding: 2rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
-.premium-input, .premium-textarea, .premium-select { border: 2px solid #e2e8f0; border-radius: 12px; padding: 1rem 1.25rem; font-size: 1rem; transition: all 0.3s ease; background: #f8fafc; }
-.premium-input:focus, .premium-textarea:focus, .premium-select:focus { border-color: #3B82F6; background: white; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); outline: none; }
-.premium-btn { background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%); border: none; border-radius: 12px; padding: 1rem 2rem; font-weight: 600; transition: all 0.3s ease; box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3); }
-.premium-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 15px -3px rgba(59, 130, 246, 0.4); }
-/* Premium Empty States */
-.premium-empty { text-align: center; padding: 4rem 2rem; background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%); border-radius: 16px; border: 2px dashed #cbd5e1; }
-.premium-empty .empty-icon { font-size: 4rem; color: #94a3b8; margin-bottom: 1rem; }
-/* Premium Chat */
-.premium-chat { background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.1); }
-.premium-chat-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1.5rem; }
-.premium-avatar { position: relative; border: 3px solid rgba(255,255,255,0.3); }
-.online-indicator { position: absolute; bottom: 2px; right: 2px; width: 12px; height: 12px; background: #10B981; border: 2px solid white; border-radius: 50%; }
-.premium-messages { background: linear-gradient(to bottom, #f8fafc, #ffffff); }
-.premium-message { margin: 1rem 0; }
-.premium-bubble { border-radius: 18px; position: relative; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-.premium-bubble.me { background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%); color: white; }
-.premium-bubble.them { background: white; border: 1px solid #e2e8f0; }
-.message-status { position: absolute; bottom: 4px; right: 8px; font-size: 0.75rem; opacity: 0.7; }
-.premium-input-area { background: white; border-top: 1px solid #e2e8f0; padding: 1rem; }
-.premium-message-form .message-input-container { display: flex; align-items: center; gap: 0.5rem; background: #f8fafc; border-radius: 25px; padding: 0.5rem; border: 2px solid #e2e8f0; }
-.premium-send-btn { background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%); border: none; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; color: white; }
-/* Premium Modals */
-.premium-overlay { background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); }
-.premium-modal { border-radius: 20px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); border: 1px solid #e2e8f0; }
-.premium-modal-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 2rem; border-radius: 20px 20px 0 0; margin: -2rem -2rem 2rem -2rem; }
-.premium-close { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; border-radius: 50%; width: 40px; height: 40px; }
-/* Premium Notifications */
-.premium-notification { border-radius: 12px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); }
-/* Premium Estimation Tool */
-.premium-estimation-container { max-width: 1000px; margin: 0 auto; }
-.estimation-steps { display: flex; justify-content: space-between; margin-bottom: 3rem; position: relative; }
-.estimation-steps::before { content: ''; position: absolute; top: 25px; left: 25px; right: 25px; height: 2px; background: #e2e8f0; z-index: 0; }
-.step { display: flex; align-items: center; gap: 1rem; background: white; padding: 1rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); position: relative; z-index: 1; }
-.step.active { background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%); color: white; }
-.step-number { width: 50px; height: 50px; border-radius: 50%; background: #f1f5f9; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.25rem; }
-.step.active .step-number { background: rgba(255,255,255,0.2); color: white; }
-.premium-upload-area { border: 3px dashed #cbd5e1; border-radius: 16px; background: linear-gradient(145deg, #f8fafc 0%, #ffffff 100%); transition: all 0.3s ease; position: relative; overflow: hidden; }
-.premium-upload-area:hover, .premium-upload-area.drag-over { border-color: #3B82F6; background: linear-gradient(145deg, #dbeafe 0%, #f0f9ff 100%); }
-.upload-content { text-align: center; padding: 3rem 2rem; position: relative; z-index: 1; }
-.file-upload-icon { font-size: 4rem; color: #64748b; margin-bottom: 1rem; }
-.supported-formats { display: flex; justify-content: center; gap: 0.5rem; margin: 1rem 0; }
-.format-badge { background: #3B82F6; color: white; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.875rem; font-weight: 500; }
-.selected-files-container { margin-top: 2rem; background: #f8fafc; border-radius: 12px; padding: 1.5rem; }
-.selected-file-item { display: flex; justify-content: space-between; align-items: center; background: white; padding: 1rem; border-radius: 8px; margin-bottom: 0.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-.file-info { display: flex; align-items: center; gap: 0.75rem; }
-.file-details { display: flex; flex-direction: column; }
-.file-name { font-weight: 500; color: #1f2937; }
-.file-size { font-size: 0.875rem; color: #64748b; }
-.remove-file-btn { background: #ef4444; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease; }
-.remove-file-btn:hover { background: #dc2626; transform: scale(1.1); }
-.estimation-features { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin: 2rem 0; }
-.feature-item { display: flex; align-items: center; gap: 1rem; background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-left: 4px solid #3B82F6; }
-.feature-item i { font-size: 2rem; color: #3B82F6; }
-.feature-item h4 { margin: 0 0 0.5rem 0; color: #1f2937; }
-.feature-item p { margin: 0; color: #64748b; font-size: 0.875rem; }
-.estimation-actions { text-align: center; padding: 2rem 0; }
-.estimation-note { margin-top: 1rem; color: #64748b; font-size: 0.875rem; }
-
-/* NEW DASHBOARD STYLES */
-.dashboard-hero { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 2rem; border-radius: 16px; margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; }
-.dashboard-hero h2 { margin: 0; font-size: 2rem; }
-.dashboard-hero p { margin: 0.5rem 0 0; opacity: 0.9; }
-.subscription-badge { background: rgba(255,255,255,0.2); padding: 0.5rem 1rem; border-radius: 20px; font-weight: 500; }
-.dashboard-section-title { font-size: 1.5rem; margin-bottom: 1rem; color: #334155; }
-.dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
-.quick-action-card { background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 1.5rem; text-align: center; transition: all 0.3s ease; cursor: pointer; }
-.quick-action-card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-color: #3B82F6; }
-.quick-action-card .card-icon { font-size: 2.5rem; color: #3B82F6; margin-bottom: 1rem; }
-.quick-action-card h3 { margin: 0 0 0.5rem; font-size: 1.2rem; }
-.quick-action-card p { margin: 0; color: #64748b; font-size: 0.9rem; }
-.dashboard-columns { display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; }
-.widget-card { background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 1.5rem; }
-.widget-card h3 { margin: 0 0 1rem; display: flex; align-items: center; gap: 0.5rem; }
-.widget-loader { display: flex; justify-content: center; align-items: center; min-height: 100px; }
-.widget-list-item { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; border-bottom: 1px solid #f1f5f9; }
-.widget-list-item:last-child { border: none; }
-.widget-item-info { display: flex; align-items: center; gap: 1rem; }
-.widget-item-icon { font-size: 1.5rem; color: #94a3b8; }
-.widget-item-title { margin: 0; font-weight: 500; }
-.widget-item-meta { font-size: 0.8rem; color: #64748b; }
-.widget-item-status { font-size: 0.8rem; font-weight: bold; padding: 0.2rem 0.5rem; border-radius: 10px; text-transform: capitalize; }
-.widget-item-status.open, .widget-item-status.submitted { background-color: #e0f2fe; color: #0284c7; }
-.widget-item-status.assigned, .widget-item-status.approved { background-color: #dcfce7; color: #16a34a; }
-.widget-item-status.completed { background-color: #e5e7eb; color: #4b5563; }
-.widget-empty-text { color: #64748b; text-align: center; padding: 2rem 0; }
-.progress-bar-container { background: #e2e8f0; border-radius: 10px; height: 10px; overflow: hidden; margin: 1rem 0 0.5rem; }
-.progress-bar { background: #10B981; height: 100%; }
-.progress-label { text-align: right; font-size: 0.8rem; color: #64748b; }
-.widget-divider { border: none; border-top: 1px solid #f1f5f9; margin: 1rem 0; }
-
-/* NEW SETTINGS STYLES */
-.settings-container { display: grid; gap: 2rem; }
-.settings-card { background: white; border-radius: 16px; padding: 2rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
-.settings-card h3 { margin-top: 0; border-bottom: 1px solid #f1f5f9; padding-bottom: 1rem; margin-bottom: 1.5rem; }
-.subscription-plans { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-top: 1.5rem; }
-.plan-card { border: 2px solid #e2e8f0; padding: 1.5rem; border-radius: 12px; text-align: center; }
-.plan-card.active { border-color: #3B82F6; box-shadow: 0 0 15px rgba(59,130,246,0.2); }
-.plan-card h4 { font-size: 1.25rem; margin: 0; }
-.plan-card .price { font-size: 2.5rem; font-weight: bold; margin: 0.5rem 0; }
-.plan-card .price span { font-size: 1rem; font-weight: normal; color: #64748b; }
-.plan-card ul { list-style: none; padding: 0; margin: 1rem 0; text-align: left; }
-.plan-card li { margin-bottom: 0.5rem; }
-.plan-card li i { color: #10B981; margin-right: 0.5rem; }
-.plan-card li i.fa-times { color: #ef4444; }
-
-/* Responsive Design */
-@media (max-width: 992px) {
-    .dashboard-columns { grid-template-columns: 1fr; }
-}
-@media (max-width: 768px) {
-    .feature-header-content { flex-direction: column; text-align: center; gap: 1rem; padding: 2rem 1rem; }
-    .feature-title { font-size: 2rem; }
-    .estimation-steps { flex-direction: column; gap: 1rem; }
-    .estimation-steps::before { display: none; }
-    .estimation-features { grid-template-columns: 1fr; }
-    .dashboard-hero { flex-direction: column; text-align: center; gap: 1rem; }
-}
-</style>
-`;
-
-// Inject the premium styles
-if (!document.getElementById('premium-styles')) {
-    const styleSheet = document.createElement('style');
-    styleSheet.id = 'premium-styles';
-    styleSheet.innerHTML = premiumStyles;
-    document.head.appendChild(styleSheet);
 }
