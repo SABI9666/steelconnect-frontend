@@ -8,15 +8,162 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
     <style>
-        /* --- AI ESTIMATION & NOTIFICATION STYLES --- */
+        /* --- GLOBAL STYLES & VARIABLES --- */
         :root {
+            --primary-color: #1e40af;
+            --primary-hover: #1d4ed8;
+            --primary-light: #dbeafe;
+            --secondary-color: #0f766e;
+            --secondary-hover: #0d9488;
+            --accent-color: #0891b2;
+            --accent-light: #cffafe;
+            --gold-accent: #f59e0b;
+            --text-dark: #0f172a;
+            --text-gray: #64748b;
+            --text-light: #94a3b8;
+            --bg-white: #ffffff;
+            --bg-light: #f8fafc;
+            --bg-gray: #f1f5f9;
+            --bg-dark: #0f172a;
+            --border-color: #e2e8f0;
+            --border-light: #f1f5f9;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+            --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+            /* --- NEW AI STYLES --- */
             --ai-gradient: linear-gradient(135deg, #8b5cf6, #ec4899, #f59e0b);
             --ai-light: #fdf4ff;
             --ai-purple: #8b5cf6;
         }
+        
+        html { scroll-behavior: smooth; }
+        body { 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            background-color: var(--bg-light); 
+            color: var(--text-dark); 
+            line-height: 1.6; 
+            margin: 0;
+            padding: 0;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
+        /* --- HEADER --- */
+        .header { 
+            background: rgba(248, 250, 252, 0.95); 
+            border-bottom: 1px solid var(--border-light); 
+            position: sticky; 
+            top: 0; 
+            z-index: 1000; 
+            backdrop-filter: blur(20px); 
+        }
+        .header-container { 
+            max-width: 1400px; 
+            margin: 0 auto; 
+            padding: 0 24px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+            height: 72px; 
+        }
+        .logo { 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            font-size: 28px; 
+            font-weight: 800; 
+            color: var(--text-dark); 
+            text-decoration: none; 
+            cursor: pointer; 
+        }
+        .logo-icon { 
+            width: 40px; 
+            height: 40px; 
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color)); 
+            border-radius: 12px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            color: white; 
+            font-weight: 700; 
+            box-shadow: var(--shadow-lg);
+        }
+        .nav-menu { 
+            flex-grow: 1; 
+            display: flex; 
+            justify-content: center; 
+            gap: 8px; 
+        }
+        .nav-link { 
+            padding: 12px 20px; 
+            border-radius: 8px; 
+            color: var(--text-gray); 
+            font-weight: 600; 
+            font-size: 15px; 
+            cursor: pointer; 
+            background: none; 
+            border: none; 
+            text-decoration: none; 
+            transition: all 0.3s ease;
+        }
+        .nav-link:hover { 
+            color: var(--primary-color); 
+            background: var(--accent-light);
+        }
+        .auth-buttons { 
+            display: flex; 
+            gap: 16px; 
+        }
+
+        /* --- BUTTONS --- */
+        .btn { 
+            padding: 14px 28px; 
+            border-radius: 12px; 
+            font-weight: 600; 
+            font-size: 16px; 
+            cursor: pointer; 
+            border: 2px solid transparent; 
+            display: inline-flex; 
+            align-items: center; 
+            gap: 10px; 
+            transition: all 0.3s ease; 
+            text-decoration: none;
+        }
+        .btn:hover { 
+            transform: translateY(-2px); 
+            box-shadow: var(--shadow-lg); 
+        }
+        .btn-outline { 
+            background: transparent; 
+            color: var(--primary-color); 
+            border-color: var(--primary-color); 
+        }
+        .btn-outline:hover { 
+            background: var(--primary-color); 
+            color: white; 
+        }
+        .btn-primary { 
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); 
+            color: white; 
+            box-shadow: var(--shadow-lg);
+        }
+        .btn-primary:hover { 
+            background: linear-gradient(135deg, var(--primary-hover), var(--secondary-hover)); 
+            box-shadow: var(--shadow-xl);
+            transform: translateY(-3px);
+        }
+        .btn-danger {
+            background-color: #ef4444;
+            color: white;
+            border-color: #ef4444;
+        }
+        .btn-danger:hover {
+            background-color: #dc2626;
+            border-color: #dc2626;
+        }
+        /* --- NEW AI BUTTON STYLE --- */
         .btn-ai {
             background: var(--ai-gradient);
             color: white;
@@ -38,13 +185,243 @@
             box-shadow: 0 12px 32px rgba(139, 92, 246, 0.4);
         }
 
+        /* --- ENHANCED HERO SECTION --- */
+        .hero { 
+            position: relative;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 30%, #334155 70%, #475569 100%);
+            overflow: hidden;
+        }
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(30, 64, 175, 0.4) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(15, 118, 110, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(8, 145, 178, 0.2) 0%, transparent 50%);
+            z-index: 1;
+        }
+        .hero-background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('https://images.unsplash.com/photo-1541888946425-d81bb19240f5?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3') center/cover;
+            opacity: 0.2;
+            z-index: 0;
+        }
+        .hero-content { 
+            position: relative;
+            z-index: 2;
+            max-width: 1400px; 
+            margin: 0 auto; 
+            padding: 0 24px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 80px;
+            align-items: center;
+        }
+        .hero-text {
+            color: white;
+        }
+        .hero-text h1 { 
+            font-size: 68px; 
+            font-weight: 900; 
+            line-height: 1.1; 
+            margin-bottom: 32px; 
+            background: linear-gradient(135deg, #ffffff 0%, #e2e8f0 50%, #f59e0b 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        .hero-text .highlight {
+            background: linear-gradient(135deg, #f59e0b, #eab308);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        /* --- NEW AI HIGHLIGHT STYLE --- */
         .hero-text .ai-highlight {
             background: var(--ai-gradient);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
+        .hero-text p { 
+            font-size: 22px; 
+            opacity: 0.95; 
+            margin-bottom: 48px; 
+            color: #e2e8f0;
+            line-height: 1.7;
+        }
+        .hero-cta {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .hero-cta .btn-primary {
+            padding: 20px 40px;
+            font-size: 18px;
+            font-weight: 700;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #f59e0b 0%, #eab308 50%, #d97706 100%);
+            box-shadow: 0 8px 24px rgba(245, 158, 11, 0.4);
+            animation: pulse-glow 2s infinite;
+        }
+        .hero-cta .btn-primary:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 32px rgba(245, 158, 11, 0.6);
+        }
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 8px 24px rgba(245, 158, 11, 0.4); }
+            50% { box-shadow: 0 8px 32px rgba(245, 158, 11, 0.6); }
+        }
+        .hero-stats {
+            display: flex;
+            gap: 32px;
+            margin-top: 40px;
+        }
+        .hero-stat {
+            text-align: center;
+        }
+        .hero-stat-number {
+            font-size: 32px;
+            font-weight: 900;
+            color: #f59e0b;
+            display: block;
+        }
+        .hero-stat-label {
+            font-size: 14px;
+            color: #cbd5e1;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 4px;
+        }
+        .hero-visual {
+            position: relative;
+            height: 600px;
+        }
+        .hero-image-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 24px 64px rgba(0, 0, 0, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+        }
+        .hero-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.6s ease;
+        }
+        .hero-image-container:hover .hero-image {
+            transform: scale(1.05);
+        }
+        .hero-image-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+            padding: 32px;
+            color: white;
+        }
+        .hero-image-overlay h3 {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .hero-image-overlay p {
+            opacity: 0.9;
+            font-size: 16px;
+        }
+        .floating-cards {
+            position: absolute;
+            top: 20px;
+            right: -180px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            z-index: 3;
+        }
+        .floating-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.88));
+            backdrop-filter: blur(20px);
+            padding: 16px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            min-width: 180px;
+            max-width: 200px;
+            transition: all 0.3s ease;
+        }
+        .floating-card:hover {
+            transform: translateY(-8px) scale(1.05);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.92));
+        }
+        .floating-card-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 16px;
+            margin-bottom: 10px;
+            box-shadow: 0 4px 12px rgba(30, 64, 175, 0.3);
+        }
+        .floating-card h4 {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 4px;
+            line-height: 1.3;
+        }
+        .floating-card p {
+            font-size: 12px;
+            color: var(--text-gray);
+            margin: 0;
+            line-height: 1.4;
+        }
+        .floating-card-number {
+            font-size: 20px;
+            font-weight: 900;
+            color: var(--secondary-color);
+            display: block;
+            margin-bottom: 2px;
+        }
+        .floating-card.connection-card {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.95), rgba(234, 179, 8, 0.88));
+            color: white;
+            border: 1px solid rgba(245, 158, 11, 0.4);
+        }
+        .floating-card.connection-card .floating-card-icon {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.7));
+            color: var(--gold-accent);
+        }
+        .floating-card.connection-card h4,
+        .floating-card.connection-card p {
+            color: white;
+        }
+        .floating-card.connection-card .floating-card-number {
+            color: white;
+        }
 
+        /* --- NEW AI ESTIMATION SECTION --- */
         .ai-estimation {
             padding: 120px 24px;
             background: var(--ai-light);
@@ -139,42 +516,578 @@
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
         }
+
+        /* --- HOW IT WORKS SECTION --- */
+        .how-it-works {
+            padding: 120px 24px;
+            background: var(--bg-white);
+            position: relative;
+        }
+        .how-it-works::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 200px;
+            background: linear-gradient(180deg, var(--ai-light) 0%, var(--bg-white) 100%);
+        }
+        .section-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+        .section-title { 
+            font-size: 48px; 
+            font-weight: 900; 
+            text-align: center; 
+            margin-bottom: 20px; 
+            background: linear-gradient(135deg, var(--text-dark), var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .section-subtitle {
+            text-align: center;
+            font-size: 20px;
+            color: var(--text-gray);
+            margin-bottom: 80px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .steps-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 40px;
+            margin-bottom: 80px;
+        }
+        .step-card {
+            text-align: center;
+            padding: 40px 30px;
+            background: linear-gradient(135deg, var(--bg-white), var(--bg-gray));
+            border-radius: 20px;
+            border: 1px solid var(--border-light);
+            box-shadow: var(--shadow-lg);
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .step-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-color), var(--accent-color), var(--secondary-color));
+        }
+        .step-card:hover {
+            transform: translateY(-12px);
+            box-shadow: var(--shadow-2xl);
+            background: var(--bg-white);
+        }
+        .step-number {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0 auto 24px;
+            box-shadow: var(--shadow-lg);
+            border: 3px solid var(--accent-light);
+        }
+        .step-card h3 {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: var(--text-dark);
+        }
+        .step-card p {
+            color: var(--text-gray);
+            line-height: 1.6;
+        }
+
+        /* --- SLIDING CARDS SECTION --- */
+        .sliding-section {
+            padding: 120px 24px;
+            background: linear-gradient(135deg, var(--bg-light), var(--accent-light));
+        }
+        .slider-container {
+            position: relative;
+            overflow: hidden;
+            border-radius: 24px;
+            box-shadow: var(--shadow-xl);
+            background: var(--bg-white);
+        }
+        .slider-wrapper {
+            display: flex;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .slide {
+            min-width: 100%;
+            padding: 80px 60px;
+            display: flex;
+            align-items: center;
+            gap: 60px;
+        }
+        .slide-content h3 {
+            font-size: 36px;
+            font-weight: 800;
+            margin-bottom: 24px;
+            color: var(--text-dark);
+        }
+        .slide-content p {
+            font-size: 18px;
+            color: var(--text-gray);
+            line-height: 1.7;
+            margin-bottom: 32px;
+        }
+        .slide-features { list-style: none; padding: 0; }
+        .slide-features li {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            font-size: 16px;
+            color: var(--text-dark);
+        }
+        .slide-features li i { color: var(--secondary-color); width: 20px; }
+        .slide-visual {
+            flex: 1;
+            height: 400px;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: var(--shadow-lg);
+        }
+        .slide-visual img { width: 100%; height: 100%; object-fit: cover; }
+        .slider-controls {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-top: 40px;
+        }
+        .slider-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--border-color);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .slider-dot.active {
+            background: var(--secondary-color);
+            transform: scale(1.2);
+        }
+        .slider-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid var(--border-light);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 20px;
+            color: var(--primary-color);
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            box-shadow: var(--shadow-lg);
+        }
+        .slider-nav:hover {
+            background: var(--secondary-color);
+            color: white;
+            transform: translateY(-50%) scale(1.1);
+            box-shadow: var(--shadow-xl);
+        }
+        .slider-nav.prev { left: 20px; }
+        .slider-nav.next { right: 20px; }
+
+        /* --- SHOWCASE SECTION --- */
+        .showcase {
+            padding: 120px 24px;
+            background: linear-gradient(135deg, var(--bg-dark) 0%, #1e293b 50%, #334155 100%);
+            color: white;
+            position: relative;
+        }
+        .showcase::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 30% 20%, rgba(30, 64, 175, 0.2) 0%, transparent 50%),
+                radial-gradient(circle at 70% 80%, rgba(15, 118, 110, 0.2) 0%, transparent 50%);
+            pointer-events: none;
+        }
+        .showcase .section-title {
+            color: white;
+            background: linear-gradient(135deg, #ffffff, #e2e8f0, #cbd5e1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .showcase-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 40px;
+        }
+        .showcase-card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 20px;
+            overflow: hidden;
+            transition: all 0.4s ease;
+            position: relative;
+        }
+        .showcase-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-color), var(--secondary-color));
+        }
+        .showcase-card:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-2xl);
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(255, 255, 255, 0.25);
+        }
+        .showcase-image { width: 100%; height: 240px; object-fit: cover; }
+        .showcase-content { padding: 32px; }
+        .showcase-content h3 { font-size: 24px; font-weight: 700; margin-bottom: 16px; color: white; }
+        .showcase-content p { color: rgba(255, 255, 255, 0.8); line-height: 1.6; }
+
+        /* --- MAIN APP VIEW STYLES --- */
+        .user-profile-menu { display: flex; align-items: center; gap: 12px; }
+        .avatar { width: 40px; height: 40px; background-color: var(--primary-color); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; }
+        .user-name { font-weight: 600; }
+        .user-role { font-size: 14px; color: var(--text-gray); text-transform: capitalize; }
+        .main-layout { display: flex; }
+        .sidebar { width: 260px; background: var(--bg-white); border-right: 1px solid var(--border-color); padding: 24px; height: calc(100vh - 72px); position: sticky; top: 72px; display: flex; flex-direction: column; }
+        .main-content { flex-grow: 1; padding: 40px; background-color: var(--bg-light); }
+        .main-container { max-width: 1200px; margin: 0 auto; }
+        .sidebar-user-profile { text-align: center; margin-bottom: 30px; }
+        .sidebar-avatar { width: 80px; height: 80px; background: var(--primary-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 32px; margin: 0 auto 10px; }
+        .sidebar-user-profile h3 { font-size: 18px; font-weight: 600; }
+        .sidebar-user-profile p { color: var(--text-gray); font-size: 14px; text-transform: capitalize; }
+        .sidebar-nav { flex-grow: 1; display: flex; flex-direction: column; gap: 8px; }
+        .sidebar-nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 8px; color: var(--text-gray); font-weight: 500; font-size: 15px; cursor: pointer; text-decoration: none; transition: all 0.2s; }
+        .sidebar-nav-link:hover { background: var(--primary-light); color: var(--primary-color); }
+        .sidebar-nav-link.active { background: var(--primary-color); color: white; }
         
-        .notification-container {
-            position: fixed;
-            top: 80px; right: 24px;
-            z-index: 2000;
+        /* --- MODALS, ALERTS, & OTHER COMPONENTS --- */
+        .section-header { margin-bottom: 32px; padding-bottom: 16px; border-bottom: 1px solid var(--border-color); }
+        .section-header h2 { font-size: 28px; font-weight: 700; color: var(--text-dark); }
+        .form-grid { display: grid; gap: 20px; }
+        .form-group { display: flex; flex-direction: column; gap: 8px; }
+        .form-label { font-weight: 500; font-size: 14px; }
+        .form-input, .form-select, .form-textarea { padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 15px; width: 100%; transition: all 0.2s ease; }
+        .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.2); }
+        .jobs-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px; }
+        .job-card { background: var(--bg-white); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; transition: all 0.3s; display: flex; flex-direction: column; }
+        .job-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-4px); }
+        .job-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
+        .job-header h3 { font-size: 20px; font-weight: 600; }
+        .job-budget { background: var(--primary-light); color: var(--primary-color); padding: 6px 12px; border-radius: 20px; font-size: 14px; font-weight: 600; white-space: nowrap; }
+        .job-card p { flex-grow: 1; }
+        .job-actions { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 12px; }
+        #alerts-container { position: fixed; top: 80px; right: 24px; z-index: 2000; display: flex; flex-direction: column; gap: 12px; }
+        .alert { padding: 16px 20px; border-radius: 8px; font-weight: 500; display: flex; align-items: center; gap: 12px; min-width: 300px; box-shadow: var(--shadow-lg); animation: slideIn 0.5s forwards; border-left: 5px solid; }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
+        .alert-success { background: #d1fae5; color: #065f46; border-color: #10b981; }
+        .alert-error { background: #fee2e2; color: #991b1b; border-color: #ef4444; }
+        .alert-info { background: #e0f2fe; color: #075985; border-color: #0ea5e9; }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.7); display: flex; align-items: center; justify-content: center; z-index: 1100; backdrop-filter: blur(5px); }
+        .modal-content { background: var(--bg-white); padding: 40px; border-radius: 16px; max-width: 450px; width: 90%; position: relative; box-shadow: var(--shadow-lg); }
+        .modal-close-button { position: absolute; top: 16px; right: 16px; background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-gray); }
+        .modal-switch { text-align: center; margin-top: 16px; font-size: 14px; }
+        .modal-switch a { color: var(--primary-color); cursor: pointer; font-weight: 500; }
+        .empty-state { text-align: center; padding: 40px; background-color: var(--bg-gray); border-radius: 12px; }
+        .empty-state h3 { margin-bottom: 8px; color: var(--text-dark); }
+        .empty-state p { color: var(--text-gray); }
+        .quote-card { border: 1px solid var(--border-color); padding: 16px; border-radius: 8px; margin-bottom: 12px; }
+        .quote-actions { margin-top: 10px; display: flex; gap: 10px; justify-content: flex-end; }
+        .quote-status-pending { border-left: 4px solid #f59e0b; }
+        .quote-status-approved { border-left: 4px solid #10b981; }
+        .quote-status-rejected { border-left: 4px solid #ef4444; }
+
+        /* ============================================= */
+        /* == JOB STATUS & MESSAGING STYLES           == */
+        /* ============================================= */
+
+        /* --- JOB STATUS STYLES --- */
+        .job-status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 9999px; /* Pill shape */
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            line-height: 1.5;
+        }
+
+        .job-status-open {
+            background-color: var(--primary-light);
+            color: var(--primary-color);
+        }
+
+        .job-status-assigned {
+            background-color: var(--accent-light);
+            color: var(--accent-color);
+        }
+
+        .job-status-completed {
+            background-color: #e9d5ff; /* Light purple */
+            color: #9333ea; /* Purple */
+        }
+
+        .job-approved {
+            border-left: 4px solid #10b981;
+        }
+
+        .text-success {
+            color: #059669 !important;
+        }
+
+
+        /* --- PROFESSIONAL MESSAGING STYLES --- */
+
+        /* 1. Conversation List Styles */
+        #conversations-list {
             display: flex;
             flex-direction: column;
             gap: 12px;
+            max-width: 800px;
+            margin: 0 auto;
         }
-        .notification {
-            padding: 16px 20px;
-            border-radius: 12px;
-            font-weight: 500;
+
+        .conversation-card {
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            min-width: 300px;
-            box-shadow: var(--shadow-lg);
-            animation: slideInRight 0.3s ease forwards;
-            border-left: 4px solid;
-            backdrop-filter: blur(10px);
+            gap: 16px;
+            padding: 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            background-color: var(--bg-white);
+            cursor: pointer;
+            transition: box-shadow 0.2s ease, border-color 0.2s ease;
         }
-        @keyframes slideInRight {
-            from { opacity: 0; transform: translateX(100%); }
-            to { opacity: 1; transform: translateX(0); }
+
+        .conversation-card:hover {
+            border-color: #cbd5e1;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
         }
-        .notification-content { display: flex; align-items: center; gap: 10px; }
-        .notification-close { background: none; border: none; cursor: pointer; color: inherit; opacity: 0.7; font-size: 16px; }
-        .notification-success { background: rgba(220, 252, 231, 0.95); color: #065f46; border-color: #10b981; }
-        .notification-error { background: rgba(254, 226, 226, 0.95); color: #991b1b; border-color: #ef4444; }
-        .notification-info { background: rgba(224, 242, 254, 0.95); color: #075985; border-color: #0ea5e9; }
-        .notification-warning { background: rgba(254, 243, 199, 0.95); color: #92400e; border-color: #f59e0b; }
+
+        .convo-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            color: var(--bg-white);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .convo-details {
+            overflow: hidden;
+            flex-grow: 1;
+        }
+
+        .convo-details h4 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-dark);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .convo-details p {
+            margin: 4px 0 0;
+            font-size: 14px;
+            color: var(--text-gray);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* 2. Chat Window Styles */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 75vh;
+            max-height: 700px;
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: var(--bg-white);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            box-shadow: var(--shadow-xl);
+            overflow: hidden;
+        }
+
+        .chat-header {
+            padding: 12px 20px;
+            border-bottom: 1px solid var(--border-color);
+            background-color: var(--bg-light);
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+        }
+
+        .chat-header .back-btn {
+            background: none;
+            border: none;
+            font-size: 16px;
+            color: var(--text-gray);
+            cursor: pointer;
+            margin-right: 12px;
+            padding: 4px;
+        }
+
+        .chat-header h3 {
+            margin: 0;
+            font-size: 18px;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        .chat-header p {
+            margin: 4px 0 0;
+            font-size: 13px;
+            color: var(--text-gray);
+        }
+
+        .chat-messages {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            background-color: var(--bg-gray);
+        }
+
+        .message-bubble {
+            padding: 10px 16px;
+            border-radius: 20px;
+            max-width: 70%;
+            line-height: 1.5;
+        }
+
+        .message-sender {
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .message-text {
+            font-size: 15px;
+            word-wrap: break-word;
+        }
+
+        .message-time {
+            font-size: 11px;
+            margin-top: 6px;
+            text-align: right;
+            opacity: 0.7;
+        }
+
+        .their-message {
+            background-color: var(--bg-white);
+            color: var(--text-dark);
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+
+        .their-message .message-time {
+            color: var(--text-gray);
+        }
+
+        .my-message {
+            background-color: var(--primary-color);
+            color: var(--bg-white);
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+
+        .chat-input-area {
+            padding: 16px;
+            border-top: 1px solid var(--border-color);
+            background-color: var(--bg-light);
+            flex-shrink: 0;
+        }
+
+        #send-message-form {
+            display: flex;
+            gap: 10px;
+        }
+
+        #message-text-input {
+            flex-grow: 1;
+            padding: 12px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            font-size: 15px;
+            background-color: var(--bg-white);
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        #message-text-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.15);
+        }
+
+
+        /* --- RESPONSIVE DESIGN --- */
+        @media (max-width: 1024px) {
+            .hero-content { grid-template-columns: 1fr; gap: 60px; text-align: center; }
+            .hero-text h1 { font-size: 48px; }
+            .floating-cards { position: static; margin-top: 40px; flex-direction: row; justify-content: center; }
+            .slide { flex-direction: column; text-align: center; padding: 60px 40px; }
+        }
+        @media (max-width: 768px) {
+            .header-container { padding: 0 16px; height: 64px; }
+            .logo { font-size: 24px; }
+            .nav-menu { display: none; }
+            .hero-text h1 { font-size: 36px; }
+            .hero-stats { justify-content: center; }
+            .section-title { font-size: 36px; }
+            .steps-container { grid-template-columns: 1fr; gap: 30px; }
+            .slide { padding: 40px 24px; }
+            .floating-cards { flex-direction: column; align-items: center; }
+            .main-layout { flex-direction: column; }
+            .sidebar { position: static; width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border-color); }
+            .main-content { padding: 24px; }
+            .ai-content { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
+    <div id="alerts-container"></div>
     <div id="modal-container"></div>
 
     <header class="header">
@@ -186,6 +1099,7 @@
             <nav id="main-nav-menu" class="nav-menu">
                 <a href="#ai-estimation" class="nav-link">AI Estimation</a>
                 <a href="#how-it-works" class="nav-link">How It Works</a>
+                <a href="#why-steelconnect" class="nav-link">Why Choose Us</a>
                 <a href="#showcase" class="nav-link">Showcase</a>
             </nav>
             <div id="auth-buttons-container" class="auth-buttons">
@@ -219,15 +1133,53 @@
                                 Try AI Estimation <i class="fas fa-brain"></i>
                             </a>
                         </div>
+                        <div class="hero-stats">
+                            <div class="hero-stat">
+                                <span class="hero-stat-number">2,500+</span>
+                                <span class="hero-stat-label">Professionals</span>
+                            </div>
+                            <div class="hero-stat">
+                                <span class="hero-stat-number">850+</span>
+                                <span class="hero-stat-label">Projects</span>
+                            </div>
+                            <div class="hero-stat">
+                                <span class="hero-stat-number">50+</span>
+                                <span class="hero-stat-label">Countries</span>
+                            </div>
+                        </div>
                     </div>
                     <div class="hero-visual">
                         <div class="hero-image-container">
-                            <img src="https://images.unsplash.com/photo-1504307651254-35680f356dfd?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3" alt="Steel construction professionals at work" class="hero-image">
+                            <img src="https://images.unsplash.com/photo-1504307651254-35680f356dfd?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3" alt="Steel construction professionals at work" class="hero-image" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2940&auto=format&fit=crop';">
+                            <div class="hero-image-overlay">
+                                <h3>Professional Excellence</h3>
+                                <p>Connecting top-tier engineers and contractors worldwide</p>
+                            </div>
+                        </div>
+                        <div class="floating-cards">
+                            <div class="floating-card">
+                                <div class="floating-card-icon"><i class="fas fa-handshake"></i></div>
+                                <h4>Active Connections</h4>
+                                <span class="floating-card-number">1,200+</span>
+                                <p>Designer-contractor partnerships</p>
+                            </div>
+                            <div class="floating-card connection-card">
+                                <div class="floating-card-icon"><i class="fas fa-network-wired"></i></div>
+                                <h4>SteelConnect Network</h4>
+                                <span class="floating-card-number">Live</span>
+                                <p>Real-time collaboration platform</p>
+                            </div>
+                            <div class="floating-card">
+                                <div class="floating-card-icon"><i class="fas fa-award"></i></div>
+                                <h4>Success Rate</h4>
+                                <span class="floating-card-number">99.8%</span>
+                                <p>Completed project satisfaction</p>
+                            </div>
                         </div>
                     </div>
                 </div>
             </section>
-            
+
             <section id="ai-estimation" class="ai-estimation">
                 <div class="ai-section-container">
                     <h2 class="ai-section-title">AI-Powered Steel Estimation</h2>
@@ -295,25 +1247,40 @@
             </section>
 
             <section id="how-it-works" class="how-it-works">
-                 <div class="section-container">
+                <div class="section-container">
                     <h2 class="section-title">How It Works</h2>
-                    <p class="section-subtitle">A simple, streamlined process to connect with the right professionals for your steel construction needs.</p>
+                    <p class="section-subtitle">Simple steps to connect with the right professionals for your steel construction needs</p>
                     <div class="steps-container">
-                        <div class="step-card"><div class="step-number">1</div><h3>Post Your Project</h3><p>Contractors describe their project needs, set a budget, and upload drawings. Use our AI tool for a preliminary estimate.</p></div>
-                        <div class="step-card"><div class="step-number">2</div><h3>Receive Quotes</h3><p>Vetted steel designers and structural engineers review the project and submit detailed, competitive proposals.</p></div>
-                        <div class="step-card"><div class="step-number">3</div><h3>Collaborate & Deliver</h3><p>Choose the best professional, communicate via our secure platform, and manage the project to successful completion.</p></div>
+                        <div class="step-card"><div class="step-number">1</div><h3>Post Your Project</h3><p>Describe your steel construction needs, set your budget, and specify required skills. Upload drawings or specifications for better quotes.</p></div>
+                        <div class="step-card"><div class="step-number">2</div><h3>Receive Quotes</h3><p>Licensed professionals and certified engineers submit detailed proposals with timelines, costs, and their approach to your project.</p></div>
+                        <div class="step-card"><div class="step-number">3</div><h3>Collaborate & Deliver</h3><p>Choose the best fit, communicate directly through our platform, and track progress from design to completion.</p></div>
                     </div>
                 </div>
             </section>
-            
+
+            <section id="why-steelconnect" class="sliding-section">
+                <div class="section-container">
+                    <h2 class="section-title">Why SteelConnect?</h2>
+                    <div class="slider-container">
+                        <div class="slider-wrapper" id="slider-wrapper">
+                            <div class="slide"><div class="slide-content"><h3>Global Network of Experts</h3><p>Connect with a worldwide community of freelance steel designers, structural engineers, and certified professionals ready to tackle your most challenging projects.</p><ul class="slide-features"><li><i class="fas fa-check"></i> PE-licensed engineers across multiple jurisdictions</li><li><i class="fas fa-check"></i> Specialized expertise in seismic and wind engineering</li><li><i class="fas fa-check"></i> Multi-language support for international projects</li><li><i class="fas fa-check"></i> 24/7 availability across time zones</li></ul></div><div class="slide-visual"><img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=2940&auto=format&fit=crop" alt="Global network" onerror="this.onerror=null;this.src='https://placehold.co/600x400/0f766e/ffffff?text=Expert';"></div></div>
+                            <div class="slide"><div class="slide-content"><h3>Advanced Engineering Solutions</h3><p>From initial concept to final construction drawings, our professionals use cutting-edge technology and industry-leading software to deliver precision engineering.</p><ul class="slide-features"><li><i class="fas fa-check"></i> Latest BIM and 3D modeling capabilities</li><li><i class="fas fa-check"></i> Advanced structural analysis software</li><li><i class="fas fa-check"></i> Code compliance across all major standards</li><li><i class="fas fa-check"></i> Sustainable design practices</li></ul></div><div class="slide-visual"><img src="https://images.unsplash.com/photo-1581094794329-c8112a89af12?q=80&w=2940&auto=format&fit=crop" alt="Engineering solutions" onerror="this.onerror=null;this.src='https://placehold.co/600x400/0891b2/ffffff?text=Engineer';"></div></div>
+                            <div class="slide"><div class="slide-content"><h3>Proven Track Record</h3><p>Our platform has facilitated thousands of successful projects, from residential developments to major infrastructure, with verified reviews and portfolio showcases.</p><ul class="slide-features"><li><i class="fas fa-check"></i> Verified professional credentials and licenses</li><li><i class="fas fa-check"></i> Comprehensive project portfolios</li><li><i class="fas fa-check"></i> Client reviews and ratings system</li><li><i class="fas fa-check"></i> Quality assurance and project insurance</li></ul></div><div class="slide-visual"><img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2940&auto=format&fit=crop" alt="Proven results" onerror="this.onerror=null;this.src='https://placehold.co/600x400/1e40af/ffffff?text=Success';"></div></div>
+                        </div>
+                        <button class="slider-nav prev" onclick="changeSlide(-1)"><i class="fas fa-chevron-left"></i></button>
+                        <button class="slider-nav next" onclick="changeSlide(1)"><i class="fas fa-chevron-right"></i></button>
+                    </div>
+                    <div class="slider-controls"><span class="slider-dot active" onclick="goToSlide(0)"></span><span class="slider-dot" onclick="goToSlide(1)"></span><span class="slider-dot" onclick="goToSlide(2)"></span></div>
+                </div>
+            </section>
+
             <section id="showcase" class="showcase">
                 <div class="section-container">
                     <h2 class="section-title">Industry Excellence Showcase</h2>
-                    <p class="section-subtitle" style="color: var(--text-light);">Explore a selection of successful projects facilitated through the SteelConnect platform.</p>
                     <div class="showcase-grid">
-                        <div class="showcase-card"><img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2940&auto=format&fit=crop" alt="Modern skyscraper" class="showcase-image"><div class="showcase-content"><h3>High-Rise Construction</h3><p>Structural steel design for towers and commercial buildings with advanced seismic engineering and wind load analysis.</p></div></div>
-                        <div class="showcase-card"><img src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?q=80&w=2940&auto=format&fit=crop" alt="Steel bridge" class="showcase-image"><div class="showcase-content"><h3>Infrastructure Projects</h3><p>Complex bridge design, highway infrastructure, and transportation networks engineered for safety and longevity.</p></div></div>
-                        <div class="showcase-card"><img src="https://images.unsplash.com/photo-1565008447742-97f6f38c985c?q=80&w=2940&auto=format&fit=crop" alt="Industrial facility" class="showcase-image"><div class="showcase-content"><h3>Industrial Facilities</h3><p>Manufacturing plants, warehouses, and industrial complexes with specialized steel frame solutions and heavy load engineering.</p></div></div>
+                        <div class="showcase-card"><img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2940&auto=format&fit=crop" alt="Modern skyscraper" class="showcase-image" onerror="this.onerror=null;this.src='https://placehold.co/400x240/1e293b/ffffff?text=High-Rise';"><div class="showcase-content"><h3>High-Rise Construction</h3><p>Structural steel design for towers and commercial buildings with advanced seismic engineering and wind load analysis.</p></div></div>
+                        <div class="showcase-card"><img src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?q=80&w=2940&auto=format&fit=crop" alt="Steel bridge" class="showcase-image" onerror="this.onerror=null;this.src='https://placehold.co/400x240/1e293b/ffffff?text=Bridge';"><div class="showcase-content"><h3>Infrastructure Projects</h3><p>Complex bridge design, highway infrastructure, and transportation networks engineered for safety and longevity.</p></div></div>
+                        <div class="showcase-card"><img src="https://images.unsplash.com/photo-1565008447742-97f6f38c985c?q=80&w=2940&auto=format&fit=crop" alt="Industrial facility" class="showcase-image" onerror="this.onerror=null;this.src='https://placehold.co/400x240/1e293b/ffffff?text=Industrial';"><div class="showcase-content"><h3>Industrial Facilities</h3><p>Manufacturing plants, warehouses, and industrial complexes with specialized steel frame solutions and heavy load engineering.</p></div></div>
                     </div>
                 </div>
             </section>
@@ -347,7 +1314,6 @@
                     const tonnage = parseFloat(document.getElementById('preview-steel-tonnage').value);
 
                     if (!projectType || !tonnage) {
-                        // The main script.js will handle the notification display
                          if (typeof showNotification === 'function') {
                             showNotification('Please fill in all fields for the preview.', 'warning');
                         }
@@ -368,7 +1334,6 @@
             }
 
             if (signupLink) {
-                // The main script.js has the showAuthModal function
                 signupLink.addEventListener('click', (e) => {
                     e.preventDefault();
                     if (typeof showAuthModal === 'function') {
