@@ -31,8 +31,23 @@
                     <button id="signin-btn" class="btn btn-outline">Sign In</button>
                     <button id="join-btn" class="btn btn-primary">Join Now</button>
                 </div>
-                <div id="user-info-container" style="display: none; position: relative;">
-                    <i class="fas fa-bell notification-bell"></i>
+                <div id="user-info-container" style="display: none;">
+                    <div id="notification-bell-container" class="notification-bell-container">
+                        <i class="fas fa-bell notification-bell"></i>
+                        <div id="notification-badge" class="notification-badge" style="display: none;"></div>
+                        <div id="notification-panel" class="notification-panel">
+                            <div class="notification-panel-header">
+                                <h3>Notifications</h3>
+                                <button id="clear-notifications-btn" class="clear-notifications-btn">Clear All</button>
+                            </div>
+                            <div id="notification-panel-list" class="notification-panel-list">
+                                <div class="notification-empty-state">
+                                    <i class="fas fa-bell-slash"></i>
+                                    <p>No new notifications</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     <div id="user-info" class="user-info-widget">
                         <div id="user-info-avatar" class="user-avatar-small"></div>
                         <span id="user-info-name"></span>
