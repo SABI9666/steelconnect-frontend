@@ -56,6 +56,7 @@ const appState = {
     uploadedFile: null,
     myEstimations: [],
     currentHeaderSlide: 0,
+    notifications: [], // New state for notifications
 };
 
 // Professional Features Header Data
@@ -92,7 +93,6 @@ const headerFeatures = [
 
 // --- INACTIVITY TIMER FOR AUTO-LOGOUT ---
 let inactivityTimer;
-let notificationInterval; // To hold the notification timer
 
 function resetInactivityTimer() {
     clearTimeout(inactivityTimer);
@@ -107,18 +107,28 @@ function resetInactivityTimer() {
 function initializeApp() {
     console.log("SteelConnect App Initializing...");
     
-    // The notification container is now in the HTML, so this check is a fallback.
-    if (!document.getElementById('notification-container')) {
-        const notificationContainer = document.createElement('div');
-        notificationContainer.id = 'notification-container';
-        notificationContainer.className = 'notification-container';
-        document.body.appendChild(notificationContainer);
-    }
-    
+    // Global click listener to close pop-ups
+    window.addEventListener('click', (event) => {
+        // Close user dropdown if click is outside
+        const userInfoContainer = document.getElementById('user-info-container');
+        const userInfoDropdown = document.getElementById('user-info-dropdown');
+        if (userInfoDropdown && userInfoContainer && !userInfoContainer.contains(event.target)) {
+            userInfoDropdown.classList.remove('active');
+        }
+        // Close notification panel if click is outside
+        const notificationPanel = document.getElementById('notification-panel');
+        const notificationBellContainer = document.getElementById('notification-bell-container');
+        if(notificationPanel && notificationBellContainer && !notificationBellContainer.contains(event.target)){
+             notificationPanel.classList.remove('active');
+        }
+    });
+
+    // Inactivity listeners
     window.addEventListener('mousemove', resetInactivityTimer);
     window.addEventListener('keydown', resetInactivityTimer);
     window.addEventListener('click', resetInactivityTimer);
 
+    // Auth button listeners
     const signInBtn = document.getElementById('signin-btn');
     if (signInBtn) signInBtn.addEventListener('click', () => showAuthModal('login'));
 
@@ -128,6 +138,7 @@ function initializeApp() {
     const getStartedBtn = document.getElementById('get-started-btn');
     if (getStartedBtn) getStartedBtn.addEventListener('click', () => showAuthModal('register'));
     
+    // Logo navigation
     const logo = document.querySelector('.logo');
     if (logo) {
         logo.addEventListener('click', (e) => {
@@ -141,6 +152,7 @@ function initializeApp() {
         });
     }
     
+    // Check for existing session
     const token = localStorage.getItem('jwtToken');
     const user = localStorage.getItem('currentUser');
     
@@ -269,10 +281,7 @@ async function handleLogin(event) {
         if (data.user.type === 'designer') {
             loadUserQuotes();
         }
-
-        // **NOTIFICATION FIX**: Start checking for notifications after login.
-        fetchAndUpdateNotifications(); // Check once immediately
-        notificationInterval = setInterval(fetchAndUpdateNotifications, 60000); // Check every 60 seconds
+        addNotification(`Welcome back, ${data.user.name}!`, 'info');
 
     } catch(error) {
         // Error is already shown by apiCall
@@ -284,16 +293,15 @@ function logout() {
     appState.jwtToken = null;
     appState.userSubmittedQuotes.clear();
     appState.myEstimations = [];
+    appState.notifications = [];
     localStorage.clear();
     clearTimeout(inactivityTimer);
-    clearInterval(notificationInterval); // **NOTIFICATION FIX**: Stop checking on logout
     showLandingPageView();
     showNotification('You have been logged out successfully.', 'info');
 }
 
 async function loadUserQuotes() {
     if (appState.currentUser.type !== 'designer') return;
-    
     try {
         const response = await apiCall(`/quotes/user/${appState.currentUser.id}`, 'GET');
         const quotes = response.data || [];
@@ -308,36 +316,89 @@ async function loadUserQuotes() {
     }
 }
 
-// --- NOTIFICATION SYSTEM ---
-async function fetchAndUpdateNotifications() {
-    if (!appState.currentUser) return;
-
-    // This is a placeholder. A real implementation requires a backend API endpoint
-    // like GET /api/notifications/unread to return the count of new events.
-    try {
-        // Example of what a real API call would look like:
-        // const response = await apiCall('/notifications/unread', 'GET');
-        // const { unreadCount } = response.data;
-
-        // --- MOCK DATA FOR DEMONSTRATION ---
-        // To test, you can change this number. In a real app, it would come from the server.
-        const unreadCount = 3; 
-        // --- END MOCK DATA ---
-
-        const badge = document.querySelector('.notification-badge');
-        if (badge) {
-            if (unreadCount > 0) {
-                badge.textContent = unreadCount;
-                badge.style.display = 'flex';
-            } else {
-                badge.style.display = 'none';
-            }
-        }
-    } catch (error) {
-        console.error("Could not fetch notifications:", error);
-    }
+// --- NOTIFICATION SYSTEM (ENHANCED) ---
+function addNotification(message, type = 'info', link = '#') {
+    const newNotification = {
+        id: Date.now(),
+        message,
+        type,
+        timestamp: new Date(),
+        link,
+        read: false,
+    };
+    appState.notifications.unshift(newNotification); // Add to the beginning
+    renderNotificationPanel();
 }
 
+function renderNotificationPanel() {
+    const panelList = document.getElementById('notification-panel-list');
+    const badge = document.getElementById('notification-badge');
+    
+    const unreadCount = appState.notifications.filter(n => !n.read).length;
+
+    if (badge) {
+        if (unreadCount > 0) {
+            badge.textContent = unreadCount;
+            badge.style.display = 'flex';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+
+    if (!panelList) return;
+
+    if (appState.notifications.length === 0) {
+        panelList.innerHTML = `
+            <div class="notification-empty-state">
+                <i class="fas fa-bell-slash"></i>
+                <p>No new notifications</p>
+            </div>`;
+        return;
+    }
+
+    panelList.innerHTML = appState.notifications.map(n => {
+        const iconMap = {
+            info: 'fa-info-circle',
+            success: 'fa-check-circle',
+            warning: 'fa-exclamation-triangle',
+            error: 'fa-times-circle',
+            message: 'fa-comment-alt',
+            job: 'fa-briefcase',
+            quote: 'fa-file-invoice-dollar'
+        };
+        const icon = iconMap[n.type] || 'fa-info-circle';
+        
+        return `
+            <div class="notification-item" data-id="${n.id}">
+                <div class="notification-item-icon ${n.type}">
+                    <i class="fas ${icon}"></i>
+                </div>
+                <div class="notification-item-content">
+                    <p>${n.message}</p>
+                    <span class="timestamp">${formatMessageTimestamp(n.timestamp)}</span>
+                </div>
+            </div>`;
+    }).join('');
+}
+
+function clearNotifications() {
+    appState.notifications = [];
+    renderNotificationPanel();
+}
+
+function toggleNotificationPanel(event) {
+    event.stopPropagation();
+    const panel = document.getElementById('notification-panel');
+    if (panel) {
+        panel.classList.toggle('active');
+        if (panel.classList.contains('active')) {
+            // Mark all as read when opening
+            appState.notifications.forEach(n => n.read = true);
+            // After a short delay, update the badge
+            setTimeout(renderNotificationPanel, 500);
+        }
+    }
+}
 
 // --- ENHANCED ESTIMATION SYSTEM ---
 async function loadUserEstimations() {
@@ -477,6 +538,7 @@ async function downloadEstimationResult(estimationId) {
     try {
         const response = await apiCall(`/estimation/${estimationId}/result`, 'GET');
         if (response.success && response.resultFile) {
+            addNotification('Your estimation result is ready for download.', 'success');
             window.open(response.resultFile.url, '_blank');
         }
     } catch (error) {
@@ -638,7 +700,10 @@ async function fetchAndRenderApprovedJobs() {
 async function markJobCompleted(jobId) {
     if (confirm('Are you sure you want to mark this job as completed? This action cannot be undone.')) {
         await apiCall(`/jobs/${jobId}`, 'PUT', { status: 'completed' }, 'Project marked as completed successfully!')
-            .then(() => fetchAndRenderApprovedJobs())
+            .then(() => {
+                addNotification('A project has been marked as completed!', 'success');
+                fetchAndRenderApprovedJobs();
+            })
             .catch(() => {});
     }
 }
@@ -770,6 +835,7 @@ async function handlePostJob(event) {
             formData.append('attachment', form.attachment.files[0]);
         }
         await apiCall('/jobs', 'POST', formData, 'Project posted successfully!');
+        addNotification(`Your new project "${form.title.value}" has been posted.`, 'job');
         form.reset();
         renderAppSection('jobs');
     } catch(error) {} finally {
@@ -849,6 +915,7 @@ async function approveQuote(quoteId, jobId) {
     if (confirm('Are you sure you want to approve this quote? This will assign the job to the designer and reject other quotes.')) {
         await apiCall(`/quotes/${quoteId}/approve`, 'PUT', { jobId }, 'Quote approved successfully!')
             .then(() => {
+                addNotification('You have approved a quote and assigned a new project!', 'success');
                 closeModal();
                 fetchAndRenderJobs();
                 showNotification('Project has been assigned! You can now communicate with the designer.', 'success');
@@ -893,6 +960,7 @@ async function handleQuoteSubmit(event) {
             }
         }
         await apiCall('/quotes', 'POST', formData, 'Quote submitted successfully!');
+        addNotification(`Your quote for a project has been submitted.`, 'quote');
         appState.userSubmittedQuotes.add(form['jobId'].value);
         closeModal();
         fetchAndRenderJobs();
@@ -977,6 +1045,21 @@ function getAvatarColor(name) {
     return colors[index];
 }
 
+function formatMessageTimestamp(date) {
+    const now = new Date();
+    const messageDate = new Date(date);
+    const isToday = now.toDateString() === messageDate.toDateString();
+    const isYesterday = new Date(now.setDate(now.getDate() - 1)).toDateString() === messageDate.toDateString();
+
+    if (isToday) {
+        return `Today, ${messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    }
+    if (isYesterday) {
+        return `Yesterday, ${messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    }
+    return messageDate.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
 async function renderConversationView(conversationOrId) {
     let conversation;
     if (typeof conversationOrId === 'string') {
@@ -1040,22 +1123,31 @@ async function renderConversationView(conversationOrId) {
         if (messages.length === 0) {
             messagesContainer.innerHTML = `<div class="empty-messages premium-empty-messages"><div class="empty-icon"><i class="fas fa-comment-dots"></i></div><h4>Start the conversation</h4><p>Send your first message to begin collaborating on this project.</p></div>`;
         } else {
-            messagesContainer.innerHTML = messages.map((msg, index) => {
+            let messagesHTML = '';
+            let lastDate = null;
+            messages.forEach((msg, index) => {
+                const messageDate = new Date(msg.createdAt).toDateString();
+                if(messageDate !== lastDate) {
+                    messagesHTML += `<div class="chat-date-separator"><span>${new Date(msg.createdAt).toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' })}</span></div>`;
+                    lastDate = messageDate;
+                }
+
                 const isMine = msg.senderId === appState.currentUser.id;
-                const time = msg.createdAt?.toDate ? msg.createdAt.toDate() : new Date(msg.createdAt);
+                const time = new Date(msg.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                 const prevMsg = messages[index - 1];
                 const showAvatar = !prevMsg || prevMsg.senderId !== msg.senderId;
                 const avatarColor = getAvatarColor(msg.senderName);
-                return `
+                messagesHTML += `
                     <div class="message-wrapper premium-message ${isMine ? 'me' : 'them'}">
-                        ${showAvatar ? `<div class="message-avatar premium-msg-avatar" style="background-color: ${avatarColor}">${msg.senderName.charAt(0).toUpperCase()}</div>` : '<div class="message-avatar-spacer"></div>'}
+                        ${!isMine && showAvatar ? `<div class="message-avatar premium-msg-avatar" style="background-color: ${avatarColor}">${msg.senderName.charAt(0).toUpperCase()}</div>` : '<div class="message-avatar-spacer" style="width: 40px; flex-shrink: 0;"></div>'}
                         <div class="message-content">
                             ${showAvatar && !isMine ? `<div class="message-sender">${msg.senderName}</div>` : ''}
-                            <div class="message-bubble premium-bubble ${isMine ? 'me' : 'them'}">${msg.text}<div class="message-status">${isMine ? '<i class="fas fa-check-double"></i>' : ''}</div></div>
-                            <div class="message-meta">${time.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                            <div class="message-bubble premium-bubble ${isMine ? 'me' : 'them'}">${msg.text}</div>
+                            <div class="message-meta">${time}</div>
                         </div>
                     </div>`;
-            }).join('');
+            });
+            messagesContainer.innerHTML = messagesHTML;
         }
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
     } catch (error) {
@@ -1074,6 +1166,7 @@ async function handleSendMessage(conversationId) {
     try {
         const response = await apiCall(`/messages/${conversationId}/messages`, 'POST', { text });
         input.value = '';
+        addNotification('You have a new message!', 'message');
         const messagesContainer = document.getElementById('chat-messages-container');
         const newMessage = response.data;
         if(messagesContainer.querySelector('.empty-messages')) {
@@ -1081,13 +1174,13 @@ async function handleSendMessage(conversationId) {
         }
         const messageBubble = document.createElement('div');
         messageBubble.className = 'message-wrapper premium-message me';
-        const time = newMessage.createdAt?.toDate ? newMessage.createdAt.toDate() : new Date(newMessage.createdAt);
-        const avatarColor = getAvatarColor(newMessage.senderName);
+        const time = new Date(newMessage.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        
         messageBubble.innerHTML = `
-            <div class="message-avatar premium-msg-avatar" style="background-color: ${avatarColor}">${newMessage.senderName.charAt(0).toUpperCase()}</div>
+            <div class="message-avatar-spacer" style="width: 40px; flex-shrink: 0;"></div>
             <div class="message-content">
-                <div class="message-bubble premium-bubble me">${newMessage.text}<div class="message-status"><i class="fas fa-check-double"></i></div></div>
-                <div class="message-meta">${time.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                <div class="message-bubble premium-bubble me">${newMessage.text}</div>
+                <div class="message-meta">${time}</div>
             </div>`;
         messagesContainer.appendChild(messageBubble);
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
@@ -1157,6 +1250,10 @@ function showAppView() {
     document.getElementById('user-info-avatar').textContent = (user.name || "A").charAt(0).toUpperCase();
     
     // Setup user dropdown
+    document.getElementById('user-info').addEventListener('click', (e) => {
+        e.stopPropagation(); // Prevent global click listener from closing it immediately
+        document.getElementById('user-info-dropdown').classList.toggle('active');
+    });
     document.getElementById('user-settings-link').addEventListener('click', (e) => {
         e.preventDefault();
         renderAppSection('settings');
@@ -1166,16 +1263,21 @@ function showAppView() {
         e.preventDefault();
         logout();
     });
-     document.getElementById('user-info').addEventListener('click', () => {
-         document.getElementById('user-info-dropdown').classList.toggle('active');
-    });
 
+    // Setup notification panel
+    document.getElementById('notification-bell-container').addEventListener('click', toggleNotificationPanel);
+    document.getElementById('clear-notifications-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        clearNotifications();
+    });
+     
     document.getElementById('sidebarUserName').textContent = user.name;
     document.getElementById('sidebarUserType').textContent = user.type;
     document.getElementById('sidebarUserAvatar').textContent = (user.name || "A").charAt(0).toUpperCase();
     
     buildSidebarNav();
     renderAppSection('dashboard');
+    renderNotificationPanel();
     
     if (user.type === 'designer') {
         loadUserQuotes();
@@ -1273,7 +1375,7 @@ function renderAppSection(sectionId) {
     }
 }
 
-// --- DASHBOARD WIDGETS ---
+// --- DASHBOARD WIDGETS (ENHANCED) ---
 async function renderRecentActivityWidgets() {
     const user = appState.currentUser;
     const recentProjectsContainer = document.getElementById('recent-projects-widget');
@@ -1287,15 +1389,18 @@ async function renderRecentActivityWidgets() {
             const recentJobs = (response.data || []).slice(0, 3);
             if (recentJobs.length > 0) {
                 recentProjectsContainer.innerHTML = recentJobs.map(job => `
-                    <div class="widget-list-item" onclick="renderAppSection('jobs')" style="cursor: pointer;">
-                        <div class="widget-item-info">
-                            <i class="fas fa-briefcase widget-item-icon"></i>
-                            <div>
-                                <p class="widget-item-title">${job.title}</p>
-                                <span class="widget-item-meta">Budget: ${job.budget}</span>
+                    <div class="widget-list-item" id="widget-item-${job.id}">
+                        <div class="widget-item-header" onclick="toggleWidgetDetails('${job.id}', 'job')">
+                            <div class="widget-item-info">
+                                <i class="fas fa-briefcase widget-item-icon"></i>
+                                <div>
+                                    <p class="widget-item-title">${job.title}</p>
+                                    <span class="widget-item-meta">Budget: ${job.budget}</span>
+                                </div>
                             </div>
+                            <span class="widget-item-status ${job.status}">${job.status}</span>
                         </div>
-                        <span class="widget-item-status ${job.status}">${job.status}</span>
+                        <div class="widget-item-details" id="widget-details-${job.id}"></div>
                     </div>
                 `).join('');
             } else {
@@ -1312,15 +1417,18 @@ async function renderRecentActivityWidgets() {
             const recentQuotes = (response.data || []).slice(0, 3);
              if (recentQuotes.length > 0) {
                 recentQuotesContainer.innerHTML = recentQuotes.map(quote => `
-                    <div class="widget-list-item" onclick="renderAppSection('my-quotes')" style="cursor: pointer;">
-                         <div class="widget-item-info">
-                            <i class="fas fa-file-invoice-dollar widget-item-icon"></i>
-                            <div>
-                                <p class="widget-item-title">Quote for: ${quote.jobTitle}</p>
-                                <span class="widget-item-meta">Amount: ${quote.quoteAmount}</span>
+                    <div class="widget-list-item" id="widget-item-${quote.id}">
+                        <div class="widget-item-header" onclick="toggleWidgetDetails('${quote.id}', 'quote')">
+                             <div class="widget-item-info">
+                                <i class="fas fa-file-invoice-dollar widget-item-icon"></i>
+                                <div>
+                                    <p class="widget-item-title">Quote for: ${quote.jobTitle}</p>
+                                    <span class="widget-item-meta">Amount: ${quote.quoteAmount}</span>
+                                </div>
                             </div>
+                            <span class="widget-item-status ${quote.status}">${quote.status}</span>
                         </div>
-                        <span class="widget-item-status ${quote.status}">${quote.status}</span>
+                        <div class="widget-item-details" id="widget-details-${quote.id}"></div>
                     </div>
                 `).join('');
             } else {
@@ -1332,6 +1440,50 @@ async function renderRecentActivityWidgets() {
     }
 }
 
+async function toggleWidgetDetails(itemId, itemType) {
+    const detailsContainer = document.getElementById(`widget-details-${itemId}`);
+    if (!detailsContainer) return;
+
+    if (detailsContainer.classList.contains('expanded')) {
+        detailsContainer.classList.remove('expanded');
+        detailsContainer.innerHTML = '';
+        return;
+    }
+
+    // Close any other open details
+    document.querySelectorAll('.widget-item-details.expanded').forEach(el => {
+        el.classList.remove('expanded');
+        el.innerHTML = '';
+    });
+
+    detailsContainer.innerHTML = '<div class="widget-loader"><div class="spinner"></div></div>';
+    detailsContainer.classList.add('expanded');
+
+    try {
+        if (itemType === 'job') {
+            const job = appState.jobs.find(j => j.id === itemId) || (await apiCall(`/jobs/${itemId}`, 'GET')).data;
+            if (job) {
+                detailsContainer.innerHTML = `
+                    <p><strong>Description:</strong> ${job.description}</p>
+                    <p><strong>Deadline:</strong> ${new Date(job.deadline).toLocaleDateString()}</p>
+                    ${job.assignedToName ? `<p><strong>Assigned To:</strong> ${job.assignedToName}</p>` : ''}
+                    <button class="btn btn-outline" onclick="renderAppSection('jobs')">View Full Details</button>
+                `;
+            }
+        } else if (itemType === 'quote') {
+            const quote = appState.myQuotes.find(q => q.id === itemId) || (await apiCall(`/quotes/${itemId}`, 'GET')).data;
+            if (quote) {
+                detailsContainer.innerHTML = `
+                    <p><strong>Description:</strong> ${quote.description}</p>
+                    <p><strong>Timeline:</strong> ${quote.timeline} days</p>
+                    <button class="btn btn-outline" onclick="renderAppSection('my-quotes')">View Full Details</button>
+                `;
+            }
+        }
+    } catch (error) {
+        detailsContainer.innerHTML = '<p>Could not load details.</p>';
+    }
+}
 
 // --- ESTIMATION TOOL FUNCTIONS ---
 function setupEstimationToolEventListeners() {
@@ -1424,6 +1576,7 @@ async function handleEstimationSubmit() {
             formData.append('files', appState.uploadedFile[i]);
         }
         await apiCall('/estimation/contractor/submit', 'POST', formData, 'Estimation request submitted successfully!');
+        addNotification(`Your AI estimation request for "${projectTitle}" is submitted.`, 'info');
         form.reset();
         appState.uploadedFile = null;
         document.getElementById('file-info-container').style.display = 'none';
