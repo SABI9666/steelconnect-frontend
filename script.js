@@ -1331,7 +1331,7 @@ async function openConversation(jobId, recipientId) {
         console.error('Failed to open conversation:', error);
     }
 }
-/ === STEELCONNECT MODAL SYSTEM FIX - PART 4 CORRECTED ===
+// === STEELCONNECT MODAL SYSTEM FIX - PART 4 CORRECTED ===
 // Fixed UI functions, modal management, and templates
 
 // --- UTILITY FUNCTIONS ---
@@ -1605,7 +1605,7 @@ async function showAppView() {
             clearNotifications();
         });
     }
-     
+    
     // Update sidebar user info
     const sidebarUserName = document.getElementById('sidebarUserName');
     const sidebarUserType = document.getElementById('sidebarUserType');
@@ -2625,4 +2625,3 @@ function getSettingsTemplate(user) {
 
 // Initialize the application
 console.log('SteelConnect Complete Script Loaded Successfully!');
-
