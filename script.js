@@ -235,7 +235,7 @@ function logout() {
     showNotification('You have been logged out successfully.', 'info');
 }
 
-// --- DATA FETCHING ---
+// --- DATA FETCHING & STATE MANAGEMENT ---
 async function loadUserQuotes() {
     if (!appState.currentUser || appState.currentUser.type !== 'designer') return;
     try {
@@ -248,6 +248,18 @@ async function loadUserQuotes() {
         console.error('Error loading user quotes:', error);
     }
 }
+
+async function loadUserEstimations() {
+    if (!appState.currentUser) return;
+    try {
+        const response = await apiCall(`/estimation/contractor/${appState.currentUser.email}`, 'GET');
+        appState.myEstimations = response.estimations || [];
+    } catch (error) {
+        console.error('Error loading user estimations:', error);
+        appState.myEstimations = [];
+    }
+}
+
 
 // --- NOTIFICATION SYSTEM ---
 async function fetchUserNotifications() {
@@ -316,7 +328,7 @@ function toggleNotificationPanel(event) {
     }
 }
 
-// --- PROFILE SETTINGS ---
+// --- PROFILE & SETTINGS ---
 async function handleProfileUpdate(event) {
     event.preventDefault();
     const form = event.target;
@@ -383,24 +395,139 @@ function setupSkillsInput() {
     renderTags();
 }
 
-// --- JOBS & QUOTES ---
-// (Placeholder for job/quote functions - you should have these already)
-async function fetchAndRenderJobs() { console.log('Fetching jobs...'); /* Add full logic */ }
-async function handlePostJob(e) { e.preventDefault(); console.log('Posting job...'); /* Add full logic */ }
-async function fetchAndRenderMyQuotes() { console.log('Fetching my quotes...'); /* Add full logic */ }
-async function fetchAndRenderApprovedJobs() { console.log('Fetching approved jobs...'); /* Add full logic */ }
+// --- JOBS & QUOTES LOGIC ---
+async function fetchAndRenderJobs(loadMore = false) {
+    const jobsListContainer = document.getElementById('jobs-list');
+    const loadMoreContainer = document.getElementById('load-more-container');
+
+    if (!loadMore) {
+        appState.jobs = [];
+        appState.jobsPage = 1;
+        appState.hasMoreJobs = true;
+        if (jobsListContainer) jobsListContainer.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Loading projects...</p></div>';
+    }
+
+    if (!jobsListContainer || !appState.hasMoreJobs) {
+        if (loadMoreContainer) loadMoreContainer.innerHTML = '';
+        return;
+    }
+
+    const user = appState.currentUser;
+    const endpoint = user.type === 'designer' ? `/jobs?page=${appState.jobsPage}&limit=6` : `/jobs/user/${user.id}`;
+    
+    if (loadMoreContainer) loadMoreContainer.innerHTML = `<button class="btn btn-loading" disabled><div class="btn-spinner"></div>Loading...</button>`;
+
+    try {
+        const response = await apiCall(endpoint, 'GET');
+        const newJobs = response.data || [];
+        appState.jobs.push(...newJobs);
+        
+        if (user.type === 'designer') {
+            appState.hasMoreJobs = response.pagination.hasNext;
+            appState.jobsPage += 1;
+        } else {
+            appState.hasMoreJobs = false;
+        }
+        
+        if (appState.jobs.length === 0) {
+            jobsListContainer.innerHTML = user.type === 'designer'
+                ? `<div class="empty-state premium-empty"><div class="empty-icon"><i class="fas fa-briefcase"></i></div><h3>No Projects Available</h3><p>Check back later for new opportunities.</p></div>`
+                : `<div class="empty-state premium-empty"><div class="empty-icon"><i class="fas fa-plus-circle"></i></div><h3>You haven't posted any projects yet</h3><p>Post your first project to connect with professionals.</p><button class="btn btn-primary" onclick="renderAppSection('post-job')">Post Project</button></div>`;
+            if (loadMoreContainer) loadMoreContainer.innerHTML = '';
+            return;
+        }
+
+        jobsListContainer.innerHTML = appState.jobs.map(job => {
+            const hasUserQuoted = appState.userSubmittedQuotes.has(job.id);
+            const canQuote = user.type === 'designer' && job.status === 'open' && !hasUserQuoted;
+            let actions = '';
+            if (user.type === 'designer') {
+                if (canQuote) actions = `<button class="btn btn-primary" onclick="showQuoteModal('${job.id}')"><i class="fas fa-file-invoice-dollar"></i> Submit Quote</button>`;
+                else if (hasUserQuoted) actions = `<button class="btn btn-outline" disabled><i class="fas fa-check-circle"></i> Quote Submitted</button>`;
+                else actions = `<span class="job-status-badge assigned"><i class="fas fa-user-check"></i> Job Assigned</span>`;
+            } else {
+                actions = `<div class="job-actions-group"><button class="btn btn-outline" onclick="viewQuotes('${job.id}')"><i class="fas fa-eye"></i> View Quotes (${job.quotesCount || 0})</button><button class="btn btn-danger" onclick="deleteJob('${job.id}')"><i class="fas fa-trash"></i> Delete</button></div>`;
+            }
+
+            return `
+                <div class="job-card premium-card" data-job-id="${job.id}">
+                    <div class="job-header"><h3>${job.title}</h3><span class="job-budget">${job.budget}</span></div>
+                    <p>${job.description}</p>
+                    <div class="job-actions">${actions}</div>
+                </div>`;
+        }).join('');
+
+        if (loadMoreContainer) {
+            if (user.type === 'designer' && appState.hasMoreJobs) {
+                loadMoreContainer.innerHTML = `<button class="btn btn-outline" id="load-more-btn"><i class="fas fa-chevron-down"></i> Load More</button>`;
+                document.getElementById('load-more-btn').addEventListener('click', () => fetchAndRenderJobs(true));
+            } else {
+                loadMoreContainer.innerHTML = '';
+            }
+        }
+
+    } catch (error) {
+        if (jobsListContainer) jobsListContainer.innerHTML = `<div class="error-state"><h3>Error Loading Projects</h3><p>Please try again.</p><button class="btn btn-primary" onclick="fetchAndRenderJobs()">Retry</button></div>`;
+    }
+}
+
+
+async function fetchAndRenderApprovedJobs() {
+    // This is a simplified version. Add your full implementation.
+    const container = document.getElementById('app-container');
+    container.innerHTML = `<div class="section-header"><h2>Approved Projects</h2></div><div id="approved-jobs-list">Loading...</div>`;
+}
+
+async function markJobCompleted(jobId) {
+    if (confirm('Are you sure you want to mark this job as completed?')) {
+        await apiCall(`/jobs/${jobId}`, 'PUT', { status: 'completed' }, 'Project marked as completed!')
+            .then(() => fetchAndRenderApprovedJobs())
+            .catch(() => {});
+    }
+}
+
+async function fetchAndRenderMyQuotes() {
+    // This is a simplified version. Add your full implementation.
+    const container = document.getElementById('app-container');
+    container.innerHTML = `<div class="section-header"><h2>My Quotes</h2></div><div id="my-quotes-list">Loading...</div>`;
+}
+
+// ... Other job/quote functions like deleteJob, viewQuotes, approveQuote etc. go here
 
 // --- MESSAGING ---
-// (Placeholder for messaging functions)
-async function fetchAndRenderConversations() { console.log('Fetching conversations...'); /* Add full logic */ }
+async function fetchAndRenderConversations() {
+    // This is a simplified version. Add your full implementation.
+    const container = document.getElementById('app-container');
+    container.innerHTML = `<div class="section-header"><h2>Messages</h2></div><div id="conversations-list">Loading...</div>`;
+}
 
 // --- ESTIMATION ---
-// (Placeholder for estimation functions)
-async function fetchAndRenderMyEstimations() { console.log('Fetching my estimations...'); /* Add full logic */ }
-function setupEstimationToolEventListeners() { console.log('Setting up estimation listeners...'); /* Add full logic */ }
+async function fetchAndRenderMyEstimations() {
+    const container = document.getElementById('app-container');
+    container.innerHTML = `
+        <div class="section-header modern-header"><h2><i class="fas fa-file-invoice-dollar"></i> My Estimation Requests</h2></div>
+        <div id="estimations-list" class="estimations-grid"></div>`;
+    
+    const listContainer = document.getElementById('estimations-list');
+    listContainer.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Loading requests...</p></div>';
+    
+    await loadUserEstimations();
+    
+    if (appState.myEstimations.length === 0) {
+        listContainer.innerHTML = `<div class="empty-state"><h3>No Estimation Requests Yet</h3><p>Upload project drawings to get AI-powered cost estimates.</p><button class="btn btn-primary" onclick="renderAppSection('estimation-tool')">New Estimation</button></div>`;
+        return;
+    }
+    listContainer.innerHTML = appState.myEstimations.map(est => `
+        <div class="estimation-card premium-card">
+            <h3>${est.projectTitle}</h3>
+            <p>Status: <span class="status ${est.status}">${est.status}</span></p>
+        </div>
+    `).join('');
+}
 
-// --- DASHBOARD ---
-function renderRecentActivityWidgets() { console.log('Rendering dashboard widgets...'); /* Add full logic */ }
+function setupEstimationToolEventListeners() {
+    // Full implementation needed
+}
 
 // --- UI & MODAL FUNCTIONS ---
 function showAuthModal(view) {
@@ -446,10 +573,7 @@ async function showAppView() {
     document.getElementById('sidebarUserType').textContent = user.type;
     document.getElementById('sidebarUserAvatar').textContent = (user.name || "A").charAt(0).toUpperCase();
 
-    document.getElementById('user-info').addEventListener('click', (e) => {
-        e.stopPropagation();
-        document.getElementById('user-info-dropdown').classList.toggle('active');
-    });
+    document.getElementById('user-info').addEventListener('click', (e) => { e.stopPropagation(); document.getElementById('user-info-dropdown').classList.toggle('active'); });
     document.getElementById('user-settings-link').addEventListener('click', (e) => { e.preventDefault(); renderAppSection('settings'); document.getElementById('user-info-dropdown').classList.remove('active'); });
     document.getElementById('user-logout-link').addEventListener('click', (e) => { e.preventDefault(); logout(); });
     document.getElementById('notification-bell-container').addEventListener('click', toggleNotificationPanel);
@@ -459,6 +583,7 @@ async function showAppView() {
     renderAppSection('dashboard');
     await fetchUserNotifications();
     if (user.type === 'designer') loadUserQuotes();
+    if (user.type === 'contractor') loadUserEstimations();
 }
 
 function showLandingPageView() {
@@ -492,19 +617,14 @@ function buildSidebarNav() {
               <a href="#" class="sidebar-nav-link" data-section="settings"><i class="fas fa-cog fa-fw"></i><span>Settings</span></a>`;
     navContainer.innerHTML = links;
     navContainer.querySelectorAll('.sidebar-nav-link').forEach(link => {
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-            renderAppSection(link.dataset.section);
-        });
+        link.addEventListener('click', (e) => { e.preventDefault(); renderAppSection(link.dataset.section); });
     });
 }
 
 function renderAppSection(sectionId) {
-    document.querySelectorAll('.sidebar-nav-link').forEach(link => {
-        link.classList.toggle('active', link.dataset.section === sectionId);
-    });
+    document.querySelectorAll('.sidebar-nav-link').forEach(link => link.classList.toggle('active', link.dataset.section === sectionId));
     const container = document.getElementById('app-container');
-    switch(sectionId) {
+    switch (sectionId) {
         case 'settings':
             container.innerHTML = getSettingsTemplate(appState.currentUser);
             document.getElementById('profile-form').addEventListener('submit', handleProfileUpdate);
@@ -517,7 +637,7 @@ function renderAppSection(sectionId) {
         case 'jobs':
             const userRole = appState.currentUser.type;
             const title = userRole === 'designer' ? 'Available Projects' : 'My Posted Projects';
-            container.innerHTML = `<div class="section-header modern-header"><h2><i class="fas fa-tasks"></i> ${title}</h2></div><div id="jobs-list" class="jobs-grid"></div>`;
+            container.innerHTML = `<div class="section-header modern-header"><h2><i class="fas fa-tasks"></i> ${title}</h2></div><div id="jobs-list" class="jobs-grid"></div><div id="load-more-container" class="load-more-section"></div>`;
             fetchAndRenderJobs();
             break;
         case 'post-job':
@@ -587,9 +707,9 @@ function getSettingsTemplate(user) {
         </div>`;
 }
 
-function getPostJobTemplate() { return `<div><h2>Post a Job</h2><form id="post-job-form">...</form></div>`; }
-function getDashboardTemplate(user) { return `<h2>Welcome back, ${user.name}!</h2><p>Your dashboard is ready.</p><div id="recent-activity"></div>`; }
-function getEstimationToolTemplate() { return `<div><h2>AI Estimation Tool</h2></div>`; }
+function getPostJobTemplate() { /* Full implementation needed */ return `<h2>Post a Job</h2>`; }
+function getDashboardTemplate(user) { /* Full implementation needed */ return `<h2>Dashboard</h2><p>Welcome, ${user.name}</p>`; }
+function getEstimationToolTemplate() { /* Full implementation needed */ return `<h2>AI Estimation Tool</h2>`; }
 
 // --- HELPERS ---
 function getTimeAgo(timestamp) {
