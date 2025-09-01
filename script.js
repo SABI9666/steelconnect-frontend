@@ -1331,8 +1331,8 @@ async function openConversation(jobId, recipientId) {
         console.error('Failed to open conversation:', error);
     }
 }
-// === STEELCONNECT COMPLETE SCRIPT - PART 4 ===
-// UI functions, modal management, and templates
+/ === STEELCONNECT MODAL SYSTEM FIX - PART 4 CORRECTED ===
+// Fixed UI functions, modal management, and templates
 
 // --- UTILITY FUNCTIONS ---
 function getTimeAgo(timestamp) {
@@ -1369,91 +1369,251 @@ function formatMessageTimestamp(date) {
     return messageDate.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
-// --- MODAL FUNCTIONS ---
+// --- FIXED MODAL FUNCTIONS ---
 function showAuthModal(view) {
+    console.log('Showing auth modal:', view);
     const modalContainer = document.getElementById('modal-container');
-    if(modalContainer) {
-        modalContainer.innerHTML = `
-            <div class="modal-overlay premium-overlay">
-                <div class="modal-content premium-modal" onclick="event.stopPropagation()">
-                    <button class="modal-close-button premium-close" onclick="closeModal()"><i class="fas fa-times"></i></button>
-                    <div id="modal-form-container"></div>
-                </div>
-            </div>`;
-        modalContainer.querySelector('.modal-overlay').addEventListener('click', closeModal);
-        renderAuthForm(view);
+    if (!modalContainer) {
+        console.error('Modal container not found! Make sure you have a div with id="modal-container" in your HTML.');
+        return;
     }
+
+    // Clear any existing modal content
+    modalContainer.innerHTML = '';
+    
+    // Create modal HTML
+    modalContainer.innerHTML = `
+        <div class="modal-overlay premium-overlay" id="modal-overlay">
+            <div class="modal-content premium-modal" id="modal-content">
+                <button class="modal-close-button premium-close" id="modal-close-btn" type="button">
+                    <i class="fas fa-times"></i>
+                </button>
+                <div id="modal-form-container"></div>
+            </div>
+        </div>`;
+
+    // Add event listeners
+    const overlay = document.getElementById('modal-overlay');
+    const closeBtn = document.getElementById('modal-close-btn');
+    const content = document.getElementById('modal-content');
+
+    if (overlay) {
+        overlay.addEventListener('click', function(e) {
+            if (e.target === overlay) {
+                closeModal();
+            }
+        });
+    }
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            closeModal();
+        });
+    }
+
+    if (content) {
+        content.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+    }
+
+    // Show modal
+    modalContainer.style.display = 'block';
+    document.body.style.overflow = 'hidden';
+    
+    // Render the form
+    renderAuthForm(view);
 }
 
 function renderAuthForm(view) {
+    console.log('Rendering auth form:', view);
     const container = document.getElementById('modal-form-container');
-    if (!container) return;
-    container.innerHTML = view === 'login' ? getLoginTemplate() : getRegisterTemplate();
-    const formId = view === 'login' ? 'login-form' : 'register-form';
-    const handler = view === 'login' ? handleLogin : handleRegister;
-    document.getElementById(formId).addEventListener('submit', handler);
+    if (!container) {
+        console.error('Modal form container not found!');
+        return;
+    }
+
+    // Clear container first
+    container.innerHTML = '';
+    
+    // Add the appropriate template
+    if (view === 'login') {
+        container.innerHTML = getLoginTemplate();
+        
+        // Add form event listener
+        const loginForm = document.getElementById('login-form');
+        if (loginForm) {
+            loginForm.addEventListener('submit', handleLogin);
+        } else {
+            console.error('Login form not found after template insertion!');
+        }
+    } else if (view === 'register') {
+        container.innerHTML = getRegisterTemplate();
+        
+        // Add form event listener
+        const registerForm = document.getElementById('register-form');
+        if (registerForm) {
+            registerForm.addEventListener('submit', handleRegister);
+        } else {
+            console.error('Register form not found after template insertion!');
+        }
+    }
 }
 
 function showGenericModal(innerHTML, style = '') {
     const modalContainer = document.getElementById('modal-container');
-    if(modalContainer) {
-        modalContainer.innerHTML = `
-            <div class="modal-overlay premium-overlay">
-                <div class="modal-content premium-modal" style="${style}" onclick="event.stopPropagation()">
-                    <button class="modal-close-button premium-close" onclick="closeModal()"><i class="fas fa-times"></i></button>
-                    ${innerHTML}
-                </div>
-            </div>`;
-        modalContainer.querySelector('.modal-overlay').addEventListener('click', closeModal);
+    if (!modalContainer) {
+        console.error('Modal container not found!');
+        return;
     }
+
+    modalContainer.innerHTML = `
+        <div class="modal-overlay premium-overlay" id="modal-overlay">
+            <div class="modal-content premium-modal" id="modal-content" style="${style}">
+                <button class="modal-close-button premium-close" id="modal-close-btn" type="button">
+                    <i class="fas fa-times"></i>
+                </button>
+                ${innerHTML}
+            </div>
+        </div>`;
+
+    // Add event listeners
+    const overlay = document.getElementById('modal-overlay');
+    const closeBtn = document.getElementById('modal-close-btn');
+    const content = document.getElementById('modal-content');
+
+    if (overlay) {
+        overlay.addEventListener('click', function(e) {
+            if (e.target === overlay) {
+                closeModal();
+            }
+        });
+    }
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            closeModal();
+        });
+    }
+
+    if (content) {
+        content.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+    }
+
+    // Show modal
+    modalContainer.style.display = 'block';
+    document.body.style.overflow = 'hidden';
 }
 
 function closeModal() {
+    console.log('Closing modal');
     const modalContainer = document.getElementById('modal-container');
-    if (modalContainer) modalContainer.innerHTML = '';
+    if (modalContainer) {
+        modalContainer.innerHTML = '';
+        modalContainer.style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
 }
+
+// Global function to handle auth form switching
+window.renderAuthForm = renderAuthForm;
+window.closeModal = closeModal;
 
 // --- VIEW MANAGEMENT ---
 async function showAppView() {
     console.log('Showing app view...');
     
-    document.getElementById('landing-page-content').style.display = 'none';
-    document.getElementById('app-content').style.display = 'flex';
-    document.getElementById('auth-buttons-container').style.display = 'none';
-    document.getElementById('user-info-container').style.display = 'flex';
+    // Hide landing page, show app
+    const landingPage = document.getElementById('landing-page-content');
+    const appContent = document.getElementById('app-content');
+    const authButtons = document.getElementById('auth-buttons-container');
+    const userInfo = document.getElementById('user-info-container');
+    
+    if (landingPage) landingPage.style.display = 'none';
+    if (appContent) appContent.style.display = 'flex';
+    if (authButtons) authButtons.style.display = 'none';
+    if (userInfo) userInfo.style.display = 'flex';
     
     const navMenu = document.getElementById('main-nav-menu');
     if (navMenu) navMenu.innerHTML = '';
     
     const user = appState.currentUser;
-    document.getElementById('user-info-name').textContent = user.name;
-    document.getElementById('user-info-avatar').textContent = (user.name || "A").charAt(0).toUpperCase();
     
-    // Setup user dropdown
-    document.getElementById('user-info').addEventListener('click', (e) => {
-        e.stopPropagation();
-        document.getElementById('user-info-dropdown').classList.toggle('active');
-    });
-    document.getElementById('user-settings-link').addEventListener('click', (e) => {
-        e.preventDefault();
-        renderAppSection('settings');
-        document.getElementById('user-info-dropdown').classList.remove('active');
-    });
-    document.getElementById('user-logout-link').addEventListener('click', (e) => {
-        e.preventDefault();
-        logout();
-    });
+    // Update user info in header
+    const userNameElement = document.getElementById('user-info-name');
+    const userAvatarElement = document.getElementById('user-info-avatar');
+    
+    if (userNameElement) userNameElement.textContent = user.name;
+    if (userAvatarElement) userAvatarElement.textContent = (user.name || "A").charAt(0).toUpperCase();
+    
+    // Setup user dropdown (avoid duplicate listeners)
+    const userInfoElement = document.getElementById('user-info');
+    if (userInfoElement) {
+        // Remove existing listeners
+        userInfoElement.replaceWith(userInfoElement.cloneNode(true));
+        const newUserInfoElement = document.getElementById('user-info');
+        
+        newUserInfoElement.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const dropdown = document.getElementById('user-info-dropdown');
+            if (dropdown) dropdown.classList.toggle('active');
+        });
+    }
+    
+    const userSettingsLink = document.getElementById('user-settings-link');
+    if (userSettingsLink) {
+        userSettingsLink.replaceWith(userSettingsLink.cloneNode(true));
+        const newSettingsLink = document.getElementById('user-settings-link');
+        newSettingsLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            renderAppSection('settings');
+            const dropdown = document.getElementById('user-info-dropdown');
+            if (dropdown) dropdown.classList.remove('active');
+        });
+    }
+    
+    const userLogoutLink = document.getElementById('user-logout-link');
+    if (userLogoutLink) {
+        userLogoutLink.replaceWith(userLogoutLink.cloneNode(true));
+        const newLogoutLink = document.getElementById('user-logout-link');
+        newLogoutLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            logout();
+        });
+    }
 
     // Setup notification panel
-    document.getElementById('notification-bell-container').addEventListener('click', toggleNotificationPanel);
-    document.getElementById('clear-notifications-btn').addEventListener('click', (e) => {
-        e.stopPropagation();
-        clearNotifications();
-    });
+    const notificationBell = document.getElementById('notification-bell-container');
+    if (notificationBell) {
+        notificationBell.replaceWith(notificationBell.cloneNode(true));
+        const newNotificationBell = document.getElementById('notification-bell-container');
+        newNotificationBell.addEventListener('click', toggleNotificationPanel);
+    }
+    
+    const clearNotificationsBtn = document.getElementById('clear-notifications-btn');
+    if (clearNotificationsBtn) {
+        clearNotificationsBtn.replaceWith(clearNotificationsBtn.cloneNode(true));
+        const newClearBtn = document.getElementById('clear-notifications-btn');
+        newClearBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            clearNotifications();
+        });
+    }
      
-    document.getElementById('sidebarUserName').textContent = user.name;
-    document.getElementById('sidebarUserType').textContent = user.type;
-    document.getElementById('sidebarUserAvatar').textContent = (user.name || "A").charAt(0).toUpperCase();
+    // Update sidebar user info
+    const sidebarUserName = document.getElementById('sidebarUserName');
+    const sidebarUserType = document.getElementById('sidebarUserType');
+    const sidebarUserAvatar = document.getElementById('sidebarUserAvatar');
+    
+    if (sidebarUserName) sidebarUserName.textContent = user.name;
+    if (sidebarUserType) sidebarUserType.textContent = user.type;
+    if (sidebarUserAvatar) sidebarUserAvatar.textContent = (user.name || "A").charAt(0).toUpperCase();
     
     buildSidebarNav();
     renderAppSection('dashboard');
@@ -1461,10 +1621,17 @@ async function showAppView() {
 }
 
 function showLandingPageView() {
-    document.getElementById('landing-page-content').style.display = 'block';
-    document.getElementById('app-content').style.display = 'none';
-    document.getElementById('auth-buttons-container').style.display = 'flex';
-    document.getElementById('user-info-container').style.display = 'none';
+    console.log('Showing landing page view...');
+    
+    const landingPage = document.getElementById('landing-page-content');
+    const appContent = document.getElementById('app-content');
+    const authButtons = document.getElementById('auth-buttons-container');
+    const userInfo = document.getElementById('user-info-container');
+    
+    if (landingPage) landingPage.style.display = 'block';
+    if (appContent) appContent.style.display = 'none';
+    if (authButtons) authButtons.style.display = 'flex';
+    if (userInfo) userInfo.style.display = 'none';
     
     const navMenu = document.getElementById('main-nav-menu');
     if (navMenu) {
@@ -1478,6 +1645,11 @@ function showLandingPageView() {
 
 function buildSidebarNav() {
     const navContainer = document.getElementById('sidebar-nav-menu');
+    if (!navContainer) {
+        console.error('Sidebar nav menu not found!');
+        return;
+    }
+    
     const role = appState.currentUser.type;
     let links = `<a href="#" class="sidebar-nav-link" data-section="dashboard"><i class="fas fa-tachometer-alt fa-fw"></i><span>Dashboard</span></a>`;
 
@@ -1510,6 +1682,10 @@ function buildSidebarNav() {
 function renderAppSection(sectionId) {
     console.log('Rendering app section:', sectionId);
     const container = document.getElementById('app-container');
+    if (!container) {
+        console.error('App container not found!');
+        return;
+    }
     
     document.querySelectorAll('.sidebar-nav-link').forEach(link => {
         link.classList.toggle('active', link.dataset.section === sectionId);
@@ -1537,7 +1713,10 @@ function renderAppSection(sectionId) {
         fetchAndRenderJobs();
     } else if (sectionId === 'post-job') {
         container.innerHTML = getPostJobTemplate();
-        document.getElementById('post-job-form').addEventListener('submit', handlePostJob);
+        const postJobForm = document.getElementById('post-job-form');
+        if (postJobForm) {
+            postJobForm.addEventListener('submit', handlePostJob);
+        }
     } else if (sectionId === 'my-quotes') {
         fetchAndRenderMyQuotes();
     } else if (sectionId === 'approved-jobs') {
@@ -1557,7 +1736,11 @@ function renderAppSection(sectionId) {
 // --- ENHANCED NOTIFICATION SYSTEM ---
 function showNotification(message, type = 'info', duration = 4000) {
     const notificationContainer = document.getElementById('notification-container');
-    if (!notificationContainer) return;
+    if (!notificationContainer) {
+        console.warn('Notification container not found, creating temporary alert');
+        alert(`${type.toUpperCase()}: ${message}`);
+        return;
+    }
     
     const notification = document.createElement('div');
     notification.className = `notification premium-notification notification-${type}`;
@@ -1573,9 +1756,17 @@ function showNotification(message, type = 'info', duration = 4000) {
             <i class="fas ${icons[type]}"></i>
             <span>${message}</span>
         </div>
-        <button class="notification-close" onclick="this.parentElement.remove()">
+        <button class="notification-close" type="button">
             <i class="fas fa-times"></i>
         </button>`;
+    
+    // Add close functionality
+    const closeBtn = notification.querySelector('.notification-close');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            notification.remove();
+        });
+    }
     
     notificationContainer.appendChild(notification);
     
@@ -1583,120 +1774,86 @@ function showNotification(message, type = 'info', duration = 4000) {
         if (notification.parentElement) {
             notification.style.opacity = '0';
             notification.style.transform = 'translateX(100%)';
-            setTimeout(() => notification.remove(), 300);
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.remove();
+                }
+            }, 300);
         }
     }, duration);
 }
 
-// --- DASHBOARD WIDGETS ---
-async function renderRecentActivityWidgets() {
-    const user = appState.currentUser;
-    const recentProjectsContainer = document.getElementById('recent-projects-widget');
-    const recentQuotesContainer = document.getElementById('recent-quotes-widget');
-    
-    if (user.type === 'contractor' && recentProjectsContainer) {
-        recentProjectsContainer.innerHTML = '<div class="widget-loader"><div class="spinner"></div></div>';
-        try {
-            const endpoint = `/jobs/user/${user.id}?limit=3`;
-            const response = await apiCall(endpoint, 'GET');
-            const recentJobs = (response.data || []).slice(0, 3);
-            if (recentJobs.length > 0) {
-                recentProjectsContainer.innerHTML = recentJobs.map(job => `
-                    <div class="widget-list-item" id="widget-item-${job.id}">
-                        <div class="widget-item-header" onclick="toggleWidgetDetails('${job.id}', 'job')">
-                            <div class="widget-item-info">
-                                <i class="fas fa-briefcase widget-item-icon"></i>
-                                <div>
-                                    <p class="widget-item-title">${job.title}</p>
-                                    <span class="widget-item-meta">Budget: ${job.budget}</span>
-                                </div>
-                            </div>
-                            <span class="widget-item-status ${job.status}">${job.status}</span>
-                        </div>
-                        <div class="widget-item-details" id="widget-details-${job.id}"></div>
-                    </div>
-                `).join('');
-            } else {
-                recentProjectsContainer.innerHTML = '<p class="widget-empty-text">No recent projects found.</p>';
-            }
-        } catch(e) {
-            recentProjectsContainer.innerHTML = '<p class="widget-empty-text">Could not load projects.</p>';
-        }
-    } else if (user.type === 'designer' && recentQuotesContainer) {
-        recentQuotesContainer.innerHTML = '<div class="widget-loader"><div class="spinner"></div></div>';
-        try {
-            const endpoint = `/quotes/user/${user.id}?limit=3`;
-            const response = await apiCall(endpoint, 'GET');
-            const recentQuotes = (response.data || []).slice(0, 3);
-             if (recentQuotes.length > 0) {
-                recentQuotesContainer.innerHTML = recentQuotes.map(quote => `
-                    <div class="widget-list-item" id="widget-item-${quote.id}">
-                        <div class="widget-item-header" onclick="toggleWidgetDetails('${quote.id}', 'quote')">
-                             <div class="widget-item-info">
-                                <i class="fas fa-file-invoice-dollar widget-item-icon"></i>
-                                <div>
-                                    <p class="widget-item-title">Quote for: ${quote.jobTitle}</p>
-                                    <span class="widget-item-meta">Amount: ${quote.quoteAmount}</span>
-                                </div>
-                            </div>
-                            <span class="widget-item-status ${quote.status}">${quote.status}</span>
-                        </div>
-                        <div class="widget-item-details" id="widget-details-${quote.id}"></div>
-                    </div>
-                `).join('');
-            } else {
-                recentQuotesContainer.innerHTML = '<p class="widget-empty-text">No recent quotes found.</p>';
-            }
-        } catch(e) {
-            recentQuotesContainer.innerHTML = '<p class="widget-empty-text">Could not load quotes.</p>';
-        }
-    }
+// --- FIXED TEMPLATES ---
+function getLoginTemplate() {
+    return `
+        <div class="auth-header premium-auth-header">
+            <div class="auth-logo"><i class="fas fa-drafting-compass"></i></div>
+            <h2>Welcome Back</h2>
+            <p>Sign in to your SteelConnect account</p>
+        </div>
+        <form id="login-form" class="premium-form">
+            <div class="form-group">
+                <label class="form-label"><i class="fas fa-envelope"></i> Email Address</label>
+                <input type="email" class="form-input premium-input" name="loginEmail" required placeholder="Enter your email">
+            </div>
+            <div class="form-group">
+                <label class="form-label"><i class="fas fa-lock"></i> Password</label>
+                <input type="password" class="form-input premium-input" name="loginPassword" required placeholder="Enter your password">
+            </div>
+            <button type="submit" class="btn btn-primary btn-full premium-btn">
+                <i class="fas fa-sign-in-alt"></i> Sign In
+            </button>
+        </form>
+        <div class="auth-switch">
+            Don't have an account? 
+            <a href="#" onclick="renderAuthForm('register')" class="auth-link">Create Account</a>
+        </div>`;
 }
 
-async function toggleWidgetDetails(itemId, itemType) {
-    const detailsContainer = document.getElementById(`widget-details-${itemId}`);
-    if (!detailsContainer) return;
-
-    if (detailsContainer.classList.contains('expanded')) {
-        detailsContainer.classList.remove('expanded');
-        detailsContainer.innerHTML = '';
-        return;
-    }
-
-    // Close any other open details
-    document.querySelectorAll('.widget-item-details.expanded').forEach(el => {
-        el.classList.remove('expanded');
-        el.innerHTML = '';
-    });
-
-    detailsContainer.innerHTML = '<div class="widget-loader"><div class="spinner"></div></div>';
-    detailsContainer.classList.add('expanded');
-
-    try {
-        if (itemType === 'job') {
-            const job = appState.jobs.find(j => j.id === itemId);
-            if (job) {
-                detailsContainer.innerHTML = `
-                    <p><strong>Description:</strong> ${job.description}</p>
-                    ${job.deadline ? `<p><strong>Deadline:</strong> ${new Date(job.deadline).toLocaleDateString()}</p>` : ''}
-                    ${job.assignedToName ? `<p><strong>Assigned To:</strong> ${job.assignedToName}</p>` : ''}
-                    <button class="btn btn-outline" onclick="renderAppSection('jobs')">View Full Details</button>
-                `;
-            }
-        } else if (itemType === 'quote') {
-            const quote = appState.myQuotes.find(q => q.id === itemId);
-            if (quote) {
-                detailsContainer.innerHTML = `
-                    <p><strong>Description:</strong> ${quote.description}</p>
-                    <p><strong>Timeline:</strong> ${quote.timeline} days</p>
-                    <button class="btn btn-outline" onclick="renderAppSection('my-quotes')">View Full Details</button>
-                `;
-            }
-        }
-    } catch (error) {
-        detailsContainer.innerHTML = '<p>Could not load details.</p>';
-    }
+function getRegisterTemplate() {
+    return `
+        <div class="auth-header premium-auth-header">
+            <div class="auth-logo"><i class="fas fa-drafting-compass"></i></div>
+            <h2>Join SteelConnect</h2>
+            <p>Create your professional account</p>
+        </div>
+        <form id="register-form" class="premium-form">
+            <div class="form-group">
+                <label class="form-label"><i class="fas fa-user"></i> Full Name</label>
+                <input type="text" class="form-input premium-input" name="regName" required placeholder="Enter your full name">
+            </div>
+            <div class="form-group">
+                <label class="form-label"><i class="fas fa-envelope"></i> Email Address</label>
+                <input type="email" class="form-input premium-input" name="regEmail" required placeholder="Enter your email">
+            </div>
+            <div class="form-group">
+                <label class="form-label"><i class="fas fa-lock"></i> Password</label>
+                <input type="password" class="form-input premium-input" name="regPassword" required placeholder="Create a strong password">
+            </div>
+            <div class="form-group">
+                <label class="form-label"><i class="fas fa-user-tag"></i> I am a...</label>
+                <select class="form-select premium-select" name="regRole" required>
+                    <option value="" disabled selected>Select your role</option>
+                    <option value="contractor">Client / Contractor</option>
+                    <option value="designer">Designer / Engineer</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary btn-full premium-btn">
+                <i class="fas fa-user-plus"></i> Create Account
+            </button>
+        </form>
+        <div class="auth-switch">
+            Already have an account? 
+            <a href="#" onclick="renderAuthForm('login')" class="auth-link">Sign In</a>
+        </div>`;
 }
+
+// Make functions globally available
+window.showAuthModal = showAuthModal;
+window.showGenericModal = showGenericModal;
+window.closeModal = closeModal;
+
+console.log('Fixed Modal System Loaded Successfully!');
 // === STEELCONNECT COMPLETE SCRIPT - PART 5 ===
 // Templates and additional features (estimation tool, approved jobs, etc.)
 
@@ -2468,3 +2625,4 @@ function getSettingsTemplate(user) {
 
 // Initialize the application
 console.log('SteelConnect Complete Script Loaded Successfully!');
+
