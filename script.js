@@ -1,3 +1,646 @@
+// server.js - SIMPLIFIED VERSION with Direct Imports
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import compression from 'compression';
+import dotenv from 'dotenv';
+import mongoose from 'mongoose';
+
+// Import routes directly
+import authRoutes from './src/routes/auth.js';
+import jobsRoutes from './src/routes/jobs.js';
+import quotesRoutes from './src/routes/quotes.js';
+import messagesRoutes from './src/routes/messages.js';
+import notificationsRoutes from './src/routes/notifications.js'; // Added
+
+// Import estimation routes (now fixed)
+let estimationRoutes;
+try {
+    const estimationModule = await import('./src/routes/estimation.js');
+    estimationRoutes = estimationModule.default;
+    console.log('✅ Estimation routes imported successfully');
+} catch (error) {
+    console.warn('⚠️ Estimation routes not available:', error.message);
+}
+
+dotenv.config();
+
+const app = express();
+const PORT = process.env.PORT || 10000;
+
+console.log('🚀 SteelConnect Backend Starting...');
+console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
+console.log(`⏰ Started at: ${new Date().toISOString()}`);
+
+// --- Database Connection ---
+if (process.env.MONGODB_URI) {
+    mongoose.connect(process.env.MONGODB_URI)
+        .then(() => console.log('✅ MongoDB connected'))
+        .catch(err => console.error('❌ MongoDB connection error:', err));
+} else {
+    console.warn('⚠️ MONGODB_URI not found in environment variables');
+}
+
+// --- Middleware ---
+const allowedOrigins = (process.env.CORS_ORIGIN || '').split(',').filter(origin => origin.trim());
+
+const corsOptions = {
+    origin: (origin, callback) => {
+        if (!origin) return callback(null, true);
+
+        if (allowedOrigins.includes(origin) ||
+            origin.endsWith('.vercel.app') ||
+            origin.includes('localhost') ||
+            origin.includes('127.0.0.1')) {
+            callback(null, true);
+        } else {
+            console.warn(`⚠️ CORS Warning: Origin "${origin}" not in allowed list`);
+            if (process.env.NODE_ENV !== 'production') {
+                callback(null, true);
+            } else {
+                callback(new Error('Not allowed by CORS'));
+            }
+        }
+    },
+    credentials: true,
+};
+
+app.use(cors(corsOptions));
+app.use(helmet({
+    contentSecurityPolicy: false,
+    crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
+app.use(compression());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// --- Request logging middleware ---
+app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+    next();
+});
+
+// --- Health check route ---
+app.get('/health', (req, res) => {
+    res.json({
+        success: true,
+        message: 'SteelConnect Backend is healthy',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        memory: process.memoryUsage(),
+        environment: process.env.NODE_ENV || 'development',
+        version: '1.0.0'
+    });
+});
+
+// --- Root route ---
+app.get('/', (req, res) => {
+    res.json({
+        message: 'SteelConnect Backend API is running',
+        version: '1.0.0',
+        status: 'healthy',
+        endpoints: {
+            health: '/health',
+            auth: '/api/auth',
+            jobs: '/api/jobs',
+            quotes: '/api/quotes',
+            messages: '/api/messages',
+            estimation: '/api/estimation',
+            notifications: '/api/notifications' // Added
+        }
+    });
+});
+
+// --- Register Routes ---
+console.log('🔄 Registering routes...');
+
+// Auth routes
+if (authRoutes) {
+    app.use('/api/auth', authRoutes);
+    console.log('✅ Auth routes registered');
+} else {
+    console.error('❌ Auth routes failed to load');
+}
+
+// Jobs routes  
+if (jobsRoutes) {
+    app.use('/api/jobs', jobsRoutes);
+    console.log('✅ Jobs routes registered');
+} else {
+    console.error('❌ Jobs routes failed to load');
+}
+
+// Quotes routes
+if (quotesRoutes) {
+    app.use('/api/quotes', quotesRoutes);
+    console.log('✅ Quotes routes registered');
+} else {
+    console.error('❌ Quotes routes failed to load');
+}
+
+// Messages routes
+if (messagesRoutes) {
+    app.use('/api/messages', messagesRoutes);
+    console.log('✅ Messages routes registered');
+} else {
+    console.error('❌ Messages routes failed to load');
+}
+
+// Notifications routes (Added)
+if (notificationsRoutes) {
+    app.use('/api/notifications', notificationsRoutes);
+    console.log('✅ Notifications routes registered');
+} else {
+    console.error('❌ Notifications routes failed to load');
+}
+
+// Estimation routes
+if (estimationRoutes) {
+    app.use('/api/estimation', estimationRoutes);
+    console.log('✅ Estimation routes registered');
+} else {
+    console.warn('⚠️ Estimation routes unavailable - some services may be missing');
+}
+
+console.log('📦 Route registration completed');
+
+// --- API test endpoint ---
+app.get('/api', (req, res) => {
+    res.json({
+        message: 'SteelConnect API',
+        version: '1.0.0',
+        available_endpoints: [
+            'GET /health',
+            'GET /api',
+            'GET /api/auth/*',
+            'POST /api/auth/register',
+            'POST /api/auth/login',
+            'GET /api/jobs/*',
+            'GET /api/quotes/*',
+            'GET /api/messages/*',
+            'GET /api/estimation/*',
+            'GET /api/notifications/*' // Added
+        ]
+    });
+});
+
+// --- Error handling middleware ---
+app.use((error, req, res, next) => {
+    console.error('❌ Global Error Handler:', error);
+
+    if (error.code === 'LIMIT_FILE_SIZE') {
+        return res.status(413).json({
+            success: false,
+            error: 'File too large. Maximum size is 50MB.'
+        });
+    }
+
+    if (error.message === 'Not allowed by CORS') {
+        return res.status(403).json({
+            success: false,
+            error: 'CORS policy violation'
+        });
+    }
+
+    res.status(error.status || 500).json({
+        success: false,
+        error: error.message || 'Internal Server Error',
+        timestamp: new Date().toISOString()
+    });
+});
+
+// --- 404 handler ---
+app.use('*', (req, res) => {
+    res.status(404).json({
+        success: false,
+        error: `Route ${req.originalUrl} not found`,
+        available_routes: [
+            '/',
+            '/health',
+            '/api',
+            '/api/auth/*',
+            '/api/jobs/*',
+            '/api/quotes/*',
+            '/api/messages/*',
+            '/api/estimation/*',
+            '/api/notifications/*' // Added
+        ]
+    });
+});
+
+// --- Graceful shutdown ---
+process.on('SIGTERM', () => {
+    console.log('🔴 SIGTERM received, shutting down gracefully...');
+    if (mongoose.connection.readyState === 1) {
+        mongoose.connection.close();
+    }
+    process.exit(0);
+});
+
+process.on('SIGINT', () => {
+    console.log('🔴 SIGINT received, shutting down gracefully...');
+    if (mongoose.connection.readyState === 1) {
+        mongoose.connection.close();
+    }
+    process.exit(0);
+});
+
+// --- Start Server ---
+app.listen(PORT, '0.0.0.0', () => {
+    console.log('🎉 SteelConnect Backend Server Started');
+    console.log(`📍 Server running on port ${PORT}`);
+    console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`⏰ Started at: ${new Date().toISOString()}`);
+
+    console.log('\n📋 Environment Check:');
+    console.log(`   MongoDB: ${process.env.MONGODB_URI ? '✅ Configured' : '❌ Missing'}`);
+    console.log(`   Anthropic API: ${process.env.ANTHROPIC_API_KEY ? '✅ Configured' : '❌ Missing'}`);
+    console.log(`   Firebase: ${process.env.FIREBASE_SERVICE_ACCOUNT_KEY_BASE64 ? '✅ Configured' : '❌ Missing'}`);
+    console.log(`   CORS Origins: ${process.env.CORS_ORIGIN ? '✅ Configured' : '⚠️ Using defaults'}`);
+    console.log(`   Resend API: ${process.env.RESEND_API_KEY ? '✅ Configured' : '❌ Missing'}`);
+
+
+    console.log('\n🔗 Available endpoints:');
+    console.log(`   Health: http://localhost:${PORT}/health`);
+    console.log(`   API: http://localhost:${PORT}/api`);
+    console.log('');
+});
+src/routes/notifications.js
+This is a new file that handles all notification-related API calls.
+
+JavaScript
+
+// src/routes/notifications.js
+import express from 'express';
+import { adminDb } from '../config/firebase.js';
+import { authMiddleware } from '../middleware/authMiddleware.js';
+
+const router = express.Router();
+
+// Middleware to protect all notification routes
+router.use(authMiddleware);
+
+// GET all notifications for the logged-in user
+router.get('/', async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const notificationsRef = adminDb.collection('notifications');
+        const snapshot = await notificationsRef
+            .where('userId', '==', userId)
+            .orderBy('createdAt', 'desc')
+            .get();
+
+        if (snapshot.empty) {
+            return res.status(200).json({ success: true, data: [] });
+        }
+
+        const notifications = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        res.status(200).json({ success: true, data: notifications });
+    } catch (error) {
+        console.error('Error fetching notifications:', error);
+        res.status(500).json({ success: false, error: 'Failed to fetch notifications.' });
+    }
+});
+
+// PUT to mark notifications as read
+router.put('/mark-read', async (req, res) => {
+    try {
+        const { ids } = req.body;
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({ success: false, error: 'Notification IDs are required.' });
+        }
+
+        const batch = adminDb.batch();
+        ids.forEach(id => {
+            const docRef = adminDb.collection('notifications').doc(id);
+            batch.update(docRef, { isRead: true });
+        });
+
+        await batch.commit();
+        res.status(200).json({ success: true, message: 'Notifications marked as read.' });
+    } catch (error) {
+        console.error('Error marking notifications as read:', error);
+        res.status(500).json({ success: false, error: 'Failed to update notifications.' });
+    }
+});
+
+// DELETE all notifications for the logged-in user
+router.delete('/', async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const notificationsRef = adminDb.collection('notifications');
+        const snapshot = await notificationsRef.where('userId', '==', userId).get();
+
+        if (snapshot.empty) {
+            return res.status(200).json({ success: true, message: 'No notifications to delete.' });
+        }
+
+        const batch = adminDb.batch();
+        snapshot.docs.forEach(doc => {
+            batch.delete(doc.ref);
+        });
+
+        await batch.commit();
+        res.status(200).json({ success: true, message: 'All notifications cleared.' });
+    } catch (error) {
+        console.error('Error deleting notifications:', error);
+        res.status(500).json({ success: false, error: 'Failed to clear notifications.' });
+    }
+});
+
+export default router;
+src/middleware/authMiddleware.js
+This existing file has been updated to be more generic and reusable.
+
+JavaScript
+
+// src/middleware/authMiddleware.js
+import jwt from 'jsonwebtoken';
+
+export const authMiddleware = (req, res, next) => {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ success: false, error: 'Authorization token is required.' });
+    }
+
+    const token = authHeader.split(' ')[1];
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_default_secret_key_change_in_production');
+        req.user = decoded; // Add decoded payload (e.g., userId, email, type) to the request object
+        next();
+    } catch (error) {
+        return res.status(401).json({ success: false, error: 'Invalid or expired token.' });
+    }
+};
+
+export const isAdmin = (req, res, next) => {
+    // This middleware should run after authMiddleware
+    if (!req.user || (req.user.type !== 'admin' && req.user.role !== 'admin')) {
+        return res.status(403).json({ success: false, error: 'Access denied. Admin privileges required.' });
+    }
+    next();
+};
+src/routes/auth.js
+This file is heavily updated to handle role-specific profile updates with file uploads to Firebase Storage and to add the Resend email notification logic.
+
+JavaScript
+
+import express from 'express';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import { adminDb, adminStorage } from '../config/firebase.js';
+import { authMiddleware } from '../middleware/authMiddleware.js';
+import multer from 'multer';
+import { Resend } from 'resend';
+
+const router = express.Router();
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+// Multer setup for handling file uploads in memory
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 15 * 1024 * 1024 }, // 15MB limit per file
+});
+
+// --- Test Route ---
+router.get('/test', (req, res) => {
+    res.json({ message: 'Auth routes working!' });
+});
+
+// --- POST /login/admin (No changes) ---
+// ... (Your existing admin login code remains here)
+
+// --- POST /register (No changes) ---
+// ... (Your existing user registration code remains here)
+
+// --- Regular User Login with Email Notification ---
+router.post('/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        if (!email || !password) {
+            return res.status(400).json({ error: 'Email and password are required.', success: false });
+        }
+        console.log('Regular user login attempt for:', email);
+
+        const usersRef = adminDb.collection('users');
+        const userSnapshot = await usersRef
+            .where('email', '==', email.toLowerCase().trim())
+            .where('type', 'in', ['contractor', 'designer'])
+            .limit(1)
+            .get();
+
+        if (userSnapshot.empty) {
+            return res.status(401).json({ error: 'Invalid credentials.', success: false });
+        }
+        const userDoc = userSnapshot.docs[0];
+        const userData = userDoc.data();
+        if (userData.isActive === false) {
+            return res.status(401).json({ error: 'Account is deactivated.', success: false });
+        }
+        const isMatch = await bcrypt.compare(password, userData.password);
+        if (!isMatch) {
+            return res.status(401).json({ error: 'Invalid credentials.', success: false });
+        }
+        await userDoc.ref.update({ lastLoginAt: new Date().toISOString() });
+
+        const payload = { userId: userDoc.id, email: userData.email, type: userData.type, name: userData.name };
+        const token = jwt.sign(payload, process.env.JWT_SECRET || 'your_default_secret_key_change_in_production', { expiresIn: '7d' });
+
+        console.log('✅ Regular user login successful');
+
+        // --- NEW: Send login notification email via Resend ---
+        if (process.env.RESEND_API_KEY) {
+            try {
+                await resend.emails.send({
+                    from: 'SteelConnect <noreply@yourdomain.com>', // Replace with your verified Resend domain
+                    to: userData.email,
+                    subject: 'New Login to Your SteelConnect Account',
+                    html: `<p>Hi ${userData.name},</p><p>We detected a new login to your SteelConnect account at ${new Date().toLocaleString()}.</p><p>If this was not you, please secure your account immediately.</p>`,
+                });
+                console.log(`✅ Login notification sent to ${userData.email}`);
+            } catch (emailError) {
+                console.error('❌ Failed to send login notification email:', emailError);
+            }
+        } else {
+            console.warn('⚠️ RESEND_API_KEY not set. Skipping login notification email.');
+        }
+
+        res.status(200).json({
+            message: 'Login successful',
+            success: true,
+            token: token,
+            user: {
+                id: userDoc.id,
+                name: userData.name,
+                email: userData.email,
+                type: userData.type,
+                createdAt: userData.createdAt,
+                lastLoginAt: new Date().toISOString()
+            }
+        });
+    } catch (error) {
+        console.error('LOGIN ERROR:', error);
+        res.status(500).json({ error: 'An error occurred during login.', success: false });
+    }
+});
+
+
+// --- GET /profile (No changes) ---
+// ... (Your existing get profile code remains here)
+
+
+// --- UPDATE User Profile (Contractor & Designer) ---
+router.put(
+    '/profile',
+    authMiddleware,
+    upload.fields([
+        { name: 'resume', maxCount: 1 },
+        { name: 'certificates' } // Allows multiple certificate files
+    ]),
+    async (req, res) => {
+        try {
+            const userId = req.user.userId;
+            const userRef = adminDb.collection('users').doc(userId);
+            const userDoc = await userRef.get();
+
+            if (!userDoc.exists) {
+                return res.status(404).json({ success: false, error: 'User not found.' });
+            }
+
+            const userData = userDoc.data();
+            const updateData = { updatedAt: new Date().toISOString() };
+            const { name } = req.body;
+
+            if (name) updateData.name = name.trim();
+
+            // --- File Upload Helper ---
+            const uploadFile = async (file, path) => {
+                const bucket = adminStorage.bucket();
+                const blob = bucket.file(path);
+                const blobStream = blob.createWriteStream({
+                    metadata: { contentType: file.mimetype },
+                });
+
+                return new Promise((resolve, reject) => {
+                    blobStream.on('error', reject);
+                    blobStream.on('finish', async () => {
+                        await blob.makePublic();
+                        resolve(blob.publicUrl());
+                    });
+                    blobStream.end(file.buffer);
+                });
+            };
+
+
+            // --- Handle Role-Specific Fields ---
+            if (userData.type === 'contractor') {
+                if (req.body.companyName) updateData.companyName = req.body.companyName;
+                if (req.body.linkedInUrl) updateData.linkedInUrl = req.body.linkedInUrl;
+            } else if (userData.type === 'designer') {
+                if (req.body.skills) {
+                    try {
+                        updateData.skills = JSON.parse(req.body.skills);
+                    } catch {
+                        return res.status(400).json({ success: false, error: 'Invalid skills format.' });
+                    }
+                }
+
+                // Handle Resume Upload
+                if (req.files && req.files.resume) {
+                    const resumeFile = req.files.resume[0];
+                    const filePath = `profiles/${userId}/resume/${resumeFile.originalname}`;
+                    updateData.resumeUrl = await uploadFile(resumeFile, filePath);
+                }
+
+                // Handle Certificate Uploads
+                if (req.files && req.files.certificates) {
+                    const certificateFiles = req.files.certificates;
+                    const existingCertificates = userData.certificates || [];
+                    
+                    const uploadPromises = certificateFiles.map(file => {
+                        const filePath = `profiles/${userId}/certificates/${Date.now()}-${file.originalname}`;
+                        return uploadFile(file, filePath);
+                    });
+                    
+                    const newUrls = await Promise.all(uploadPromises);
+
+                    // For simplicity, we'll just store URLs. In a real app, you'd handle names/metadata from the form.
+                    const newCertificates = newUrls.map(url => ({ url, name: url.split('/').pop(), uploadedAt: new Date().toISOString() }));
+
+                    updateData.certificates = [...existingCertificates, ...newCertificates];
+                }
+            }
+
+            // Update user document
+            await userRef.update(updateData);
+
+            const updatedUserDoc = await userRef.get();
+            const { password, ...userProfile } = updatedUserDoc.data();
+
+            res.status(200).json({
+                success: true,
+                message: 'Profile updated successfully.',
+                data: { id: updatedUserDoc.id, ...userProfile },
+            });
+
+        } catch (error) {
+            console.error('PROFILE UPDATE ERROR:', error);
+            res.status(500).json({ success: false, error: 'An error occurred while updating profile.' });
+        }
+    }
+);
+
+// --- PUT /change-password (No changes) ---
+// ... (Your existing change password code remains here)
+
+// --- POST /logout (No changes) ---
+// ... (Your existing logout code remains here)
+
+// --- GET /verify (No changes) ---
+// ... (Your existing token verification code remains here)
+
+export default router;
+firebase.js
+This file has been corrected as noted. The storageBucket URL has been fixed.
+
+JavaScript
+
+import admin from 'firebase-admin';
+
+// Check for the required environment variable
+if (!process.env.FIREBASE_SERVICE_ACCOUNT_KEY_BASE64) {
+  throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY_BASE64 is not set in environment variables.');
+}
+
+// Decode the Base64 service account key from environment variables
+const serviceAccountJson = Buffer.from(
+  process.env.FIREBASE_SERVICE_ACCOUNT_KEY_BASE64,
+  'base64'
+).toString('utf8');
+
+const serviceAccount = JSON.parse(serviceAccountJson);
+
+// Initialize Firebase Admin SDK if not already initialized
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+    // --- FIX: The bucket name should not include 'gs://' or 'firebasestorage.app' ---
+    storageBucket: 'steelconnect-backend-3f684.appspot.com'
+  });
+}
+
+// Export the initialized services
+const adminDb = admin.firestore();
+const adminStorage = admin.storage();
+
+export { admin, adminDb, adminStorage };
+script.js
+This file contains the majority of the new frontend logic for notifications and the dynamic settings page, plus the login notification trigger. The logout mechanism was reviewed and is functioning as expected for an inactivity timer.
+
+JavaScript
+
 // --- LANDING PAGE SLIDER & SMOOTH SCROLL ---
 let currentSlide = 0;
 const sliderWrapper = document.getElementById('slider-wrapper');
@@ -24,7 +667,7 @@ if (totalSlides > 0) {
 }
 
 document.querySelectorAll('.nav-link[href^="#"]').forEach(link => {
-    link.addEventListener('click', function(e) {
+    link.addEventListener('click', function (e) {
         e.preventDefault();
         const targetId = this.getAttribute('href');
         const targetSection = document.querySelector(targetId);
@@ -96,30 +739,32 @@ let inactivityTimer;
 
 function resetInactivityTimer() {
     clearTimeout(inactivityTimer);
+    // Set to 30 minutes (1800000 ms) for a better user experience
     inactivityTimer = setTimeout(() => {
         if (appState.currentUser) {
+            // This is the auto-logout flow. It shows a notification and then redirects.
+            // It's not a "popup" but an informational message before action.
             showNotification('You have been logged out due to inactivity.', 'info');
             logout();
         }
-    }, 300000); // 5 minutes
+    }, 1800000);
 }
+
 
 function initializeApp() {
     console.log("SteelConnect App Initializing...");
-    
+
     // Global click listener to close pop-ups
     window.addEventListener('click', (event) => {
-        // Close user dropdown if click is outside
-        const userInfoContainer = document.getElementById('user-info-container');
         const userInfoDropdown = document.getElementById('user-info-dropdown');
+        const userInfoContainer = document.getElementById('user-info-container');
         if (userInfoDropdown && userInfoContainer && !userInfoContainer.contains(event.target)) {
             userInfoDropdown.classList.remove('active');
         }
-        // Close notification panel if click is outside
         const notificationPanel = document.getElementById('notification-panel');
         const notificationBellContainer = document.getElementById('notification-bell-container');
-        if(notificationPanel && notificationBellContainer && !notificationBellContainer.contains(event.target)){
-             notificationPanel.classList.remove('active');
+        if (notificationPanel && notificationBellContainer && !notificationBellContainer.contains(event.target)) {
+            notificationPanel.classList.remove('active');
         }
     });
 
@@ -129,33 +774,25 @@ function initializeApp() {
     window.addEventListener('click', resetInactivityTimer);
 
     // Auth button listeners
-    const signInBtn = document.getElementById('signin-btn');
-    if (signInBtn) signInBtn.addEventListener('click', () => showAuthModal('login'));
+    document.getElementById('signin-btn')?.addEventListener('click', () => showAuthModal('login'));
+    document.getElementById('join-btn')?.addEventListener('click', () => showAuthModal('register'));
+    document.getElementById('get-started-btn')?.addEventListener('click', () => showAuthModal('register'));
 
-    const joinBtn = document.getElementById('join-btn');
-    if (joinBtn) joinBtn.addEventListener('click', () => showAuthModal('register'));
-    
-    const getStartedBtn = document.getElementById('get-started-btn');
-    if (getStartedBtn) getStartedBtn.addEventListener('click', () => showAuthModal('register'));
-    
     // Logo navigation
-    const logo = document.querySelector('.logo');
-    if (logo) {
-        logo.addEventListener('click', (e) => {
-            e.preventDefault();
-            if (appState.currentUser) {
-                renderAppSection('dashboard');
-            } else {
-                showLandingPageView();
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            }
-        });
-    }
-    
+    document.querySelector('.logo')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (appState.currentUser) {
+            renderAppSection('dashboard');
+        } else {
+            showLandingPageView();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    });
+
     // Check for existing session
     const token = localStorage.getItem('jwtToken');
     const user = localStorage.getItem('currentUser');
-    
+
     if (token && user) {
         try {
             appState.jwtToken = token;
@@ -169,7 +806,7 @@ function initializeApp() {
     } else {
         showLandingPageView();
     }
-    
+
     initializeHeaderRotation();
 }
 
@@ -187,23 +824,20 @@ function updateDynamicHeader() {
         const feature = headerFeatures[appState.currentHeaderSlide];
         headerElement.innerHTML = `
             <div class="feature-header-content" style="background: ${feature.gradient};">
-                <div class="feature-icon-container">
-                    <i class="fas ${feature.icon}"></i>
-                </div>
+                <div class="feature-icon-container"><i class="fas ${feature.icon}"></i></div>
                 <div class="feature-text-content">
                     <h2 class="feature-title">${feature.title}</h2>
                     <p class="feature-subtitle">${feature.subtitle}</p>
-                    <p class="feature-description">${feature.description}</p>
                 </div>
                 <div class="feature-indicators">
-                    ${headerFeatures.map((_, index) => 
-                        `<div class="indicator ${index === appState.currentHeaderSlide ? 'active' : ''}"></div>`
-                    ).join('')}
+                    ${headerFeatures.map((_, index) =>
+            `<div class="indicator ${index === appState.currentHeaderSlide ? 'active' : ''}"></div>`
+        ).join('')}
                 </div>
-            </div>
-        `;
+            </div>`;
     }
 }
+
 
 async function apiCall(endpoint, method, body = null, successMessage = null) {
     try {
@@ -219,30 +853,26 @@ async function apiCall(endpoint, method, body = null, successMessage = null) {
                 options.body = JSON.stringify(body);
             }
         }
-        
+
         const response = await fetch(BACKEND_URL + endpoint, options);
 
         if (response.status === 204 || response.headers.get("content-length") === "0") {
-             if (!response.ok) {
+            if (!response.ok) {
                 const errorMsg = response.headers.get('X-Error-Message') || `Request failed with status ${response.status}`;
                 throw new Error(errorMsg);
-             }
-             if (successMessage) showNotification(successMessage, 'success');
-             return { success: true };
+            }
+            if (successMessage) showNotification(successMessage, 'success');
+            return { success: true };
         }
 
         const responseData = await response.json();
-
         if (!response.ok) {
             throw new Error(responseData.message || responseData.error || `Request failed with status ${response.status}`);
         }
-
         if (successMessage) {
             showNotification(successMessage, 'success');
         }
-        
         return responseData;
-
     } catch (error) {
         console.error(`API call to ${endpoint} failed:`, error);
         showNotification(error.message, 'error');
@@ -261,7 +891,7 @@ async function handleRegister(event) {
     };
     await apiCall('/auth/register', 'POST', userData, 'Registration successful! Please sign in.')
         .then(() => renderAuthForm('login'))
-        .catch(() => {});
+        .catch(() => { });
 }
 
 async function handleLogin(event) {
@@ -270,25 +900,21 @@ async function handleLogin(event) {
     const authData = { email: form.loginEmail.value, password: form.loginPassword.value };
     try {
         const data = await apiCall('/auth/login', 'POST', authData);
-        
+
         appState.currentUser = data.user;
         appState.jwtToken = data.token;
         localStorage.setItem('currentUser', JSON.stringify(data.user));
         localStorage.setItem('jwtToken', data.token);
 
-        // NEW: Call the backend to send a login notification email via Resend
-        apiCall('/auth/notify-login', 'POST', { email: data.user.email, name: data.user.name })
-            .catch(err => console.error("Failed to send login notification:", err));
-
         closeModal();
-        await showAppView(); // Make sure this is awaited to fetch notifications
+        await showAppView();
         showNotification(`Welcome back to SteelConnect, ${data.user.name}!`, 'success');
-        
+
         if (data.user.type === 'designer') {
             loadUserQuotes();
         }
 
-    } catch(error) {
+    } catch (error) {
         // Error is already shown by apiCall
     }
 }
@@ -321,7 +947,7 @@ async function loadUserQuotes() {
     }
 }
 
-// --- NOTIFICATION SYSTEM (FIRESTORE-BACKED) ---
+// --- NOTIFICATION SYSTEM (NEW/UPDATED) ---
 async function fetchUserNotifications() {
     if (!appState.currentUser) return;
     try {
@@ -330,10 +956,9 @@ async function fetchUserNotifications() {
         renderNotificationPanel();
     } catch (error) {
         console.error('Failed to fetch notifications:', error);
-        // Add a visual indicator of failure in the panel
         const panelList = document.getElementById('notification-panel-list');
         if (panelList) {
-            panelList.innerHTML = `<div class="notification-empty-state"><i class="fas fa-exclamation-triangle"></i><p>Could not load notifications</p></div>`;
+            panelList.innerHTML = `<div class="notification-empty-state"><i class="fas fa-exclamation-triangle"></i><p>Could not load</p></div>`;
         }
     }
 }
@@ -341,49 +966,28 @@ async function fetchUserNotifications() {
 function renderNotificationPanel() {
     const panelList = document.getElementById('notification-panel-list');
     const badge = document.getElementById('notification-badge');
-    
     const unreadCount = appState.notifications.filter(n => !n.isRead).length;
 
     if (badge) {
-        if (unreadCount > 0) {
-            badge.textContent = unreadCount;
-            badge.style.display = 'flex';
-        } else {
-            badge.style.display = 'none';
-        }
+        badge.textContent = unreadCount > 9 ? '9+' : unreadCount;
+        badge.style.display = unreadCount > 0 ? 'flex' : 'none';
     }
-
     if (!panelList) return;
 
     if (appState.notifications.length === 0) {
-        panelList.innerHTML = `
-            <div class="notification-empty-state">
-                <i class="fas fa-bell-slash"></i>
-                <p>No new notifications</p>
-            </div>`;
+        panelList.innerHTML = `<div class="notification-empty-state"><i class="fas fa-bell-slash"></i><p>No new notifications</p></div>`;
         return;
     }
 
     panelList.innerHTML = appState.notifications.map(n => {
-        const iconMap = {
-            info: 'fa-info-circle',
-            success: 'fa-check-circle',
-            warning: 'fa-exclamation-triangle',
-            error: 'fa-times-circle',
-            message: 'fa-comment-alt',
-            job: 'fa-briefcase',
-            quote: 'fa-file-invoice-dollar'
-        };
+        const iconMap = { info: 'fa-info-circle', success: 'fa-check-circle', warning: 'fa-exclamation-triangle', error: 'fa-times-circle', message: 'fa-comment-alt', job: 'fa-briefcase', quote: 'fa-file-invoice-dollar' };
         const icon = iconMap[n.type] || 'fa-info-circle';
-        
         return `
             <div class="notification-item ${n.isRead ? '' : 'unread-notification'}" data-id="${n.id}">
-                <div class="notification-item-icon ${n.type}">
-                    <i class="fas ${icon}"></i>
-                </div>
+                <div class="notification-item-icon ${n.type}"><i class="fas ${icon}"></i></div>
                 <div class="notification-item-content">
                     <p>${n.message}</p>
-                    <span class="timestamp">${formatMessageTimestamp(n.createdAt)}</span>
+                    <span class="timestamp">${getTimeAgo(n.createdAt)}</span>
                 </div>
             </div>`;
     }).join('');
@@ -397,7 +1001,7 @@ async function markNotificationsAsRead() {
     // Optimistically update UI
     appState.notifications.forEach(n => n.isRead = true);
     renderNotificationPanel();
-    
+
     try {
         await apiCall('/notifications/mark-read', 'PUT', { ids: unreadIds });
     } catch (error) {
@@ -406,17 +1010,18 @@ async function markNotificationsAsRead() {
     }
 }
 
-function clearNotifications() {
-    // This function will now delete notifications in the backend
-    if (confirm('Are you sure you want to clear all your notifications? This cannot be undone.')) {
-        apiCall('/notifications', 'DELETE', null, 'All notifications cleared.')
-            .then(() => {
-                appState.notifications = [];
-                renderNotificationPanel();
-            })
-            .catch(err => console.error("Failed to clear notifications", err));
+async function clearNotifications() {
+    if (confirm('Are you sure you want to clear all notifications? This cannot be undone.')) {
+        try {
+            await apiCall('/notifications', 'DELETE', null, 'All notifications cleared.');
+            appState.notifications = [];
+            renderNotificationPanel();
+        } catch (err) {
+            console.error("Failed to clear notifications", err);
+        }
     }
 }
+
 
 function toggleNotificationPanel(event) {
     event.stopPropagation();
@@ -424,421 +1029,39 @@ function toggleNotificationPanel(event) {
     if (panel) {
         panel.classList.toggle('active');
         if (panel.classList.contains('active')) {
-            // Mark all as read when opening
             markNotificationsAsRead();
         }
     }
 }
 
-// --- ENHANCED ESTIMATION SYSTEM ---
-async function loadUserEstimations() {
-    if (!appState.currentUser) return;
-    
-    try {
-        const response = await apiCall(`/estimation/contractor/${appState.currentUser.email}`, 'GET');
-        appState.myEstimations = response.estimations || [];
-    } catch (error) {
-        console.error('Error loading user estimations:', error);
-        appState.myEstimations = [];
-    }
-}
+// ... (Your other existing functions like estimation, jobs, quotes, messages remain largely the same)
+// ... (Make sure to paste them back in here if needed)
 
-async function fetchAndRenderMyEstimations() {
-    const container = document.getElementById('app-container');
-    container.innerHTML = `
-        <div id="dynamic-feature-header" class="dynamic-feature-header"></div>
-        <div class="section-header modern-header">
-            <div class="header-content">
-                <h2><i class="fas fa-file-invoice-dollar"></i> My Estimation Requests</h2>
-                <p class="header-subtitle">Track your cost estimation submissions and results</p>
-            </div>
-            <div class="header-actions">
-                <button class="btn btn-primary" onclick="renderAppSection('estimation-tool')">
-                    <i class="fas fa-plus"></i> New Estimation Request
-                </button>
-            </div>
-        </div>
-        <div id="estimations-list" class="estimations-grid"></div>`;
-    
-    updateDynamicHeader();
-    
-    const listContainer = document.getElementById('estimations-list');
-    listContainer.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Loading your estimation requests...</p></div>';
-    
-    try {
-        await loadUserEstimations();
-        
-        if (appState.myEstimations.length === 0) {
-            listContainer.innerHTML = `
-                <div class="empty-state premium-empty">
-                    <div class="empty-icon">
-                        <i class="fas fa-calculator"></i>
-                    </div>
-                    <h3>No Estimation Requests Yet</h3>
-                    <p>Start by uploading your project drawings to get accurate cost estimates from our AI-powered system.</p>
-                    <button class="btn btn-primary btn-large" onclick="renderAppSection('estimation-tool')">
-                        <i class="fas fa-upload"></i> Upload First Project
-                    </button>
-                </div>`;
-            return;
-        }
-        
-        listContainer.innerHTML = appState.myEstimations.map(estimation => {
-            const statusConfig = getEstimationStatusConfig(estimation.status);
-            const createdDate = new Date(estimation.createdAt).toLocaleDateString();
-            const updatedDate = new Date(estimation.updatedAt).toLocaleDateString();
-            
-            const hasFiles = estimation.uploadedFiles && estimation.uploadedFiles.length > 0;
-            const hasResult = estimation.resultFile;
-            
-            return `
-                <div class="estimation-card premium-card">
-                    <div class="estimation-header">
-                        <div class="estimation-title-section">
-                            <h3 class="estimation-title">${estimation.projectTitle}</h3>
-                            <span class="estimation-status-badge ${estimation.status}">
-                                <i class="fas ${statusConfig.icon}"></i> ${statusConfig.label}
-                            </span>
-                        </div>
-                        ${estimation.estimatedAmount ? `
-                            <div class="estimation-amount">
-                                <span class="amount-label">Estimated Cost</span>
-                                <span class="amount-value">$${estimation.estimatedAmount.toLocaleString()}</span>
-                            </div>
-                        ` : ''}
-                    </div>
-                    <div class="estimation-description"><p>${estimation.description}</p></div>
-                    <div class="estimation-meta">
-                        <div class="meta-item"><i class="fas fa-calendar-plus"></i><span>Submitted: ${createdDate}</span></div>
-                        <div class="meta-item"><i class="fas fa-clock"></i><span>Updated: ${updatedDate}</span></div>
-                        ${hasFiles ? `<div class="meta-item"><i class="fas fa-paperclip"></i><span>${estimation.uploadedFiles.length} file(s) uploaded</span></div>` : ''}
-                    </div>
-                    <div class="estimation-actions">
-                        <div class="action-buttons">
-                            ${hasFiles ? `<button class="btn btn-outline btn-sm" onclick="viewEstimationFiles('${estimation._id}')"><i class="fas fa-eye"></i> View Files</button>` : ''}
-                            ${hasResult ? `<button class="btn btn-success btn-sm" onclick="downloadEstimationResult('${estimation._id}')"><i class="fas fa-download"></i> Download Result</button>` : ''}
-                            ${estimation.status === 'pending' ? `<button class="btn btn-danger btn-sm" onclick="deleteEstimation('${estimation._id}')"><i class="fas fa-trash"></i> Delete</button>` : ''}
-                        </div>
-                    </div>
-                </div>`;
-        }).join('');
-        
-    } catch (error) {
-        listContainer.innerHTML = `
-            <div class="error-state premium-error">
-                <div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div>
-                <h3>Error Loading Estimations</h3>
-                <p>We couldn't load your estimation requests. Please try again.</p>
-                <button class="btn btn-primary" onclick="fetchAndRenderMyEstimations()">Retry</button>
-            </div>`;
-    }
-}
-
-function getEstimationStatusConfig(status) {
-    const configs = {
-        'pending': { icon: 'fa-clock', label: 'Under Review' },
-        'in-progress': { icon: 'fa-cogs', label: 'Processing' },
-        'completed': { icon: 'fa-check-circle', label: 'Complete' },
-        'rejected': { icon: 'fa-times-circle', label: 'Rejected' },
-        'cancelled': { icon: 'fa-ban', label: 'Cancelled' }
-    };
-    return configs[status] || { icon: 'fa-question-circle', label: status };
-}
-
-async function viewEstimationFiles(estimationId) {
-    try {
-        const response = await apiCall(`/estimation/${estimationId}/files`, 'GET');
-        const files = response.files || [];
-        const content = `
-            <div class="modal-header"><h3><i class="fas fa-folder-open"></i> Uploaded Project Files</h3><p class="modal-subtitle">Files submitted with your estimation request</p></div>
-            <div class="files-list premium-files">
-                ${files.length === 0 ? `<div class="empty-state"><i class="fas fa-file"></i><p>No files found for this estimation.</p></div>` : files.map(file => `
-                    <div class="file-item">
-                        <div class="file-info"><i class="fas fa-file-pdf"></i><div class="file-details"><h4>${file.name}</h4><span class="file-date">Uploaded: ${new Date(file.uploadedAt).toLocaleDateString()}</span></div></div>
-                        <a href="${file.url}" target="_blank" class="btn btn-outline btn-sm"><i class="fas fa-external-link-alt"></i> View</a>
-                    </div>`).join('')}
-            </div>`;
-        showGenericModal(content, 'max-width: 600px;');
-    } catch (error) {
-        showNotification('Error loading files', 'error');
-    }
-}
-
-async function downloadEstimationResult(estimationId) {
-    try {
-        const response = await apiCall(`/estimation/${estimationId}/result`, 'GET');
-        if (response.success && response.resultFile) {
-            showNotification('Your estimation result is ready for download.', 'success');
-            window.open(response.resultFile.url, '_blank');
-        }
-    } catch (error) {
-        showNotification('Error downloading result file', 'error');
-    }
-}
-
-async function deleteEstimation(estimationId) {
-    if (confirm('Are you sure you want to delete this estimation request? This action cannot be undone.')) {
-        try {
-            await apiCall(`/estimation/${estimationId}`, 'DELETE', null, 'Estimation deleted successfully');
-            fetchAndRenderMyEstimations();
-        } catch (error) {}
-    }
-}
-
-// Continue with existing job functions...
-async function fetchAndRenderJobs(loadMore = false) {
-    const jobsListContainer = document.getElementById('jobs-list');
-    const loadMoreContainer = document.getElementById('load-more-container');
-
-    if (!loadMore) {
-        appState.jobs = [];
-        appState.jobsPage = 1;
-        appState.hasMoreJobs = true;
-        if (jobsListContainer) jobsListContainer.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Loading projects...</p></div>';
-    }
-
-    if (!jobsListContainer || !appState.hasMoreJobs) {
-        if(loadMoreContainer) loadMoreContainer.innerHTML = '';
-        return;
-    }
-
-    const user = appState.currentUser;
-    const endpoint = user.type === 'designer' 
-        ? `/jobs?page=${appState.jobsPage}&limit=6` 
-        : `/jobs/user/${user.id}`;
-    
-    if(loadMoreContainer) loadMoreContainer.innerHTML = `<button class="btn btn-loading" disabled><div class="btn-spinner"></div>Loading...</button>`;
-
-    try {
-        const response = await apiCall(endpoint, 'GET');
-        const newJobs = response.data || [];
-        appState.jobs.push(...newJobs);
-        
-        if (user.type === 'designer') {
-            appState.hasMoreJobs = response.pagination.hasNext;
-            appState.jobsPage += 1;
-        } else {
-            appState.hasMoreJobs = false;
-        }
-        
-        if (appState.jobs.length === 0) {
-            jobsListContainer.innerHTML = user.type === 'designer'
-                ? `<div class="empty-state premium-empty"><div class="empty-icon"><i class="fas fa-briefcase"></i></div><h3>No Projects Available</h3><p>Check back later for new opportunities or try adjusting your search criteria.</p></div>`
-                : `<div class="empty-state premium-empty"><div class="empty-icon"><i class="fas fa-plus-circle"></i></div><h3>You haven't posted any projects yet</h3><p>Ready to get started? Post your first project and connect with talented professionals.</p><button class="btn btn-primary" onclick="renderAppSection('post-job')">Post Your First Project</button></div>`;
-            if (loadMoreContainer) loadMoreContainer.innerHTML = '';
-            return;
-        }
-
-        const jobsHTML = appState.jobs.map(job => {
-            const hasUserQuoted = appState.userSubmittedQuotes.has(job.id);
-            const canQuote = user.type === 'designer' && job.status === 'open' && !hasUserQuoted;
-            const quoteButton = canQuote 
-                ? `<button class="btn btn-primary btn-submit-quote" onclick="showQuoteModal('${job.id}')"><i class="fas fa-file-invoice-dollar"></i> Submit Quote</button>`
-                : user.type === 'designer' && hasUserQuoted
-                ? `<button class="btn btn-outline btn-submitted" disabled><i class="fas fa-check-circle"></i> Quote Submitted</button>`
-                : user.type === 'designer' && job.status === 'assigned'
-                ? `<span class="job-status-badge assigned"><i class="fas fa-user-check"></i> Job Assigned</span>`
-                : '';
-            const actions = user.type === 'designer' ? quoteButton : `<div class="job-actions-group"><button class="btn btn-outline" onclick="viewQuotes('${job.id}')"><i class="fas fa-eye"></i> View Quotes (${job.quotesCount || 0})</button><button class="btn btn-danger" onclick="deleteJob('${job.id}')"><i class="fas fa-trash"></i> Delete</button></div>`;
-            const statusBadge = job.status !== 'open' 
-                ? `<span class="job-status-badge ${job.status}"><i class="fas ${job.status === 'assigned' ? 'fa-user-check' : 'fa-check-circle'}"></i> ${job.status.charAt(0).toUpperCase() + job.status.slice(1)}</span>` 
-                : `<span class="job-status-badge open"><i class="fas fa-clock"></i> Open</span>`;
-            const attachmentLink = job.attachment ? `<div class="job-attachment"><i class="fas fa-paperclip"></i><a href="${job.attachment}" target="_blank" rel="noopener noreferrer">View Attachment</a></div>` : '';
-            const skillsDisplay = job.skills?.length > 0 ? `<div class="job-skills"><i class="fas fa-tools"></i><span>Skills:</span><div class="skills-tags">${job.skills.map(skill => `<span class="skill-tag">${skill}</span>`).join('')}</div></div>` : '';
-            
-            return `
-                <div class="job-card premium-card" data-job-id="${job.id}">
-                    <div class="job-header">
-                        <div class="job-title-section"><h3 class="job-title">${job.title}</h3>${statusBadge}</div>
-                        <div class="job-budget-section"><span class="budget-label">Budget</span><span class="budget-amount">${job.budget}</span></div>
-                    </div>
-                    <div class="job-meta">
-                        <div class="job-meta-item"><i class="fas fa-user"></i><span>Posted by: <strong>${job.posterName || 'N/A'}</strong></span></div>
-                        ${job.assignedToName ? `<div class="job-meta-item"><i class="fas fa-user-check"></i><span>Assigned to: <strong>${job.assignedToName}</strong></span></div>` : ''}
-                        ${job.deadline ? `<div class="job-meta-item"><i class="fas fa-calendar-alt"></i><span>Deadline: <strong>${new Date(job.deadline).toLocaleDateString()}</strong></span></div>` : ''}
-                    </div>
-                    <div class="job-description"><p>${job.description}</p></div>
-                    ${skillsDisplay}
-                    ${job.link ? `<div class="job-link"><i class="fas fa-external-link-alt"></i><a href="${job.link}" target="_blank" rel="noopener noreferrer">View Project Link</a></div>` : ''}
-                    ${attachmentLink}
-                    <div class="job-actions">${actions}</div>
-                </div>`;
-        }).join('');
-
-        if(jobsListContainer) jobsListContainer.innerHTML = jobsHTML;
-
-        if (loadMoreContainer) {
-            if (user.type === 'designer' && appState.hasMoreJobs) {
-                loadMoreContainer.innerHTML = `<button class="btn btn-outline btn-load-more" id="load-more-btn"><i class="fas fa-chevron-down"></i> Load More Projects</button>`;
-                document.getElementById('load-more-btn').addEventListener('click', () => fetchAndRenderJobs(true));
-            } else {
-                loadMoreContainer.innerHTML = '';
-            }
-        }
-
-    } catch(error) {
-        if(jobsListContainer) {
-            jobsListContainer.innerHTML = `<div class="error-state premium-error"><div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div><h3>Error Loading Projects</h3><p>We encountered an issue loading the projects. Please try again.</p><button class="btn btn-primary" onclick="fetchAndRenderJobs()">Retry</button></div>`;
-        }
-    }
-}
-
-// Continue with other existing functions...
-async function fetchAndRenderApprovedJobs() {
-    const container = document.getElementById('app-container');
-    container.innerHTML = `
-        <div id="dynamic-feature-header" class="dynamic-feature-header"></div>
-        <div class="section-header modern-header"><div class="header-content"><h2><i class="fas fa-check-circle"></i> Approved Projects</h2><p class="header-subtitle">Manage your approved projects and communicate with designers</p></div></div>
-        <div id="approved-jobs-list" class="jobs-grid"></div>`;
-    updateDynamicHeader();
-    const listContainer = document.getElementById('approved-jobs-list');
-    listContainer.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Loading approved projects...</p></div>';
-    
-    try {
-        const response = await apiCall(`/jobs/user/${appState.currentUser.id}`, 'GET');
-        const allJobs = response.data || [];
-        const approvedJobs = allJobs.filter(job => job.status === 'assigned');
-        appState.approvedJobs = approvedJobs;
-        
-        if (approvedJobs.length === 0) {
-            listContainer.innerHTML = `<div class="empty-state premium-empty"><div class="empty-icon"><i class="fas fa-clipboard-check"></i></div><h3>No Approved Projects</h3><p>Your approved projects will appear here once you accept quotes from designers.</p><button class="btn btn-primary" onclick="renderAppSection('jobs')">View My Projects</button></div>`;
-            return;
-        }
-        
-        listContainer.innerHTML = approvedJobs.map(job => {
-            const attachmentLink = job.attachment ? `<div class="job-attachment"><i class="fas fa-paperclip"></i><a href="${job.attachment}" target="_blank" rel="noopener noreferrer">View Attachment</a></div>` : '';
-            const skillsDisplay = job.skills?.length > 0 ? `<div class="job-skills"><i class="fas fa-tools"></i><span>Skills:</span><div class="skills-tags">${job.skills.map(skill => `<span class="skill-tag">${skill}</span>`).join('')}</div></div>` : '';
-            return `
-                <div class="job-card premium-card approved-job">
-                    <div class="job-header">
-                        <div class="job-title-section"><h3 class="job-title">${job.title}</h3><span class="job-status-badge assigned"><i class="fas fa-user-check"></i> Assigned</span></div>
-                        <div class="approved-amount"><span class="amount-label">Approved Amount</span><span class="amount-value">${job.approvedAmount}</span></div>
-                    </div>
-                    <div class="job-meta"><div class="job-meta-item"><i class="fas fa-user-cog"></i><span>Assigned to: <strong>${job.assignedToName}</strong></span></div></div>
-                    <div class="job-description"><p>${job.description}</p></div>
-                    ${skillsDisplay}
-                    ${job.link ? `<div class="job-link"><i class="fas fa-external-link-alt"></i><a href="${job.link}" target="_blank" rel="noopener noreferrer">View Project Link</a></div>` : ''}
-                    ${attachmentLink}
-                    <div class="job-actions"><div class="job-actions-group"><button class="btn btn-primary" onclick="openConversation('${job.id}', '${job.assignedTo}')"><i class="fas fa-comments"></i> Message Designer</button><button class="btn btn-success" onclick="markJobCompleted('${job.id}')"><i class="fas fa-check-double"></i> Mark Completed</button></div></div>
-                </div>`;
-        }).join('');
-    } catch(error) {
-        listContainer.innerHTML = `<div class="error-state premium-error"><div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div><h3>Error Loading Approved Projects</h3><p>Please try again later.</p><button class="btn btn-primary" onclick="fetchAndRenderApprovedJobs()">Retry</button></div>`;
-    }
-}
-
-async function markJobCompleted(jobId) {
-    if (confirm('Are you sure you want to mark this job as completed? This action cannot be undone.')) {
-        await apiCall(`/jobs/${jobId}`, 'PUT', { status: 'completed' }, 'Project marked as completed successfully!')
-            .then(() => {
-                fetchAndRenderApprovedJobs();
-            })
-            .catch(() => {});
-    }
-}
-
-async function fetchAndRenderMyQuotes() {
-    const container = document.getElementById('app-container');
-    container.innerHTML = `
-        <div id="dynamic-feature-header" class="dynamic-feature-header"></div>
-        <div class="section-header modern-header"><div class="header-content"><h2><i class="fas fa-file-invoice-dollar"></i> My Submitted Quotes</h2><p class="header-subtitle">Track your quote submissions and manage communications</p></div></div>
-        <div id="my-quotes-list" class="jobs-grid"></div>`;
-    updateDynamicHeader();
-    const listContainer = document.getElementById('my-quotes-list');
-    listContainer.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Loading your quotes...</p></div>';
-    
-    try {
-        const response = await apiCall(`/quotes/user/${appState.currentUser.id}`, 'GET');
-        const quotes = response.data || [];
-        appState.myQuotes = quotes;
-        
-        if (quotes.length === 0) {
-            listContainer.innerHTML = `<div class="empty-state premium-empty"><div class="empty-icon"><i class="fas fa-file-invoice"></i></div><h3>No Quotes Submitted</h3><p>You haven't submitted any quotes yet. Browse available projects to get started.</p><button class="btn btn-primary" onclick="renderAppSection('jobs')">Find Projects</button></div>`;
-            return;
-        }
-        
-        listContainer.innerHTML = quotes.map(quote => {
-            const attachments = quote.attachments || [];
-            let attachmentLink = attachments.length > 0 ? `<div class="quote-attachment"><i class="fas fa-paperclip"></i><a href="${attachments[0]}" target="_blank" rel="noopener noreferrer">View Attachment</a></div>` : '';
-            const canDelete = quote.status === 'submitted';
-            const canEdit = quote.status === 'submitted';
-            const statusIcon = {'submitted': 'fa-clock', 'approved': 'fa-check-circle', 'rejected': 'fa-times-circle'}[quote.status] || 'fa-question-circle';
-            const statusClass = quote.status;
-            const actionButtons = [];
-            if (quote.status === 'approved') {
-                actionButtons.push(`<button class="btn btn-primary" onclick="openConversation('${quote.jobId}', '${quote.contractorId}')"><i class="fas fa-comments"></i> Message Client</button>`);
-            }
-            if (canEdit) {
-                actionButtons.push(`<button class="btn btn-outline" onclick="editQuote('${quote.id}')"><i class="fas fa-edit"></i> Edit Quote</button>`);
-            }
-            if (canDelete) {
-                actionButtons.push(`<button class="btn btn-danger" onclick="deleteQuote('${quote.id}')"><i class="fas fa-trash"></i> Delete</button>`);
-            }
-            return `
-                <div class="quote-card premium-card quote-status-${statusClass}">
-                    <div class="quote-header">
-                        <div class="quote-title-section"><h3 class="quote-title">Quote for: ${quote.jobTitle || 'Unknown Job'}</h3><span class="quote-status-badge ${statusClass}"><i class="fas ${statusIcon}"></i> ${quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}</span></div>
-                        <div class="quote-amount-section"><span class="amount-label">Quote Amount</span><span class="amount-value">${quote.quoteAmount}</span></div>
-                    </div>
-                    <div class="quote-meta">
-                        ${quote.timeline ? `<div class="quote-meta-item"><i class="fas fa-calendar-alt"></i><span>Timeline: <strong>${quote.timeline} days</strong></span></div>` : ''}
-                        <div class="quote-meta-item"><i class="fas fa-clock"></i><span>Submitted: <strong>${new Date(quote.createdAt?.toDate ? quote.createdAt.toDate() : quote.createdAt).toLocaleDateString()}</strong></span></div>
-                    </div>
-                    <div class="quote-description"><p>${quote.description}</p></div>
-                    ${attachmentLink}
-                    <div class="quote-actions"><div class="quote-actions-group">${actionButtons.join('')}</div></div>
-                </div>`;
-        }).join('');
-    } catch(error) {
-        listContainer.innerHTML = `<div class="error-state premium-error"><div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div><h3>Error Loading Quotes</h3><p>Please try again later.</p><button class="btn btn-primary" onclick="fetchAndRenderMyQuotes()">Retry</button></div>`;
-    }
-}
-
-async function editQuote(quoteId) {
-    try {
-        const response = await apiCall(`/quotes/${quoteId}`, 'GET');
-        const quote = response.data;
-        
-        const content = `
-            <div class="modal-header premium-modal-header"><h3><i class="fas fa-edit"></i> Edit Your Quote</h3><p class="modal-subtitle">Update your quote details for: <strong>${quote.jobTitle}</strong></p></div>
-            <form id="edit-quote-form" class="premium-form">
-                <input type="hidden" name="quoteId" value="${quote.id}">
-                <div class="form-row">
-                    <div class="form-group"><label class="form-label"><i class="fas fa-dollar-sign"></i> Quote Amount ($)</label><input type="number" class="form-input" name="amount" value="${quote.quoteAmount}" required min="1" step="0.01"></div>
-                    <div class="form-group"><label class="form-label"><i class="fas fa-calendar-alt"></i> Timeline (days)</label><input type="number" class="form-input" name="timeline" value="${quote.timeline || ''}" required min="1"></div>
-                </div>
-                <div class="form-group"><label class="form-label"><i class="fas fa-file-alt"></i> Proposal Description</label><textarea class="form-textarea" name="description" required placeholder="Describe your approach...">${quote.description}</textarea></div>
-                <div class="form-group"><label class="form-label"><i class="fas fa-paperclip"></i> Attachments (Optional, max 5)</label><input type="file" class="form-input file-input" name="attachments" multiple accept=".pdf,.doc,.docx,.dwg,.jpg,.jpeg,.png"><small class="form-help">Supported formats: PDF, DOC, DWG, Images</small></div>
-                <div class="form-actions"><button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button><button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Update Quote</button></div>
-            </form>`;
-        showGenericModal(content, 'max-width: 600px;');
-        document.getElementById('edit-quote-form').addEventListener('submit', handleQuoteEdit);
-    } catch (error) {}
-}
-
-async function handleQuoteEdit(event) {
+// --- PROFILE SETTINGS (NEW/UPDATED) ---
+async function handleProfileUpdate(event) {
     event.preventDefault();
     const form = event.target;
     const submitBtn = form.querySelector('button[type="submit"]');
     const originalText = submitBtn.innerHTML;
-    submitBtn.innerHTML = '<div class="btn-spinner"></div> Updating...';
+    submitBtn.innerHTML = '<div class="btn-spinner"></div> Saving...';
     submitBtn.disabled = true;
 
     try {
-        const formData = new FormData();
-        formData.append('quoteAmount', form['amount'].value);
-        formData.append('timeline', form['timeline'].value);
-        formData.append('description', form['description'].value);
-        if (form.attachments.files.length > 0) {
-            for (let i = 0; i < form.attachments.files.length; i++) {
-                formData.append('attachments', form.attachments.files[i]);
-            }
-        }
-        await apiCall(`/quotes/${form['quoteId'].value}`, 'PUT', formData, 'Quote updated successfully!');
-        closeModal();
-        fetchAndRenderMyQuotes();
+        const formData = new FormData(form);
+        const response = await apiCall('/auth/profile', 'PUT', formData); // Changed endpoint to match auth.js
+
+        // Update local state and localStorage with the returned fresh user data
+        appState.currentUser = response.data;
+        localStorage.setItem('currentUser', JSON.stringify(appState.currentUser));
+
+        showNotification('Your profile has been saved!', 'success');
+        // Optionally re-render parts of the UI that depend on user info
+        document.getElementById('user-info-name').textContent = appState.currentUser.name;
+        document.getElementById('sidebarUserName').textContent = appState.currentUser.name;
+
     } catch (error) {
-        console.error("Quote edit failed:", error);
+        console.error("Profile update failed:", error);
+        // Error notification is handled by apiCall
     } finally {
         if (submitBtn) {
             submitBtn.innerHTML = originalText;
@@ -847,1095 +1070,19 @@ async function handleQuoteEdit(event) {
     }
 }
 
-async function handlePostJob(event) {
-    event.preventDefault();
-    const form = event.target;
-    const submitBtn = form.querySelector('button[type="submit"]');
-    const originalText = submitBtn.innerHTML;
-    submitBtn.innerHTML = '<div class="btn-spinner"></div> Posting...';
-    submitBtn.disabled = true;
-    
-    try {
-        const formData = new FormData();
-        ['title', 'description', 'budget', 'deadline', 'skills', 'link'].forEach(field => {
-            if (form[field]) formData.append(field, form[field].value);
-        });
-        if (form.attachment.files.length > 0) {
-            formData.append('attachment', form.attachment.files[0]);
-        }
-        await apiCall('/jobs', 'POST', formData, 'Project posted successfully!');
-        form.reset();
-        renderAppSection('jobs');
-    } catch(error) {} finally {
-        submitBtn.innerHTML = originalText;
-        submitBtn.disabled = false;
-    }
-}
-
-async function deleteJob(jobId) {
-    if (confirm('Are you sure you want to delete this project? This will also delete all associated quotes and cannot be undone.')) {
-        await apiCall(`/jobs/${jobId}`, 'DELETE', null, 'Project deleted successfully.')
-            .then(() => fetchAndRenderJobs())
-            .catch(() => {});
-    }
-}
-
-async function deleteQuote(quoteId) {
-    if (confirm('Are you sure you want to delete this quote? This action cannot be undone.')) {
-        await apiCall(`/quotes/${quoteId}`, 'DELETE', null, 'Quote deleted successfully.')
-            .then(() => {
-                fetchAndRenderMyQuotes();
-                loadUserQuotes();
-            })
-            .catch(() => {});
-    }
-}
-
-async function viewQuotes(jobId) {
-    try {
-        const response = await apiCall(`/quotes/job/${jobId}`, 'GET');
-        const quotes = response.data || [];
-        
-        let quotesHTML = `<div class="modal-header premium-modal-header"><h3><i class="fas fa-file-invoice-dollar"></i> Received Quotes</h3><p class="modal-subtitle">Review and manage quotes for this project</p></div>`;
-        if (quotes.length === 0) {
-            quotesHTML += `<div class="empty-state premium-empty"><div class="empty-icon"><i class="fas fa-file-invoice"></i></div><h3>No Quotes Received</h3><p>No quotes have been submitted for this project yet. Check back later.</p></div>`;
-        } else {
-            const job = appState.jobs.find(j => j.id === jobId);
-            quotesHTML += `<div class="quotes-list premium-quotes">`;
-            quotesHTML += quotes.map(quote => {
-                const attachments = quote.attachments || [];
-                let attachmentLink = attachments.length > 0 ? `<div class="quote-attachment"><i class="fas fa-paperclip"></i><a href="${attachments[0]}" target="_blank" rel="noopener noreferrer">View Attachment</a></div>` : '';
-                const canApprove = job && job.status === 'open' && quote.status === 'submitted';
-                let actionButtons = '';
-                const messageButton = `<button class="btn btn-outline btn-sm" onclick="openConversation('${quote.jobId}', '${quote.designerId}')"><i class="fas fa-comments"></i> Message</button>`;
-                if(canApprove) {
-                    actionButtons = `<button class="btn btn-success btn-sm" onclick="approveQuote('${quote.id}', '${jobId}')"><i class="fas fa-check"></i> Approve Quote</button>${messageButton}`;
-                } else if (quote.status === 'approved') {
-                    actionButtons = `<span class="status-approved"><i class="fas fa-check-circle"></i> Approved</span>${messageButton}`;
-                } else {
-                    actionButtons = messageButton;
-                }
-                const statusClass = quote.status;
-                const statusIcon = {'submitted': 'fa-clock', 'approved': 'fa-check-circle', 'rejected': 'fa-times-circle'}[quote.status] || 'fa-question-circle';
-                return `
-                    <div class="quote-item premium-quote-item quote-status-${statusClass}">
-                        <div class="quote-item-header">
-                            <div class="designer-info"><div class="designer-avatar">${quote.designerName.charAt(0).toUpperCase()}</div><div class="designer-details"><h4>${quote.designerName}</h4><span class="quote-status-badge ${statusClass}"><i class="fas ${statusIcon}"></i> ${quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}</span></div></div>
-                            <div class="quote-amount"><span class="amount-label">Quote</span><span class="amount-value">${quote.quoteAmount}</span></div>
-                        </div>
-                        <div class="quote-details">
-                            ${quote.timeline ? `<div class="quote-meta-item"><i class="fas fa-calendar-alt"></i><span>Timeline: <strong>${quote.timeline} days</strong></span></div>` : ''}
-                            <div class="quote-description"><p>${quote.description}</p></div>
-                            ${attachmentLink}
-                        </div>
-                        <div class="quote-actions">${actionButtons}</div>
-                    </div>`;
-            }).join('');
-            quotesHTML += `</div>`;
-        }
-        showGenericModal(quotesHTML, 'max-width: 900px;');
-    } catch (error) {
-        showGenericModal(`<div class="modal-header premium-modal-header"><h3><i class="fas fa-exclamation-triangle"></i> Error</h3></div><div class="error-state premium-error"><p>Could not load quotes for this project. Please try again later.</p></div>`);
-    }
-}
-
-async function approveQuote(quoteId, jobId) {
-    if (confirm('Are you sure you want to approve this quote? This will assign the job to the designer and reject other quotes.')) {
-        await apiCall(`/quotes/${quoteId}/approve`, 'PUT', { jobId }, 'Quote approved successfully!')
-            .then(() => {
-                closeModal();
-                fetchAndRenderJobs();
-                showNotification('Project has been assigned! You can now communicate with the designer.', 'success');
-            })
-            .catch(() => {});
-    }
-}
-
-function showQuoteModal(jobId) {
-    const content = `
-        <div class="modal-header premium-modal-header"><h3><i class="fas fa-file-invoice-dollar"></i> Submit Your Quote</h3><p class="modal-subtitle">Provide your best proposal for this project</p></div>
-        <form id="quote-form" class="premium-form">
-            <input type="hidden" name="jobId" value="${jobId}">
-            <div class="form-row">
-                <div class="form-group"><label class="form-label"><i class="fas fa-dollar-sign"></i> Quote Amount ($)</label><input type="number" class="form-input" name="amount" required min="1" step="0.01" placeholder="Enter your quote amount"></div>
-                <div class="form-group"><label class="form-label"><i class="fas fa-calendar-alt"></i> Timeline (days)</label><input type="number" class="form-input" name="timeline" required min="1" placeholder="Project duration"></div>
-            </div>
-            <div class="form-group"><label class="form-label"><i class="fas fa-file-alt"></i> Proposal Description</label><textarea class="form-textarea" name="description" required placeholder="Describe your approach..."></textarea></div>
-            <div class="form-group"><label class="form-label"><i class="fas fa-paperclip"></i> Attachments (Optional, max 5)</label><input type="file" class="form-input file-input" name="attachments" multiple accept=".pdf,.doc,.docx,.dwg,.jpg,.jpeg,.png"><small class="form-help">Upload portfolio samples or relevant documents</small></div>
-            <div class="form-actions"><button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button><button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane"></i> Submit Quote</button></div>
-        </form>`;
-    showGenericModal(content, 'max-width: 600px;');
-    document.getElementById('quote-form').addEventListener('submit', handleQuoteSubmit);
-}
-
-async function handleQuoteSubmit(event) {
-    event.preventDefault();
-    const form = event.target;
-    const submitBtn = form.querySelector('button[type="submit"]');
-    const originalText = submitBtn.innerHTML;
-    submitBtn.innerHTML = '<div class="btn-spinner"></div> Submitting...';
-    submitBtn.disabled = true;
-    try {
-        const formData = new FormData();
-        formData.append('jobId', form['jobId'].value);
-        formData.append('quoteAmount', form['amount'].value);
-        formData.append('timeline', form['timeline'].value);
-        formData.append('description', form['description'].value);
-        if (form.attachments.files.length > 0) {
-            for (let i = 0; i < form.attachments.files.length; i++) {
-                formData.append('attachments', form.attachments.files[i]);
-            }
-        }
-        await apiCall('/quotes', 'POST', formData, 'Quote submitted successfully!');
-        appState.userSubmittedQuotes.add(form['jobId'].value);
-        closeModal();
-        fetchAndRenderJobs();
-        showNotification('Your quote has been submitted! You can track its status in "My Quotes".', 'success');
-    } catch (error) {
-        console.error("Quote submission failed:", error);
-    } finally {
-        if(submitBtn) {
-           submitBtn.innerHTML = originalText;
-           submitBtn.disabled = false;
-        }
-    }
-}
-
-// --- ENHANCED MESSAGING SYSTEM ---
-async function openConversation(jobId, recipientId) {
-    try {
-        showNotification('Opening conversation...', 'info');
-        const response = await apiCall('/messages/find', 'POST', { jobId, recipientId });
-        if (response.success) {
-            renderConversationView(response.data);
-        }
-    } catch (error) {}
-}
-
-async function fetchAndRenderConversations() {
-    const container = document.getElementById('app-container');
-    container.innerHTML = `
-        <div id="dynamic-feature-header" class="dynamic-feature-header"></div>
-        <div class="section-header modern-header">
-            <div class="header-content"><h2><i class="fas fa-comments"></i> Messages</h2><p class="header-subtitle">Communicate with clients and designers</p></div>
-        </div>
-        <div id="conversations-list" class="conversations-container premium-conversations"></div>`;
-    updateDynamicHeader();
-    const listContainer = document.getElementById('conversations-list');
-    listContainer.innerHTML = `<div class="loading-spinner"><div class="spinner"></div><p>Loading conversations...</p></div>`;
-    try {
-        const response = await apiCall('/messages', 'GET');
-        appState.conversations = response.data || [];
-        if (appState.conversations.length === 0) {
-            listContainer.innerHTML = `<div class="empty-state premium-empty"><div class="empty-icon"><i class="fas fa-comments"></i></div><h3>No Conversations Yet</h3><p>Start collaborating with professionals by messaging them from job quotes.</p><button class="btn btn-primary" onclick="renderAppSection('jobs')">Browse Projects</button></div>`;
-            return;
-        }
-        const conversationsHTML = appState.conversations.map(convo => {
-            const otherParticipant = convo.participants.find(p => p.id !== appState.currentUser.id);
-            const otherParticipantName = otherParticipant ? otherParticipant.name : 'Unknown User';
-            const lastMessage = convo.lastMessage ? (convo.lastMessage.length > 60 ? convo.lastMessage.substring(0, 60) + '...' : convo.lastMessage) : 'No messages yet.';
-            const timeAgo = getTimeAgo(convo.updatedAt);
-            const avatarColor = getAvatarColor(otherParticipantName);
-            const isUnread = convo.lastMessageBy && convo.lastMessageBy !== appState.currentUser.name;
-            return `
-                <div class="conversation-card premium-card ${isUnread ? 'unread' : ''}" onclick="renderConversationView('${convo.id}')">
-                    <div class="convo-avatar" style="background-color: ${avatarColor}">${otherParticipantName.charAt(0).toUpperCase()}${isUnread ? '<div class="unread-indicator"></div>' : ''}</div>
-                    <div class="convo-details">
-                        <div class="convo-header"><h4>${otherParticipantName}</h4><div class="convo-meta"><span class="participant-type ${otherParticipant ? otherParticipant.type : ''}">${otherParticipant ? otherParticipant.type : ''}</span><span class="convo-time">${timeAgo}</span></div></div>
-                        <p class="convo-project"><i class="fas fa-briefcase"></i><strong>${convo.jobTitle}</strong></p>
-                        <p class="convo-preview">${convo.lastMessageBy && convo.lastMessageBy !== appState.currentUser.name ? `<strong>${convo.lastMessageBy}:</strong> ` : ''}${lastMessage}</p>
-                    </div>
-                    <div class="convo-arrow"><i class="fas fa-chevron-right"></i></div>
-                </div>`;
-        }).join('');
-        listContainer.innerHTML = conversationsHTML;
-    } catch (error) {
-        listContainer.innerHTML = `<div class="error-state premium-error"><div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div><h3>Error Loading Conversations</h3><p>Please try again later.</p><button class="btn btn-primary" onclick="fetchAndRenderConversations()">Retry</button></div>`;
-    }
-}
-
-function getTimeAgo(timestamp) {
-    const now = new Date();
-    const time = timestamp?.toDate ? timestamp.toDate() : new Date(timestamp);
-    const diffInMinutes = Math.floor((now - time) / (1000 * 60));
-    if (diffInMinutes < 1) return 'Just now';
-    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
-    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
-    if (diffInMinutes < 10080) return `${Math.floor(diffInMinutes / 1440)}d ago`;
-    return time.toLocaleDateString();
-}
-
-function getAvatarColor(name) {
-    const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#84CC16', '#F97316'];
-    const index = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
-    return colors[index];
-}
-
-function formatMessageTimestamp(date) {
-    const now = new Date();
-    const messageDate = new Date(date);
-    const isToday = now.toDateString() === messageDate.toDateString();
-    const isYesterday = new Date(now.setDate(now.getDate() - 1)).toDateString() === messageDate.toDateString();
-
-    if (isToday) {
-        return `Today, ${messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-    }
-    if (isYesterday) {
-        return `Yesterday, ${messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-    }
-    return messageDate.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-}
-
-async function renderConversationView(conversationOrId) {
-    let conversation;
-    if (typeof conversationOrId === 'string') {
-        conversation = appState.conversations.find(c => c.id === conversationOrId) || { id: conversationOrId };
-    } else {
-        conversation = conversationOrId;
-    }
-    
-    if (!conversation.participants) {
-        try {
-            const response = await apiCall('/messages', 'GET');
-            appState.conversations = response.data || [];
-            conversation = appState.conversations.find(c => c.id === conversation.id);
-        } catch(e) {}
-        if(!conversation) {
-            showNotification('Conversation not found.', 'error');
-            return;
-        }
-    }
-
-    const container = document.getElementById('app-container');
-    const otherParticipant = conversation.participants.find(p => p.id !== appState.currentUser.id);
-    const avatarColor = getAvatarColor(otherParticipant ? otherParticipant.name : 'Unknown');
-    
-    container.innerHTML = `
-        <div class="chat-container premium-chat">
-            <div class="chat-header premium-chat-header">
-                <button onclick="renderAppSection('messages')" class="back-btn premium-back-btn"><i class="fas fa-arrow-left"></i></button>
-                <div class="chat-header-info">
-                    <div class="chat-avatar premium-avatar" style="background-color: ${avatarColor}">${otherParticipant ? otherParticipant.name.charAt(0).toUpperCase() : '?'}<div class="online-indicator"></div></div>
-                    <div class="chat-details"><h3>${otherParticipant ? otherParticipant.name : 'Conversation'}</h3><p class="chat-project"><i class="fas fa-briefcase"></i> ${conversation.jobTitle || ''}</p><span class="chat-status">Active now</span></div>
-                </div>
-                <div class="chat-actions">
-                    <span class="participant-type-badge premium-badge ${otherParticipant ? otherParticipant.type : ''}"><i class="fas ${otherParticipant && otherParticipant.type === 'designer' ? 'fa-drafting-compass' : 'fa-building'}"></i> ${otherParticipant ? otherParticipant.type : ''}</span>
-                    <button class="chat-options-btn"><i class="fas fa-ellipsis-v"></i></button>
-                </div>
-            </div>
-            <div class="chat-messages premium-messages" id="chat-messages-container"><div class="loading-messages"><div class="spinner"></div><p>Loading messages...</p></div></div>
-            <div class="chat-input-area premium-input-area">
-                <form id="send-message-form" class="message-form premium-message-form">
-                    <div class="message-input-container">
-                        <button type="button" class="attachment-btn" title="Add attachment"><i class="fas fa-paperclip"></i></button>
-                        <input type="text" id="message-text-input" placeholder="Type your message..." required autocomplete="off">
-                        <button type="button" class="emoji-btn" title="Add emoji"><i class="fas fa-smile"></i></button>
-                        <button type="submit" class="send-button premium-send-btn" title="Send message"><i class="fas fa-paper-plane"></i></button>
-                    </div>
-                </form>
-            </div>
-        </div>`;
-
-    document.getElementById('send-message-form').addEventListener('submit', (e) => {
-        e.preventDefault();
-        handleSendMessage(conversation.id);
-    });
-
-    const messagesContainer = document.getElementById('chat-messages-container');
-    try {
-        const response = await apiCall(`/messages/${conversation.id}/messages`, 'GET');
-        const messages = response.data || [];
-        
-        if (messages.length === 0) {
-            messagesContainer.innerHTML = `<div class="empty-messages premium-empty-messages"><div class="empty-icon"><i class="fas fa-comment-dots"></i></div><h4>Start the conversation</h4><p>Send your first message to begin collaborating on this project.</p></div>`;
-        } else {
-            let messagesHTML = '';
-            let lastDate = null;
-            messages.forEach((msg, index) => {
-                const messageDate = new Date(msg.createdAt).toDateString();
-                if(messageDate !== lastDate) {
-                    messagesHTML += `<div class="chat-date-separator"><span>${new Date(msg.createdAt).toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' })}</span></div>`;
-                    lastDate = messageDate;
-                }
-
-                const isMine = msg.senderId === appState.currentUser.id;
-                const time = new Date(msg.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                const prevMsg = messages[index - 1];
-                const showAvatar = !prevMsg || prevMsg.senderId !== msg.senderId;
-                const avatarColor = getAvatarColor(msg.senderName);
-                messagesHTML += `
-                    <div class="message-wrapper premium-message ${isMine ? 'me' : 'them'}">
-                        ${!isMine && showAvatar ? `<div class="message-avatar premium-msg-avatar" style="background-color: ${avatarColor}">${msg.senderName.charAt(0).toUpperCase()}</div>` : '<div class="message-avatar-spacer" style="width: 40px; flex-shrink: 0;"></div>'}
-                        <div class="message-content">
-                            ${showAvatar && !isMine ? `<div class="message-sender">${msg.senderName}</div>` : ''}
-                            <div class="message-bubble premium-bubble ${isMine ? 'me' : 'them'}">${msg.text}</div>
-                            <div class="message-meta">${time}</div>
-                        </div>
-                    </div>`;
-            });
-            messagesContainer.innerHTML = messagesHTML;
-        }
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    } catch (error) {
-        messagesContainer.innerHTML = `<div class="error-messages premium-error-messages"><div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div><h4>Error loading messages</h4><p>Please try again later.</p></div>`;
-    }
-}
-
-async function handleSendMessage(conversationId) {
-    const input = document.getElementById('message-text-input');
-    const sendBtn = document.querySelector('.send-button');
-    const text = input.value.trim();
-    if (!text) return;
-    input.disabled = true;
-    sendBtn.disabled = true;
-    sendBtn.innerHTML = '<div class="btn-spinner"></div>';
-    try {
-        const response = await apiCall(`/messages/${conversationId}/messages`, 'POST', { text });
-        input.value = '';
-        const messagesContainer = document.getElementById('chat-messages-container');
-        const newMessage = response.data;
-        if(messagesContainer.querySelector('.empty-messages')) {
-            messagesContainer.innerHTML = '';
-        }
-        const messageBubble = document.createElement('div');
-        messageBubble.className = 'message-wrapper premium-message me';
-        const time = new Date(newMessage.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-        
-        messageBubble.innerHTML = `
-            <div class="message-avatar-spacer" style="width: 40px; flex-shrink: 0;"></div>
-            <div class="message-content">
-                <div class="message-bubble premium-bubble me">${newMessage.text}</div>
-                <div class="message-meta">${time}</div>
-            </div>`;
-        messagesContainer.appendChild(messageBubble);
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    } catch(error) {} finally {
-        input.disabled = false;
-        sendBtn.disabled = false;
-        sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
-        input.focus();
-    }
-}
-
-// --- ENHANCED UI & MODAL FUNCTIONS ---
-function showAuthModal(view) {
-    const modalContainer = document.getElementById('modal-container');
-    if(modalContainer) {
-        modalContainer.innerHTML = `
-            <div class="modal-overlay premium-overlay">
-                <div class="modal-content premium-modal" onclick="event.stopPropagation()">
-                    <button class="modal-close-button premium-close" onclick="closeModal()"><i class="fas fa-times"></i></button>
-                    <div id="modal-form-container"></div>
-                </div>
-            </div>`;
-        modalContainer.querySelector('.modal-overlay').addEventListener('click', closeModal);
-        renderAuthForm(view);
-    }
-}
-
-function renderAuthForm(view) {
-    const container = document.getElementById('modal-form-container');
-    if (!container) return;
-    container.innerHTML = view === 'login' ? getLoginTemplate() : getRegisterTemplate();
-    const formId = view === 'login' ? 'login-form' : 'register-form';
-    const handler = view === 'login' ? handleLogin : handleRegister;
-    document.getElementById(formId).addEventListener('submit', handler);
-}
-
-function showGenericModal(innerHTML, style = '') {
-    const modalContainer = document.getElementById('modal-container');
-    if(modalContainer) {
-        modalContainer.innerHTML = `
-            <div class="modal-overlay premium-overlay">
-                <div class="modal-content premium-modal" style="${style}" onclick="event.stopPropagation()">
-                    <button class="modal-close-button premium-close" onclick="closeModal()"><i class="fas fa-times"></i></button>
-                    ${innerHTML}
-                </div>
-            </div>`;
-        modalContainer.querySelector('.modal-overlay').addEventListener('click', closeModal);
-    }
-}
-
-function closeModal() {
-    const modalContainer = document.getElementById('modal-container');
-    if (modalContainer) modalContainer.innerHTML = '';
-}
-
-async function showAppView() {
-    document.getElementById('landing-page-content').style.display = 'none';
-    document.getElementById('app-content').style.display = 'flex';
-    document.getElementById('auth-buttons-container').style.display = 'none';
-    document.getElementById('user-info-container').style.display = 'flex';
-    
-    const navMenu = document.getElementById('main-nav-menu');
-    if (navMenu) navMenu.innerHTML = '';
-    
-    const user = appState.currentUser;
-    document.getElementById('user-info-name').textContent = user.name;
-    document.getElementById('user-info-avatar').textContent = (user.name || "A").charAt(0).toUpperCase();
-    
-    // Setup user dropdown
-    document.getElementById('user-info').addEventListener('click', (e) => {
-        e.stopPropagation(); // Prevent global click listener from closing it immediately
-        document.getElementById('user-info-dropdown').classList.toggle('active');
-    });
-    document.getElementById('user-settings-link').addEventListener('click', (e) => {
-        e.preventDefault();
-        renderAppSection('settings');
-        document.getElementById('user-info-dropdown').classList.remove('active');
-    });
-    document.getElementById('user-logout-link').addEventListener('click', (e) => {
-        e.preventDefault();
-        logout();
-    });
-
-    // Setup notification panel
-    document.getElementById('notification-bell-container').addEventListener('click', toggleNotificationPanel);
-    document.getElementById('clear-notifications-btn').addEventListener('click', (e) => {
-        e.stopPropagation();
-        clearNotifications();
-    });
-     
-    document.getElementById('sidebarUserName').textContent = user.name;
-    document.getElementById('sidebarUserType').textContent = user.type;
-    document.getElementById('sidebarUserAvatar').textContent = (user.name || "A").charAt(0).toUpperCase();
-    
-    buildSidebarNav();
-    renderAppSection('dashboard');
-    
-    // Fetch notifications from Firestore
-    await fetchUserNotifications();
-    
-    if (user.type === 'designer') {
-        loadUserQuotes();
-    }
-    if (user.type === 'contractor') {
-        loadUserEstimations();
-    }
-}
-
-function showLandingPageView() {
-    document.getElementById('landing-page-content').style.display = 'block';
-    document.getElementById('app-content').style.display = 'none';
-    document.getElementById('auth-buttons-container').style.display = 'flex';
-    document.getElementById('user-info-container').style.display = 'none';
-    
-    const navMenu = document.getElementById('main-nav-menu');
-    if (navMenu) {
-        navMenu.innerHTML = `
-            <a href="#ai-estimation" class="nav-link">AI Estimation</a>
-            <a href="#how-it-works" class="nav-link">How It Works</a>
-            <a href="#why-steelconnect" class="nav-link">Why Choose Us</a>
-            <a href="#showcase" class="nav-link">Showcase</a>`;
-    }
-}
-
-function buildSidebarNav() {
-    const navContainer = document.getElementById('sidebar-nav-menu');
-    const role = appState.currentUser.type;
-    let links = `<a href="#" class="sidebar-nav-link" data-section="dashboard"><i class="fas fa-tachometer-alt fa-fw"></i><span>Dashboard</span></a>`;
-
-    if (role === 'designer') {
-        links += `
-          <a href="#" class="sidebar-nav-link" data-section="jobs"><i class="fas fa-search fa-fw"></i><span>Find Projects</span></a>
-          <a href="#" class="sidebar-nav-link" data-section="my-quotes"><i class="fas fa-file-invoice-dollar fa-fw"></i><span>My Quotes</span></a>`;
-    } else {
-        links += `
-          <a href="#" class="sidebar-nav-link" data-section="jobs"><i class="fas fa-tasks fa-fw"></i><span>My Projects</span></a>
-          <a href="#" class="sidebar-nav-link" data-section="approved-jobs"><i class="fas fa-check-circle fa-fw"></i><span>Approved Projects</span></a>
-          <a href="#" class="sidebar-nav-link" data-section="post-job"><i class="fas fa-plus-circle fa-fw"></i><span>Post Project</span></a>
-          <a href="#" class="sidebar-nav-link" data-section="estimation-tool"><i class="fas fa-calculator fa-fw"></i><span>AI Cost Estimation</span></a>
-          <a href="#" class="sidebar-nav-link" data-section="my-estimations"><i class="fas fa-file-invoice fa-fw"></i><span>My Estimations</span></a>`;
-    }
-    
-    links += `<a href="#" class="sidebar-nav-link" data-section="messages"><i class="fas fa-comments fa-fw"></i><span>Messages</span></a>`;
-    links += `<hr class="sidebar-divider">`;
-    links += `<a href="#" class="sidebar-nav-link" data-section="settings"><i class="fas fa-cog fa-fw"></i><span>Settings</span></a>`;
-
-    navContainer.innerHTML = links;
-    navContainer.querySelectorAll('.sidebar-nav-link').forEach(link => {
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-            renderAppSection(link.dataset.section);
-        });
-    });
-}
-
-function renderAppSection(sectionId) {
-    const container = document.getElementById('app-container');
-    document.querySelectorAll('.sidebar-nav-link').forEach(link => {
-        link.classList.toggle('active', link.dataset.section === sectionId);
-    });
-    
-    const userRole = appState.currentUser.type;
-    if (sectionId === 'dashboard') {
-        container.innerHTML = getDashboardTemplate(appState.currentUser);
-        renderRecentActivityWidgets();
-    } else if (sectionId === 'jobs') {
-        const title = userRole === 'designer' ? 'Available Projects' : 'My Posted Projects';
-        const subtitle = userRole === 'designer' ? 'Browse and submit quotes for engineering projects' : 'Manage your project listings and review quotes';
-        container.innerHTML = `
-            ${userRole === 'contractor' ? '<div id="dynamic-feature-header" class="dynamic-feature-header"></div>' : ''}
-            <div class="section-header modern-header">
-                <div class="header-content"><h2><i class="fas ${userRole === 'designer' ? 'fa-search' : 'fa-tasks'}"></i> ${title}</h2><p class="header-subtitle">${subtitle}</p></div>
-            </div>
-            <div id="jobs-list" class="jobs-grid"></div>
-            <div id="load-more-container" class="load-more-section"></div>`;
-        if (userRole === 'contractor') updateDynamicHeader();
-        fetchAndRenderJobs();
-    } else if (sectionId === 'post-job') {
-        container.innerHTML = getPostJobTemplate();
-        document.getElementById('post-job-form').addEventListener('submit', handlePostJob);
-    } else if (sectionId === 'my-quotes') {
-        fetchAndRenderMyQuotes();
-    } else if (sectionId === 'approved-jobs') {
-        fetchAndRenderApprovedJobs();
-    } else if (sectionId === 'messages') {
-        fetchAndRenderConversations();
-    } else if (sectionId === 'estimation-tool') {
-        container.innerHTML = getEstimationToolTemplate();
-        setupEstimationToolEventListeners();
-    } else if (sectionId === 'my-estimations') {
-        fetchAndRenderMyEstimations();
-    } else if (sectionId === 'settings') {
-        container.innerHTML = getSettingsTemplate(appState.currentUser);
-        // Add event listeners for the new settings form
-        document.getElementById('profile-form').addEventListener('submit', handleProfileUpdate);
-        if(appState.currentUser.type === 'designer') {
-            setupSkillsInput();
-        }
-    }
-}
-
-// --- DASHBOARD WIDGETS (ENHANCED) ---
-async function renderRecentActivityWidgets() {
-    const user = appState.currentUser;
-    const recentProjectsContainer = document.getElementById('recent-projects-widget');
-    const recentQuotesContainer = document.getElementById('recent-quotes-widget');
-    
-    if (user.type === 'contractor') {
-        if(recentProjectsContainer) recentProjectsContainer.innerHTML = '<div class="widget-loader"><div class="spinner"></div></div>';
-        try {
-            const endpoint = `/jobs/user/${user.id}?limit=3`;
-            const response = await apiCall(endpoint, 'GET');
-            const recentJobs = (response.data || []).slice(0, 3);
-            if (recentJobs.length > 0) {
-                recentProjectsContainer.innerHTML = recentJobs.map(job => `
-                    <div class="widget-list-item" id="widget-item-${job.id}">
-                        <div class="widget-item-header" onclick="toggleWidgetDetails('${job.id}', 'job')">
-                            <div class="widget-item-info">
-                                <i class="fas fa-briefcase widget-item-icon"></i>
-                                <div>
-                                    <p class="widget-item-title">${job.title}</p>
-                                    <span class="widget-item-meta">Budget: ${job.budget}</span>
-                                </div>
-                            </div>
-                            <span class="widget-item-status ${job.status}">${job.status}</span>
-                        </div>
-                        <div class="widget-item-details" id="widget-details-${job.id}"></div>
-                    </div>
-                `).join('');
-            } else {
-                recentProjectsContainer.innerHTML = '<p class="widget-empty-text">No recent projects found.</p>';
-            }
-        } catch(e) {
-            recentProjectsContainer.innerHTML = '<p class="widget-empty-text">Could not load projects.</p>';
-        }
-    } else if (user.type === 'designer') {
-        if(recentQuotesContainer) recentQuotesContainer.innerHTML = '<div class="widget-loader"><div class="spinner"></div></div>';
-        try {
-            const endpoint = `/quotes/user/${user.id}?limit=3`;
-            const response = await apiCall(endpoint, 'GET');
-            const recentQuotes = (response.data || []).slice(0, 3);
-             if (recentQuotes.length > 0) {
-                recentQuotesContainer.innerHTML = recentQuotes.map(quote => `
-                    <div class="widget-list-item" id="widget-item-${quote.id}">
-                        <div class="widget-item-header" onclick="toggleWidgetDetails('${quote.id}', 'quote')">
-                             <div class="widget-item-info">
-                                <i class="fas fa-file-invoice-dollar widget-item-icon"></i>
-                                <div>
-                                    <p class="widget-item-title">Quote for: ${quote.jobTitle}</p>
-                                    <span class="widget-item-meta">Amount: ${quote.quoteAmount}</span>
-                                </div>
-                            </div>
-                            <span class="widget-item-status ${quote.status}">${quote.status}</span>
-                        </div>
-                        <div class="widget-item-details" id="widget-details-${quote.id}"></div>
-                    </div>
-                `).join('');
-            } else {
-                recentQuotesContainer.innerHTML = '<p class="widget-empty-text">No recent quotes found.</p>';
-            }
-        } catch(e) {
-            recentQuotesContainer.innerHTML = '<p class="widget-empty-text">Could not load quotes.</p>';
-        }
-    }
-}
-
-async function toggleWidgetDetails(itemId, itemType) {
-    const detailsContainer = document.getElementById(`widget-details-${itemId}`);
-    if (!detailsContainer) return;
-
-    if (detailsContainer.classList.contains('expanded')) {
-        detailsContainer.classList.remove('expanded');
-        detailsContainer.innerHTML = '';
-        return;
-    }
-
-    // Close any other open details
-    document.querySelectorAll('.widget-item-details.expanded').forEach(el => {
-        el.classList.remove('expanded');
-        el.innerHTML = '';
-    });
-
-    detailsContainer.innerHTML = '<div class="widget-loader"><div class="spinner"></div></div>';
-    detailsContainer.classList.add('expanded');
-
-    try {
-        if (itemType === 'job') {
-            const job = appState.jobs.find(j => j.id === itemId) || (await apiCall(`/jobs/${itemId}`, 'GET')).data;
-            if (job) {
-                detailsContainer.innerHTML = `
-                    <p><strong>Description:</strong> ${job.description}</p>
-                    <p><strong>Deadline:</strong> ${new Date(job.deadline).toLocaleDateString()}</p>
-                    ${job.assignedToName ? `<p><strong>Assigned To:</strong> ${job.assignedToName}</p>` : ''}
-                    <button class="btn btn-outline" onclick="renderAppSection('jobs')">View Full Details</button>
-                `;
-            }
-        } else if (itemType === 'quote') {
-            const quote = appState.myQuotes.find(q => q.id === itemId) || (await apiCall(`/quotes/${itemId}`, 'GET')).data;
-            if (quote) {
-                detailsContainer.innerHTML = `
-                    <p><strong>Description:</strong> ${quote.description}</p>
-                    <p><strong>Timeline:</strong> ${quote.timeline} days</p>
-                    <button class="btn btn-outline" onclick="renderAppSection('my-quotes')">View Full Details</button>
-                `;
-            }
-        }
-    } catch (error) {
-        detailsContainer.innerHTML = '<p>Could not load details.</p>';
-    }
-}
-
-// --- ESTIMATION TOOL FUNCTIONS ---
-function setupEstimationToolEventListeners() {
-    const uploadArea = document.getElementById('file-upload-area');
-    const fileInput = document.getElementById('file-upload-input');
-    
-    if (uploadArea) {
-        uploadArea.addEventListener('click', () => fileInput.click());
-        uploadArea.addEventListener('dragover', (e) => { e.preventDefault(); uploadArea.classList.add('drag-over'); });
-        uploadArea.addEventListener('dragleave', () => { uploadArea.classList.remove('drag-over'); });
-        uploadArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            uploadArea.classList.remove('drag-over');
-            if (e.dataTransfer.files.length > 0) handleFileSelect(e.dataTransfer.files);
-        });
-    }
-
-    if (fileInput) {
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) handleFileSelect(e.target.files);
-        });
-    }
-
-    const submitBtn = document.getElementById('submit-estimation-btn');
-    if (submitBtn) submitBtn.addEventListener('click', handleEstimationSubmit);
-}
-
-function handleFileSelect(files) {
-    const fileList = document.getElementById('selected-files-list');
-    const submitBtn = document.getElementById('submit-estimation-btn');
-    appState.uploadedFile = files;
-    let filesHTML = '';
-    for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const fileSize = (file.size / 1024 / 1024).toFixed(2);
-        const fileType = file.type === 'application/pdf' ? 'fa-file-pdf' : 'fa-file';
-        filesHTML += `
-            <div class="selected-file-item">
-                <div class="file-info"><i class="fas ${fileType}"></i><div class="file-details"><span class="file-name">${file.name}</span><span class="file-size">${fileSize} MB</span></div></div>
-                <button type="button" class="remove-file-btn" onclick="removeFile(${i})"><i class="fas fa-times"></i></button>
-            </div>`;
-    }
-    fileList.innerHTML = filesHTML;
-    document.getElementById('file-info-container').style.display = 'block';
-    submitBtn.disabled = false;
-    showNotification(`${files.length} file(s) selected for estimation`, 'success');
-}
-
-function removeFile(index) {
-    const filesArray = Array.from(appState.uploadedFile);
-    filesArray.splice(index, 1);
-    
-    if (filesArray.length === 0) {
-        appState.uploadedFile = null;
-        document.getElementById('file-info-container').style.display = 'none';
-        document.getElementById('submit-estimation-btn').disabled = true;
-    } else {
-        const dt = new DataTransfer();
-        filesArray.forEach(file => dt.items.add(file));
-        appState.uploadedFile = dt.files;
-        handleFileSelect(appState.uploadedFile);
-    }
-}
-
-async function handleEstimationSubmit() {
-    const form = document.getElementById('estimation-form');
-    const submitBtn = document.getElementById('submit-estimation-btn');
-    
-    if (!appState.uploadedFile || appState.uploadedFile.length === 0) {
-        showNotification('Please select files for estimation', 'warning');
-        return;
-    }
-    const projectTitle = form.projectTitle.value.trim();
-    const description = form.description.value.trim();
-    if (!projectTitle || !description) {
-        showNotification('Please fill in all required fields', 'warning');
-        return;
-    }
-
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = '<div class="btn-spinner"></div> Submitting Request...';
-
-    try {
-        const formData = new FormData();
-        formData.append('projectTitle', projectTitle);
-        formData.append('description', description);
-        formData.append('contractorName', appState.currentUser.name);
-        formData.append('contractorEmail', appState.currentUser.email);
-        for (let i = 0; i < appState.uploadedFile.length; i++) {
-            formData.append('files', appState.uploadedFile[i]);
-        }
-        await apiCall('/estimation/contractor/submit', 'POST', formData, 'Estimation request submitted successfully!');
-        form.reset();
-        appState.uploadedFile = null;
-        document.getElementById('file-info-container').style.display = 'none';
-        renderAppSection('my-estimations');
-    } catch (error) {
-        console.error('Estimation submission failed:', error);
-    } finally {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Estimation Request';
-    }
-}
-
-// Enhanced notification system
-function showNotification(message, type = 'info', duration = 4000) {
-    const notificationContainer = document.getElementById('notification-container');
-    if (!notificationContainer) return;
-    const notification = document.createElement('div');
-    notification.className = `notification premium-notification notification-${type}`;
-    const icons = { success: 'fa-check-circle', error: 'fa-exclamation-triangle', warning: 'fa-exclamation-circle', info: 'fa-info-circle' };
-    notification.innerHTML = `
-        <div class="notification-content"><i class="fas ${icons[type]}"></i><span>${message}</span></div>
-        <button class="notification-close" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>`;
-    notificationContainer.appendChild(notification);
-    setTimeout(() => {
-        if (notification.parentElement) {
-            notification.style.opacity = '0';
-            notification.style.transform = 'translateX(100%)';
-            setTimeout(() => notification.remove(), 300);
-        }
-    }, duration);
-}
-
-// --- TEMPLATE GETTERS ---
-function getLoginTemplate() {
-    return `
-        <div class="auth-header premium-auth-header">
-            <div class="auth-logo"><i class="fas fa-drafting-compass"></i></div>
-            <h2>Welcome Back</h2><p>Sign in to your SteelConnect account</p>
-        </div>
-        <form id="login-form" class="premium-form">
-            <div class="form-group"><label class="form-label"><i class="fas fa-envelope"></i> Email Address</label><input type="email" class="form-input premium-input" name="loginEmail" required placeholder="Enter your email"></div>
-            <div class="form-group"><label class="form-label"><i class="fas fa-lock"></i> Password</label><input type="password" class="form-input premium-input" name="loginPassword" required placeholder="Enter your password"></div>
-            <button type="submit" class="btn btn-primary btn-full premium-btn"><i class="fas fa-sign-in-alt"></i> Sign In</button>
-        </form>
-        <div class="auth-switch">Don't have an account? <a onclick="renderAuthForm('register')" class="auth-link">Create Account</a></div>`;
-}
-
-function getRegisterTemplate() {
-    return `
-        <div class="auth-header premium-auth-header">
-            <div class="auth-logo"><i class="fas fa-drafting-compass"></i></div>
-            <h2>Join SteelConnect</h2><p>Create your professional account</p>
-        </div>
-        <form id="register-form" class="premium-form">
-            <div class="form-group"><label class="form-label"><i class="fas fa-user"></i> Full Name</label><input type="text" class="form-input premium-input" name="regName" required placeholder="Enter your full name"></div>
-            <div class="form-group"><label class="form-label"><i class="fas fa-envelope"></i> Email Address</label><input type="email" class="form-input premium-input" name="regEmail" required placeholder="Enter your email"></div>
-            <div class="form-group"><label class="form-label"><i class="fas fa-lock"></i> Password</label><input type="password" class="form-input premium-input" name="regPassword" required placeholder="Create a strong password"></div>
-            <div class="form-group"><label class="form-label"><i class="fas fa-user-tag"></i> I am a...</label><select class="form-select premium-select" name="regRole" required><option value="" disabled selected>Select your role</option><option value="contractor">Client / Contractor</option><option value="designer">Designer / Engineer</option></select></div>
-            <button type="submit" class="btn btn-primary btn-full premium-btn"><i class="fas fa-user-plus"></i> Create Account</button>
-        </form>
-        <div class="auth-switch">Already have an account? <a onclick="renderAuthForm('login')" class="auth-link">Sign In</a></div>`;
-}
-
-function getPostJobTemplate() {
-    return `
-        <div id="dynamic-feature-header" class="dynamic-feature-header"></div>
-        <div class="section-header modern-header">
-            <div class="header-content"><h2><i class="fas fa-plus-circle"></i> Post a New Project</h2><p class="header-subtitle">Create a detailed project listing to attract qualified professionals</p></div>
-        </div>
-        <div class="post-job-container premium-container">
-            <form id="post-job-form" class="premium-form post-job-form">
-                <div class="form-section premium-section">
-                    <h3><i class="fas fa-info-circle"></i> Project Details</h3>
-                    <div class="form-group"><label class="form-label"><i class="fas fa-heading"></i> Project Title</label><input type="text" class="form-input premium-input" name="title" required placeholder="e.g., Structural Steel Design for Warehouse"></div>
-                    <div class="form-row">
-                        <div class="form-group"><label class="form-label"><i class="fas fa-dollar-sign"></i> Budget Range</label><input type="text" class="form-input premium-input" name="budget" required placeholder="e.g., $5,000 - $10,000"></div>
-                        <div class="form-group"><label class="form-label"><i class="fas fa-calendar-alt"></i> Project Deadline</label><input type="date" class="form-input premium-input" name="deadline" required></div>
-                    </div>
-                    <div class="form-group"><label class="form-label"><i class="fas fa-tools"></i> Required Skills</label><input type="text" class="form-input premium-input" name="skills" placeholder="e.g., AutoCAD, Revit, Structural Analysis"><small class="form-help">Separate skills with commas</small></div>
-                    <div class="form-group"><label class="form-label"><i class="fas fa-external-link-alt"></i> Project Link (Optional)</label><input type="url" class="form-input premium-input" name="link" placeholder="https://example.com/project-details"><small class="form-help">Link to additional project information</small></div>
-                </div>
-                <div class="form-section premium-section">
-                    <h3><i class="fas fa-file-alt"></i> Project Description</h3>
-                    <div class="form-group"><label class="form-label"><i class="fas fa-align-left"></i> Detailed Description</label><textarea class="form-textarea premium-textarea" name="description" required placeholder="Provide a comprehensive description of your project..."></textarea></div>
-                    <div class="form-group"><label class="form-label"><i class="fas fa-paperclip"></i> Project Attachments</label><input type="file" class="form-input file-input premium-file-input" name="attachment" accept=".pdf,.doc,.docx,.dwg,.jpg,.jpeg,.png"><small class="form-help">Upload drawings or specifications (Max 10MB)</small></div>
-                </div>
-                <div class="form-actions"><button type="submit" class="btn btn-primary btn-large premium-btn"><i class="fas fa-rocket"></i> Post Project</button></div>
-            </form>
-        </div>`;
-}
-
-function getEstimationToolTemplate() {
-    return `
-        <div id="dynamic-feature-header" class="dynamic-feature-header"></div>
-        <div class="section-header modern-header">
-            <div class="header-content"><h2><i class="fas fa-calculator"></i> AI-Powered Cost Estimation</h2><p class="header-subtitle">Upload your structural drawings to get instant, accurate cost estimates</p></div>
-        </div>
-        <div class="estimation-tool-container premium-estimation-container">
-            <div class="estimation-steps">
-                <div class="step active"><div class="step-number">1</div><div class="step-content"><h4>Upload Files</h4><p>Add your project drawings</p></div></div>
-                <div class="step"><div class="step-number">2</div><div class="step-content"><h4>Project Details</h4><p>Describe your requirements</p></div></div>
-                <div class="step"><div class="step-number">3</div><div class="step-content"><h4>Get Estimate</h4><p>Receive detailed cost breakdown</p></div></div>
-            </div>
-            <form id="estimation-form" class="premium-estimation-form">
-                <div class="form-section premium-section">
-                    <h3><i class="fas fa-upload"></i> Upload Project Files</h3>
-                    <div class="file-upload-section premium-upload-section">
-                        <div id="file-upload-area" class="file-upload-area premium-upload-area">
-                            <input type="file" id="file-upload-input" accept=".pdf,.dwg,.doc,.docx,.jpg,.jpeg,.png" multiple />
-                            <div class="upload-content">
-                                <div class="file-upload-icon"><i class="fas fa-cloud-upload-alt"></i></div>
-                                <h3>Drag & Drop Your Files Here</h3><p>or click to browse</p>
-                                <div class="supported-formats"><span class="format-badge">PDF</span><span class="format-badge">DWG</span><span class="format-badge">DOC</span><span class="format-badge">Images</span></div>
-                                <small class="upload-limit">Maximum 10 files, 15MB each</small>
-                            </div>
-                        </div>
-                        <div id="file-info-container" class="selected-files-container" style="display: none;"><h4><i class="fas fa-files"></i> Selected Files</h4><div id="selected-files-list" class="selected-files-list"></div></div>
-                    </div>
-                </div>
-                <div class="form-section premium-section">
-                    <h3><i class="fas fa-info-circle"></i> Project Information</h3>
-                    <div class="form-group"><label class="form-label"><i class="fas fa-heading"></i> Project Title</label><input type="text" class="form-input premium-input" name="projectTitle" required placeholder="e.g., Commercial Building Steel Framework"></div>
-                    <div class="form-group"><label class="form-label"><i class="fas fa-file-alt"></i> Project Description</label><textarea class="form-textarea premium-textarea" name="description" required placeholder="Describe your project in detail..."></textarea></div>
-                </div>
-                <div class="estimation-features">
-                    <div class="feature-item"><i class="fas fa-robot"></i><div><h4>AI-Powered Analysis</h4><p>Advanced algorithms analyze your drawings</p></div></div>
-                    <div class="feature-item"><i class="fas fa-chart-line"></i><div><h4>Detailed Breakdown</h4><p>Get itemized costs for materials, labor, and logistics</p></div></div>
-                    <div class="feature-item"><i class="fas fa-clock"></i><div><h4>Instant Results</h4><p>Receive your estimation within minutes</p></div></div>
-                </div>
-                <div class="form-actions estimation-actions">
-                    <button type="button" id="submit-estimation-btn" class="btn btn-primary btn-large premium-btn" disabled><i class="fas fa-paper-plane"></i> Submit Estimation Request</button>
-                    <p class="estimation-note"><i class="fas fa-info-circle"></i> Our expert team will review your submission and provide a detailed cost analysis.</p>
-                </div>
-            </form>
-        </div>`;
-}
-
-function getDashboardTemplate(user) {
-    const isContractor = user.type === 'contractor';
-    const name = user.name.split(' ')[0];
-
-    const contractorQuickActions = `
-        <div class="quick-action-card" onclick="renderAppSection('post-job')">
-            <i class="fas fa-plus-circle card-icon"></i>
-            <h3>Create New Project</h3>
-            <p>Post a new listing for designers to quote on.</p>
-        </div>
-        <div class="quick-action-card" onclick="renderAppSection('jobs')">
-            <i class="fas fa-tasks card-icon"></i>
-            <h3>My Projects</h3>
-            <p>View and manage all your active projects.</p>
-        </div>
-        <div class="quick-action-card" onclick="renderAppSection('estimation-tool')">
-            <i class="fas fa-calculator card-icon"></i>
-            <h3>AI Estimation</h3>
-            <p>Get instant cost estimates for your drawings.</p>
-        </div>
-        <div class="quick-action-card" onclick="renderAppSection('approved-jobs')">
-            <i class="fas fa-check-circle card-icon"></i>
-            <h3>Approved Projects</h3>
-            <p>Track progress and communicate on assigned work.</p>
-        </div>`;
-    
-    const contractorWidgets = `
-        <div class="widget-card">
-            <h3><i class="fas fa-history"></i> Recent Projects</h3>
-            <div id="recent-projects-widget" class="widget-content"></div>
-        </div>`;
-
-    const designerQuickActions = `
-        <div class="quick-action-card" onclick="renderAppSection('jobs')">
-            <i class="fas fa-search card-icon"></i>
-            <h3>Browse Projects</h3>
-            <p>Find new opportunities and submit quotes.</p>
-        </div>
-        <div class="quick-action-card" onclick="renderAppSection('my-quotes')">
-            <i class="fas fa-file-invoice-dollar card-icon"></i>
-            <h3>My Quotes</h3>
-            <p>Track the status of your submitted quotes.</p>
-        </div>
-        <div class="quick-action-card" onclick="showNotification('Feature coming soon!', 'info')">
-            <i class="fas fa-upload card-icon"></i>
-            <h3>Submit Work</h3>
-            <p>Upload deliverables for your assigned projects.</p>
-        </div>
-        <div class="quick-action-card" onclick="renderAppSection('messages')">
-            <i class="fas fa-comments card-icon"></i>
-            <h3>Messages</h3>
-            <p>Communicate with clients about projects.</p>
-        </div>`;
-        
-    const designerWidgets = `
-        <div class="widget-card">
-            <h3><i class="fas fa-history"></i> Recent Quotes</h3>
-            <div id="recent-quotes-widget" class="widget-content"></div>
-        </div>`;
-
-    return `
-        <div class="dashboard-container">
-            <div class="dashboard-hero">
-                <div>
-                    <h2>Welcome back, ${name} 👋</h2>
-                    <p>You are logged in to your <strong>${isContractor ? 'Contractor' : 'Designer'} Portal</strong>. Manage your workflows seamlessly.</p>
-                </div>
-                <div class="subscription-badge">
-                    <i class="fas fa-star"></i> Pro Plan
-                </div>
-            </div>
-
-            <h3 class="dashboard-section-title">Quick Actions</h3>
-            <div class="dashboard-grid">
-                ${isContractor ? contractorQuickActions : designerQuickActions}
-            </div>
-
-            <div class="dashboard-columns">
-                ${isContractor ? contractorWidgets : designerWidgets}
-
-                <div class="widget-card">
-                    <h3><i class="fas fa-user-circle"></i> Your Profile</h3>
-                    <div class="widget-content">
-                        <p>Complete your profile to attract more opportunities.</p>
-                        <div class="progress-bar-container">
-                            <div class="progress-bar" style="width: 75%;"></div>
-                        </div>
-                        <p class="progress-label">75% Complete</p>
-                        <button class="btn btn-outline" onclick="renderAppSection('settings')">
-                            <i class="fas fa-edit"></i> Update Profile
-                        </button>
-                        <hr class="widget-divider">
-                        <p>Upgrade your plan for advanced features.</p>
-                        <button class="btn btn-primary" onclick="renderAppSection('settings')">
-                           <i class="fas fa-arrow-up"></i> Upgrade Subscription
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>`;
-}
-
-// --- NEW/UPDATED TEMPLATES AND FUNCTIONS FOR PROFILE ---
-
-function getSettingsTemplate(user) {
-    const isContractor = user.type === 'contractor';
-
-    const contractorFields = `
-        <div class="form-group">
-            <label class="form-label">Company Name</label>
-            <input type="text" name="companyName" class="form-input" placeholder="Your Company LLC" value="${user.companyName || ''}">
-        </div>
-        <div class="form-group">
-            <label class="form-label">LinkedIn URL</label>
-            <input type="url" name="linkedInUrl" class="form-input" placeholder="https://linkedin.com/company/your-company" value="${user.linkedInUrl || ''}">
-        </div>
-    `;
-
-    const designerFields = `
-        <div class="form-group">
-            <label class="form-label">Resume</label>
-            <input type="file" name="resume" class="form-input file-input" accept=".pdf,.doc,.docx">
-            <small class="form-help">Upload your latest resume (PDF, DOC, DOCX).</small>
-        </div>
-        <div class="form-group">
-            <label class="form-label">Skills</label>
-            <div class="skills-input-container">
-                <div id="skills-tags-container" class="skills-tags-container"></div>
-                <input type="text" id="skills-input" class="form-input" placeholder="e.g., Revit, AutoCAD (then press Enter)">
-            </div>
-             <input type="hidden" name="skills">
-        </div>
-        <div class="form-group">
-            <label class="form-label">Certificates</label>
-            <div id="certificates-container">
-                </div>
-            <button type="button" class="btn btn-outline btn-sm" id="add-certificate-btn">Add Certificate</button>
-        </div>
-    `;
-    
-    return `
-        <div class="section-header modern-header">
-            <div class="header-content">
-                <h2><i class="fas fa-cog"></i> Settings</h2>
-                <p class="header-subtitle">Manage your account and professional profile</p>
-            </div>
-        </div>
-        <div class="settings-container">
-            <div class="settings-card">
-                <h3><i class="fas fa-user-edit"></i> Profile Information</h3>
-                <form id="profile-form" class="premium-form">
-                    <div class="form-group">
-                        <label class="form-label">Full Name</label>
-                        <input type="text" name="name" class="form-input" value="${user.name}" required>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Email Address</label>
-                        <input type="email" class="form-input" value="${user.email}" disabled>
-                        <small class="form-help">Email cannot be changed.</small>
-                    </div>
-                    
-                    ${isContractor ? contractorFields : designerFields}
-
-                    <button type="submit" class="btn btn-primary">Save Profile Changes</button>
-                </form>
-            </div>
-            
-            <div class="settings-card">
-                <h3><i class="fas fa-shield-alt"></i> Security</h3>
-                 <form class="premium-form" onsubmit="event.preventDefault(); showNotification('Password functionality not implemented.', 'info');">
-                    <div class="form-group">
-                        <label class="form-label">Current Password</label>
-                        <input type="password" class="form-input">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">New Password</label>
-                        <input type="password" class="form-input">
-                    </div>
-                    <button type="submit" class="btn btn-primary">Change Password</button>
-                </form>
-            </div>
-        </div>
-    `;
-}
 
 function setupSkillsInput() {
     const skillsInput = document.getElementById('skills-input');
     const tagsContainer = document.getElementById('skills-tags-container');
     const hiddenSkillsInput = document.querySelector('input[name="skills"]');
-    
+    if (!skillsInput || !tagsContainer || !hiddenSkillsInput) return;
+
     let skills = [];
+    try {
+        skills = JSON.parse(hiddenSkillsInput.value || '[]');
+    } catch {
+        skills = [];
+    }
 
     const renderTags = () => {
         tagsContainer.innerHTML = '';
@@ -1961,40 +1108,171 @@ function setupSkillsInput() {
     });
 
     tagsContainer.addEventListener('click', (e) => {
-        if (e.target.classList.contains('remove-tag-btn')) {
-            const index = e.target.dataset.index;
+        if (e.target.classList.contains('remove-tag-btn') || e.target.parentElement.classList.contains('remove-tag-btn')) {
+            const button = e.target.classList.contains('remove-tag-btn') ? e.target : e.target.parentElement;
+            const index = button.dataset.index;
             skills.splice(index, 1);
             renderTags();
         }
     });
+
+    renderTags(); // Initial render
 }
 
-async function handleProfileUpdate(event) {
-    event.preventDefault();
-    const form = event.target;
-    const submitBtn = form.querySelector('button[type="submit"]');
-    const originalText = submitBtn.innerHTML;
-    submitBtn.innerHTML = '<div class="btn-spinner"></div> Saving...';
-    submitBtn.disabled = true;
 
-    try {
-        const formData = new FormData(form);
-        
-        // The backend will handle file uploads and update the user document in Firestore.
-        // It should expect fields like 'name', 'companyName', 'linkedInUrl', 'resume', 'skills', and 'certificates[]'
-        const updatedUser = await apiCall('/profile', 'PUT', formData, 'Profile updated successfully!');
-        
-        // Update local state and localStorage
-        appState.currentUser = { ...appState.currentUser, ...updatedUser.data };
-        localStorage.setItem('currentUser', JSON.stringify(appState.currentUser));
+// --- UI RENDERING FUNCTIONS ---
+async function showAppView() {
+    document.getElementById('landing-page-content').style.display = 'none';
+    document.getElementById('app-content').style.display = 'flex';
+    document.getElementById('auth-buttons-container').style.display = 'none';
+    document.getElementById('user-info-container').style.display = 'flex';
 
-        showNotification('Your profile has been saved!', 'success');
-        
-    } catch (error) {
-        console.error("Profile update failed:", error);
-        // Error notification is already handled by apiCall
-    } finally {
-        submitBtn.innerHTML = originalText;
-        submitBtn.disabled = false;
+    document.getElementById('main-nav-menu').innerHTML = '';
+
+    const user = appState.currentUser;
+    document.getElementById('user-info-name').textContent = user.name;
+    document.getElementById('user-info-avatar').textContent = (user.name || "A").charAt(0).toUpperCase();
+
+    // Setup user dropdown
+    document.getElementById('user-info').addEventListener('click', (e) => {
+        e.stopPropagation();
+        document.getElementById('user-info-dropdown').classList.toggle('active');
+    });
+    document.getElementById('user-settings-link').addEventListener('click', (e) => {
+        e.preventDefault();
+        renderAppSection('settings');
+        document.getElementById('user-info-dropdown').classList.remove('active');
+    });
+    document.getElementById('user-logout-link').addEventListener('click', (e) => {
+        e.preventDefault();
+        logout();
+    });
+
+    // Setup notification panel
+    document.getElementById('notification-bell-container').addEventListener('click', toggleNotificationPanel);
+    document.getElementById('clear-notifications-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        clearNotifications();
+    });
+
+    document.getElementById('sidebarUserName').textContent = user.name;
+    document.getElementById('sidebarUserType').textContent = user.type;
+    document.getElementById('sidebarUserAvatar').textContent = (user.name || "A").charAt(0).toUpperCase();
+
+    buildSidebarNav();
+    renderAppSection('dashboard');
+
+    // Fetch notifications from Firestore
+    await fetchUserNotifications();
+
+    if (user.type === 'designer') loadUserQuotes();
+    if (user.type === 'contractor') loadUserEstimations();
+}
+
+function renderAppSection(sectionId) {
+    const container = document.getElementById('app-container');
+    document.querySelectorAll('.sidebar-nav-link').forEach(link => {
+        link.classList.toggle('active', link.dataset.section === sectionId);
+    });
+
+    // ... (Your existing renderAppSection logic)
+
+    if (sectionId === 'settings') {
+        container.innerHTML = getSettingsTemplate(appState.currentUser);
+        document.getElementById('profile-form').addEventListener('submit', handleProfileUpdate);
+        if (appState.currentUser.type === 'designer') {
+            setupSkillsInput();
+        }
+    } else if (sectionId === 'dashboard') {
+        container.innerHTML = getDashboardTemplate(appState.currentUser);
+        // renderRecentActivityWidgets(); // Make sure this function exists
     }
+    // ... (Add other sections like 'jobs', 'post-job', etc.)
+}
+
+// ... (Your existing template functions like getLoginTemplate, getDashboardTemplate, etc.)
+
+function getSettingsTemplate(user) {
+    const isContractor = user.type === 'contractor';
+
+    const contractorFields = `
+        <div class="form-group">
+            <label class="form-label">Company Name</label>
+            <input type="text" name="companyName" class="form-input" placeholder="Your Company LLC" value="${user.companyName || ''}">
+        </div>
+        <div class="form-group">
+            <label class="form-label">LinkedIn URL</label>
+            <input type="url" name="linkedInUrl" class="form-input" placeholder="https://linkedin.com/company/your-company" value="${user.linkedInUrl || ''}">
+        </div>
+    `;
+
+    const designerFields = `
+        <div class="form-group">
+            <label class="form-label">Resume</label>
+            <input type="file" name="resume" class="form-input file-input" accept=".pdf,.doc,.docx">
+            <small class="form-help">Upload your latest resume (PDF, DOC, DOCX).</small>
+            ${user.resumeUrl ? `<a href="${user.resumeUrl}" target="_blank" class="form-help">View current resume</a>` : ''}
+        </div>
+        <div class="form-group">
+            <label class="form-label">Skills</label>
+            <div class="skills-input-container">
+                <div id="skills-tags-container" class="skills-tags-container"></div>
+                <input type="text" id="skills-input" class="form-input" placeholder="e.g., Revit, AutoCAD (then press Enter)">
+            </div>
+             <input type="hidden" name="skills" value='${JSON.stringify(user.skills || [])}'>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Certificates</label>
+            <input type="file" name="certificates" class="form-input file-input" accept=".pdf,.jpg,.jpeg,.png" multiple>
+            <small class="form-help">Upload any relevant certificates.</small>
+            <div id="certificates-list" style="margin-top: 10px;">
+                ${(user.certificates || []).map(cert => `
+                    <div class="skill-tag">
+                        <a href="${cert.url}" target="_blank" style="color: white; text-decoration: none;">${cert.name.substring(0, 20)}...</a>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+
+    return `
+        <div class="section-header modern-header">
+            <div class="header-content">
+                <h2><i class="fas fa-cog"></i> Settings</h2>
+                <p class="header-subtitle">Manage your account and professional profile</p>
+            </div>
+        </div>
+        <div class="settings-container">
+            <div class="settings-card">
+                <h3><i class="fas fa-user-edit"></i> Profile Information</h3>
+                <form id="profile-form" class="premium-form">
+                    <div class="form-group">
+                        <label class="form-label">Full Name</label>
+                        <input type="text" name="name" class="form-input" value="${user.name}" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Email Address</label>
+                        <input type="email" class="form-input" value="${user.email}" disabled>
+                        <small class="form-help">Email cannot be changed.</small>
+                    </div>
+                    ${isContractor ? contractorFields : designerFields}
+                    <button type="submit" class="btn btn-primary">Save Profile Changes</button>
+                </form>
+            </div>
+            <div class="settings-card">
+                <h3><i class="fas fa-shield-alt"></i> Security</h3>
+                 <form class="premium-form" onsubmit="event.preventDefault(); showNotification('Password change is not yet implemented.', 'info');">
+                    <div class="form-group">
+                        <label class="form-label">Current Password</label>
+                        <input type="password" class="form-input" autocomplete="current-password">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">New Password</label>
+                        <input type="password" class="form-input" autocomplete="new-password">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Change Password</button>
+                </form>
+            </div>
+        </div>
+    `;
 }
