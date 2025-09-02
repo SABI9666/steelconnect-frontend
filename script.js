@@ -405,7 +405,8 @@ async function loadUserEstimations() {
     if (!appState.currentUser) return;
     
     try {
-        const response = await apiCall(`/estimation/contractor/${appState.currentUser.email}`, 'GET');
+        // Use the /estimation endpoint which is more secure and works for both roles
+        const response = await apiCall('/estimation', 'GET');
         appState.myEstimations = response.estimations || [];
     } catch (error) {
         console.error('Error loading user estimations:', error);
@@ -457,6 +458,7 @@ async function fetchAndRenderMyEstimations() {
             const statusConfig = getEstimationStatusConfig(estimation.status);
             const createdDate = new Date(estimation.createdAt).toLocaleDateString();
             const updatedDate = new Date(estimation.updatedAt).toLocaleDateString();
+            const estId = estimation.id || estimation._id; // CORRECTED: Use 'id' as fallback
             
             const hasFiles = estimation.uploadedFiles && estimation.uploadedFiles.length > 0;
             const hasResult = estimation.resultFile;
@@ -485,9 +487,9 @@ async function fetchAndRenderMyEstimations() {
                     </div>
                     <div class="estimation-actions">
                         <div class="action-buttons">
-                            ${hasFiles ? `<button class="btn btn-outline btn-sm" onclick="viewEstimationFiles('${estimation._id}')"><i class="fas fa-eye"></i> View Files</button>` : ''}
-                            ${hasResult ? `<button class="btn btn-success btn-sm" onclick="downloadEstimationResult('${estimation._id}')"><i class="fas fa-download"></i> Download Result</button>` : ''}
-                            ${estimation.status === 'pending' ? `<button class="btn btn-danger btn-sm" onclick="deleteEstimation('${estimation._id}')"><i class="fas fa-trash"></i> Delete</button>` : ''}
+                            ${hasFiles ? `<button class="btn btn-outline btn-sm" onclick="viewEstimationFiles('${estId}')"><i class="fas fa-eye"></i> View Files</button>` : ''}
+                            ${hasResult ? `<button class="btn btn-success btn-sm" onclick="downloadEstimationResult('${estId}')"><i class="fas fa-download"></i> Download Result</button>` : ''}
+                            ${estimation.status === 'pending' ? `<button class="btn btn-danger btn-sm" onclick="deleteEstimation('${estId}')"><i class="fas fa-trash"></i> Delete</button>` : ''}
                         </div>
                     </div>
                 </div>`;
@@ -516,40 +518,51 @@ function getEstimationStatusConfig(status) {
 }
 
 async function viewEstimationFiles(estimationId) {
-    try {
-        const response = await apiCall(`/estimation/${estimationId}/files`, 'GET');
-        const files = response.files || [];
-        const content = `
-            <div class="modal-header"><h3><i class="fas fa-folder-open"></i> Uploaded Project Files</h3><p class="modal-subtitle">Files submitted with your estimation request</p></div>
-            <div class="files-list premium-files">
-                ${files.length === 0 ? `<div class="empty-state"><i class="fas fa-file"></i><p>No files found for this estimation.</p></div>` : files.map(file => `
-                    <div class="file-item">
-                        <div class="file-info"><i class="fas fa-file-pdf"></i><div class="file-details"><h4>${file.name}</h4><span class="file-date">Uploaded: ${new Date(file.uploadedAt).toLocaleDateString()}</span></div></div>
-                        <a href="${file.url}" target="_blank" class="btn btn-outline btn-sm"><i class="fas fa-external-link-alt"></i> View</a>
-                    </div>`).join('')}
-            </div>`;
-        showGenericModal(content, 'max-width: 600px;');
-    } catch (error) {
-        showNotification('Error loading files', 'error');
+    const token = appState.jwtToken;
+    if (!token) { showNotification('Authentication error.', 'error'); return; }
+
+    const estimation = appState.myEstimations.find(e => (e.id || e._id) === estimationId);
+    if (!estimation || !estimation.uploadedFiles) {
+        showNotification('Files not found for this estimation.', 'warning');
+        return;
     }
+    
+    showNotification(`Preparing to download ${estimation.uploadedFiles.length} file(s)...`, 'info');
+    estimation.uploadedFiles.forEach((file, index) => {
+        const url = `${BACKEND_URL}/estimation/${estimationId}/files/${encodeURIComponent(file.name)}/download?token=${token}`;
+        setTimeout(() => window.open(url, '_blank'), index * 300);
+    });
 }
 
+/**
+ * CORRECTED: This function now builds the correct download URL and opens it.
+ */
 async function downloadEstimationResult(estimationId) {
-    try {
-        const response = await apiCall(`/estimation/${estimationId}/result`, 'GET');
-        if (response.success && response.resultFile) {
-            addNotification('Your estimation result is ready for download.', 'success');
-            window.open(response.resultFile.url, '_blank');
-        }
-    } catch (error) {
-        showNotification('Error downloading result file', 'error');
+    const token = appState.jwtToken;
+    if (!token) {
+        showNotification('Authentication error.', 'error');
+        return;
     }
+    if (!estimationId) {
+        showNotification('Cannot download result: Estimation ID is missing.', 'error');
+        return;
+    }
+
+    showNotification('Preparing your download...', 'info');
+    const downloadUrl = `${BACKEND_URL}/estimation/${estimationId}/result/download?token=${token}`;
+    window.open(downloadUrl, '_blank');
 }
+
 
 async function deleteEstimation(estimationId) {
+    const estId = estimationId || (estimation && (estimation.id || estimation._id)); // Defensive check
+    if (!estId) {
+        showNotification('Cannot delete: Estimation ID is missing.', 'error');
+        return;
+    }
     if (confirm('Are you sure you want to delete this estimation request? This action cannot be undone.')) {
         try {
-            await apiCall(`/estimation/${estimationId}`, 'DELETE', null, 'Estimation deleted successfully');
+            await apiCall(`/estimation/${estId}`, 'DELETE', null, 'Estimation deleted successfully');
             fetchAndRenderMyEstimations();
         } catch (error) {}
     }
