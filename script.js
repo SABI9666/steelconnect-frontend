@@ -282,7 +282,7 @@ async function handleLogin(event) {
         if (data.user.type === 'designer') {
             loadUserQuotes();
         }
-        addNotification(`Welcome back, ${data.user.name}!`, 'info');
+        addNotification(`Welcome back, ${data.user.name}!`, 'user');
 
     } catch(error) {
         // Error is already shown by apiCall
@@ -297,11 +297,13 @@ function logout() {
     appState.notifications = [];
     localStorage.clear();
     clearTimeout(inactivityTimer);
+    
     // Stop polling for notifications on logout
     if (appState.notificationInterval) {
         clearInterval(appState.notificationInterval);
         appState.notificationInterval = null;
     }
+
     showLandingPageView();
     showNotification('You have been logged out successfully.', 'info');
 }
@@ -324,38 +326,48 @@ async function loadUserQuotes() {
 
 // --- NOTIFICATION SYSTEM (INTEGRATED WITH BACKEND) ---
 
-// Fetches notifications from the backend
+/**
+ * Fetches notifications from the backend and updates the UI.
+ */
 async function fetchNotifications() {
     if (!appState.currentUser) return;
     try {
         const response = await apiCall('/notifications', 'GET');
-        // Sort by date to ensure latest are first
+        // Sort by date to ensure the latest notifications are always first
         appState.notifications = (response.data || []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         renderNotificationPanel();
     } catch (error) {
         console.error("Failed to fetch notifications:", error);
-        // Avoid showing error for a background poll
+        // Avoid showing a disruptive error for a background poll
     }
 }
 
-// For optimistic UI updates. The real data comes from fetchNotifications.
+/**
+ * Adds a temporary, client-side notification for optimistic UI updates.
+ * The real data will be synced by fetchNotifications on the next poll.
+ * @param {string} message The notification message.
+ * @param {string} type The type of notification (e.g., 'job', 'quote', 'success').
+ */
 function addNotification(message, type = 'info') {
     const newNotification = {
-        id: Date.now(), // Temporary ID
+        id: Date.now(), // Temporary ID for client-side rendering
         message,
         type,
         createdAt: new Date().toISOString(),
         isRead: false,
     };
-    appState.notifications.unshift(newNotification); // Add to the beginning
+    appState.notifications.unshift(newNotification); // Add to the beginning of the array
     renderNotificationPanel();
 }
 
+/**
+ * Renders the notification panel with the current state.
+ */
 function renderNotificationPanel() {
     const panelList = document.getElementById('notification-panel-list');
     const badge = document.getElementById('notification-badge');
     
-    // Use `isRead` from backend data
+    // Use `isRead` property from the backend data
     const unreadCount = appState.notifications.filter(n => !n.isRead).length;
 
     if (badge) {
@@ -388,7 +400,8 @@ function renderNotificationPanel() {
             job: 'fa-briefcase',
             quote: 'fa-file-invoice-dollar',
             estimation: 'fa-calculator',
-            user: 'fa-user'
+            user: 'fa-user',
+            file: 'fa-paperclip'
         };
         const icon = iconMap[n.type] || 'fa-info-circle';
         
@@ -405,11 +418,13 @@ function renderNotificationPanel() {
     }).join('');
 }
 
-// Replaces old clearNotifications. Calls the backend to mark all as read.
+/**
+ * Calls the backend to mark all notifications as read.
+ */
 async function markAllAsRead() {
     try {
         await apiCall('/notifications/mark-all-read', 'PUT');
-        // Optimistically update the UI
+        // Optimistically update the UI for immediate feedback
         appState.notifications.forEach(n => n.isRead = true);
         renderNotificationPanel();
         showNotification('All notifications marked as read.', 'success');
@@ -418,12 +433,17 @@ async function markAllAsRead() {
     }
 }
 
+/**
+ * Toggles the visibility of the notification panel.
+ * If the panel is opened and has unread messages, it marks them all as read.
+ * @param {Event} event The click event.
+ */
 async function toggleNotificationPanel(event) {
     event.stopPropagation();
     const panel = document.getElementById('notification-panel');
     if (panel) {
         panel.classList.toggle('active');
-        // If panel is opened and has unread messages, mark them all as read on the backend
+        
         if (panel.classList.contains('active')) {
              const hasUnread = appState.notifications.some(n => !n.isRead);
              if (hasUnread) {
@@ -431,7 +451,7 @@ async function toggleNotificationPanel(event) {
                     await apiCall('/notifications/mark-all-read', 'PUT');
                     // Update client state after successful API call
                     appState.notifications.forEach(n => n.isRead = true);
-                    // After a short delay, update the badge
+                    // After a short delay to allow animation, update the badge
                     setTimeout(renderNotificationPanel, 500);
                 } catch (error) {
                     console.error("Failed to mark notifications as read on open:", error);
@@ -742,7 +762,7 @@ async function markJobCompleted(jobId) {
     if (confirm('Are you sure you want to mark this job as completed? This action cannot be undone.')) {
         await apiCall(`/jobs/${jobId}`, 'PUT', { status: 'completed' }, 'Project marked as completed successfully!')
             .then(() => {
-                addNotification('A project has been marked as completed!', 'success');
+                addNotification('A project has been marked as completed!', 'job');
                 fetchAndRenderApprovedJobs();
             })
             .catch(() => {});
@@ -956,7 +976,7 @@ async function approveQuote(quoteId, jobId) {
     if (confirm('Are you sure you want to approve this quote? This will assign the job to the designer and reject other quotes.')) {
         await apiCall(`/quotes/${quoteId}/approve`, 'PUT', { jobId }, 'Quote approved successfully!')
             .then(() => {
-                addNotification('You have approved a quote and assigned a new project!', 'success');
+                addNotification('You have approved a quote and assigned a new project!', 'quote');
                 closeModal();
                 fetchAndRenderJobs();
                 showNotification('Project has been assigned! You can now communicate with the designer.', 'success');
@@ -1307,11 +1327,11 @@ function showAppView() {
         logout();
     });
 
-    // Setup notification panel
+    // Setup notification panel event listeners
     document.getElementById('notification-bell-container').addEventListener('click', toggleNotificationPanel);
     document.getElementById('clear-notifications-btn').addEventListener('click', (e) => {
         e.stopPropagation();
-        markAllAsRead(); // Changed from clearNotifications
+        markAllAsRead(); // Changed from clearNotifications to markAllAsRead
     });
      
     document.getElementById('sidebarUserName').textContent = user.name;
@@ -1321,7 +1341,7 @@ function showAppView() {
     buildSidebarNav();
     renderAppSection('dashboard');
     
-    // Initial fetch of notifications
+    // Initial fetch of notifications when the app view is shown
     fetchNotifications();
     
     // Start polling for new notifications every 30 seconds
@@ -1625,7 +1645,7 @@ async function handleEstimationSubmit() {
             formData.append('files', appState.uploadedFile[i]);
         }
         await apiCall('/estimation/contractor/submit', 'POST', formData, 'Estimation request submitted successfully!');
-        addNotification(`Your AI estimation request for "${projectTitle}" is submitted.`, 'info');
+        addNotification(`Your AI estimation request for "${projectTitle}" is submitted.`, 'estimation');
         form.reset();
         appState.uploadedFile = null;
         document.getElementById('file-info-container').style.display = 'none';
