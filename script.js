@@ -57,7 +57,7 @@ const appState = {
     myEstimations: [],
     currentHeaderSlide: 0,
     notifications: [],
-    notificationPollingInterval: null,
+    notificationInterval: null, // To hold the polling interval
 };
 
 // Professional Features Header Data
@@ -107,9 +107,6 @@ function resetInactivityTimer() {
 
 function initializeApp() {
     console.log("SteelConnect App Initializing...");
-    
-    // Inject notification styles
-    injectNotificationStyles();
     
     // Global click listener to close pop-ups
     window.addEventListener('click', (event) => {
@@ -298,15 +295,13 @@ function logout() {
     appState.userSubmittedQuotes.clear();
     appState.myEstimations = [];
     appState.notifications = [];
-    
-    // Clear notification polling
-    if (appState.notificationPollingInterval) {
-        clearInterval(appState.notificationPollingInterval);
-        appState.notificationPollingInterval = null;
-    }
-    
     localStorage.clear();
     clearTimeout(inactivityTimer);
+    // Stop polling for notifications on logout
+    if (appState.notificationInterval) {
+        clearInterval(appState.notificationInterval);
+        appState.notificationInterval = null;
+    }
     showLandingPageView();
     showNotification('You have been logged out successfully.', 'info');
 }
@@ -327,30 +322,45 @@ async function loadUserQuotes() {
     }
 }
 
-// --- ENHANCED NOTIFICATION SYSTEM ---
-async function loadNotifications() {
+// --- NOTIFICATION SYSTEM (INTEGRATED WITH BACKEND) ---
+
+// Fetches notifications from the backend
+async function fetchNotifications() {
     if (!appState.currentUser) return;
-    
     try {
         const response = await apiCall('/notifications', 'GET');
-        if (response.success) {
-            appState.notifications = response.data || [];
-            renderNotificationPanel();
-        }
+        // Sort by date to ensure latest are first
+        appState.notifications = (response.data || []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        renderNotificationPanel();
     } catch (error) {
-        console.error('Error loading notifications:', error);
+        console.error("Failed to fetch notifications:", error);
+        // Avoid showing error for a background poll
     }
+}
+
+// For optimistic UI updates. The real data comes from fetchNotifications.
+function addNotification(message, type = 'info') {
+    const newNotification = {
+        id: Date.now(), // Temporary ID
+        message,
+        type,
+        createdAt: new Date().toISOString(),
+        isRead: false,
+    };
+    appState.notifications.unshift(newNotification); // Add to the beginning
+    renderNotificationPanel();
 }
 
 function renderNotificationPanel() {
     const panelList = document.getElementById('notification-panel-list');
     const badge = document.getElementById('notification-badge');
     
+    // Use `isRead` from backend data
     const unreadCount = appState.notifications.filter(n => !n.isRead).length;
 
     if (badge) {
         if (unreadCount > 0) {
-            badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+            badge.textContent = unreadCount;
             badge.style.display = 'flex';
         } else {
             badge.style.display = 'none';
@@ -363,204 +373,72 @@ function renderNotificationPanel() {
         panelList.innerHTML = `
             <div class="notification-empty-state">
                 <i class="fas fa-bell-slash"></i>
-                <p>No notifications yet</p>
-                <small>You'll see updates about your projects here</small>
+                <p>No new notifications</p>
             </div>`;
         return;
     }
 
-    panelList.innerHTML = appState.notifications.map(notification => {
+    panelList.innerHTML = appState.notifications.map(n => {
         const iconMap = {
-            job: 'fa-briefcase',
-            quote: 'fa-file-invoice-dollar',
-            message: 'fa-comment-alt',
-            estimation: 'fa-calculator',
-            user: 'fa-user-circle',
-            file: 'fa-file-alt',
             info: 'fa-info-circle',
             success: 'fa-check-circle',
             warning: 'fa-exclamation-triangle',
-            error: 'fa-times-circle'
+            error: 'fa-times-circle',
+            message: 'fa-comment-alt',
+            job: 'fa-briefcase',
+            quote: 'fa-file-invoice-dollar',
+            estimation: 'fa-calculator',
+            user: 'fa-user'
         };
-        
-        const icon = iconMap[notification.type] || 'fa-bell';
-        const timeAgo = getTimeAgo(notification.createdAt);
-        const isUnread = !notification.isRead;
-        const metadataStr = JSON.stringify(notification.metadata || {}).replace(/"/g, '&quot;');
+        const icon = iconMap[n.type] || 'fa-info-circle';
         
         return `
-            <div class="notification-item ${isUnread ? 'unread' : ''}" data-id="${notification.id}" onclick="handleNotificationClick('${notification.id}', '${notification.type}', '${metadataStr}')">
-                <div class="notification-item-icon ${notification.type}">
+            <div class="notification-item ${n.isRead ? '' : 'unread'}" data-id="${n.id}">
+                <div class="notification-item-icon ${n.type}">
                     <i class="fas ${icon}"></i>
-                    ${isUnread ? '<div class="unread-dot"></div>' : ''}
                 </div>
                 <div class="notification-item-content">
-                    <p class="notification-message">${notification.message}</p>
-                    <span class="notification-timestamp">${timeAgo}</span>
-                </div>
-                <div class="notification-actions">
-                    ${isUnread ? '<div class="mark-read-btn" onclick="event.stopPropagation(); markNotificationAsRead(\'' + notification.id + '\')"><i class="fas fa-check"></i></div>' : ''}
+                    <p>${n.message}</p>
+                    <span class="timestamp">${formatMessageTimestamp(n.createdAt)}</span>
                 </div>
             </div>`;
     }).join('');
 }
 
-// Handle notification clicks with navigation
-async function handleNotificationClick(notificationId, type, metadataStr) {
+// Replaces old clearNotifications. Calls the backend to mark all as read.
+async function markAllAsRead() {
     try {
-        const metadata = JSON.parse(metadataStr.replace(/&quot;/g, '"'));
-        
-        // Mark as read first
-        await markNotificationAsRead(notificationId);
-        
-        // Navigate based on notification type
-        switch (type) {
-            case 'job':
-                if (metadata.jobId) {
-                    renderAppSection('jobs');
-                    // Optionally scroll to specific job
-                    setTimeout(() => {
-                        const jobCard = document.querySelector(`[data-job-id="${metadata.jobId}"]`);
-                        if (jobCard) {
-                            jobCard.scrollIntoView({ behavior: 'smooth' });
-                            jobCard.style.boxShadow = '0 0 15px rgba(59, 130, 246, 0.5)';
-                            setTimeout(() => jobCard.style.boxShadow = '', 2000);
-                        }
-                    }, 500);
-                }
-                break;
-                
-            case 'quote':
-                if (appState.currentUser.type === 'designer') {
-                    renderAppSection('my-quotes');
-                } else {
-                    renderAppSection('jobs');
-                }
-                break;
-                
-            case 'message':
-                if (metadata.conversationId) {
-                    renderConversationView(metadata.conversationId);
-                } else {
-                    renderAppSection('messages');
-                }
-                break;
-                
-            case 'estimation':
-                renderAppSection('my-estimations');
-                break;
-                
-            default:
-                // Close notification panel for other types
-                break;
-        }
-        
-        // Close notification panel
-        document.getElementById('notification-panel').classList.remove('active');
-        
+        await apiCall('/notifications/mark-all-read', 'PUT');
+        // Optimistically update the UI
+        appState.notifications.forEach(n => n.isRead = true);
+        renderNotificationPanel();
+        showNotification('All notifications marked as read.', 'success');
     } catch (error) {
-        console.error('Error handling notification click:', error);
+        console.error('Failed to mark all notifications as read:', error);
     }
 }
 
-// Mark single notification as read
-async function markNotificationAsRead(notificationId) {
-    try {
-        const response = await apiCall(`/notifications/${notificationId}/read`, 'PUT');
-        if (response.success) {
-            // Update local state
-            const notification = appState.notifications.find(n => n.id === notificationId);
-            if (notification) {
-                notification.isRead = true;
-                notification.readAt = new Date().toISOString();
-            }
-            renderNotificationPanel();
-        }
-    } catch (error) {
-        console.error('Error marking notification as read:', error);
-    }
-}
-
-// Enhanced clear notifications function
-async function clearNotifications() {
-    try {
-        const response = await apiCall('/notifications/mark-all-read', 'PUT');
-        if (response.success) {
-            // Update local state
-            appState.notifications.forEach(n => {
-                n.isRead = true;
-                n.readAt = new Date().toISOString();
-            });
-            renderNotificationPanel();
-            showNotification('All notifications marked as read', 'success');
-        }
-    } catch (error) {
-        console.error('Error clearing notifications:', error);
-        showNotification('Failed to clear notifications', 'error');
-    }
-}
-
-function toggleNotificationPanel(event) {
+async function toggleNotificationPanel(event) {
     event.stopPropagation();
     const panel = document.getElementById('notification-panel');
     if (panel) {
-        const isOpening = !panel.classList.contains('active');
         panel.classList.toggle('active');
-        
-        if (isOpening) {
-            // Load fresh notifications when opening
-            loadNotifications();
+        // If panel is opened and has unread messages, mark them all as read on the backend
+        if (panel.classList.contains('active')) {
+             const hasUnread = appState.notifications.some(n => !n.isRead);
+             if (hasUnread) {
+                try {
+                    await apiCall('/notifications/mark-all-read', 'PUT');
+                    // Update client state after successful API call
+                    appState.notifications.forEach(n => n.isRead = true);
+                    // After a short delay, update the badge
+                    setTimeout(renderNotificationPanel, 500);
+                } catch (error) {
+                    console.error("Failed to mark notifications as read on open:", error);
+                }
+             }
         }
     }
-}
-
-// Periodic notification polling
-function startNotificationPolling() {
-    if (!appState.currentUser) return;
-    
-    // Clear any existing polling
-    if (appState.notificationPollingInterval) {
-        clearInterval(appState.notificationPollingInterval);
-    }
-    
-    // Initial load
-    loadNotifications();
-    
-    // Poll every 30 seconds for new notifications
-    appState.notificationPollingInterval = setInterval(() => {
-        if (appState.currentUser) {
-            loadNotifications();
-        } else {
-            clearInterval(appState.notificationPollingInterval);
-            appState.notificationPollingInterval = null;
-        }
-    }, 30000);
-}
-
-// Enhanced addNotification function for better local notifications
-function addNotification(message, type = 'info', link = '#') {
-    const newNotification = {
-        id: Date.now(),
-        message,
-        type,
-        createdAt: new Date().toISOString(),
-        link,
-        isRead: false,
-        metadata: {}
-    };
-    
-    // Add to beginning of notifications array
-    appState.notifications.unshift(newNotification);
-    
-    // Keep only last 50 notifications in memory
-    if (appState.notifications.length > 50) {
-        appState.notifications = appState.notifications.slice(0, 50);
-    }
-    
-    renderNotificationPanel();
-    
-    // Show toast notification
-    showNotification(message, type, 4000);
 }
 
 // --- ENHANCED ESTIMATION SYSTEM ---
@@ -653,6 +531,148 @@ async function fetchAndRenderMyEstimations() {
                             ${estimation.status === 'pending' ? `<button class="btn btn-danger btn-sm" onclick="deleteEstimation('${estimation._id}')"><i class="fas fa-trash"></i> Delete</button>` : ''}
                         </div>
                     </div>
+                </div>`;
+        }).join('');
+        
+    } catch (error) {
+        listContainer.innerHTML = `
+            <div class="error-state premium-error">
+                <div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                <h3>Error Loading Estimations</h3>
+                <p>We couldn't load your estimation requests. Please try again.</p>
+                <button class="btn btn-primary" onclick="fetchAndRenderMyEstimations()">Retry</button>
+            </div>`;
+    }
+}
+
+function getEstimationStatusConfig(status) {
+    const configs = {
+        'pending': { icon: 'fa-clock', label: 'Under Review' },
+        'in-progress': { icon: 'fa-cogs', label: 'Processing' },
+        'completed': { icon: 'fa-check-circle', label: 'Complete' },
+        'rejected': { icon: 'fa-times-circle', label: 'Rejected' },
+        'cancelled': { icon: 'fa-ban', label: 'Cancelled' }
+    };
+    return configs[status] || { icon: 'fa-question-circle', label: status };
+}
+
+async function viewEstimationFiles(estimationId) {
+    try {
+        const response = await apiCall(`/estimation/${estimationId}/files`, 'GET');
+        const files = response.files || [];
+        const content = `
+            <div class="modal-header"><h3><i class="fas fa-folder-open"></i> Uploaded Project Files</h3><p class="modal-subtitle">Files submitted with your estimation request</p></div>
+            <div class="files-list premium-files">
+                ${files.length === 0 ? `<div class="empty-state"><i class="fas fa-file"></i><p>No files found for this estimation.</p></div>` : files.map(file => `
+                    <div class="file-item">
+                        <div class="file-info"><i class="fas fa-file-pdf"></i><div class="file-details"><h4>${file.name}</h4><span class="file-date">Uploaded: ${new Date(file.uploadedAt).toLocaleDateString()}</span></div></div>
+                        <a href="${file.url}" target="_blank" class="btn btn-outline btn-sm"><i class="fas fa-external-link-alt"></i> View</a>
+                    </div>`).join('')}
+            </div>`;
+        showGenericModal(content, 'max-width: 600px;');
+    } catch (error) {
+        showNotification('Error loading files', 'error');
+    }
+}
+
+async function downloadEstimationResult(estimationId) {
+    try {
+        const response = await apiCall(`/estimation/${estimationId}/result`, 'GET');
+        if (response.success && response.resultFile) {
+            addNotification('Your estimation result is ready for download.', 'success');
+            window.open(response.resultFile.url, '_blank');
+        }
+    } catch (error) {
+        showNotification('Error downloading result file', 'error');
+    }
+}
+
+async function deleteEstimation(estimationId) {
+    if (confirm('Are you sure you want to delete this estimation request? This action cannot be undone.')) {
+        try {
+            await apiCall(`/estimation/${estimationId}`, 'DELETE', null, 'Estimation deleted successfully');
+            fetchAndRenderMyEstimations();
+        } catch (error) {}
+    }
+}
+
+// Continue with existing job functions...
+async function fetchAndRenderJobs(loadMore = false) {
+    const jobsListContainer = document.getElementById('jobs-list');
+    const loadMoreContainer = document.getElementById('load-more-container');
+
+    if (!loadMore) {
+        appState.jobs = [];
+        appState.jobsPage = 1;
+        appState.hasMoreJobs = true;
+        if (jobsListContainer) jobsListContainer.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Loading projects...</p></div>';
+    }
+
+    if (!jobsListContainer || !appState.hasMoreJobs) {
+        if(loadMoreContainer) loadMoreContainer.innerHTML = '';
+        return;
+    }
+
+    const user = appState.currentUser;
+    const endpoint = user.type === 'designer' 
+        ? `/jobs?page=${appState.jobsPage}&limit=6` 
+        : `/jobs/user/${user.id}`;
+    
+    if(loadMoreContainer) loadMoreContainer.innerHTML = `<button class="btn btn-loading" disabled><div class="btn-spinner"></div>Loading...</button>`;
+
+    try {
+        const response = await apiCall(endpoint, 'GET');
+        const newJobs = response.data || [];
+        appState.jobs.push(...newJobs);
+        
+        if (user.type === 'designer') {
+            appState.hasMoreJobs = response.pagination.hasNext;
+            appState.jobsPage += 1;
+        } else {
+            appState.hasMoreJobs = false;
+        }
+        
+        if (appState.jobs.length === 0) {
+            jobsListContainer.innerHTML = user.type === 'designer'
+                ? `<div class="empty-state premium-empty"><div class="empty-icon"><i class="fas fa-briefcase"></i></div><h3>No Projects Available</h3><p>Check back later for new opportunities or try adjusting your search criteria.</p></div>`
+                : `<div class="empty-state premium-empty"><div class="empty-icon"><i class="fas fa-plus-circle"></i></div><h3>You haven't posted any projects yet</h3><p>Ready to get started? Post your first project and connect with talented professionals.</p><button class="btn btn-primary" onclick="renderAppSection('post-job')">Post Your First Project</button></div>`;
+            if (loadMoreContainer) loadMoreContainer.innerHTML = '';
+            return;
+        }
+
+        const jobsHTML = appState.jobs.map(job => {
+            const hasUserQuoted = appState.userSubmittedQuotes.has(job.id);
+            const canQuote = user.type === 'designer' && job.status === 'open' && !hasUserQuoted;
+            const quoteButton = canQuote 
+                ? `<button class="btn btn-primary btn-submit-quote" onclick="showQuoteModal('${job.id}')"><i class="fas fa-file-invoice-dollar"></i> Submit Quote</button>`
+                : user.type === 'designer' && hasUserQuoted
+                ? `<button class="btn btn-outline btn-submitted" disabled><i class="fas fa-check-circle"></i> Quote Submitted</button>`
+                : user.type === 'designer' && job.status === 'assigned'
+                ? `<span class="job-status-badge assigned"><i class="fas fa-user-check"></i> Job Assigned</span>`
+                : '';
+            const actions = user.type === 'designer' ? quoteButton : `<div class="job-actions-group"><button class="btn btn-outline" onclick="viewQuotes('${job.id}')"><i class="fas fa-eye"></i> View Quotes (${job.quotesCount || 0})</button><button class="btn btn-danger" onclick="deleteJob('${job.id}')"><i class="fas fa-trash"></i> Delete</button></div>`;
+            const statusBadge = job.status !== 'open' 
+                ? `<span class="job-status-badge ${job.status}"><i class="fas ${job.status === 'assigned' ? 'fa-user-check' : 'fa-check-circle'}"></i> ${job.status.charAt(0).toUpperCase() + job.status.slice(1)}</span>` 
+                : `<span class="job-status-badge open"><i class="fas fa-clock"></i> Open</span>`;
+            const attachmentLink = job.attachment ? `<div class="job-attachment"><i class="fas fa-paperclip"></i><a href="${job.attachment}" target="_blank" rel="noopener noreferrer">View Attachment</a></div>` : '';
+            const skillsDisplay = job.skills?.length > 0 ? `<div class="job-skills"><i class="fas fa-tools"></i><span>Skills:</span><div class="skills-tags">${job.skills.map(skill => `<span class="skill-tag">${skill}</span>`).join('')}</div></div>` : '';
+            
+            return `
+                <div class="job-card premium-card" data-job-id="${job.id}">
+                    <div class="job-header">
+                        <div class="job-title-section"><h3 class="job-title">${job.title}</h3>${statusBadge}</div>
+                        <div class="job-budget-section"><span class="budget-label">Budget</span><span class="budget-amount">${job.budget}</span></div>
+                    </div>
+                    <div class="job-meta">
+                        <div class="job-meta-item"><i class="fas fa-user"></i><span>Posted by: <strong>${job.posterName || 'N/A'}</strong></span></div>
+                        ${job.assignedToName ? `<div class="job-meta-item"><i class="fas fa-user-check"></i><span>Assigned to: <strong>${job.assignedToName}</strong></span></div>` : ''}
+                        ${job.deadline ? `<div class="job-meta-item"><i class="fas fa-calendar-alt"></i><span>Deadline: <strong>${new Date(job.deadline).toLocaleDateString()}</strong></span></div>` : ''}
+                    </div>
+                    <div class="job-description"><p>${job.description}</p></div>
+                    ${skillsDisplay}
+                    ${job.link ? `<div class="job-link"><i class="fas fa-external-link-alt"></i><a href="${job.link}" target="_blank" rel="noopener noreferrer">View Project Link</a></div>` : ''}
+                    ${attachmentLink}
+                    <div class="job-actions">${actions}</div>
                 </div>`;
         }).join('');
 
@@ -1069,16 +1089,18 @@ function getAvatarColor(name) {
 function formatMessageTimestamp(date) {
     const now = new Date();
     const messageDate = new Date(date);
-    const isToday = now.toDateString() === messageDate.toDateString();
-    const isYesterday = new Date(now.setDate(now.getDate() - 1)).toDateString() === messageDate.toDateString();
+    const diffMs = now - messageDate;
+    const diffSeconds = Math.round(diffMs / 1000);
+    const diffMinutes = Math.round(diffSeconds / 60);
+    const diffHours = Math.round(diffMinutes / 60);
+    const diffDays = Math.round(diffHours / 24);
 
-    if (isToday) {
-        return `Today, ${messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-    }
-    if (isYesterday) {
-        return `Yesterday, ${messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-    }
-    return messageDate.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    if (diffSeconds < 60) return 'Just now';
+    if (diffMinutes < 60) return `${diffMinutes}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return messageDate.toLocaleDateString();
 }
 
 async function renderConversationView(conversationOrId) {
@@ -1187,7 +1209,7 @@ async function handleSendMessage(conversationId) {
     try {
         const response = await apiCall(`/messages/${conversationId}/messages`, 'POST', { text });
         input.value = '';
-        addNotification('Message sent successfully!', 'message');
+        addNotification('You have a new message!', 'message');
         const messagesContainer = document.getElementById('chat-messages-container');
         const newMessage = response.data;
         if(messagesContainer.querySelector('.empty-messages')) {
@@ -1289,7 +1311,7 @@ function showAppView() {
     document.getElementById('notification-bell-container').addEventListener('click', toggleNotificationPanel);
     document.getElementById('clear-notifications-btn').addEventListener('click', (e) => {
         e.stopPropagation();
-        clearNotifications();
+        markAllAsRead(); // Changed from clearNotifications
     });
      
     document.getElementById('sidebarUserName').textContent = user.name;
@@ -1298,10 +1320,13 @@ function showAppView() {
     
     buildSidebarNav();
     renderAppSection('dashboard');
-    renderNotificationPanel();
     
-    // Start notification polling
-    startNotificationPolling();
+    // Initial fetch of notifications
+    fetchNotifications();
+    
+    // Start polling for new notifications every 30 seconds
+    if (appState.notificationInterval) clearInterval(appState.notificationInterval);
+    appState.notificationInterval = setInterval(fetchNotifications, 30000);
     
     if (user.type === 'designer') {
         loadUserQuotes();
@@ -1580,178 +1605,6 @@ async function handleEstimationSubmit() {
         showNotification('Please select files for estimation', 'warning');
         return;
     }
-    const projectTitle = form.projectTitle
-        
-    } catch (error) {
-        listContainer.innerHTML = `
-            <div class="error-state premium-error">
-                <div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div>
-                <h3>Error Loading Estimations</h3>
-                <p>We couldn't load your estimation requests. Please try again.</p>
-                <button class="btn btn-primary" onclick="fetchAndRenderMyEstimations()">Retry</button>
-            </div>`;
-    }
-}
-
-function getEstimationStatusConfig(status) {
-    const configs = {
-        'pending': { icon: 'fa-clock', label: 'Under Review' },
-        'in-progress': { icon: 'fa-cogs', label: 'Processing' },
-        'completed': { icon: 'fa-check-circle', label: 'Complete' },
-        'rejected': { icon: 'fa-times-circle', label: 'Rejected' },
-        'cancelled': { icon: 'fa-ban', label: 'Cancelled' }
-    };
-    return configs[status] || { icon: 'fa-question-circle', label: status };
-}
-
-async function viewEstimationFiles(estimationId) {
-    try {
-        const response = await apiCall(`/estimation/${estimationId}/files`, 'GET');
-        const files = response.files || [];
-        const content = `
-            <div class="modal-header"><h3><i class="fas fa-folder-open"></i> Uploaded Project Files</h3><p class="modal-subtitle">Files submitted with your estimation request</p></div>
-            <div class="files-list premium-files">
-                ${files.length === 0 ? `<div class="empty-state"><i class="fas fa-file"></i><p>No files found for this estimation.</p></div>` : files.map(file => `
-                    <div class="file-item">
-                        <div class="file-info"><i class="fas fa-file-pdf"></i><div class="file-details"><h4>${file.name}</h4><span class="file-date">Uploaded: ${new Date(file.uploadedAt).toLocaleDateString()}</span></div></div>
-                        <a href="${file.url}" target="_blank" class="btn btn-outline btn-sm"><i class="fas fa-external-link-alt"></i> View</a>
-                    </div>`).join('')}
-            </div>`;
-        showGenericModal(content, 'max-width: 600px;');
-    } catch (error) {
-        showNotification('Error loading files', 'error');
-    }
-}
-
-async function downloadEstimationResult(estimationId) {
-    try {
-        const response = await apiCall(`/estimation/${estimationId}/result`, 'GET');
-        if (response.success && response.resultFile) {
-            addNotification('Your estimation result is ready for download.', 'success');
-            window.open(response.resultFile.url, '_blank');
-        }
-    } catch (error) {
-        showNotification('Error downloading result file', 'error');
-    }
-}
-
-async function deleteEstimation(estimationId) {
-    if (confirm('Are you sure you want to delete this estimation request? This action cannot be undone.')) {
-        try {
-            await apiCall(`/estimation/${estimationId}`, 'DELETE', null, 'Estimation deleted successfully');
-            fetchAndRenderMyEstimations();
-        } catch (error) {}
-    }
-}
-
-// Continue with existing job functions...
-async function fetchAndRenderJobs(loadMore = false) {
-    const jobsListContainer = document.getElementById('jobs-list');
-    const loadMoreContainer = document.getElementById('load-more-container');
-
-    if (!loadMore) {
-        appState.jobs = [];
-        appState.jobsPage = 1;
-        appState.hasMoreJobs = true;
-        if (jobsListContainer) jobsListContainer.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Loading projects...</p></div>';
-    }
-
-    if (!jobsListContainer || !appState.hasMoreJobs) {
-        if(loadMoreContainer) loadMoreContainer.innerHTML = '';
-        return;
-    }
-
-    const user = appState.currentUser;
-    const endpoint = user.type === 'designer' 
-        ? `/jobs?page=${appState.jobsPage}&limit=6` 
-        : `/jobs/user/${user.id}`;
-    
-    if(loadMoreContainer) loadMoreContainer.innerHTML = `<button class="btn btn-loading" disabled><div class="btn-spinner"></div>Loading...</button>`;
-
-    try {
-        const response = await apiCall(endpoint, 'GET');
-        const newJobs = response.data || [];
-        appState.jobs.push(...newJobs);
-        
-        if (user.type === 'designer') {
-            appState.hasMoreJobs = response.pagination.hasNext;
-            appState.jobsPage += 1;
-        } else {
-            appState.hasMoreJobs = false;
-        }
-        
-        if (appState.jobs.length === 0) {
-            jobsListContainer.innerHTML = user.type === 'designer'
-                ? `<div class="empty-state premium-empty"><div class="empty-icon"><i class="fas fa-briefcase"></i></div><h3>No Projects Available</h3><p>Check back later for new opportunities or try adjusting your search criteria.</p></div>`
-                : `<div class="empty-state premium-empty"><div class="empty-icon"><i class="fas fa-plus-circle"></i></div><h3>You haven't posted any projects yet</h3><p>Ready to get started? Post your first project and connect with talented professionals.</p><button class="btn btn-primary" onclick="renderAppSection('post-job')">Post Your First Project</button></div>`;
-            if (loadMoreContainer) loadMoreContainer.innerHTML = '';
-            return;
-        }
-
-        const jobsHTML = appState.jobs.map(job =>
-            const hasUserQuoted = appState.userSubmittedQuotes.has(job.id);
-            const canQuote = user.type === 'designer' && job.status === 'open' && !hasUserQuoted;
-            const quoteButton = canQuote 
-                ? `<button class="btn btn-primary btn-submit-quote" onclick="showQuoteModal('${job.id}')"><i class="fas fa-file-invoice-dollar"></i> Submit Quote</button>`
-                : user.type === 'designer' && hasUserQuoted
-                ? `<button class="btn btn-outline btn-submitted" disabled><i class="fas fa-check-circle"></i> Quote Submitted</button>`
-                : user.type === 'designer' && job.status === 'assigned'
-                ? `<span class="job-status-badge assigned"><i class="fas fa-user-check"></i> Job Assigned</span>`
-                : '';
-            const actions = user.type === 'designer' ? quoteButton : `<div class="job-actions-group"><button class="btn btn-outline" onclick="viewQuotes('${job.id}')"><i class="fas fa-eye"></i> View Quotes (${job.quotesCount || 0})</button><button class="btn btn-danger" onclick="deleteJob('${job.id}')"><i class="fas fa-trash"></i> Delete</button></div>`;
-            const statusBadge = job.status !== 'open' 
-                ? `<span class="job-status-badge ${job.status}"><i class="fas ${job.status === 'assigned' ? 'fa-user-check' : 'fa-check-circle'}"></i> ${job.status.charAt(0).toUpperCase() + job.status.slice(1)}</span>` 
-                : `<span class="job-status-badge open"><i class="fas fa-clock"></i> Open</span>`;
-            const attachmentLink = job.attachment ? `<div class="job-attachment"><i class="fas fa-paperclip"></i><a href="${job.attachment}" target="_blank" rel="noopener noreferrer">View Attachment</a></div>` : '';
-            const skillsDisplay = job.skills?.length > 0 ? `<div class="job-skills"><i class="fas fa-tools"></i><span>Skills:</span><div class="skills-tags">${job.skills.map(skill => `<span class="skill-tag">${skill}</span>`).join('')}</div></div>` : '';
-            
-            return `
-                <div class="job-card premium-card" data-job-id="${job.id}">
-                    <div class="job-header">
-                        <div class="job-title-section"><h3 class="job-title">${job.title}</h3>${statusBadge}</div>
-                        <div class="job-budget-section"><span class="budget-label">Budget</span><span class="budget-amount">${job.budget}</span></div>
-                    </div>
-                    <div class="job-meta">
-                        <div class="job-meta-item"><i class="fas fa-user"></i><span>Posted by: <strong>${job.posterName || 'N/A'}</strong></span></div>
-                        ${job.assignedToName ? `<div class="job-meta-item"><i class="fas fa-user-check"></i><span>Assigned to: <strong>${job.assignedToName}</strong></span></div>` : ''}
-                        ${job.deadline ? `<div class="job-meta-item"><i class="fas fa-calendar-alt"></i><span>Deadline: <strong>${new Date(job.deadline).toLocaleDateString()}</strong></span></div>` : ''}
-                    </div>
-                    <div class="job-description"><p>${job.description}</p></div>
-                    ${skillsDisplay}
-                    ${job.link ? `<div class="job-link"><i class="fas fa-external-link-alt"></i><a href="${job.link}" target="_blank" rel="noopener noreferrer">View Project Link</a></div>` : ''}
-                    ${attachmentLink}
-                    <div class="job-actions">${actions}</div>
-                </div>`;
-        }).join('');
-
-        if(jobsListContainer) jobsListContainer.innerHTML = jobsHTML;
-
-        if (loadMoreContainer) {
-            if (user.type === 'designer' && appState.hasMoreJobs) {
-                loadMoreContainer.innerHTML = `<button class="btn btn-outline btn-load-more" id="load-more-btn"><i class="fas fa-chevron-down"></i> Load More Projects</button>`;
-                document.getElementById('load-more-btn').addEventListener('click', () => fetchAndRenderJobs(true));
-            } else {
-                loadMoreContainer.innerHTML = '';
-            }
-        }
-
-    } catch(error) {
-        if(jobsListContainer) {
-            jobsListContainer.innerHTML = `<div class="error-state premium-error"><div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div><h3>Error Loading Projects</h3><p>We encountered an issue loading the projects. Please try again.</p><button class="btn btn-primary" onclick="fetchAndRenderJobs()">Retry</button></div>`;
-        }
-    }
-}
-
-// Complete the handleEstimationSubmit function that was cut off
-async function handleEstimationSubmit() {
-    const form = document.getElementById('estimation-form');
-    const submitBtn = document.getElementById('submit-estimation-btn');
-    
-    if (!appState.uploadedFile || appState.uploadedFile.length === 0) {
-        showNotification('Please select files for estimation', 'warning');
-        return;
-    }
-    
     const projectTitle = form.projectTitle.value.trim();
     const description = form.description.value.trim();
     if (!projectTitle || !description) {
@@ -1772,7 +1625,7 @@ async function handleEstimationSubmit() {
             formData.append('files', appState.uploadedFile[i]);
         }
         await apiCall('/estimation/contractor/submit', 'POST', formData, 'Estimation request submitted successfully!');
-        addNotification(`Your AI estimation request for "${projectTitle}" has been submitted.`, 'estimation');
+        addNotification(`Your AI estimation request for "${projectTitle}" is submitted.`, 'info');
         form.reset();
         appState.uploadedFile = null;
         document.getElementById('file-info-container').style.display = 'none';
@@ -1803,357 +1656,6 @@ function showNotification(message, type = 'info', duration = 4000) {
             setTimeout(() => notification.remove(), 300);
         }
     }, duration);
-}
-
-// Inject notification styles
-function injectNotificationStyles() {
-    const styleSheet = document.createElement('style');
-    styleSheet.textContent = `
-/* Enhanced Notification Styles */
-.notification-item {
-    padding: 12px;
-    border-radius: 8px;
-    margin-bottom: 8px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    border: 1px solid transparent;
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-}
-
-.notification-item:hover {
-    background-color: rgba(59, 130, 246, 0.05);
-    border-color: rgba(59, 130, 246, 0.2);
-}
-
-.notification-item.unread {
-    background-color: rgba(59, 130, 246, 0.05);
-    border-left: 3px solid #3b82f6;
-}
-
-.notification-item-icon {
-    position: relative;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.notification-item-icon.job {
-    background-color: rgba(16, 185, 129, 0.1);
-    color: #10b981;
-}
-
-.notification-item-icon.quote {
-    background-color: rgba(245, 158, 11, 0.1);
-    color: #f59e0b;
-}
-
-.notification-item-icon.message {
-    background-color: rgba(59, 130, 246, 0.1);
-    color: #3b82f6;
-}
-
-.notification-item-icon.estimation {
-    background-color: rgba(139, 92, 246, 0.1);
-    color: #8b5cf6;
-}
-
-.notification-item-icon.user {
-    background-color: rgba(107, 114, 128, 0.1);
-    color: #6b7280;
-}
-
-.notification-item-icon.file {
-    background-color: rgba(16, 185, 129, 0.1);
-    color: #10b981;
-}
-
-.notification-item-icon.info {
-    background-color: rgba(59, 130, 246, 0.1);
-    color: #3b82f6;
-}
-
-.notification-item-icon.success {
-    background-color: rgba(16, 185, 129, 0.1);
-    color: #10b981;
-}
-
-.notification-item-icon.warning {
-    background-color: rgba(245, 158, 11, 0.1);
-    color: #f59e0b;
-}
-
-.notification-item-icon.error {
-    background-color: rgba(239, 68, 68, 0.1);
-    color: #ef4444;
-}
-
-.unread-dot {
-    position: absolute;
-    top: -2px;
-    right: -2px;
-    width: 8px;
-    height: 8px;
-    background-color: #ef4444;
-    border-radius: 50%;
-    border: 2px solid white;
-}
-
-.notification-item-content {
-    flex: 1;
-    min-width: 0;
-}
-
-.notification-message {
-    font-size: 14px;
-    line-height: 1.4;
-    color: #374151;
-    margin: 0 0 4px 0;
-    word-break: break-word;
-}
-
-.notification-timestamp {
-    font-size: 12px;
-    color: #6b7280;
-}
-
-.notification-actions {
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-}
-
-.mark-read-btn {
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    background-color: #f3f4f6;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    opacity: 0;
-    transition: all 0.2s ease;
-    color: #6b7280;
-    font-size: 10px;
-    border: none;
-}
-
-.notification-item:hover .mark-read-btn {
-    opacity: 1;
-}
-
-.mark-read-btn:hover {
-    background-color: #e5e7eb;
-    color: #374151;
-    transform: scale(1.1);
-}
-
-.notification-empty-state {
-    text-align: center;
-    padding: 40px 20px;
-    color: #6b7280;
-}
-
-.notification-empty-state i {
-    font-size: 48px;
-    margin-bottom: 16px;
-    opacity: 0.5;
-}
-
-.notification-empty-state p {
-    margin: 0 0 8px 0;
-    font-weight: 500;
-    font-size: 16px;
-}
-
-.notification-empty-state small {
-    opacity: 0.7;
-    font-size: 14px;
-}
-
-#notification-badge {
-    position: absolute;
-    top: -8px;
-    right: -8px;
-    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-    color: white;
-    border-radius: 50%;
-    min-width: 20px;
-    height: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 11px;
-    font-weight: 600;
-    border: 2px solid white;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    z-index: 10;
-}
-
-#notification-panel {
-    position: absolute;
-    top: calc(100% + 8px);
-    right: 0;
-    width: 380px;
-    max-height: 500px;
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-    border: 1px solid #e5e7eb;
-    opacity: 0;
-    visibility: hidden;
-    transform: translateY(-10px);
-    transition: all 0.2s ease;
-    z-index: 1000;
-    overflow: hidden;
-}
-
-#notification-panel.active {
-    opacity: 1;
-    visibility: visible;
-    transform: translateY(0);
-}
-
-.notification-panel-header {
-    padding: 16px 20px;
-    border-bottom: 1px solid #e5e7eb;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: #f9fafb;
-}
-
-.notification-panel-header h3 {
-    margin: 0;
-    font-size: 16px;
-    font-weight: 600;
-    color: #374151;
-}
-
-.notification-panel-list {
-    max-height: 400px;
-    overflow-y: auto;
-    padding: 8px;
-}
-
-.notification-panel-list::-webkit-scrollbar {
-    width: 6px;
-}
-
-.notification-panel-list::-webkit-scrollbar-track {
-    background: #f1f5f9;
-}
-
-.notification-panel-list::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
-    border-radius: 3px;
-}
-
-.notification-panel-list::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
-}
-
-#clear-notifications-btn {
-    padding: 6px 12px;
-    font-size: 12px;
-    background: none;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    color: #6b7280;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-#clear-notifications-btn:hover {
-    background: #f3f4f6;
-    color: #374151;
-}
-
-/* Toast notification styles */
-.notification.premium-notification {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 16px;
-    border-radius: 8px;
-    margin-bottom: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    border-left: 4px solid;
-    transition: all 0.3s ease;
-    max-width: 400px;
-    min-width: 300px;
-}
-
-.notification.notification-success {
-    background: #f0f9ff;
-    border-left-color: #10b981;
-    color: #065f46;
-}
-
-.notification.notification-error {
-    background: #fef2f2;
-    border-left-color: #ef4444;
-    color: #991b1b;
-}
-
-.notification.notification-warning {
-    background: #fffbeb;
-    border-left-color: #f59e0b;
-    color: #92400e;
-}
-
-.notification.notification-info {
-    background: #eff6ff;
-    border-left-color: #3b82f6;
-    color: #1e40af;
-}
-
-.notification-content {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex: 1;
-}
-
-.notification-content i {
-    font-size: 16px;
-}
-
-.notification-close {
-    background: none;
-    border: none;
-    cursor: pointer;
-    color: inherit;
-    opacity: 0.7;
-    padding: 4px;
-    border-radius: 4px;
-    transition: all 0.2s ease;
-}
-
-.notification-close:hover {
-    opacity: 1;
-    background: rgba(0, 0, 0, 0.05);
-}
-
-@media (max-width: 768px) {
-    #notification-panel {
-        width: 340px;
-        right: -20px;
-    }
-    
-    .notification.premium-notification {
-        max-width: 320px;
-        min-width: 280px;
-    }
-}
-    `;
-    document.head.appendChild(styleSheet);
 }
 
 // --- TEMPLATE GETTERS ---
@@ -2325,7 +1827,7 @@ function getDashboardTemplate(user) {
         <div class="dashboard-container">
             <div class="dashboard-hero">
                 <div>
-                    <h2>Welcome back, ${name}!</h2>
+                    <h2>Welcome back, ${name} 👋</h2>
                     <p>You are logged in to your <strong>${isContractor ? 'Contractor' : 'Designer'} Portal</strong>. Manage your workflows seamlessly.</p>
                 </div>
                 <div class="subscription-badge">
@@ -2446,54 +1948,3 @@ function getSettingsTemplate(user) {
         </div>
     `;
 }
-
-// --- SCRIPT INITIALIZATION AND CLOSURE ---
-
-// Initialize the app when DOM is ready
-console.log("SteelConnect Script Loaded Successfully");
-
-// Global error handler for unhandled promise rejections
-window.addEventListener('unhandledrejection', function(event) {
-    console.error('Unhandled promise rejection:', event.reason);
-    showNotification('An unexpected error occurred. Please refresh the page.', 'error');
-});
-
-// Global error handler
-window.addEventListener('error', function(event) {
-    console.error('Global error:', event.error);
-    showNotification('A system error occurred. Please refresh if issues persist.', 'error');
-});
-
-// Export functions to global scope for HTML onclick handlers
-window.showAuthModal = showAuthModal;
-window.renderAuthForm = renderAuthForm;
-window.closeModal = closeModal;
-window.renderAppSection = renderAppSection;
-window.showQuoteModal = showQuoteModal;
-window.approveQuote = approveQuote;
-window.deleteJob = deleteJob;
-window.deleteQuote = deleteQuote;
-window.editQuote = editQuote;
-window.viewQuotes = viewQuotes;
-window.openConversation = openConversation;
-window.markJobCompleted = markJobCompleted;
-window.toggleWidgetDetails = toggleWidgetDetails;
-window.removeFile = removeFile;
-window.viewEstimationFiles = viewEstimationFiles;
-window.downloadEstimationResult = downloadEstimationResult;
-window.deleteEstimation = deleteEstimation;
-window.renderConversationView = renderConversationView;
-window.toggleNotificationPanel = toggleNotificationPanel;
-window.clearNotifications = clearNotifications;
-window.handleNotificationClick = handleNotificationClick;
-window.markNotificationAsRead = markNotificationAsRead;
-window.showNotification = showNotification;
-window.showGenericModal = showGenericModal;
-
-// Expose appState for debugging in development
-if (IS_LOCAL) {
-    window.appState = appState;
-    console.log('Development mode: appState exposed to window');
-}
-
-console.log("SteelConnect Application Ready - All functions loaded and notification system integrated");
