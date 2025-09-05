@@ -92,22 +92,77 @@ const headerFeatures = [
     }
 ];
 
-// --- INACTIVITY TIMER FOR AUTO-LOGOUT ---
+// --- INACTIVITY TIMER FOR AUTO-LOGOUT (ENHANCED) ---
 let inactivityTimer;
+let warningTimer;
 
 function resetInactivityTimer() {
     clearTimeout(inactivityTimer);
+    clearTimeout(warningTimer);
+
+    // Warning at 4 minutes (1 minute before logout)
+    warningTimer = setTimeout(() => {
+        if (appState.currentUser) {
+            showInactivityWarning();
+        }
+    }, 240000); // 4 minutes
+
+    // Logout at 5 minutes
     inactivityTimer = setTimeout(() => {
         if (appState.currentUser) {
-            showNotification('You have been logged out due to inactivity.', 'info');
+            showNotification('You have been logged out due to inactivity.', 'warning');
             logout();
         }
     }, 300000); // 5 minutes
 }
 
+function showInactivityWarning() {
+    // Dismiss any previous warning
+    dismissInactivityWarning(); 
+    
+    const warning = document.createElement('div');
+    warning.id = 'inactivity-warning';
+    warning.className = 'inactivity-warning-modal';
+    warning.innerHTML = `
+        <div class="warning-content">
+            <div class="warning-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <h3>Session Timeout Warning</h3>
+            <p>You will be logged out in 1 minute due to inactivity.</p>
+            <p>Click anywhere to stay logged in.</p>
+            <div class="warning-actions">
+                <button class="btn btn-primary" onclick="dismissInactivityWarning()">Stay Logged In</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(warning);
+
+    const dismissHandler = () => {
+        dismissInactivityWarning();
+        document.removeEventListener('click', dismissHandler);
+        document.removeEventListener('keydown', dismissHandler);
+        document.removeEventListener('mousemove', dismissHandler);
+    };
+
+    document.addEventListener('click', dismissHandler);
+    document.addEventListener('keydown', dismissHandler);
+    document.addEventListener('mousemove', dismissHandler);
+}
+
+function dismissInactivityWarning() {
+    const warning = document.getElementById('inactivity-warning');
+    if (warning) {
+        warning.remove();
+        resetInactivityTimer(); // Reset the timer
+    }
+}
+
+
 function initializeApp() {
     console.log("SteelConnect App Initializing...");
-    
+
     // Global click listener to close pop-ups
     window.addEventListener('click', (event) => {
         // Close user dropdown if click is outside
@@ -116,29 +171,29 @@ function initializeApp() {
         if (userInfoDropdown && userInfoContainer && !userInfoContainer.contains(event.target)) {
             userInfoDropdown.classList.remove('active');
         }
+
         // Close notification panel if click is outside
         const notificationPanel = document.getElementById('notification-panel');
         const notificationBellContainer = document.getElementById('notification-bell-container');
-        if(notificationPanel && notificationBellContainer && !notificationBellContainer.contains(event.target)){
-             notificationPanel.classList.remove('active');
+        if (notificationPanel && notificationBellContainer && !notificationBellContainer.contains(event.target)) {
+            notificationPanel.classList.remove('active');
         }
     });
 
-    // Inactivity listeners
-    window.addEventListener('mousemove', resetInactivityTimer);
-    window.addEventListener('keydown', resetInactivityTimer);
-    window.addEventListener('click', resetInactivityTimer);
+    // Comprehensive activity listeners for 5-minute auto-logout
+    const activityEvents = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart', 'touchmove', 'wheel'];
+    activityEvents.forEach(event => {
+        window.addEventListener(event, resetInactivityTimer, { passive: true });
+    });
 
     // Auth button listeners
     const signInBtn = document.getElementById('signin-btn');
     if (signInBtn) signInBtn.addEventListener('click', () => showAuthModal('login'));
-
     const joinBtn = document.getElementById('join-btn');
     if (joinBtn) joinBtn.addEventListener('click', () => showAuthModal('register'));
-    
     const getStartedBtn = document.getElementById('get-started-btn');
     if (getStartedBtn) getStartedBtn.addEventListener('click', () => showAuthModal('register'));
-    
+
     // Logo navigation
     const logo = document.querySelector('.logo');
     if (logo) {
@@ -152,17 +207,18 @@ function initializeApp() {
             }
         });
     }
-    
+
     // Check for existing session
     const token = localStorage.getItem('jwtToken');
     const user = localStorage.getItem('currentUser');
-    
+
     if (token && user) {
         try {
             appState.jwtToken = token;
             appState.currentUser = JSON.parse(user);
             showAppView();
             resetInactivityTimer();
+            console.log('Restored user session');
         } catch (error) {
             console.error("Error parsing user data from localStorage:", error);
             logout();
@@ -170,9 +226,10 @@ function initializeApp() {
     } else {
         showLandingPageView();
     }
-    
+
     initializeHeaderRotation();
 }
+
 
 // --- DYNAMIC HEADER SYSTEM ---
 function initializeHeaderRotation() {
@@ -278,18 +335,23 @@ async function handleLogin(event) {
         localStorage.setItem('jwtToken', data.token);
         closeModal();
         showAppView();
-        
+
         if (data.user.type === 'designer') {
             loadUserQuotes();
         }
-        addNotification(`Welcome back, ${data.user.name}!`, 'user');
 
-    } catch(error) {
+        // Initial welcome notification after login
+        setTimeout(() => {
+            addNotification(`Welcome back, ${data.user.name}! You're now connected to real-time notifications.`, 'user');
+        }, 1000);
+    } catch (error) {
         // Error is already shown by apiCall
     }
 }
 
+
 function logout() {
+    console.log('Logging out user...');
     appState.currentUser = null;
     appState.jwtToken = null;
     appState.userSubmittedQuotes.clear();
@@ -297,16 +359,21 @@ function logout() {
     appState.notifications = [];
     localStorage.clear();
     clearTimeout(inactivityTimer);
-    
+    clearTimeout(warningTimer);
+
+    // Dismiss any active warnings
+    dismissInactivityWarning();
+
     // Stop polling for notifications on logout
     if (appState.notificationInterval) {
         clearInterval(appState.notificationInterval);
         appState.notificationInterval = null;
+        console.log('Notification polling stopped');
     }
-
     showLandingPageView();
     showNotification('You have been logged out successfully.', 'info');
 }
+
 
 async function loadUserQuotes() {
     if (appState.currentUser.type !== 'designer') return;
@@ -324,61 +391,97 @@ async function loadUserQuotes() {
     }
 }
 
-// --- NOTIFICATION SYSTEM (INTEGRATED WITH BACKEND) ---
-
-/**
- * Fetches notifications from the backend and updates the UI.
- */
+// --- ENHANCED NOTIFICATION SYSTEM ---
 async function fetchNotifications() {
     if (!appState.currentUser) return;
     try {
         const response = await apiCall('/notifications', 'GET');
-        // Sort by date to ensure the latest notifications are always first
         appState.notifications = (response.data || []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         renderNotificationPanel();
+        updateNotificationBadge();
+        console.log(`Fetched ${appState.notifications.length} notifications`);
     } catch (error) {
-        console.error("Failed to fetch notifications:", error);
-        // Avoid showing a disruptive error for a background poll
+        console.error("Error fetching notifications:", error);
     }
 }
 
-/**
- * Adds a temporary, client-side notification for optimistic UI updates.
- * The real data will be synced by fetchNotifications on the next poll.
- * @param {string} message The notification message.
- * @param {string} type The type of notification (e.g., 'job', 'quote', 'success').
- */
+function updateNotificationBadge() {
+    const badge = document.getElementById('notification-badge');
+    if (badge) {
+        const unreadCount = appState.notifications.filter(n => !n.isRead).length;
+        if (unreadCount > 0) {
+            badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+            badge.style.display = 'flex';
+            badge.classList.add('pulse'); // Add visual effect
+        } else {
+            badge.style.display = 'none';
+            badge.classList.remove('pulse');
+        }
+    }
+}
+
 function addNotification(message, type = 'info') {
     const newNotification = {
-        id: Date.now(), // Temporary ID for client-side rendering
+        id: Date.now(),
         message,
         type,
         createdAt: new Date().toISOString(),
         isRead: false,
     };
-    appState.notifications.unshift(newNotification); // Add to the beginning of the array
+    appState.notifications.unshift(newNotification);
     renderNotificationPanel();
+    updateNotificationBadge();
+    // Show toast notification for immediate feedback
+    showToastNotification(message, type);
 }
 
-/**
- * Renders the notification panel with the current state.
- */
+function showToastNotification(message, type = 'info') {
+    const container = document.getElementById('notification-container');
+    if (!container) return; // Use the same container as the main notifications
+    
+    const toast = document.createElement('div');
+    toast.className = `notification premium-notification notification-${type}`; // Reuse existing styles
+    toast.innerHTML = `
+        <div class="notification-content">
+            <i class="fas ${getNotificationIcon(type)}"></i>
+            <span>${message}</span>
+        </div>
+        <button class="notification-close" onclick="this.parentElement.remove()">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    
+    container.appendChild(toast);
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        if (toast.parentElement) {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(100%)';
+            setTimeout(() => toast.remove(), 300);
+        }
+    }, 5000);
+}
+
+
+function getNotificationIcon(type) {
+    const iconMap = {
+        info: 'fa-info-circle',
+        success: 'fa-check-circle',
+        warning: 'fa-exclamation-triangle',
+        error: 'fa-times-circle',
+        message: 'fa-comment-alt',
+        job: 'fa-briefcase',
+        quote: 'fa-file-invoice-dollar',
+        estimation: 'fa-calculator',
+        user: 'fa-user',
+        file: 'fa-paperclip'
+    };
+    return iconMap[type] || 'fa-info-circle';
+}
+
 function renderNotificationPanel() {
     const panelList = document.getElementById('notification-panel-list');
-    const badge = document.getElementById('notification-badge');
-    
-    // Use `isRead` property from the backend data
-    const unreadCount = appState.notifications.filter(n => !n.isRead).length;
-
-    if (badge) {
-        if (unreadCount > 0) {
-            badge.textContent = unreadCount;
-            badge.style.display = 'flex';
-        } else {
-            badge.style.display = 'none';
-        }
-    }
-
     if (!panelList) return;
 
     if (appState.notifications.length === 0) {
@@ -386,80 +489,135 @@ function renderNotificationPanel() {
             <div class="notification-empty-state">
                 <i class="fas fa-bell-slash"></i>
                 <p>No new notifications</p>
+                <small>You'll see updates here when things happen</small>
             </div>`;
         return;
     }
-
+    
     panelList.innerHTML = appState.notifications.map(n => {
-        const iconMap = {
-            info: 'fa-info-circle',
-            success: 'fa-check-circle',
-            warning: 'fa-exclamation-triangle',
-            error: 'fa-times-circle',
-            message: 'fa-comment-alt',
-            job: 'fa-briefcase',
-            quote: 'fa-file-invoice-dollar',
-            estimation: 'fa-calculator',
-            user: 'fa-user',
-            file: 'fa-paperclip'
-        };
-        const icon = iconMap[n.type] || 'fa-info-circle';
-        
+        const icon = getNotificationIcon(n.type);
+        const timeAgo = formatMessageTimestamp(n.createdAt);
+        // Ensure metadata is properly escaped for the onclick attribute
+        const metadataString = JSON.stringify(n.metadata || {}).replace(/"/g, '&quot;');
+
         return `
-            <div class="notification-item ${n.isRead ? '' : 'unread'}" data-id="${n.id}">
+            <div class="notification-item ${n.isRead ? '' : 'unread'}" data-id="${n.id}" onclick="handleNotificationClick('${n.id}', '${n.type}', ${metadataString})">
                 <div class="notification-item-icon ${n.type}">
                     <i class="fas ${icon}"></i>
                 </div>
                 <div class="notification-item-content">
                     <p>${n.message}</p>
-                    <span class="timestamp">${formatMessageTimestamp(n.createdAt)}</span>
+                    <span class="timestamp">${timeAgo}</span>
                 </div>
+                ${!n.isRead ? '<div class="unread-indicator"></div>' : ''}
             </div>`;
     }).join('');
 }
 
-/**
- * Calls the backend to mark all notifications as read.
- */
-async function markAllAsRead() {
-    try {
-        await apiCall('/notifications/mark-all-read', 'PUT');
-        // Optimistically update the UI for immediate feedback
-        appState.notifications.forEach(n => n.isRead = true);
-        renderNotificationPanel();
-        showNotification('All notifications marked as read.', 'success');
-    } catch (error) {
-        console.error('Failed to mark all notifications as read:', error);
+function handleNotificationClick(notificationId, type, metadata) {
+    markNotificationAsRead(notificationId);
+    
+    switch (type) {
+        case 'job':
+            if (metadata.action === 'created') {
+                renderAppSection('jobs');
+            } else if (metadata.jobId) {
+                renderAppSection('jobs');
+            }
+            break;
+        case 'quote':
+            if (appState.currentUser.type === 'designer') {
+                renderAppSection('my-quotes');
+            } else {
+                renderAppSection('jobs');
+            }
+            break;
+        case 'message':
+            if (metadata.conversationId) {
+                renderConversationView(metadata.conversationId);
+            } else {
+                renderAppSection('messages');
+            }
+            break;
+        case 'estimation':
+            renderAppSection('my-estimations');
+            break;
+        default:
+            break;
+    }
+
+    const panel = document.getElementById('notification-panel');
+    if (panel) {
+        panel.classList.remove('active');
     }
 }
 
-/**
- * Toggles the visibility of the notification panel.
- * If the panel is opened and has unread messages, it marks them all as read.
- * @param {Event} event The click event.
- */
+async function markNotificationAsRead(notificationId) {
+    // Client-side optimistic update first
+    const notification = appState.notifications.find(n => n.id == notificationId); // Use == for type coercion if needed
+    if (notification && !notification.isRead) {
+        notification.isRead = true;
+        renderNotificationPanel();
+        updateNotificationBadge();
+    }
+    
+    try {
+        // Backend update
+        await apiCall(`/notifications/${notificationId}/read`, 'PUT');
+    } catch (error) {
+        console.error('Failed to mark notification as read on backend:', error);
+        // Revert if API call fails (optional)
+        if (notification) {
+            notification.isRead = false;
+        }
+        renderNotificationPanel();
+        updateNotificationBadge();
+    }
+}
+
+
+async function markAllAsRead() {
+    try {
+        await apiCall('/notifications/mark-all-read', 'PUT');
+        appState.notifications.forEach(n => n.isRead = true);
+        renderNotificationPanel();
+        updateNotificationBadge();
+        showNotification('All notifications marked as read.', 'success');
+    } catch (error) {
+        console.error('Failed to mark all notifications as read:', error);
+        showNotification('Failed to mark notifications as read', 'error');
+    }
+}
+
 async function toggleNotificationPanel(event) {
     event.stopPropagation();
     const panel = document.getElementById('notification-panel');
     if (panel) {
-        panel.classList.toggle('active');
-        
-        if (panel.classList.contains('active')) {
-             const hasUnread = appState.notifications.some(n => !n.isRead);
-             if (hasUnread) {
-                try {
-                    await apiCall('/notifications/mark-all-read', 'PUT');
-                    // Update client state after successful API call
-                    appState.notifications.forEach(n => n.isRead = true);
-                    // After a short delay to allow animation, update the badge
-                    setTimeout(renderNotificationPanel, 500);
-                } catch (error) {
-                    console.error("Failed to mark notifications as read on open:", error);
-                }
-             }
+        const isActive = panel.classList.toggle('active');
+
+        if (isActive) {
+            await fetchNotifications(); // Refresh on open
+            
+            const hasUnread = appState.notifications.some(n => !n.isRead);
+            if (hasUnread) {
+                setTimeout(async () => {
+                    try {
+                        // Check again if panel is still active before making API call
+                        if (panel.classList.contains('active')) {
+                            await apiCall('/notifications/mark-all-read', 'PUT');
+                            appState.notifications.forEach(n => n.isRead = true);
+                            updateNotificationBadge();
+                            renderNotificationPanel();
+                        }
+                    } catch (error) {
+                        console.error("Failed to mark notifications as read on open:", error);
+                    }
+                }, 1000); 
+            }
         }
     }
 }
+
 
 // --- ENHANCED ESTIMATION SYSTEM ---
 async function loadUserEstimations() {
@@ -578,6 +736,7 @@ function getEstimationStatusConfig(status) {
 
 async function viewEstimationFiles(estimationId) {
     try {
+        addNotification('Loading estimation files...', 'info');
         const response = await apiCall(`/estimation/${estimationId}/files`, 'GET');
         const files = response.files || [];
         const content = `
@@ -591,19 +750,21 @@ async function viewEstimationFiles(estimationId) {
             </div>`;
         showGenericModal(content, 'max-width: 600px;');
     } catch (error) {
-        showNotification('Error loading files', 'error');
+        addNotification('Failed to load estimation files.', 'error');
     }
 }
 
 async function downloadEstimationResult(estimationId) {
     try {
+        addNotification('Preparing download...', 'info');
         const response = await apiCall(`/estimation/${estimationId}/result`, 'GET');
         if (response.success && response.resultFile) {
             addNotification('Your estimation result is ready for download.', 'success');
             window.open(response.resultFile.url, '_blank');
+            setTimeout(() => fetchNotifications(), 1000);
         }
     } catch (error) {
-        showNotification('Error downloading result file', 'error');
+        addNotification('Failed to download estimation result.', 'error');
     }
 }
 
@@ -611,12 +772,15 @@ async function deleteEstimation(estimationId) {
     if (confirm('Are you sure you want to delete this estimation request? This action cannot be undone.')) {
         try {
             await apiCall(`/estimation/${estimationId}`, 'DELETE', null, 'Estimation deleted successfully');
+            addNotification('Estimation request has been deleted successfully.', 'info');
             fetchAndRenderMyEstimations();
-        } catch (error) {}
+        } catch (error) {
+            addNotification('Failed to delete estimation request. Please try again.', 'error');
+        }
     }
 }
 
-// Continue with existing job functions...
+// --- ENHANCED JOB FUNCTIONS ---
 async function fetchAndRenderJobs(loadMore = false) {
     const jobsListContainer = document.getElementById('jobs-list');
     const loadMoreContainer = document.getElementById('load-more-container');
@@ -714,7 +878,6 @@ async function fetchAndRenderJobs(loadMore = false) {
     }
 }
 
-// Continue with other existing functions...
 async function fetchAndRenderApprovedJobs() {
     const container = document.getElementById('app-container');
     container.innerHTML = `
@@ -759,13 +922,15 @@ async function fetchAndRenderApprovedJobs() {
 }
 
 async function markJobCompleted(jobId) {
-    if (confirm('Are you sure you want to mark this job as completed? This action cannot be undone.')) {
-        await apiCall(`/jobs/${jobId}`, 'PUT', { status: 'completed' }, 'Project marked as completed successfully!')
-            .then(() => {
-                addNotification('A project has been marked as completed!', 'job');
-                fetchAndRenderApprovedJobs();
-            })
-            .catch(() => {});
+    if (confirm('Are you sure you want to mark this job as completed? This action cannot be undone and will notify the designer.')) {
+        try {
+            await apiCall(`/jobs/${jobId}`, 'PUT', { status: 'completed' }, 'Project marked as completed successfully!');
+            addNotification('A project has been marked as completed! The designer has been notified.', 'job');
+            setTimeout(() => fetchNotifications(), 2000);
+            fetchAndRenderApprovedJobs();
+        } catch (error) {
+            addNotification('Failed to mark job as completed. Please try again.', 'error');
+        }
     }
 }
 
@@ -830,7 +995,6 @@ async function editQuote(quoteId) {
     try {
         const response = await apiCall(`/quotes/${quoteId}`, 'GET');
         const quote = response.data;
-        
         const content = `
             <div class="modal-header premium-modal-header"><h3><i class="fas fa-edit"></i> Edit Your Quote</h3><p class="modal-subtitle">Update your quote details for: <strong>${quote.jobTitle}</strong></p></div>
             <form id="edit-quote-form" class="premium-form">
@@ -845,7 +1009,9 @@ async function editQuote(quoteId) {
             </form>`;
         showGenericModal(content, 'max-width: 600px;');
         document.getElementById('edit-quote-form').addEventListener('submit', handleQuoteEdit);
-    } catch (error) {}
+    } catch (error) {
+        addNotification('Failed to load quote details for editing.', 'error');
+    }
 }
 
 async function handleQuoteEdit(event) {
@@ -855,7 +1021,6 @@ async function handleQuoteEdit(event) {
     const originalText = submitBtn.innerHTML;
     submitBtn.innerHTML = '<div class="btn-spinner"></div> Updating...';
     submitBtn.disabled = true;
-
     try {
         const formData = new FormData();
         formData.append('quoteAmount', form['amount'].value);
@@ -867,10 +1032,12 @@ async function handleQuoteEdit(event) {
             }
         }
         await apiCall(`/quotes/${form['quoteId'].value}`, 'PUT', formData, 'Quote updated successfully!');
+        addNotification('Your quote has been updated successfully. The client will be notified of the changes.', 'quote');
         closeModal();
         fetchAndRenderMyQuotes();
+        setTimeout(() => fetchNotifications(), 2000);
     } catch (error) {
-        console.error("Quote edit failed:", error);
+        addNotification('Failed to update quote. Please try again.', 'error');
     } finally {
         if (submitBtn) {
             submitBtn.innerHTML = originalText;
@@ -886,41 +1053,52 @@ async function handlePostJob(event) {
     const originalText = submitBtn.innerHTML;
     submitBtn.innerHTML = '<div class="btn-spinner"></div> Posting...';
     submitBtn.disabled = true;
-    
+
     try {
         const formData = new FormData();
         ['title', 'description', 'budget', 'deadline', 'skills', 'link'].forEach(field => {
-            if (form[field]) formData.append(field, form[field].value);
+            if (form[field] && form[field].value) formData.append(field, form[field].value);
         });
         if (form.attachment.files.length > 0) {
             formData.append('attachment', form.attachment.files[0]);
         }
         await apiCall('/jobs', 'POST', formData, 'Project posted successfully!');
-        addNotification(`Your new project "${form.title.value}" has been posted.`, 'job');
+        addNotification(`Your project "${form.title.value}" has been posted successfully. All designers will be notified automatically.`, 'job');
+        setTimeout(() => fetchNotifications(), 2000);
         form.reset();
         renderAppSection('jobs');
-    } catch(error) {} finally {
+    } catch (error) {
+        addNotification('Failed to post project. Please try again.', 'error');
+    } finally {
         submitBtn.innerHTML = originalText;
         submitBtn.disabled = false;
     }
 }
 
+
 async function deleteJob(jobId) {
     if (confirm('Are you sure you want to delete this project? This will also delete all associated quotes and cannot be undone.')) {
-        await apiCall(`/jobs/${jobId}`, 'DELETE', null, 'Project deleted successfully.')
-            .then(() => fetchAndRenderJobs())
-            .catch(() => {});
+        try {
+            await apiCall(`/jobs/${jobId}`, 'DELETE', null, 'Project deleted successfully.');
+            addNotification('Project has been deleted successfully.', 'info');
+            fetchAndRenderJobs();
+        } catch (error) {
+            addNotification('Failed to delete project. Please try again.', 'error');
+        }
     }
 }
 
+
 async function deleteQuote(quoteId) {
     if (confirm('Are you sure you want to delete this quote? This action cannot be undone.')) {
-        await apiCall(`/quotes/${quoteId}`, 'DELETE', null, 'Quote deleted successfully.')
-            .then(() => {
-                fetchAndRenderMyQuotes();
-                loadUserQuotes();
-            })
-            .catch(() => {});
+        try {
+            await apiCall(`/quotes/${quoteId}`, 'DELETE', null, 'Quote deleted successfully.');
+            addNotification('Quote has been deleted successfully.', 'info');
+            fetchAndRenderMyQuotes();
+            loadUserQuotes();
+        } catch (error) {
+            addNotification('Failed to delete quote. Please try again.', 'error');
+        }
     }
 }
 
@@ -973,15 +1151,17 @@ async function viewQuotes(jobId) {
 }
 
 async function approveQuote(quoteId, jobId) {
-    if (confirm('Are you sure you want to approve this quote? This will assign the job to the designer and reject other quotes.')) {
-        await apiCall(`/quotes/${quoteId}/approve`, 'PUT', { jobId }, 'Quote approved successfully!')
-            .then(() => {
-                addNotification('You have approved a quote and assigned a new project!', 'quote');
-                closeModal();
-                fetchAndRenderJobs();
-                showNotification('Project has been assigned! You can now communicate with the designer.', 'success');
-            })
-            .catch(() => {});
+    if (confirm('Are you sure you want to approve this quote? This will assign the job to the designer and notify all participants.')) {
+        try {
+            await apiCall(`/quotes/${quoteId}/approve`, 'PUT', { jobId }, 'Quote approved successfully!');
+            addNotification('You have approved a quote and assigned the project! All affected designers have been notified of the decision.', 'quote');
+            setTimeout(() => fetchNotifications(), 2000);
+            closeModal();
+            fetchAndRenderJobs();
+            showNotification('Project has been assigned! You can now communicate with the designer.', 'success');
+        } catch (error) {
+            addNotification('Failed to approve quote. Please try again.', 'error');
+        }
     }
 }
 
@@ -1021,20 +1201,22 @@ async function handleQuoteSubmit(event) {
             }
         }
         await apiCall('/quotes', 'POST', formData, 'Quote submitted successfully!');
-        addNotification(`Your quote for a project has been submitted.`, 'quote');
+        addNotification('Your quote has been submitted successfully. The client will be notified immediately and you will receive updates about its status.', 'quote');
+        setTimeout(() => fetchNotifications(), 2000);
         appState.userSubmittedQuotes.add(form['jobId'].value);
         closeModal();
         fetchAndRenderJobs();
         showNotification('Your quote has been submitted! You can track its status in "My Quotes".', 'success');
     } catch (error) {
-        console.error("Quote submission failed:", error);
+        addNotification('Failed to submit quote. Please try again.', 'error');
     } finally {
-        if(submitBtn) {
-           submitBtn.innerHTML = originalText;
-           submitBtn.disabled = false;
+        if (submitBtn) {
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
         }
     }
 }
+
 
 // --- ENHANCED MESSAGING SYSTEM ---
 async function openConversation(jobId, recipientId) {
@@ -1043,8 +1225,11 @@ async function openConversation(jobId, recipientId) {
         const response = await apiCall('/messages/find', 'POST', { jobId, recipientId });
         if (response.success) {
             renderConversationView(response.data);
+            setTimeout(() => fetchNotifications(), 1000);
         }
-    } catch (error) {}
+    } catch (error) {
+        addNotification('Failed to open conversation. Please try again.', 'error');
+    }
 }
 
 async function fetchAndRenderConversations() {
@@ -1223,21 +1408,26 @@ async function handleSendMessage(conversationId) {
     const sendBtn = document.querySelector('.send-button');
     const text = input.value.trim();
     if (!text) return;
+
     input.disabled = true;
     sendBtn.disabled = true;
     sendBtn.innerHTML = '<div class="btn-spinner"></div>';
+
     try {
         const response = await apiCall(`/messages/${conversationId}/messages`, 'POST', { text });
         input.value = '';
-        addNotification('You have a new message!', 'message');
+        addNotification('Message sent successfully! The recipient will be notified.', 'message');
+        
         const messagesContainer = document.getElementById('chat-messages-container');
         const newMessage = response.data;
-        if(messagesContainer.querySelector('.empty-messages')) {
+
+        if (messagesContainer.querySelector('.empty-messages')) {
             messagesContainer.innerHTML = '';
         }
+
         const messageBubble = document.createElement('div');
         messageBubble.className = 'message-wrapper premium-message me';
-        const time = new Date(newMessage.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        const time = new Date(newMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         
         messageBubble.innerHTML = `
             <div class="message-avatar-spacer" style="width: 40px; flex-shrink: 0;"></div>
@@ -1247,13 +1437,18 @@ async function handleSendMessage(conversationId) {
             </div>`;
         messagesContainer.appendChild(messageBubble);
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    } catch(error) {} finally {
+        
+        setTimeout(() => fetchNotifications(), 1000);
+    } catch (error) {
+        addNotification('Failed to send message. Please try again.', 'error');
+    } finally {
         input.disabled = false;
         sendBtn.disabled = false;
         sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
         input.focus();
     }
 }
+
 
 // --- ENHANCED UI & MODAL FUNCTIONS ---
 function showAuthModal(view) {
@@ -1304,57 +1499,78 @@ function showAppView() {
     document.getElementById('app-content').style.display = 'flex';
     document.getElementById('auth-buttons-container').style.display = 'none';
     document.getElementById('user-info-container').style.display = 'flex';
-    
+
     const navMenu = document.getElementById('main-nav-menu');
     if (navMenu) navMenu.innerHTML = '';
-    
+
     const user = appState.currentUser;
     document.getElementById('user-info-name').textContent = user.name;
     document.getElementById('user-info-avatar').textContent = (user.name || "A").charAt(0).toUpperCase();
-    
+
     // Setup user dropdown
     document.getElementById('user-info').addEventListener('click', (e) => {
-        e.stopPropagation(); // Prevent global click listener from closing it immediately
+        e.stopPropagation();
         document.getElementById('user-info-dropdown').classList.toggle('active');
     });
+
     document.getElementById('user-settings-link').addEventListener('click', (e) => {
         e.preventDefault();
         renderAppSection('settings');
         document.getElementById('user-info-dropdown').classList.remove('active');
     });
+
     document.getElementById('user-logout-link').addEventListener('click', (e) => {
         e.preventDefault();
         logout();
     });
 
-    // Setup notification panel event listeners
-    document.getElementById('notification-bell-container').addEventListener('click', toggleNotificationPanel);
-    document.getElementById('clear-notifications-btn').addEventListener('click', (e) => {
-        e.stopPropagation();
-        markAllAsRead(); // Changed from clearNotifications to markAllAsRead
-    });
-     
+    // Enhanced notification panel setup
+    const notificationBell = document.getElementById('notification-bell-container');
+    if (notificationBell) {
+        notificationBell.removeEventListener('click', toggleNotificationPanel);
+        notificationBell.addEventListener('click', toggleNotificationPanel);
+    }
+
+    const clearBtn = document.getElementById('clear-notifications-btn');
+    if (clearBtn) {
+        // Remove old listener if it exists to prevent duplicates
+        const newClearBtn = clearBtn.cloneNode(true);
+        clearBtn.parentNode.replaceChild(newClearBtn, clearBtn);
+        newClearBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            markAllAsRead();
+        });
+    }
+
     document.getElementById('sidebarUserName').textContent = user.name;
     document.getElementById('sidebarUserType').textContent = user.type;
     document.getElementById('sidebarUserAvatar').textContent = (user.name || "A").charAt(0).toUpperCase();
-    
+
     buildSidebarNav();
     renderAppSection('dashboard');
-    
-    // Initial fetch of notifications when the app view is shown
-    fetchNotifications();
-    
+
+    // Start notification system
+    fetchNotifications(); // Initial fetch
+
     // Start polling for new notifications every 30 seconds
     if (appState.notificationInterval) clearInterval(appState.notificationInterval);
-    appState.notificationInterval = setInterval(fetchNotifications, 30000);
-    
+    appState.notificationInterval = setInterval(() => {
+        fetchNotifications();
+    }, 30000);
+
+    // Load user-specific data
     if (user.type === 'designer') {
         loadUserQuotes();
     }
     if (user.type === 'contractor') {
         loadUserEstimations();
     }
+
+    // Start inactivity timer
+    resetInactivityTimer();
+    console.log('5-minute inactivity timer started');
 }
+
 
 function showLandingPageView() {
     document.getElementById('landing-page-content').style.display = 'block';
@@ -1620,7 +1836,7 @@ function removeFile(index) {
 async function handleEstimationSubmit() {
     const form = document.getElementById('estimation-form');
     const submitBtn = document.getElementById('submit-estimation-btn');
-    
+
     if (!appState.uploadedFile || appState.uploadedFile.length === 0) {
         showNotification('Please select files for estimation', 'warning');
         return;
@@ -1631,10 +1847,8 @@ async function handleEstimationSubmit() {
         showNotification('Please fill in all required fields', 'warning');
         return;
     }
-
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<div class="btn-spinner"></div> Submitting Request...';
-
     try {
         const formData = new FormData();
         formData.append('projectTitle', projectTitle);
@@ -1645,20 +1859,22 @@ async function handleEstimationSubmit() {
             formData.append('files', appState.uploadedFile[i]);
         }
         await apiCall('/estimation/contractor/submit', 'POST', formData, 'Estimation request submitted successfully!');
-        addNotification(`Your AI estimation request for "${projectTitle}" is submitted.`, 'estimation');
+        addNotification(`Your AI estimation request for "${projectTitle}" has been submitted successfully. You will be notified when the analysis is complete.`, 'estimation');
+        setTimeout(() => fetchNotifications(), 2000);
         form.reset();
         appState.uploadedFile = null;
         document.getElementById('file-info-container').style.display = 'none';
         renderAppSection('my-estimations');
     } catch (error) {
-        console.error('Estimation submission failed:', error);
+        addNotification('Failed to submit estimation request. Please try again.', 'error');
     } finally {
         submitBtn.disabled = false;
         submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Estimation Request';
     }
 }
 
-// Enhanced notification system
+
+// Function to show toast-style notifications
 function showNotification(message, type = 'info', duration = 4000) {
     const notificationContainer = document.getElementById('notification-container');
     if (!notificationContainer) return;
