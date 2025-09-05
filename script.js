@@ -435,35 +435,6 @@ function addNotification(message, type = 'info') {
     showToastNotification(message, type);
 }
 
-function showToastNotification(message, type = 'info') {
-    const container = document.getElementById('notification-container');
-    if (!container) return; // Use the same container as the main notifications
-    
-    const toast = document.createElement('div');
-    toast.className = `notification premium-notification notification-${type}`; // Reuse existing styles
-    toast.innerHTML = `
-        <div class="notification-content">
-            <i class="fas ${getNotificationIcon(type)}"></i>
-            <span>${message}</span>
-        </div>
-        <button class="notification-close" onclick="this.parentElement.remove()">
-            <i class="fas fa-times"></i>
-        </button>
-    `;
-    
-    container.appendChild(toast);
-    
-    // Auto remove after 5 seconds
-    setTimeout(() => {
-        if (toast.parentElement) {
-            toast.style.opacity = '0';
-            toast.style.transform = 'translateX(100%)';
-            setTimeout(() => toast.remove(), 300);
-        }
-    }, 5000);
-}
-
-
 function getNotificationIcon(type) {
     const iconMap = {
         info: 'fa-info-circle',
@@ -1904,18 +1875,72 @@ async function handleEstimationSubmit() {
     }
 }
 
+// Fixed showToastNotification function
+function showToastNotification(message, type = 'info') {
+    // Create container if it doesn't exist
+    let container = document.getElementById('notification-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'notification-container';
+        container.className = 'notification-container';
+        document.body.appendChild(container);
+    }
 
-// Function to show toast-style notifications
+    const toast = document.createElement('div');
+    toast.className = `toast-notification toast-${type}`;
+    toast.innerHTML = `
+        <div class="toast-content">
+            <i class="fas ${getNotificationIcon(type)}"></i>
+            <span>${message}</span>
+        </div>
+        <button class="toast-close" onclick="this.parentElement.remove()">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+
+    container.appendChild(toast);
+
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        if (toast.parentElement) {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(100%)';
+            setTimeout(() => toast.remove(), 300);
+        }
+    }, 5000);
+}
+
+// Fixed main showNotification function
 function showNotification(message, type = 'info', duration = 4000) {
-    const notificationContainer = document.getElementById('notification-container');
-    if (!notificationContainer) return;
+    // Create container if it doesn't exist
+    let notificationContainer = document.getElementById('notification-container');
+    if (!notificationContainer) {
+        notificationContainer = document.createElement('div');
+        notificationContainer.id = 'notification-container';
+        notificationContainer.className = 'notification-container';
+        document.body.appendChild(notificationContainer);
+    }
+
     const notification = document.createElement('div');
     notification.className = `notification premium-notification notification-${type}`;
-    const icons = { success: 'fa-check-circle', error: 'fa-exclamation-triangle', warning: 'fa-exclamation-circle', info: 'fa-info-circle' };
+    const icons = {
+        success: 'fa-check-circle',
+        error: 'fa-exclamation-triangle',
+        warning: 'fa-exclamation-circle',
+        info: 'fa-info-circle'
+    };
+
     notification.innerHTML = `
-        <div class="notification-content"><i class="fas ${icons[type]}"></i><span>${message}</span></div>
-        <button class="notification-close" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>`;
+        <div class="notification-content">
+            <i class="fas ${icons[type]}"></i>
+            <span>${message}</span>
+        </div>
+        <button class="notification-close" onclick="this.parentElement.remove()">
+            <i class="fas fa-times"></i>
+        </button>`;
+
     notificationContainer.appendChild(notification);
+
     setTimeout(() => {
         if (notification.parentElement) {
             notification.style.opacity = '0';
@@ -1924,6 +1949,7 @@ function showNotification(message, type = 'info', duration = 4000) {
         }
     }, duration);
 }
+
 
 // --- TEMPLATE GETTERS ---
 function getLoginTemplate() {
