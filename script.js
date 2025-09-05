@@ -1403,44 +1403,75 @@ async function renderConversationView(conversationOrId) {
     }
 }
 
+// FIXED MESSAGE HANDLER
 async function handleSendMessage(conversationId) {
     const input = document.getElementById('message-text-input');
     const sendBtn = document.querySelector('.send-button');
     const text = input.value.trim();
-    if (!text) return;
+
+    if (!text) {
+        showNotification('Please enter a message', 'warning');
+        return;
+    }
+
+    if (!conversationId) {
+        showNotification('Conversation not found', 'error');
+        return;
+    }
 
     input.disabled = true;
     sendBtn.disabled = true;
     sendBtn.innerHTML = '<div class="btn-spinner"></div>';
 
     try {
-        const response = await apiCall(`/messages/${conversationId}/messages`, 'POST', { text });
-        input.value = '';
-        addNotification('Message sent successfully! The recipient will be notified.', 'message');
-        
-        const messagesContainer = document.getElementById('chat-messages-container');
-        const newMessage = response.data;
+        console.log(`Sending message to conversation: ${conversationId}`);
 
-        if (messagesContainer.querySelector('.empty-messages')) {
-            messagesContainer.innerHTML = '';
+        const response = await fetch(`${BACKEND_URL}/messages/${conversationId}/messages`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${appState.jwtToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ text })
+        });
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || `Failed to send message: ${response.status}`);
         }
+        if (data.success) {
+            input.value = '';
 
-        const messageBubble = document.createElement('div');
-        messageBubble.className = 'message-wrapper premium-message me';
-        const time = new Date(newMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        
-        messageBubble.innerHTML = `
-            <div class="message-avatar-spacer" style="width: 40px; flex-shrink: 0;"></div>
-            <div class="message-content">
-                <div class="message-bubble premium-bubble me">${newMessage.text}</div>
-                <div class="message-meta">${time}</div>
-            </div>`;
-        messagesContainer.appendChild(messageBubble);
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        
-        setTimeout(() => fetchNotifications(), 1000);
-    } catch (error) {
-        addNotification('Failed to send message. Please try again.', 'error');
+            // Add client-side notification for immediate feedback
+            addNotification('Message sent successfully!', 'message');
+
+            const messagesContainer = document.getElementById('chat-messages-container');
+            const newMessage = data.data;
+
+            if(messagesContainer.querySelector('.empty-messages')) {
+                messagesContainer.innerHTML = '';
+            }
+
+            const messageBubble = document.createElement('div');
+            messageBubble.className = 'message-wrapper premium-message me';
+            const time = new Date(newMessage.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
+            messageBubble.innerHTML = `
+                <div class="message-avatar-spacer" style="width: 40px; flex-shrink: 0;"></div>
+                <div class="message-content">
+                    <div class="message-bubble premium-bubble me">${newMessage.text}</div>
+                    <div class="message-meta">${time}</div>
+                </div>`;
+            messagesContainer.appendChild(messageBubble);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+            // Refresh notifications to see if there are any updates
+            setTimeout(() => fetchNotifications(), 1000);
+        } else {
+            throw new Error(data.error || 'Failed to send message');
+        }
+    } catch(error) {
+        console.error('Message send failed:', error);
+        showNotification(error.message || 'Failed to send message. Please try again.', 'error');
     } finally {
         input.disabled = false;
         sendBtn.disabled = false;
