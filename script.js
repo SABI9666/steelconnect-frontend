@@ -431,8 +431,8 @@ function addNotification(message, type = 'info') {
     appState.notifications.unshift(newNotification);
     renderNotificationPanel();
     updateNotificationBadge();
-    // Show toast notification for immediate feedback
-    showToastNotification(message, type);
+    // Show pop-up notification for immediate feedback
+    showNotification(message, type);
 }
 
 function getNotificationIcon(type) {
@@ -567,24 +567,9 @@ async function toggleNotificationPanel(event) {
         const isActive = panel.classList.toggle('active');
 
         if (isActive) {
-            await fetchNotifications(); // Refresh on open
-            
-            const hasUnread = appState.notifications.some(n => !n.isRead);
-            if (hasUnread) {
-                setTimeout(async () => {
-                    try {
-                        // Check again if panel is still active before making API call
-                        if (panel.classList.contains('active')) {
-                            await apiCall('/notifications/mark-all-read', 'PUT');
-                            appState.notifications.forEach(n => n.isRead = true);
-                            updateNotificationBadge();
-                            renderNotificationPanel();
-                        }
-                    } catch (error) {
-                        console.error("Failed to mark notifications as read on open:", error);
-                    }
-                }, 1000); 
-            }
+            // Refresh notifications from the server every time the panel is opened
+            // to ensure the list is up-to-date.
+            await fetchNotifications(); 
         }
     }
 }
@@ -1262,6 +1247,28 @@ function getAvatarColor(name) {
     return colors[index];
 }
 
+// Corrected function to provide detailed timestamps for chat messages
+function formatDetailedTimestamp(date) {
+    const today = new Date();
+    const messageDate = new Date(date);
+
+    const time = messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    if (today.toDateString() === messageDate.toDateString()) {
+        return time; // e.g., "10:30 AM"
+    }
+
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+    if (yesterday.toDateString() === messageDate.toDateString()) {
+        return `Yesterday, ${time}`; // e.g., "Yesterday, 2:15 PM"
+    }
+    
+    // For older dates
+    return `${messageDate.toLocaleDateString()}, ${time}`; // e.g., "9/5/2025, 9:00 AM"
+}
+
+
 function formatMessageTimestamp(date) {
     const now = new Date();
     const messageDate = new Date(date);
@@ -1352,7 +1359,7 @@ async function renderConversationView(conversationOrId) {
                 }
 
                 const isMine = msg.senderId === appState.currentUser.id;
-                const time = new Date(msg.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                const timestamp = formatDetailedTimestamp(msg.createdAt);
                 const prevMsg = messages[index - 1];
                 const showAvatar = !prevMsg || prevMsg.senderId !== msg.senderId;
                 const avatarColor = getAvatarColor(msg.senderName);
@@ -1362,7 +1369,7 @@ async function renderConversationView(conversationOrId) {
                         <div class="message-content">
                             ${showAvatar && !isMine ? `<div class="message-sender">${msg.senderName}</div>` : ''}
                             <div class="message-bubble premium-bubble ${isMine ? 'me' : 'them'}">${msg.text}</div>
-                            <div class="message-meta">${time}</div>
+                            <div class="message-meta">${timestamp}</div>
                         </div>
                     </div>`;
             });
@@ -1424,13 +1431,13 @@ async function handleSendMessage(conversationId) {
 
             const messageBubble = document.createElement('div');
             messageBubble.className = 'message-wrapper premium-message me';
-            const time = new Date(newMessage.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            const timestamp = formatDetailedTimestamp(newMessage.createdAt);
 
             messageBubble.innerHTML = `
                 <div class="message-avatar-spacer" style="width: 40px; flex-shrink: 0;"></div>
                 <div class="message-content">
                     <div class="message-bubble premium-bubble me">${newMessage.text}</div>
-                    <div class="message-meta">${time}</div>
+                    <div class="message-meta">${timestamp}</div>
                 </div>`;
             messagesContainer.appendChild(messageBubble);
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
@@ -1875,44 +1882,8 @@ async function handleEstimationSubmit() {
     }
 }
 
-// Fixed showToastNotification function
-function showToastNotification(message, type = 'info') {
-    // Create container if it doesn't exist
-    let container = document.getElementById('notification-container');
-    if (!container) {
-        container = document.createElement('div');
-        container.id = 'notification-container';
-        container.className = 'notification-container';
-        document.body.appendChild(container);
-    }
-
-    const toast = document.createElement('div');
-    toast.className = `toast-notification toast-${type}`;
-    toast.innerHTML = `
-        <div class="toast-content">
-            <i class="fas ${getNotificationIcon(type)}"></i>
-            <span>${message}</span>
-        </div>
-        <button class="toast-close" onclick="this.parentElement.remove()">
-            <i class="fas fa-times"></i>
-        </button>
-    `;
-
-    container.appendChild(toast);
-
-    // Auto remove after 5 seconds
-    setTimeout(() => {
-        if (toast.parentElement) {
-            toast.style.opacity = '0';
-            toast.style.transform = 'translateX(100%)';
-            setTimeout(() => toast.remove(), 300);
-        }
-    }, 5000);
-}
-
-// Fixed main showNotification function
+// Consolidated notification/toast function
 function showNotification(message, type = 'info', duration = 4000) {
-    // Create container if it doesn't exist
     let notificationContainer = document.getElementById('notification-container');
     if (!notificationContainer) {
         notificationContainer = document.createElement('div');
@@ -1927,12 +1898,19 @@ function showNotification(message, type = 'info', duration = 4000) {
         success: 'fa-check-circle',
         error: 'fa-exclamation-triangle',
         warning: 'fa-exclamation-circle',
-        info: 'fa-info-circle'
+        info: 'fa-info-circle',
+        message: 'fa-comment-alt',
+        job: 'fa-briefcase',
+        quote: 'fa-file-invoice-dollar',
+        estimation: 'fa-calculator',
+        user: 'fa-user'
     };
+    
+    const iconClass = icons[type] || 'fa-info-circle';
 
     notification.innerHTML = `
         <div class="notification-content">
-            <i class="fas ${icons[type]}"></i>
+            <i class="fas ${iconClass}"></i>
             <span>${message}</span>
         </div>
         <button class="notification-close" onclick="this.parentElement.remove()">
