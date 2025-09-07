@@ -355,6 +355,10 @@ async function handleLogin(event) {
         setTimeout(() => {
             addNotification(`Welcome back, ${data.user.name}! You're now connected to real-time notifications.`, 'user');
         }, 1000);
+
+        // Auto-run basic debug on login
+        runBasicNotificationDebug();
+
     } catch (error) {
         // Error is already shown by apiCall
     }
@@ -431,12 +435,27 @@ function saveNotificationsToStorage() {
     }
 }
 
-// FIXED: Enhanced notification fetching with longer timeout for message notifications
+// FIXED: Enhanced notification fetching with proper message handling
 async function fetchNotifications() {
     if (!appState.currentUser) return;
     try {
+        console.log('🔄 Fetching notifications from server...');
         const response = await apiCall('/notifications', 'GET');
         const serverNotifications = response.data || [];
+        console.log(`📥 Received ${serverNotifications.length} notifications from server`);
+        // Log message notifications specifically
+        const messageNotifications = serverNotifications.filter(n => n.type === 'message');
+        if (messageNotifications.length > 0) {
+            console.log(`💬 Found ${messageNotifications.length} message notifications:`,
+                 messageNotifications.map(n => ({
+                    id: n.id,
+                    message: n.message,
+                    isRead: n.isRead,
+                    createdAt: n.createdAt,
+                    metadata: n.metadata
+                }))
+            );
+        }
         // Merge server notifications with stored ones
         const mergedNotifications = mergeNotifications(serverNotifications, notificationState.notifications);
         // Update state
@@ -448,20 +467,15 @@ async function fetchNotifications() {
         // Update UI
         renderNotificationPanel();
         updateNotificationBadge();
-        console.log(`Fetched and merged ${serverNotifications.length} server notifications with ${notificationState.notifications.length} total stored`);
-        // Check for new message notifications
-        const messageNotifications = serverNotifications.filter(n => n.type === 'message' && !n.isRead);
-        if (messageNotifications.length > 0) {
-            console.log(`Found ${messageNotifications.length} new message notifications`);
-        }
+        console.log(`✅ Successfully merged and stored ${mergedNotifications.length} total notifications`);
     } catch (error) {
-        console.error("Error fetching notifications:", error);
+        console.error("❌ Error fetching notifications:", error);
         // If fetch fails, still show stored notifications
         if (notificationState.notifications.length > 0) {
             appState.notifications = notificationState.notifications;
             renderNotificationPanel();
             updateNotificationBadge();
-            console.log('Using stored notifications due to fetch error');
+            console.log('📱 Using stored notifications due to fetch error');
         }
     }
 }
@@ -691,7 +705,7 @@ function updateNotificationBadge() {
     }
 }
 
-// Enhanced notification polling with better error handling
+// Enhanced notification polling with more frequent checks for messages
 function startNotificationPolling() {
     // Clear any existing interval
     if (notificationState.pollingInterval) {
@@ -699,15 +713,15 @@ function startNotificationPolling() {
     }
     // Initial fetch
     fetchNotifications();
-    // Set up polling every 30 seconds
+    // Set up polling every 15 seconds (more frequent for better message notification responsiveness)
     notificationState.pollingInterval = setInterval(() => {
         if (appState.currentUser) {
             fetchNotifications();
         } else {
             stopNotificationPolling();
         }
-    }, 30000);
-    console.log('Notification polling started');
+    }, 15000); // Reduced from 30 seconds to 15 seconds
+    console.log('🔔 Notification polling started (15 second intervals)');
 }
 
 function stopNotificationPolling() {
@@ -1454,37 +1468,48 @@ function getAvatarColor(name) {
     return colors[index];
 }
 
-// FIXED: Better date handling functions
+// FIXED: Enhanced date handling functions with proper error handling
 function formatDetailedTimestamp(date) {
     try {
         let messageDate;
         // Handle different date formats
-        if (date && typeof date === 'object' && date.toDate) {
+        if (!date) {
+            return 'Unknown time';
+        }
+        if (date && typeof date === 'object' && typeof date.toDate === 'function') {
             // Firebase Timestamp
             messageDate = date.toDate();
-        } else if (date) {
-            // Regular date string or Date object
+        } else if (date && typeof date === 'object' && typeof date.getTime === 'function') {
+            // Already a Date object
+            messageDate = date;
+        } else if (typeof date === 'string' || typeof date === 'number') {
+            // Date string or timestamp
             messageDate = new Date(date);
         } else {
-            return 'Unknown time';
+            console.warn('Unrecognized date format:', typeof date, date);
+            return 'Invalid time';
         }
         // Check if date is valid
         if (isNaN(messageDate.getTime())) {
+            console.warn('Invalid date created from:', date);
             return 'Invalid date';
         }
         const today = new Date();
         const time = messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        // Check if it's today
         if (today.toDateString() === messageDate.toDateString()) {
             return time;
         }
+        // Check if it's yesterday
         const yesterday = new Date();
         yesterday.setDate(today.getDate() - 1);
         if (yesterday.toDateString() === messageDate.toDateString()) {
             return `Yesterday, ${time}`;
         }
+        // Older dates
         return `${messageDate.toLocaleDateString()}, ${time}`;
     } catch (error) {
-        console.error('Error formatting timestamp:', error);
+        console.error('Error formatting detailed timestamp:', error, 'Input:', date);
         return 'Invalid date';
     }
 }
@@ -1493,17 +1518,25 @@ function formatMessageTimestamp(date) {
     try {
         let messageDate;
         // Handle different date formats
-        if (date && typeof date === 'object' && date.toDate) {
+        if (!date) {
+            return 'Unknown time';
+        }
+        if (date && typeof date === 'object' && typeof date.toDate === 'function') {
             // Firebase Timestamp
             messageDate = date.toDate();
-        } else if (date) {
-            // Regular date string or Date object
+        } else if (date && typeof date === 'object' && typeof date.getTime === 'function') {
+            // Already a Date object
+            messageDate = date;
+        } else if (typeof date === 'string' || typeof date === 'number') {
+            // Date string or timestamp
             messageDate = new Date(date);
         } else {
-            return 'Unknown time';
+            console.warn('Unrecognized date format:', typeof date, date);
+            return 'Invalid time';
         }
         // Check if date is valid
         if (isNaN(messageDate.getTime())) {
+            console.warn('Invalid date created from:', date);
             return 'Invalid date';
         }
         const now = new Date();
@@ -1519,12 +1552,44 @@ function formatMessageTimestamp(date) {
         if (diffDays < 7) return `${diffDays}d ago`;
         return messageDate.toLocaleDateString();
     } catch (error) {
-        console.error('Error formatting message timestamp:', error);
+        console.error('Error formatting message timestamp:', error, 'Input:', date);
         return 'Invalid date';
     }
 }
 
-// FIXED: Enhanced conversation rendering with better date handling
+// HELPER: Format date for date separators
+function formatMessageDate(date) {
+    try {
+        let messageDate;
+        if (!date) {
+            return 'Unknown Date';
+        }
+        if (date && typeof date === 'object' && typeof date.toDate === 'function') {
+            messageDate = date.toDate();
+        } else if (date && typeof date === 'object' && typeof date.getTime === 'function') {
+            messageDate = date;
+        } else if (typeof date === 'string' || typeof date === 'number') {
+            messageDate = new Date(date);
+        } else {
+            console.warn('Unrecognized date format:', typeof date, date);
+            return 'Unknown Date';
+        }
+        if (isNaN(messageDate.getTime())) {
+            console.warn('Invalid date created from:', date);
+            return 'Invalid Date';
+        }
+        return messageDate.toLocaleDateString([], {
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric'
+        });
+    } catch (error) {
+        console.error('Error formatting message date:', error, 'Input:', date);
+        return 'Invalid Date';
+    }
+}
+
+// FIXED: Enhanced conversation rendering with proper date handling and error recovery
 async function renderConversationView(conversationOrId) {
     let conversation;
     // Handle both conversation object and ID
@@ -1609,7 +1674,7 @@ async function renderConversationView(conversationOrId) {
         e.preventDefault();
         handleSendMessage(conversation.id);
     });
-    // Load messages
+    // Load messages with enhanced error handling
     const messagesContainer = document.getElementById('chat-messages-container');
     try {
         const response = await apiCall(`/messages/${conversation.id}/messages`, 'GET');
@@ -1625,38 +1690,46 @@ async function renderConversationView(conversationOrId) {
             let messagesHTML = '';
             let lastDate = null;
             messages.forEach((msg, index) => {
-                // Use improved date handling
-                const messageDate = formatMessageDate(msg.createdAt);
-                if(messageDate !== lastDate) {
-                    messagesHTML += `<div class="chat-date-separator"><span>${messageDate}</span></div>`;
-                    lastDate = messageDate;
+                try {
+                    // Use improved date handling with error recovery
+                    const messageDate = formatMessageDate(msg.createdAt);
+                    if(messageDate !== lastDate && messageDate !== 'Invalid Date') {
+                        messagesHTML += `<div class="chat-date-separator"><span>${messageDate}</span></div>`;
+                        lastDate = messageDate;
+                    }
+                    const isMine = msg.senderId === appState.currentUser.id;
+                    const timestamp = formatDetailedTimestamp(msg.createdAt);
+                    const prevMsg = messages[index - 1];
+                    const showAvatar = !prevMsg || prevMsg.senderId !== msg.senderId;
+                    const senderAvatarColor = getAvatarColor(msg.senderName || 'Unknown');
+                    messagesHTML += `
+                        <div class="message-wrapper premium-message ${isMine ? 'me' : 'them'}">
+                            ${!isMine && showAvatar ?
+                                 `<div class="message-avatar premium-msg-avatar" style="background-color: ${senderAvatarColor}">
+                                    ${(msg.senderName || 'U').charAt(0).toUpperCase()}
+                                </div>` :
+                                 '<div class="message-avatar-spacer" style="width: 40px; flex-shrink: 0;"></div>'
+                            }
+                            <div class="message-content">
+                                ${showAvatar && !isMine ? `<div class="message-sender">${msg.senderName || 'Unknown'}</div>` : ''}
+                                <div class="message-bubble premium-bubble ${isMine ? 'me' : 'them'}">${msg.text || ''}</div>
+                                <div class="message-meta">${timestamp}</div>
+                            </div>
+                        </div>`;
+                } catch (msgError) {
+                    console.error('Error rendering message:', msgError, msg);
+                    // Skip this message but continue with others
                 }
-                const isMine = msg.senderId === appState.currentUser.id;
-                const timestamp = formatDetailedTimestamp(msg.createdAt);
-                const prevMsg = messages[index - 1];
-                const showAvatar = !prevMsg || prevMsg.senderId !== msg.senderId;
-                const senderAvatarColor = getAvatarColor(msg.senderName);
-                messagesHTML += `
-                    <div class="message-wrapper premium-message ${isMine ? 'me' : 'them'}">
-                        ${!isMine && showAvatar ?
-                             `<div class="message-avatar premium-msg-avatar" style="background-color: ${senderAvatarColor}">
-                                ${msg.senderName.charAt(0).toUpperCase()}
-                            </div>` :
-                             '<div class="message-avatar-spacer" style="width: 40px; flex-shrink: 0;"></div>'
-                        }
-                        <div class="message-content">
-                            ${showAvatar && !isMine ? `<div class="message-sender">${msg.senderName}</div>` : ''}
-                            <div class="message-bubble premium-bubble ${isMine ? 'me' : 'them'}">${msg.text}</div>
-                            <div class="message-meta">${timestamp}</div>
-                        </div>
-                    </div>`;
             });
             messagesContainer.innerHTML = messagesHTML;
         }
         // Scroll to bottom
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
         // Focus on input
-        document.getElementById('message-text-input').focus();
+        const messageInput = document.getElementById('message-text-input');
+        if (messageInput) {
+            messageInput.focus();
+        }
     } catch (error) {
         console.error('Error loading messages:', error);
         messagesContainer.innerHTML = `
@@ -1671,7 +1744,7 @@ async function renderConversationView(conversationOrId) {
     }
 }
 
-// FIXED: Enhanced message sending function - Replace in your script.js
+// FIXED: Enhanced message sending function with proper error handling and notification refresh
 async function handleSendMessage(conversationId) {
     const input = document.getElementById('message-text-input');
     const sendBtn = document.querySelector('.send-button');
@@ -1690,6 +1763,7 @@ async function handleSendMessage(conversationId) {
     sendBtn.disabled = true;
     sendBtn.innerHTML = '<div class="btn-spinner"></div>';
     try {
+        console.log(`📤 Sending message to conversation ${conversationId}...`);
         const response = await fetch(`${BACKEND_URL}/messages/${conversationId}/messages`, {
             method: 'POST',
             headers: {
@@ -1700,9 +1774,10 @@ async function handleSendMessage(conversationId) {
         });
         const data = await response.json();
         if (!response.ok) {
-            throw new Error(data.error || `Failed to send message: ${response.status}`);
+            throw new Error(data.error || data.message || `Failed to send message: ${response.status}`);
         }
         if (data.success) {
+            console.log(`✅ Message sent successfully:`, data.data);
             input.value = '';
             const messagesContainer = document.getElementById('chat-messages-container');
             // Remove empty state if it exists
@@ -1723,49 +1798,32 @@ async function handleSendMessage(conversationId) {
                 </div>`;
             messagesContainer.appendChild(messageBubble);
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            // Refresh notifications after a short delay to get message notifications
-            setTimeout(() => {
-                fetchNotifications();
-            }, 2000); // Increased delay to ensure server processing
+            // FIXED: Force refresh notifications after message send with proper timing
+            console.log(`🔔 Scheduling notification refresh...`);
+            setTimeout(async () => {
+                try {
+                    console.log(`🔄 Refreshing notifications after message send...`);
+                    await fetchNotifications();
+                    console.log(`✅ Notifications refreshed successfully`);
+                } catch (error) {
+                    console.error(`❌ Failed to refresh notifications:`, error);
+                }
+            }, 3000); // 3 second delay to ensure server processing
         } else {
             throw new Error(data.error || 'Failed to send message');
         }
     } catch(error) {
-        console.error('Message send failed:', error);
+        console.error('❌ Message send failed:', error);
         showNotification(error.message || 'Failed to send message. Please try again.', 'error');
     } finally {
         input.disabled = false;
         sendBtn.disabled = false;
         sendBtn.innerHTML = originalBtnContent;
-        input.focus();
+        if (input) {
+            input.focus();
+        }
     }
 }
-
-// HELPER: Format date for date separators
-function formatMessageDate(date) {
-    try {
-        let messageDate;
-        if (date && typeof date === 'object' && date.toDate) {
-            messageDate = date.toDate();
-        } else if (date) {
-            messageDate = new Date(date);
-        } else {
-            return 'Unknown Date';
-        }
-        if (isNaN(messageDate.getTime())) {
-            return 'Invalid Date';
-        }
-        return messageDate.toLocaleDateString([], {
-             month: 'long',
-             day: 'numeric',
-             year: 'numeric'
-         });
-    } catch (error) {
-        console.error('Error formatting message date:', error);
-        return 'Invalid Date';
-    }
-}
-
 
 // --- ENHANCED UI & MODAL FUNCTIONS ---
 function showAuthModal(view) {
@@ -2502,7 +2560,8 @@ function getSettingsTemplate(user) {
     `;
 }
 
-// Add this debug function to your frontend script.js
+// Add this to your script.js for debugging notification issues
+// Enhanced debug function to trace notification flow
 async function debugNotificationFlow() {
     console.log('=== NOTIFICATION DEBUG TEST ===');
     // 1. Check current notifications
@@ -2513,7 +2572,13 @@ async function debugNotificationFlow() {
         const messageNotifications = response.data.filter(n => n.type === 'message');
         console.log(`Found ${messageNotifications.length} message notifications`);
         if (messageNotifications.length > 0) {
-            console.log('Recent message notifications:', messageNotifications.slice(0, 3));
+            console.log('Recent message notifications:', messageNotifications.slice(0, 3).map(n => ({
+                id: n.id,
+                message: n.message,
+                isRead: n.isRead,
+                createdAt: n.createdAt,
+                metadata: n.metadata
+            })));
         }
     } catch (error) {
         console.error('Error fetching notifications:', error);
@@ -2527,7 +2592,11 @@ async function debugNotificationFlow() {
     console.log('3. Current conversations:');
     console.log('Conversations loaded:', appState.conversations.length);
     if (appState.conversations.length > 0) {
-        console.log('First conversation:', appState.conversations[0]);
+        console.log('First conversation:', {
+            id: appState.conversations[0].id,
+            participants: appState.conversations[0].participants?.map(p => p.name),
+            jobTitle: appState.conversations[0].jobTitle
+        });
     }
     // 4. Test notification creation manually
     console.log('4. Creating test notification...');
@@ -2546,16 +2615,38 @@ async function debugNotificationFlow() {
     console.log('App notifications:', appState.notifications.length);
     console.log('Stored notifications:', notificationState.notifications.length);
     console.log('Polling active:', !!notificationState.pollingInterval);
+    console.log('Last fetch time:', notificationState.lastFetchTime);
+    // 6. Test backend notification endpoint directly
+    console.log('6. Testing backend notification endpoint...');
+    try {
+        const testResponse = await fetch(`${BACKEND_URL}/notifications`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${appState.jwtToken}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        if (testResponse.ok) {
+            const testData = await testResponse.json();
+            console.log('Backend response status:', testResponse.status);
+            console.log('Backend notifications count:', testData.data?.length || 0);
+        } else {
+            console.error('Backend response error:', testResponse.status, testResponse.statusText);
+        }
+    } catch (error) {
+        console.error('Backend request failed:', error);
+    }
     console.log('=== DEBUG TEST COMPLETE ===');
 }
 
-// Add this enhanced send message function with detailed logging
-async function sendMessageWithLogging(conversationId, messageText) {
-    console.log('=== SENDING MESSAGE WITH LOGGING ===');
+// Test message sending with detailed logging
+async function testMessageSending(conversationId, messageText = 'Test message for notification debugging') {
+    console.log('=== TESTING MESSAGE SEND ===');
     console.log('Conversation ID:', conversationId);
     console.log('Message text:', messageText);
     console.log('Current user:', appState.currentUser.name);
     try {
+        // Send message
         const response = await fetch(`${BACKEND_URL}/messages/${conversationId}/messages`, {
             method: 'POST',
             headers: {
@@ -2565,13 +2656,12 @@ async function sendMessageWithLogging(conversationId, messageText) {
             body: JSON.stringify({ text: messageText })
         });
         const data = await response.json();
-        console.log('Backend response:', data);
+        console.log('Send message response:', data);
         if (data.success) {
-            console.log('Message sent successfully!');
-            // Wait and then check for notifications
-            console.log('Waiting 5 seconds before checking notifications...');
-            setTimeout(async () => {
-                console.log('Checking for new notifications...');
+            console.log('Message sent successfully! Message ID:', data.data.id);
+            // Wait and check for notifications multiple times
+            const checkNotifications = async (attempt) => {
+                console.log(`Checking notifications (attempt ${attempt})...`);
                 const notificationResponse = await apiCall('/notifications', 'GET');
                 const messageNotifications = notificationResponse.data.filter(n =>
                     n.type === 'message' &&
@@ -2581,16 +2671,80 @@ async function sendMessageWithLogging(conversationId, messageText) {
                 console.log(`Found ${messageNotifications.length} notifications for this conversation`);
                 if (messageNotifications.length > 0) {
                     console.log('Latest message notification:', messageNotifications[0]);
+                    return true;
                 }
-            }, 5000);
+                return false;
+            };
+            // Check immediately
+            await checkNotifications(1);
+            // Check after 3 seconds
+            setTimeout(() => checkNotifications(2), 3000);
+            // Check after 6 seconds
+            setTimeout(() => checkNotifications(3), 6000);
+        } else {
+            console.error('Message send failed:', data.error);
         }
         return data;
     } catch (error) {
-        console.error('Error sending message:', error);
+        console.error('Error sending test message:', error);
         throw error;
     }
 }
 
-// Add this to window so you can call it from browser console
+// Check notification service health
+async function checkNotificationServiceHealth() {
+    console.log('=== NOTIFICATION SERVICE HEALTH CHECK ===');
+    try {
+        // Test unread count endpoint
+        const unreadResponse = await apiCall('/notifications/unread-count', 'GET');
+        console.log('Unread count response:', unreadResponse);
+        // Test mark as read functionality
+        if (appState.notifications.length > 0) {
+            const testNotification = appState.notifications[0];
+            console.log('Testing mark as read with notification:', testNotification.id);
+            try {
+                await apiCall(`/notifications/${testNotification.id}/read`, 'PUT');
+                console.log('Mark as read test: SUCCESS');
+            } catch (error) {
+                console.error('Mark as read test: FAILED', error);
+            }
+        }
+        console.log('Notification service health check complete');
+    } catch (error) {
+        console.error('Notification service health check failed:', error);
+    }
+}
+
+// Force refresh all notification data
+async function forceRefreshNotifications() {
+    console.log('=== FORCING NOTIFICATION REFRESH ===');
+    try {
+        // Clear local storage
+        localStorage.removeItem(notificationState.storageKey);
+        // Reset state
+        notificationState.notifications = [];
+        appState.notifications = [];
+        // Force fresh fetch
+        await fetchNotifications();
+        console.log('Notification refresh complete');
+        console.log('Current notifications:', appState.notifications.length);
+    } catch (error) {
+        console.error('Failed to refresh notifications:', error);
+    }
+}
+
+// Add these functions to window for console access
 window.debugNotificationFlow = debugNotificationFlow;
-window.sendMessageWithLogging = sendMessageWithLogging;
+window.testMessageSending = testMessageSending;
+window.checkNotificationServiceHealth = checkNotificationServiceHealth;
+window.forceRefreshNotifications = forceRefreshNotifications;
+
+// Auto-run basic debug on login (can be removed later)
+function runBasicNotificationDebug() {
+    if (appState.currentUser) {
+        console.log('Running basic notification debug check...');
+        setTimeout(() => {
+            debugNotificationFlow();
+        }, 2000);
+    }
+}
