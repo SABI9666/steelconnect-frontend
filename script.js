@@ -56,9 +56,18 @@ const appState = {
     uploadedFile: null,
     myEstimations: [],
     currentHeaderSlide: 0,
-    notifications: [],
-    notificationInterval: null, // To hold the polling interval
+    notifications: [], // This will be managed by the enhanced system
 };
+
+// --- ENHANCED NOTIFICATION SYSTEM STATE ---
+const notificationState = {
+    notifications: [],
+    maxStoredNotifications: 50, // Store up to 50 notifications
+    storageKey: 'steelconnect_notifications',
+    lastFetchTime: null,
+    pollingInterval: null,
+};
+
 
 // Professional Features Header Data
 const headerFeatures = [
@@ -118,8 +127,8 @@ function resetInactivityTimer() {
 
 function showInactivityWarning() {
     // Dismiss any previous warning
-    dismissInactivityWarning(); 
-    
+    dismissInactivityWarning();
+
     const warning = document.createElement('div');
     warning.id = 'inactivity-warning';
     warning.className = 'inactivity-warning-modal';
@@ -218,6 +227,7 @@ function initializeApp() {
             appState.currentUser = JSON.parse(user);
             showAppView();
             resetInactivityTimer();
+            initializeEnhancedNotifications(); // Initialize notification system for logged-in user
             console.log('Restored user session');
         } catch (error) {
             console.error("Error parsing user data from localStorage:", error);
@@ -254,7 +264,7 @@ function updateDynamicHeader() {
                     <p class="feature-description">${feature.description}</p>
                 </div>
                 <div class="feature-indicators">
-                    ${headerFeatures.map((_, index) => 
+                    ${headerFeatures.map((_, index) =>
                         `<div class="indicator ${index === appState.currentHeaderSlide ? 'active' : ''}"></div>`
                     ).join('')}
                 </div>
@@ -277,7 +287,7 @@ async function apiCall(endpoint, method, body = null, successMessage = null) {
                 options.body = JSON.stringify(body);
             }
         }
-        
+
         const response = await fetch(BACKEND_URL + endpoint, options);
 
         if (response.status === 204 || response.headers.get("content-length") === "0") {
@@ -298,7 +308,7 @@ async function apiCall(endpoint, method, body = null, successMessage = null) {
         if (successMessage) {
             showNotification(successMessage, 'success');
         }
-        
+
         return responseData;
 
     } catch (error) {
@@ -335,6 +345,7 @@ async function handleLogin(event) {
         localStorage.setItem('jwtToken', data.token);
         closeModal();
         showAppView();
+        initializeEnhancedNotifications(); // Initialize notification system after login
 
         if (data.user.type === 'designer') {
             loadUserQuotes();
@@ -352,24 +363,19 @@ async function handleLogin(event) {
 
 function logout() {
     console.log('Logging out user...');
+    enhancedLogout(); // Clean up notification system
+
     appState.currentUser = null;
     appState.jwtToken = null;
     appState.userSubmittedQuotes.clear();
     appState.myEstimations = [];
-    appState.notifications = [];
+    appState.notifications = []; // Clear app state notifications
     localStorage.clear();
     clearTimeout(inactivityTimer);
     clearTimeout(warningTimer);
 
-    // Dismiss any active warnings
     dismissInactivityWarning();
 
-    // Stop polling for notifications on logout
-    if (appState.notificationInterval) {
-        clearInterval(appState.notificationInterval);
-        appState.notificationInterval = null;
-        console.log('Notification polling stopped');
-    }
     showLandingPageView();
     showNotification('You have been logged out successfully.', 'info');
 }
@@ -391,48 +397,124 @@ async function loadUserQuotes() {
     }
 }
 
-// --- ENHANCED NOTIFICATION SYSTEM ---
+// --- ENHANCED NOTIFICATION SYSTEM WITH LOCAL STORAGE PERSISTENCE ---
+
+// Load notifications from localStorage on app initialization
+function loadStoredNotifications() {
+    try {
+        const stored = localStorage.getItem(notificationState.storageKey);
+        if (stored) {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed.notifications)) {
+                notificationState.notifications = parsed.notifications;
+                notificationState.lastFetchTime = parsed.lastFetchTime ? new Date(parsed.lastFetchTime) : null;
+                console.log(`Loaded ${notificationState.notifications.length} stored notifications`);
+            }
+        }
+    } catch (error) {
+        console.error('Error loading stored notifications:', error);
+        notificationState.notifications = [];
+    }
+}
+
+// Save notifications to localStorage
+function saveNotificationsToStorage() {
+    try {
+        const dataToStore = {
+            notifications: notificationState.notifications.slice(0, notificationState.maxStoredNotifications),
+            lastFetchTime: notificationState.lastFetchTime,
+            savedAt: new Date().toISOString()
+        };
+        localStorage.setItem(notificationState.storageKey, JSON.stringify(dataToStore));
+    } catch (error) {
+        console.error('Error saving notifications to storage:', error);
+    }
+}
+
+// Enhanced notification fetching with merge logic
 async function fetchNotifications() {
     if (!appState.currentUser) return;
     try {
         const response = await apiCall('/notifications', 'GET');
-        appState.notifications = (response.data || []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        const serverNotifications = response.data || [];
+        // Merge server notifications with stored ones
+        const mergedNotifications = mergeNotifications(serverNotifications, notificationState.notifications);
+        // Update state
+        appState.notifications = mergedNotifications;
+        notificationState.notifications = mergedNotifications;
+        notificationState.lastFetchTime = new Date();
+        // Save to storage
+        saveNotificationsToStorage();
+        // Update UI
         renderNotificationPanel();
         updateNotificationBadge();
-        console.log(`Fetched ${appState.notifications.length} notifications`);
+        console.log(`Fetched and merged ${serverNotifications.length} server notifications with ${notificationState.notifications.length} total stored`);
     } catch (error) {
         console.error("Error fetching notifications:", error);
-    }
-}
-
-function updateNotificationBadge() {
-    const badge = document.getElementById('notification-badge');
-    if (badge) {
-        const unreadCount = appState.notifications.filter(n => !n.isRead).length;
-        if (unreadCount > 0) {
-            badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
-            badge.style.display = 'flex';
-            badge.classList.add('pulse'); // Add visual effect
-        } else {
-            badge.style.display = 'none';
-            badge.classList.remove('pulse');
+        // If fetch fails, still show stored notifications
+        if (notificationState.notifications.length > 0) {
+            appState.notifications = notificationState.notifications;
+            renderNotificationPanel();
+            updateNotificationBadge();
+            console.log('Using stored notifications due to fetch error');
         }
     }
 }
 
-function addNotification(message, type = 'info') {
+// Smart notification merging to avoid duplicates
+function mergeNotifications(serverNotifications, storedNotifications) {
+    const notificationMap = new Map();
+    // Add stored notifications first (older ones)
+    storedNotifications.forEach(notification => {
+        if (notification.id) {
+            notificationMap.set(notification.id, notification);
+        }
+    });
+    // Add/update with server notifications (newer ones take precedence)
+    serverNotifications.forEach(notification => {
+        if (notification.id) {
+            notificationMap.set(notification.id, notification);
+        }
+    });
+    // Convert back to array and sort by creation date (newest first)
+    const merged = Array.from(notificationMap.values()).sort((a, b) => {
+        const dateA = new Date(a.createdAt);
+        const dateB = new Date(b.createdAt);
+        return dateB - dateA;
+    });
+    // Limit to max stored notifications
+    return merged.slice(0, notificationState.maxStoredNotifications);
+}
+
+// Enhanced local notification addition with persistence
+function addNotification(message, type = 'info', metadata = {}) {
     const newNotification = {
-        id: Date.now(),
+        id: `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         message,
         type,
         createdAt: new Date().toISOString(),
         isRead: false,
+        metadata,
+        isLocal: true // Mark as locally generated
     };
+    // Add to both arrays
     appState.notifications.unshift(newNotification);
+    notificationState.notifications.unshift(newNotification);
+    // Maintain size limits
+    if (appState.notifications.length > notificationState.maxStoredNotifications) {
+        appState.notifications = appState.notifications.slice(0, notificationState.maxStoredNotifications);
+    }
+    if (notificationState.notifications.length > notificationState.maxStoredNotifications) {
+        notificationState.notifications = notificationState.notifications.slice(0, notificationState.maxStoredNotifications);
+    }
+    // Save to storage
+    saveNotificationsToStorage();
+    // Update UI
     renderNotificationPanel();
     updateNotificationBadge();
-    // Show pop-up notification for immediate feedback
+    // Show toast notification for immediate feedback
     showNotification(message, type);
+    console.log('Added local notification:', newNotification);
 }
 
 function getNotificationIcon(type) {
@@ -451,43 +533,55 @@ function getNotificationIcon(type) {
     return iconMap[type] || 'fa-info-circle';
 }
 
+// Enhanced notification panel rendering with better error handling
 function renderNotificationPanel() {
     const panelList = document.getElementById('notification-panel-list');
     if (!panelList) return;
-
-    if (appState.notifications.length === 0) {
+    const notifications = appState.notifications || [];
+    if (notifications.length === 0) {
         panelList.innerHTML = `
             <div class="notification-empty-state">
                 <i class="fas fa-bell-slash"></i>
-                <p>No new notifications</p>
+                <p>No notifications</p>
                 <small>You'll see updates here when things happen</small>
             </div>`;
         return;
     }
-    
-    panelList.innerHTML = appState.notifications.map(n => {
-        const icon = getNotificationIcon(n.type);
-        const timeAgo = formatMessageTimestamp(n.createdAt);
-        // Ensure metadata is properly escaped for the onclick attribute
-        const metadataString = JSON.stringify(n.metadata || {}).replace(/"/g, '&quot;');
-
-        return `
-            <div class="notification-item ${n.isRead ? '' : 'unread'}" data-id="${n.id}" onclick="handleNotificationClick('${n.id}', '${n.type}', ${metadataString})">
-                <div class="notification-item-icon ${n.type}">
-                    <i class="fas ${icon}"></i>
-                </div>
-                <div class="notification-item-content">
-                    <p>${n.message}</p>
-                    <span class="timestamp">${timeAgo}</span>
-                </div>
-                ${!n.isRead ? '<div class="unread-indicator"></div>' : ''}
+    try {
+        panelList.innerHTML = notifications.map(n => {
+            const icon = getNotificationIcon(n.type);
+            const timeAgo = formatMessageTimestamp(n.createdAt);
+            const metadataString = JSON.stringify(n.metadata || {}).replace(/"/g, '&quot;');
+            const isLocalClass = n.isLocal ? 'local-notification' : '';
+            return `
+                <div class="notification-item ${n.isRead ? 'read' : 'unread'} ${isLocalClass}"
+                     data-id="${n.id}"
+                     onclick="handleNotificationClick('${n.id}', '${n.type}', ${metadataString})">
+                    <div class="notification-item-icon ${n.type}">
+                        <i class="fas ${icon}"></i>
+                        ${n.isLocal ? '<div class="local-indicator" title="Local notification"></div>' : ''}
+                    </div>
+                    <div class="notification-item-content">
+                        <p>${n.message}</p>
+                        <span class="timestamp">${timeAgo}</span>
+                    </div>
+                    ${!n.isRead ? '<div class="unread-indicator"></div>' : ''}
+                </div>`;
+        }).join('');
+    } catch (error) {
+        console.error('Error rendering notifications:', error);
+        panelList.innerHTML = `
+            <div class="notification-error-state">
+                <i class="fas fa-exclamation-triangle"></i>
+                <p>Error loading notifications</p>
+                <button onclick="fetchNotifications()" class="btn btn-sm btn-outline">Retry</button>
             </div>`;
-    }).join('');
+    }
 }
 
 function handleNotificationClick(notificationId, type, metadata) {
     markNotificationAsRead(notificationId);
-    
+
     switch (type) {
         case 'job':
             if (metadata.action === 'created') {
@@ -523,62 +617,177 @@ function handleNotificationClick(notificationId, type, metadata) {
     }
 }
 
+// Enhanced mark as read with persistence
 async function markNotificationAsRead(notificationId) {
-    // Client-side optimistic update first
-    const notification = appState.notifications.find(n => n.id == notificationId); // Use == for type coercion if needed
-    if (notification && !notification.isRead) {
-        notification.isRead = true;
+    // Update in both arrays
+    const updateNotification = (notifications) => {
+        const notification = notifications.find(n => n.id == notificationId);
+        if (notification && !notification.isRead) {
+            notification.isRead = true;
+            return true;
+        }
+        return false;
+    };
+    const updatedApp = updateNotification(appState.notifications);
+    const updatedStored = updateNotification(notificationState.notifications);
+    if (updatedApp || updatedStored) {
+        // Save to storage
+        saveNotificationsToStorage();
+        // Update UI
         renderNotificationPanel();
         updateNotificationBadge();
     }
-    
-    try {
-        // Backend update
-        await apiCall(`/notifications/${notificationId}/read`, 'PUT');
-    } catch (error) {
-        console.error('Failed to mark notification as read on backend:', error);
-        // Revert if API call fails (optional)
-        if (notification) {
-            notification.isRead = false;
+    // Try to update on server (only for server notifications)
+    const notification = appState.notifications.find(n => n.id == notificationId);
+    if (notification && !notification.isLocal) {
+        try {
+            await apiCall(`/notifications/${notificationId}/read`, 'PUT');
+        } catch (error) {
+            console.error('Failed to mark notification as read on server:', error);
+            // Don't revert - keep local state since user interaction happened
         }
-        renderNotificationPanel();
-        updateNotificationBadge();
     }
 }
 
-
+// Enhanced mark all as read
 async function markAllAsRead() {
     try {
-        await apiCall('/notifications/mark-all-read', 'PUT');
+        // Mark all as read locally first
         appState.notifications.forEach(n => n.isRead = true);
+        notificationState.notifications.forEach(n => n.isRead = true);
+        // Save to storage
+        saveNotificationsToStorage();
+        // Update UI
         renderNotificationPanel();
         updateNotificationBadge();
+        // Try to update server notifications
+        await apiCall('/notifications/mark-all-read', 'PUT');
         showNotification('All notifications marked as read.', 'success');
     } catch (error) {
-        console.error('Failed to mark all notifications as read:', error);
-        showNotification('Failed to mark notifications as read', 'error');
+        console.error('Failed to mark all notifications as read on server:', error);
+        showNotification('Marked as read locally (server sync failed)', 'warning');
     }
 }
 
+// Enhanced notification badge with better counting
+function updateNotificationBadge() {
+    const badge = document.getElementById('notification-badge');
+    if (badge) {
+        const unreadCount = (appState.notifications || []).filter(n => !n.isRead).length;
+        if (unreadCount > 0) {
+            badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+            badge.style.display = 'flex';
+            badge.classList.add('pulse');
+        } else {
+            badge.style.display = 'none';
+            badge.classList.remove('pulse');
+        }
+    }
+}
+
+// Enhanced notification polling with better error handling
+function startNotificationPolling() {
+    // Clear any existing interval
+    if (notificationState.pollingInterval) {
+        clearInterval(notificationState.pollingInterval);
+    }
+    // Initial fetch
+    fetchNotifications();
+    // Set up polling every 30 seconds
+    notificationState.pollingInterval = setInterval(() => {
+        if (appState.currentUser) {
+            fetchNotifications();
+        } else {
+            stopNotificationPolling();
+        }
+    }, 30000);
+    console.log('Notification polling started');
+}
+
+function stopNotificationPolling() {
+    if (notificationState.pollingInterval) {
+        clearInterval(notificationState.pollingInterval);
+        notificationState.pollingInterval = null;
+        console.log('Notification polling stopped');
+    }
+}
+
+// Enhanced notification panel toggle with loading state
 async function toggleNotificationPanel(event) {
     event.stopPropagation();
     const panel = document.getElementById('notification-panel');
     if (panel) {
         const isActive = panel.classList.toggle('active');
-
         if (isActive) {
-            // Refresh notifications from the server every time the panel is opened
-            // to ensure the list is up-to-date.
-            await fetchNotifications(); 
+            // Show loading state
+            const panelList = document.getElementById('notification-panel-list');
+            if (panelList && appState.notifications.length === 0) {
+                panelList.innerHTML = `
+                    <div class="notification-loading-state">
+                        <div class="spinner"></div>
+                        <p>Loading notifications...</p>
+                    </div>`;
+            }
+            // Fetch fresh notifications
+            await fetchNotifications();
         }
     }
+}
+
+// Clear old notifications (optional maintenance function)
+function clearOldNotifications(daysToKeep = 30) {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
+    const originalCount = notificationState.notifications.length;
+    notificationState.notifications = notificationState.notifications.filter(n => {
+        const notificationDate = new Date(n.createdAt);
+        return notificationDate > cutoffDate;
+    });
+    appState.notifications = appState.notifications.filter(n => {
+        const notificationDate = new Date(n.createdAt);
+        return notificationDate > cutoffDate;
+    });
+    if (originalCount !== notificationState.notifications.length) {
+        saveNotificationsToStorage();
+        renderNotificationPanel();
+        updateNotificationBadge();
+        console.log(`Cleared ${originalCount - notificationState.notifications.length} old notifications`);
+    }
+}
+
+// Initialize the enhanced notification system
+function initializeEnhancedNotifications() {
+    // Load stored notifications first
+    loadStoredNotifications();
+    // If we have stored notifications, show them immediately
+    if (notificationState.notifications.length > 0) {
+        appState.notifications = notificationState.notifications;
+        renderNotificationPanel();
+        updateNotificationBadge();
+    }
+    // Start polling for new notifications
+    if (appState.currentUser) {
+        startNotificationPolling();
+    }
+    // Clean up old notifications on startup
+    clearOldNotifications(30);
+}
+
+// Enhanced logout to stop polling and save state
+function enhancedLogout() {
+    stopNotificationPolling();
+    // Save final state before logout
+    if (notificationState.notifications.length > 0) {
+        saveNotificationsToStorage();
+    }
+    console.log('Enhanced notification system cleaned up for logout');
 }
 
 
 // --- ENHANCED ESTIMATION SYSTEM ---
 async function loadUserEstimations() {
     if (!appState.currentUser) return;
-    
+
     try {
         const response = await apiCall(`/estimation/contractor/${appState.currentUser.email}`, 'GET');
         appState.myEstimations = response.estimations || [];
@@ -604,15 +813,15 @@ async function fetchAndRenderMyEstimations() {
             </div>
         </div>
         <div id="estimations-list" class="estimations-grid"></div>`;
-    
+
     updateDynamicHeader();
-    
+
     const listContainer = document.getElementById('estimations-list');
     listContainer.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Loading your estimation requests...</p></div>';
-    
+
     try {
         await loadUserEstimations();
-        
+
         if (appState.myEstimations.length === 0) {
             listContainer.innerHTML = `
                 <div class="empty-state premium-empty">
@@ -627,15 +836,15 @@ async function fetchAndRenderMyEstimations() {
                 </div>`;
             return;
         }
-        
+
         listContainer.innerHTML = appState.myEstimations.map(estimation => {
             const statusConfig = getEstimationStatusConfig(estimation.status);
             const createdDate = new Date(estimation.createdAt).toLocaleDateString();
             const updatedDate = new Date(estimation.updatedAt).toLocaleDateString();
-            
+
             const hasFiles = estimation.uploadedFiles && estimation.uploadedFiles.length > 0;
             const hasResult = estimation.resultFile;
-            
+
             return `
                 <div class="estimation-card premium-card">
                     <div class="estimation-header">
@@ -667,7 +876,7 @@ async function fetchAndRenderMyEstimations() {
                     </div>
                 </div>`;
         }).join('');
-        
+
     } catch (error) {
         listContainer.innerHTML = `
             <div class="error-state premium-error">
@@ -754,24 +963,24 @@ async function fetchAndRenderJobs(loadMore = false) {
     }
 
     const user = appState.currentUser;
-    const endpoint = user.type === 'designer' 
-        ? `/jobs?page=${appState.jobsPage}&limit=6` 
+    const endpoint = user.type === 'designer'
+        ? `/jobs?page=${appState.jobsPage}&limit=6`
         : `/jobs/user/${user.id}`;
-    
+
     if(loadMoreContainer) loadMoreContainer.innerHTML = `<button class="btn btn-loading" disabled><div class="btn-spinner"></div>Loading...</button>`;
 
     try {
         const response = await apiCall(endpoint, 'GET');
         const newJobs = response.data || [];
         appState.jobs.push(...newJobs);
-        
+
         if (user.type === 'designer') {
             appState.hasMoreJobs = response.pagination.hasNext;
             appState.jobsPage += 1;
         } else {
             appState.hasMoreJobs = false;
         }
-        
+
         if (appState.jobs.length === 0) {
             jobsListContainer.innerHTML = user.type === 'designer'
                 ? `<div class="empty-state premium-empty"><div class="empty-icon"><i class="fas fa-briefcase"></i></div><h3>No Projects Available</h3><p>Check back later for new opportunities or try adjusting your search criteria.</p></div>`
@@ -783,7 +992,7 @@ async function fetchAndRenderJobs(loadMore = false) {
         const jobsHTML = appState.jobs.map(job => {
             const hasUserQuoted = appState.userSubmittedQuotes.has(job.id);
             const canQuote = user.type === 'designer' && job.status === 'open' && !hasUserQuoted;
-            const quoteButton = canQuote 
+            const quoteButton = canQuote
                 ? `<button class="btn btn-primary btn-submit-quote" onclick="showQuoteModal('${job.id}')"><i class="fas fa-file-invoice-dollar"></i> Submit Quote</button>`
                 : user.type === 'designer' && hasUserQuoted
                 ? `<button class="btn btn-outline btn-submitted" disabled><i class="fas fa-check-circle"></i> Quote Submitted</button>`
@@ -791,12 +1000,12 @@ async function fetchAndRenderJobs(loadMore = false) {
                 ? `<span class="job-status-badge assigned"><i class="fas fa-user-check"></i> Job Assigned</span>`
                 : '';
             const actions = user.type === 'designer' ? quoteButton : `<div class="job-actions-group"><button class="btn btn-outline" onclick="viewQuotes('${job.id}')"><i class="fas fa-eye"></i> View Quotes (${job.quotesCount || 0})</button><button class="btn btn-danger" onclick="deleteJob('${job.id}')"><i class="fas fa-trash"></i> Delete</button></div>`;
-            const statusBadge = job.status !== 'open' 
-                ? `<span class="job-status-badge ${job.status}"><i class="fas ${job.status === 'assigned' ? 'fa-user-check' : 'fa-check-circle'}"></i> ${job.status.charAt(0).toUpperCase() + job.status.slice(1)}</span>` 
+            const statusBadge = job.status !== 'open'
+                ? `<span class="job-status-badge ${job.status}"><i class="fas ${job.status === 'assigned' ? 'fa-user-check' : 'fa-check-circle'}"></i> ${job.status.charAt(0).toUpperCase() + job.status.slice(1)}</span>`
                 : `<span class="job-status-badge open"><i class="fas fa-clock"></i> Open</span>`;
             const attachmentLink = job.attachment ? `<div class="job-attachment"><i class="fas fa-paperclip"></i><a href="${job.attachment}" target="_blank" rel="noopener noreferrer">View Attachment</a></div>` : '';
             const skillsDisplay = job.skills?.length > 0 ? `<div class="job-skills"><i class="fas fa-tools"></i><span>Skills:</span><div class="skills-tags">${job.skills.map(skill => `<span class="skill-tag">${skill}</span>`).join('')}</div></div>` : '';
-            
+
             return `
                 <div class="job-card premium-card" data-job-id="${job.id}">
                     <div class="job-header">
@@ -843,18 +1052,18 @@ async function fetchAndRenderApprovedJobs() {
     updateDynamicHeader();
     const listContainer = document.getElementById('approved-jobs-list');
     listContainer.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Loading approved projects...</p></div>';
-    
+
     try {
         const response = await apiCall(`/jobs/user/${appState.currentUser.id}`, 'GET');
         const allJobs = response.data || [];
         const approvedJobs = allJobs.filter(job => job.status === 'assigned');
         appState.approvedJobs = approvedJobs;
-        
+
         if (approvedJobs.length === 0) {
             listContainer.innerHTML = `<div class="empty-state premium-empty"><div class="empty-icon"><i class="fas fa-clipboard-check"></i></div><h3>No Approved Projects</h3><p>Your approved projects will appear here once you accept quotes from designers.</p><button class="btn btn-primary" onclick="renderAppSection('jobs')">View My Projects</button></div>`;
             return;
         }
-        
+
         listContainer.innerHTML = approvedJobs.map(job => {
             const attachmentLink = job.attachment ? `<div class="job-attachment"><i class="fas fa-paperclip"></i><a href="${job.attachment}" target="_blank" rel="noopener noreferrer">View Attachment</a></div>` : '';
             const skillsDisplay = job.skills?.length > 0 ? `<div class="job-skills"><i class="fas fa-tools"></i><span>Skills:</span><div class="skills-tags">${job.skills.map(skill => `<span class="skill-tag">${skill}</span>`).join('')}</div></div>` : '';
@@ -882,7 +1091,6 @@ async function markJobCompleted(jobId) {
         try {
             await apiCall(`/jobs/${jobId}`, 'PUT', { status: 'completed' }, 'Project marked as completed successfully!');
             addNotification('A project has been marked as completed! The designer has been notified.', 'job');
-            setTimeout(() => fetchNotifications(), 2000);
             fetchAndRenderApprovedJobs();
         } catch (error) {
             addNotification('Failed to mark job as completed. Please try again.', 'error');
@@ -899,17 +1107,17 @@ async function fetchAndRenderMyQuotes() {
     updateDynamicHeader();
     const listContainer = document.getElementById('my-quotes-list');
     listContainer.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Loading your quotes...</p></div>';
-    
+
     try {
         const response = await apiCall(`/quotes/user/${appState.currentUser.id}`, 'GET');
         const quotes = response.data || [];
         appState.myQuotes = quotes;
-        
+
         if (quotes.length === 0) {
             listContainer.innerHTML = `<div class="empty-state premium-empty"><div class="empty-icon"><i class="fas fa-file-invoice"></i></div><h3>No Quotes Submitted</h3><p>You haven't submitted any quotes yet. Browse available projects to get started.</p><button class="btn btn-primary" onclick="renderAppSection('jobs')">Find Projects</button></div>`;
             return;
         }
-        
+
         listContainer.innerHTML = quotes.map(quote => {
             const attachments = quote.attachments || [];
             let attachmentLink = attachments.length > 0 ? `<div class="quote-attachment"><i class="fas fa-paperclip"></i><a href="${attachments[0]}" target="_blank" rel="noopener noreferrer">View Attachment</a></div>` : '';
@@ -991,7 +1199,6 @@ async function handleQuoteEdit(event) {
         addNotification('Your quote has been updated successfully. The client will be notified of the changes.', 'quote');
         closeModal();
         fetchAndRenderMyQuotes();
-        setTimeout(() => fetchNotifications(), 2000);
     } catch (error) {
         addNotification('Failed to update quote. Please try again.', 'error');
     } finally {
@@ -1019,8 +1226,7 @@ async function handlePostJob(event) {
             formData.append('attachment', form.attachment.files[0]);
         }
         await apiCall('/jobs', 'POST', formData, 'Project posted successfully!');
-        addNotification(`Your project "${form.title.value}" has been posted successfully. All designers will be notified automatically.`, 'job');
-        setTimeout(() => fetchNotifications(), 2000);
+        addNotification(`Your project "${form.title.value}" has been posted successfully.`, 'job');
         form.reset();
         renderAppSection('jobs');
     } catch (error) {
@@ -1062,7 +1268,7 @@ async function viewQuotes(jobId) {
     try {
         const response = await apiCall(`/quotes/job/${jobId}`, 'GET');
         const quotes = response.data || [];
-        
+
         let quotesHTML = `<div class="modal-header premium-modal-header"><h3><i class="fas fa-file-invoice-dollar"></i> Received Quotes</h3><p class="modal-subtitle">Review and manage quotes for this project</p></div>`;
         if (quotes.length === 0) {
             quotesHTML += `<div class="empty-state premium-empty"><div class="empty-icon"><i class="fas fa-file-invoice"></i></div><h3>No Quotes Received</h3><p>No quotes have been submitted for this project yet. Check back later.</p></div>`;
@@ -1110,11 +1316,9 @@ async function approveQuote(quoteId, jobId) {
     if (confirm('Are you sure you want to approve this quote? This will assign the job to the designer and notify all participants.')) {
         try {
             await apiCall(`/quotes/${quoteId}/approve`, 'PUT', { jobId }, 'Quote approved successfully!');
-            addNotification('You have approved a quote and assigned the project! All affected designers have been notified of the decision.', 'quote');
-            setTimeout(() => fetchNotifications(), 2000);
+            addNotification('You have approved a quote and assigned the project!', 'quote');
             closeModal();
             fetchAndRenderJobs();
-            showNotification('Project has been assigned! You can now communicate with the designer.', 'success');
         } catch (error) {
             addNotification('Failed to approve quote. Please try again.', 'error');
         }
@@ -1157,12 +1361,10 @@ async function handleQuoteSubmit(event) {
             }
         }
         await apiCall('/quotes', 'POST', formData, 'Quote submitted successfully!');
-        addNotification('Your quote has been submitted successfully. The client will be notified immediately and you will receive updates about its status.', 'quote');
-        setTimeout(() => fetchNotifications(), 2000);
+        addNotification('Your quote has been submitted successfully.', 'quote');
         appState.userSubmittedQuotes.add(form['jobId'].value);
         closeModal();
         fetchAndRenderJobs();
-        showNotification('Your quote has been submitted! You can track its status in "My Quotes".', 'success');
     } catch (error) {
         addNotification('Failed to submit quote. Please try again.', 'error');
     } finally {
@@ -1181,7 +1383,6 @@ async function openConversation(jobId, recipientId) {
         const response = await apiCall('/messages/find', 'POST', { jobId, recipientId });
         if (response.success) {
             renderConversationView(response.data);
-            setTimeout(() => fetchNotifications(), 1000);
         }
     } catch (error) {
         addNotification('Failed to open conversation. Please try again.', 'error');
@@ -1247,27 +1448,21 @@ function getAvatarColor(name) {
     return colors[index];
 }
 
-// Corrected function to provide detailed timestamps for chat messages
 function formatDetailedTimestamp(date) {
     const today = new Date();
     const messageDate = new Date(date);
-
     const time = messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
     if (today.toDateString() === messageDate.toDateString()) {
-        return time; // e.g., "10:30 AM"
+        return time;
     }
-
     const yesterday = new Date();
     yesterday.setDate(today.getDate() - 1);
     if (yesterday.toDateString() === messageDate.toDateString()) {
-        return `Yesterday, ${time}`; // e.g., "Yesterday, 2:15 PM"
+        return `Yesterday, ${time}`;
     }
-    
-    // For older dates
-    return `${messageDate.toLocaleDateString()}, ${time}`; // e.g., "9/5/2025, 9:00 AM"
+    return `${messageDate.toLocaleDateString()}, ${time}`;
 }
-
 
 function formatMessageTimestamp(date) {
     const now = new Date();
@@ -1293,7 +1488,7 @@ async function renderConversationView(conversationOrId) {
     } else {
         conversation = conversationOrId;
     }
-    
+
     if (!conversation.participants) {
         try {
             const response = await apiCall('/messages', 'GET');
@@ -1309,7 +1504,7 @@ async function renderConversationView(conversationOrId) {
     const container = document.getElementById('app-container');
     const otherParticipant = conversation.participants.find(p => p.id !== appState.currentUser.id);
     const avatarColor = getAvatarColor(otherParticipant ? otherParticipant.name : 'Unknown');
-    
+
     container.innerHTML = `
         <div class="chat-container premium-chat">
             <div class="chat-header premium-chat-header">
@@ -1345,7 +1540,7 @@ async function renderConversationView(conversationOrId) {
     try {
         const response = await apiCall(`/messages/${conversation.id}/messages`, 'GET');
         const messages = response.data || [];
-        
+
         if (messages.length === 0) {
             messagesContainer.innerHTML = `<div class="empty-messages premium-empty-messages"><div class="empty-icon"><i class="fas fa-comment-dots"></i></div><h4>Start the conversation</h4><p>Send your first message to begin collaborating on this project.</p></div>`;
         } else {
@@ -1381,7 +1576,6 @@ async function renderConversationView(conversationOrId) {
     }
 }
 
-// FIXED MESSAGE HANDLER
 async function handleSendMessage(conversationId) {
     const input = document.getElementById('message-text-input');
     const sendBtn = document.querySelector('.send-button');
@@ -1419,9 +1613,6 @@ async function handleSendMessage(conversationId) {
         if (data.success) {
             input.value = '';
 
-            // Add client-side notification for immediate feedback
-            addNotification('Message sent successfully!', 'message');
-
             const messagesContainer = document.getElementById('chat-messages-container');
             const newMessage = data.data;
 
@@ -1441,9 +1632,6 @@ async function handleSendMessage(conversationId) {
                 </div>`;
             messagesContainer.appendChild(messageBubble);
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
-
-            // Refresh notifications to see if there are any updates
-            setTimeout(() => fetchNotifications(), 1000);
         } else {
             throw new Error(data.error || 'Failed to send message');
         }
@@ -1542,7 +1730,6 @@ function showAppView() {
 
     const clearBtn = document.getElementById('clear-notifications-btn');
     if (clearBtn) {
-        // Remove old listener if it exists to prevent duplicates
         const newClearBtn = clearBtn.cloneNode(true);
         clearBtn.parentNode.replaceChild(newClearBtn, clearBtn);
         newClearBtn.addEventListener('click', (e) => {
@@ -1558,16 +1745,6 @@ function showAppView() {
     buildSidebarNav();
     renderAppSection('dashboard');
 
-    // Start notification system
-    fetchNotifications(); // Initial fetch
-
-    // Start polling for new notifications every 30 seconds
-    if (appState.notificationInterval) clearInterval(appState.notificationInterval);
-    appState.notificationInterval = setInterval(() => {
-        fetchNotifications();
-    }, 30000);
-
-    // Load user-specific data
     if (user.type === 'designer') {
         loadUserQuotes();
     }
@@ -1575,7 +1752,6 @@ function showAppView() {
         loadUserEstimations();
     }
 
-    // Start inactivity timer
     resetInactivityTimer();
     console.log('5-minute inactivity timer started');
 }
@@ -1586,7 +1762,7 @@ function showLandingPageView() {
     document.getElementById('app-content').style.display = 'none';
     document.getElementById('auth-buttons-container').style.display = 'flex';
     document.getElementById('user-info-container').style.display = 'none';
-    
+
     const navMenu = document.getElementById('main-nav-menu');
     if (navMenu) {
         navMenu.innerHTML = `
@@ -1614,7 +1790,7 @@ function buildSidebarNav() {
           <a href="#" class="sidebar-nav-link" data-section="estimation-tool"><i class="fas fa-calculator fa-fw"></i><span>AI Cost Estimation</span></a>
           <a href="#" class="sidebar-nav-link" data-section="my-estimations"><i class="fas fa-file-invoice fa-fw"></i><span>My Estimations</span></a>`;
     }
-    
+
     links += `<a href="#" class="sidebar-nav-link" data-section="messages"><i class="fas fa-comments fa-fw"></i><span>Messages</span></a>`;
     links += `<hr class="sidebar-divider">`;
     links += `<a href="#" class="sidebar-nav-link" data-section="settings"><i class="fas fa-cog fa-fw"></i><span>Settings</span></a>`;
@@ -1633,7 +1809,7 @@ function renderAppSection(sectionId) {
     document.querySelectorAll('.sidebar-nav-link').forEach(link => {
         link.classList.toggle('active', link.dataset.section === sectionId);
     });
-    
+
     const userRole = appState.currentUser.type;
     if (sectionId === 'dashboard') {
         container.innerHTML = getDashboardTemplate(appState.currentUser);
@@ -1674,7 +1850,7 @@ async function renderRecentActivityWidgets() {
     const user = appState.currentUser;
     const recentProjectsContainer = document.getElementById('recent-projects-widget');
     const recentQuotesContainer = document.getElementById('recent-quotes-widget');
-    
+
     if (user.type === 'contractor') {
         if(recentProjectsContainer) recentProjectsContainer.innerHTML = '<div class="widget-loader"><div class="spinner"></div></div>';
         try {
@@ -1783,7 +1959,7 @@ async function toggleWidgetDetails(itemId, itemType) {
 function setupEstimationToolEventListeners() {
     const uploadArea = document.getElementById('file-upload-area');
     const fileInput = document.getElementById('file-upload-input');
-    
+
     if (uploadArea) {
         uploadArea.addEventListener('click', () => fileInput.click());
         uploadArea.addEventListener('dragover', (e) => { e.preventDefault(); uploadArea.classList.add('drag-over'); });
@@ -1829,7 +2005,7 @@ function handleFileSelect(files) {
 function removeFile(index) {
     const filesArray = Array.from(appState.uploadedFile);
     filesArray.splice(index, 1);
-    
+
     if (filesArray.length === 0) {
         appState.uploadedFile = null;
         document.getElementById('file-info-container').style.display = 'none';
@@ -1868,8 +2044,7 @@ async function handleEstimationSubmit() {
             formData.append('files', appState.uploadedFile[i]);
         }
         await apiCall('/estimation/contractor/submit', 'POST', formData, 'Estimation request submitted successfully!');
-        addNotification(`Your AI estimation request for "${projectTitle}" has been submitted successfully. You will be notified when the analysis is complete.`, 'estimation');
-        setTimeout(() => fetchNotifications(), 2000);
+        addNotification(`Your AI estimation request for "${projectTitle}" has been submitted.`, 'estimation');
         form.reset();
         appState.uploadedFile = null;
         document.getElementById('file-info-container').style.display = 'none';
@@ -1882,7 +2057,6 @@ async function handleEstimationSubmit() {
     }
 }
 
-// Consolidated notification/toast function
 function showNotification(message, type = 'info', duration = 4000) {
     let notificationContainer = document.getElementById('notification-container');
     if (!notificationContainer) {
@@ -1894,19 +2068,7 @@ function showNotification(message, type = 'info', duration = 4000) {
 
     const notification = document.createElement('div');
     notification.className = `notification premium-notification notification-${type}`;
-    const icons = {
-        success: 'fa-check-circle',
-        error: 'fa-exclamation-triangle',
-        warning: 'fa-exclamation-circle',
-        info: 'fa-info-circle',
-        message: 'fa-comment-alt',
-        job: 'fa-briefcase',
-        quote: 'fa-file-invoice-dollar',
-        estimation: 'fa-calculator',
-        user: 'fa-user'
-    };
-    
-    const iconClass = icons[type] || 'fa-info-circle';
+    const iconClass = getNotificationIcon(type);
 
     notification.innerHTML = `
         <div class="notification-content">
@@ -2059,7 +2221,7 @@ function getDashboardTemplate(user) {
             <h3>Approved Projects</h3>
             <p>Track progress and communicate on assigned work.</p>
         </div>`;
-    
+
     const contractorWidgets = `
         <div class="widget-card">
             <h3><i class="fas fa-history"></i> Recent Projects</h3>
@@ -2087,7 +2249,7 @@ function getDashboardTemplate(user) {
             <h3>Messages</h3>
             <p>Communicate with clients about projects.</p>
         </div>`;
-        
+
     const designerWidgets = `
         <div class="widget-card">
             <h3><i class="fas fa-history"></i> Recent Quotes</h3>
@@ -2164,7 +2326,7 @@ function getSettingsTemplate(user) {
                     <button type="submit" class="btn btn-primary">Save Changes</button>
                 </form>
             </div>
-            
+
             <div class="settings-card">
                 <h3><i class="fas fa-shield-alt"></i> Security</h3>
                  <form class="premium-form" onsubmit="event.preventDefault(); showNotification('Password functionality not implemented.', 'info');">
