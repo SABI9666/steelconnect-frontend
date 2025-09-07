@@ -273,48 +273,39 @@ function updateDynamicHeader() {
     }
 }
 
-async function apiCall(endpoint, method, body = null, successMessage = null) {
+// Enhanced API call function with better error handling
+async function apiCall(endpoint, method = 'GET', body = null, isFileUpload = false) {
+    const token = localStorage.getItem('jwtToken');
+    const options = {
+        method,
+        headers: { 'Authorization': `Bearer ${token}` },
+    };
+    if (!isFileUpload && body) {
+        options.headers['Content-Type'] = 'application/json';
+        options.body = JSON.stringify(body);
+    } else if (isFileUpload && body) {
+        options.body = body; // FormData for file uploads
+    }
     try {
-        const options = { method, headers: {} };
-        if (appState.jwtToken) {
-            options.headers['Authorization'] = `Bearer ${appState.jwtToken}`;
+        console.log(`API Call: ${method} ${BACKEND_URL}${endpoint}`);
+        const response = await fetch(`${BACKEND_URL}${endpoint}`, options);
+        let responseData;
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            responseData = await response.json();
+        } else {
+            responseData = { success: false, message: 'Invalid response format' };
         }
-        if (body) {
-            if (body instanceof FormData) {
-                options.body = body;
-            } else {
-                options.headers['Content-Type'] = 'application/json';
-                options.body = JSON.stringify(body);
-            }
-        }
-
-        const response = await fetch(BACKEND_URL + endpoint, options);
-
-        if (response.status === 204 || response.headers.get("content-length") === "0") {
-             if (!response.ok) {
-                const errorMsg = response.headers.get('X-Error-Message') || `Request failed with status ${response.status}`;
-                throw new Error(errorMsg);
-             }
-             if (successMessage) showNotification(successMessage, 'success');
-             return { success: true };
-        }
-
-        const responseData = await response.json();
-
+        console.log(`API Response: ${response.status}`, responseData);
         if (!response.ok) {
-            throw new Error(responseData.message || responseData.error || `Request failed with status ${response.status}`);
+            throw new Error(responseData.message || `HTTP error! Status: ${response.status}`);
         }
-
-        if (successMessage) {
-            showNotification(successMessage, 'success');
-        }
-
         return responseData;
-
     } catch (error) {
-        console.error(`API call to ${endpoint} failed:`, error);
-        showNotification(error.message, 'error');
-        throw error;
+        console.error('API call error:', error);
+        const errorMessage = error.name === 'TypeError' ? 'Network error: Could not connect to server.' : error.message;
+        showNotification(errorMessage, 'error');
+        throw new Error(errorMessage);
     }
 }
 
@@ -1473,213 +1464,6 @@ function getAvatarColor(name) {
     return colors[index];
 }
 
-// ROBUST TIMESTAMP HANDLING - Replace in your script.js
-function formatDetailedTimestamp(date) {
-    try {
-        if (!date) {
-            console.warn('formatDetailedTimestamp: No date provided');
-            return 'Unknown time';
-        }
-        let messageDate;
-        // Handle Firebase Timestamp objects
-        if (date && typeof date === 'object' && typeof date.toDate === 'function') {
-            messageDate = date.toDate();
-        }
-        // Handle Firebase server timestamp objects with seconds/nanoseconds
-        else if (date && typeof date === 'object' && date.seconds !== undefined) {
-            messageDate = new Date(date.seconds * 1000 + (date.nanoseconds || 0) / 1000000);
-        }
-        // Handle regular Date objects
-        else if (date instanceof Date) {
-            messageDate = date;
-        }
-        // Handle ISO date strings
-        else if (typeof date === 'string') {
-            messageDate = new Date(date);
-        }
-        // Handle Unix timestamps (numbers)
-        else if (typeof date === 'number') {
-            // If it's a large number, assume milliseconds; if small, assume seconds
-            messageDate = new Date(date > 1000000000000 ? date : date * 1000);
-        }
-        // Handle objects with _seconds property (some Firebase formats)
-        else if (date && typeof date === 'object' && date._seconds !== undefined) {
-            messageDate = new Date(date._seconds * 1000 + (date._nanoseconds || 0) / 1000000);
-        }
-        else {
-            console.warn('formatDetailedTimestamp: Unrecognized date format:', typeof date, date);
-            return 'Invalid time';
-        }
-        // Validate the resulting date
-        if (!messageDate || isNaN(messageDate.getTime()) || messageDate.getTime() === 0) {
-            console.warn('formatDetailedTimestamp: Invalid date created from:', date);
-            return 'Invalid date';
-        }
-        const now = new Date();
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const messageDay = new Date(messageDate.getFullYear(), messageDate.getMonth(), messageDate.getDate());
-        const time = messageDate.toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true
-        });
-        // Check if it's today
-        if (today.getTime() === messageDay.getTime()) {
-            return time;
-        }
-        // Check if it's yesterday
-        const yesterday = new Date(today);
-        yesterday.setDate(today.getDate() - 1);
-        if (yesterday.getTime() === messageDay.getTime()) {
-            return `Yesterday, ${time}`;
-        }
-        // Check if it's within the last week
-        const weekAgo = new Date(today);
-        weekAgo.setDate(today.getDate() - 7);
-        if (messageDay > weekAgo) {
-            const dayName = messageDate.toLocaleDateString([], { weekday: 'long' });
-            return `${dayName}, ${time}`;
-        }
-        // Older dates
-        return `${messageDate.toLocaleDateString()}, ${time}`;
-    } catch (error) {
-        console.error('formatDetailedTimestamp error:', error, 'Input:', date);
-        return 'Invalid date';
-    }
-}
-
-function formatMessageTimestamp(date) {
-    try {
-        if (!date) {
-            return 'Unknown time';
-        }
-        let messageDate;
-        // Handle Firebase Timestamp objects
-        if (date && typeof date === 'object' && typeof date.toDate === 'function') {
-            messageDate = date.toDate();
-        }
-        // Handle Firebase server timestamp objects
-        else if (date && typeof date === 'object' && date.seconds !== undefined) {
-            messageDate = new Date(date.seconds * 1000 + (date.nanoseconds || 0) / 1000000);
-        }
-        // Handle regular Date objects
-        else if (date instanceof Date) {
-            messageDate = date;
-        }
-        // Handle ISO date strings
-        else if (typeof date === 'string') {
-            messageDate = new Date(date);
-        }
-        // Handle Unix timestamps
-        else if (typeof date === 'number') {
-            messageDate = new Date(date > 1000000000000 ? date : date * 1000);
-        }
-        // Handle objects with _seconds property
-        else if (date && typeof date === 'object' && date._seconds !== undefined) {
-            messageDate = new Date(date._seconds * 1000 + (date._nanoseconds || 0) / 1000000);
-        }
-        else {
-            console.warn('formatMessageTimestamp: Unrecognized date format:', typeof date, date);
-            return 'Invalid time';
-        }
-        if (!messageDate || isNaN(messageDate.getTime()) || messageDate.getTime() === 0) {
-            console.warn('formatMessageTimestamp: Invalid date created from:', date);
-            return 'Invalid date';
-        }
-        const now = new Date();
-        const diffMs = now - messageDate;
-        // Handle future dates (should not happen but just in case)
-        if (diffMs < 0) {
-            return 'Just now';
-        }
-        const diffSeconds = Math.floor(diffMs / 1000);
-        const diffMinutes = Math.floor(diffSeconds / 60);
-        const diffHours = Math.floor(diffMinutes / 60);
-        const diffDays = Math.floor(diffHours / 24);
-        if (diffSeconds < 30) return 'Just now';
-        if (diffSeconds < 60) return `${diffSeconds}s ago`;
-        if (diffMinutes < 60) return `${diffMinutes}m ago`;
-        if (diffHours < 24) return `${diffHours}h ago`;
-        if (diffDays === 1) return 'Yesterday';
-        if (diffDays < 7) return `${diffDays}d ago`;
-        if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
-        return messageDate.toLocaleDateString();
-    } catch (error) {
-        console.error('formatMessageTimestamp error:', error, 'Input:', date);
-        return 'Invalid date';
-    }
-}
-
-function formatMessageDate(date) {
-    try {
-        if (!date) {
-            return 'Unknown Date';
-        }
-        let messageDate;
-        // Handle Firebase Timestamp objects
-        if (date && typeof date === 'object' && typeof date.toDate === 'function') {
-            messageDate = date.toDate();
-        }
-        // Handle Firebase server timestamp objects
-        else if (date && typeof date === 'object' && date.seconds !== undefined) {
-            messageDate = new Date(date.seconds * 1000 + (date.nanoseconds || 0) / 1000000);
-        }
-        // Handle regular Date objects
-        else if (date instanceof Date) {
-            messageDate = date;
-        }
-        // Handle ISO date strings
-        else if (typeof date === 'string') {
-            messageDate = new Date(date);
-        }
-        // Handle Unix timestamps
-        else if (typeof date === 'number') {
-            messageDate = new Date(date > 1000000000000 ? date : date * 1000);
-        }
-        // Handle objects with _seconds property
-        else if (date && typeof date === 'object' && date._seconds !== undefined) {
-            messageDate = new Date(date._seconds * 1000 + (date._nanoseconds || 0) / 1000000);
-        }
-        else {
-            console.warn('formatMessageDate: Unrecognized date format:', typeof date, date);
-            return 'Unknown Date';
-        }
-        if (!messageDate || isNaN(messageDate.getTime()) || messageDate.getTime() === 0) {
-            console.warn('formatMessageDate: Invalid date created from:', date);
-            return 'Invalid Date';
-        }
-        const now = new Date();
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const messageDay = new Date(messageDate.getFullYear(), messageDate.getMonth(), messageDate.getDate());
-        // Check if it's today
-        if (today.getTime() === messageDay.getTime()) {
-            return 'Today';
-        }
-        // Check if it's yesterday
-        const yesterday = new Date(today);
-        yesterday.setDate(today.getDate() - 1);
-        if (yesterday.getTime() === messageDay.getTime()) {
-            return 'Yesterday';
-        }
-        // Check if it's this year
-        if (messageDate.getFullYear() === now.getFullYear()) {
-            return messageDate.toLocaleDateString([], {
-                month: 'long',
-                day: 'numeric'
-            });
-        }
-        // Different year
-        return messageDate.toLocaleDateString([], {
-            month: 'long',
-            day: 'numeric',
-            year: 'numeric'
-        });
-    } catch (error) {
-        console.error('formatMessageDate error:', error, 'Input:', date);
-        return 'Invalid Date';
-    }
-}
-
 async function renderConversationView(conversationOrId) {
     let conversation;
     // Handle both conversation object and ID
@@ -1833,106 +1617,7 @@ async function renderConversationView(conversationOrId) {
             </div>`;
     }
 }
-
-// Force immediate notification refresh after message send
-async function refreshNotificationsAfterMessage() {
-    console.log('🔄 [REFRESH] Forcing immediate notification refresh after message...');
-    // Wait a moment for server processing
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    try {
-        await fetchNotifications();
-        console.log('✅ [REFRESH] Immediate refresh completed');
-        // Schedule additional refreshes
-        setTimeout(async () => {
-            console.log('🔄 [REFRESH] Secondary refresh...');
-            await fetchNotifications();
-        }, 3000);
-        setTimeout(async () => {
-            console.log('🔄 [REFRESH] Final refresh...');
-            await fetchNotifications();
-        }, 8000);
-    } catch (error) {
-        console.error('❌ [REFRESH] Refresh failed:', error);
-    }
-}
-
-// Enhanced message sending with immediate notification refresh
-async function handleSendMessage(conversationId) {
-    const input = document.getElementById('message-text-input');
-    const sendBtn = document.querySelector('.send-button');
-    const text = input.value.trim();
-    if (!text) {
-        showNotification('Please enter a message', 'warning');
-        return;
-    }
-    if (!conversationId) {
-        showNotification('Conversation not found', 'error');
-        return;
-    }
-    const originalBtnContent = sendBtn.innerHTML;
-    input.disabled = true;
-    sendBtn.disabled = true;
-    sendBtn.innerHTML = '<div class="btn-spinner"></div>';
-    try {
-        console.log(`📤 [SEND] Sending message to conversation ${conversationId}...`);
-        const response = await fetch(`${BACKEND_URL}/messages/${conversationId}/messages`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${appState.jwtToken}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ text })
-        });
-        const data = await response.json();
-        if (!response.ok) {
-            throw new Error(data.error || data.message || `Failed to send message: ${response.status}`);
-        }
-        if (data.success) {
-            console.log(`✅ [SEND] Message sent successfully:`, data.data);
-            input.value = '';
-            const messagesContainer = document.getElementById('chat-messages-container');
-            // Remove empty state if it exists
-            const emptyState = messagesContainer.querySelector('.empty-messages');
-            if (emptyState) {
-                emptyState.remove();
-            }
-            // Add message to UI immediately with proper timestamp
-            const newMessage = data.data;
-            const timestamp = formatDetailedTimestamp(newMessage.createdAt);
-            const messageBubble = document.createElement('div');
-            messageBubble.className = 'message-wrapper premium-message me';
-            messageBubble.innerHTML = `
-                <div class="message-avatar-spacer" style="width: 40px; flex-shrink: 0;"></div>
-                <div class="message-content">
-                    <div class="message-bubble premium-bubble me">${newMessage.text}</div>
-                    <div class="message-meta">${timestamp}</div>
-                </div>`;
-            messagesContainer.appendChild(messageBubble);
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            // ENHANCED: Force immediate notification refresh
-            refreshNotificationsAfterMessage();
-        } else {
-            throw new Error(data.error || 'Failed to send message');
-        }
-    } catch(error) {
-        console.error('❌ [SEND] Message send failed:', error);
-        showNotification(error.message || 'Failed to send message. Please try again.', 'error');
-    } finally {
-        input.disabled = false;
-        sendBtn.disabled = false;
-        sendBtn.innerHTML = originalBtnContent;
-        if (input) {
-            input.focus();
-        }
-    }
-}
-
-
 // --- UI & MODAL FUNCTIONS ---
-// ... (The rest of the script from the previous turn remains unchanged)
-// [I will append the rest of the script here]
-// ...
-
 function showAuthModal(view) {
     const modalContainer = document.getElementById('modal-container');
     if(modalContainer) {
@@ -2907,3 +2592,13 @@ window.quickNotificationTest = async function() {
         await testCompleteMessageFlow();
     }
 };
+
+// Auto-run basic debug on login (can be removed later)
+function runBasicNotificationDebug() {
+    if (appState.currentUser) {
+        console.log('Running basic notification debug check...');
+        setTimeout(() => {
+            debugNotificationFlow();
+        }, 2000);
+    }
+}
