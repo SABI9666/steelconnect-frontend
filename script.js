@@ -431,7 +431,7 @@ function saveNotificationsToStorage() {
     }
 }
 
-// Enhanced notification fetching with merge logic
+// FIXED: Enhanced notification fetching with longer timeout for message notifications
 async function fetchNotifications() {
     if (!appState.currentUser) return;
     try {
@@ -449,6 +449,11 @@ async function fetchNotifications() {
         renderNotificationPanel();
         updateNotificationBadge();
         console.log(`Fetched and merged ${serverNotifications.length} server notifications with ${notificationState.notifications.length} total stored`);
+        // Check for new message notifications
+        const messageNotifications = serverNotifications.filter(n => n.type === 'message' && !n.isRead);
+        if (messageNotifications.length > 0) {
+            console.log(`Found ${messageNotifications.length} new message notifications`);
+        }
     } catch (error) {
         console.error("Error fetching notifications:", error);
         // If fetch fails, still show stored notifications
@@ -460,6 +465,7 @@ async function fetchNotifications() {
         }
     }
 }
+
 
 // Smart notification merging to avoid duplicates
 function mergeNotifications(serverNotifications, storedNotifications) {
@@ -579,9 +585,9 @@ function renderNotificationPanel() {
     }
 }
 
-// FIXED: Enhanced notification click handler for messages
 function handleNotificationClick(notificationId, type, metadata) {
     markNotificationAsRead(notificationId);
+
     switch (type) {
         case 'job':
             if (metadata.action === 'created') {
@@ -598,9 +604,7 @@ function handleNotificationClick(notificationId, type, metadata) {
             }
             break;
         case 'message':
-            // Handle message notifications properly
             if (metadata.conversationId) {
-                console.log('Opening conversation from notification:', metadata.conversationId);
                 renderConversationView(metadata.conversationId);
             } else {
                 renderAppSection('messages');
@@ -610,10 +614,9 @@ function handleNotificationClick(notificationId, type, metadata) {
             renderAppSection('my-estimations');
             break;
         default:
-            console.log('Unknown notification type:', type);
             break;
     }
-    // Close notification panel
+
     const panel = document.getElementById('notification-panel');
     if (panel) {
         panel.classList.remove('active');
@@ -1451,40 +1454,77 @@ function getAvatarColor(name) {
     return colors[index];
 }
 
+// FIXED: Better date handling functions
 function formatDetailedTimestamp(date) {
-    const today = new Date();
-    const messageDate = new Date(date);
-    const time = messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-    if (today.toDateString() === messageDate.toDateString()) {
-        return time;
+    try {
+        let messageDate;
+        // Handle different date formats
+        if (date && typeof date === 'object' && date.toDate) {
+            // Firebase Timestamp
+            messageDate = date.toDate();
+        } else if (date) {
+            // Regular date string or Date object
+            messageDate = new Date(date);
+        } else {
+            return 'Unknown time';
+        }
+        // Check if date is valid
+        if (isNaN(messageDate.getTime())) {
+            return 'Invalid date';
+        }
+        const today = new Date();
+        const time = messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        if (today.toDateString() === messageDate.toDateString()) {
+            return time;
+        }
+        const yesterday = new Date();
+        yesterday.setDate(today.getDate() - 1);
+        if (yesterday.toDateString() === messageDate.toDateString()) {
+            return `Yesterday, ${time}`;
+        }
+        return `${messageDate.toLocaleDateString()}, ${time}`;
+    } catch (error) {
+        console.error('Error formatting timestamp:', error);
+        return 'Invalid date';
     }
-    const yesterday = new Date();
-    yesterday.setDate(today.getDate() - 1);
-    if (yesterday.toDateString() === messageDate.toDateString()) {
-        return `Yesterday, ${time}`;
-    }
-    return `${messageDate.toLocaleDateString()}, ${time}`;
 }
 
 function formatMessageTimestamp(date) {
-    const now = new Date();
-    const messageDate = new Date(date);
-    const diffMs = now - messageDate;
-    const diffSeconds = Math.round(diffMs / 1000);
-    const diffMinutes = Math.round(diffSeconds / 60);
-    const diffHours = Math.round(diffMinutes / 60);
-    const diffDays = Math.round(diffHours / 24);
-
-    if (diffSeconds < 60) return 'Just now';
-    if (diffMinutes < 60) return `${diffMinutes}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays === 1) return 'Yesterday';
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return messageDate.toLocaleDateString();
+    try {
+        let messageDate;
+        // Handle different date formats
+        if (date && typeof date === 'object' && date.toDate) {
+            // Firebase Timestamp
+            messageDate = date.toDate();
+        } else if (date) {
+            // Regular date string or Date object
+            messageDate = new Date(date);
+        } else {
+            return 'Unknown time';
+        }
+        // Check if date is valid
+        if (isNaN(messageDate.getTime())) {
+            return 'Invalid date';
+        }
+        const now = new Date();
+        const diffMs = now - messageDate;
+        const diffSeconds = Math.round(diffMs / 1000);
+        const diffMinutes = Math.round(diffSeconds / 60);
+        const diffHours = Math.round(diffMinutes / 60);
+        const diffDays = Math.round(diffHours / 24);
+        if (diffSeconds < 60) return 'Just now';
+        if (diffMinutes < 60) return `${diffMinutes}m ago`;
+        if (diffHours < 24) return `${diffHours}h ago`;
+        if (diffDays === 1) return 'Yesterday';
+        if (diffDays < 7) return `${diffDays}d ago`;
+        return messageDate.toLocaleDateString();
+    } catch (error) {
+        console.error('Error formatting message timestamp:', error);
+        return 'Invalid date';
+    }
 }
 
-// FIXED: Enhanced conversation rendering
+// FIXED: Enhanced conversation rendering with better date handling
 async function renderConversationView(conversationOrId) {
     let conversation;
     // Handle both conversation object and ID
@@ -1516,8 +1556,8 @@ async function renderConversationView(conversationOrId) {
     }
     const container = document.getElementById('app-container');
     const otherParticipant = conversation.participants ?
-        conversation.participants.find(p => p.id !== appState.currentUser.id) :
-        { name: 'Unknown User', type: 'user' };
+         conversation.participants.find(p => p.id !== appState.currentUser.id) :
+         { name: 'Unknown User', type: 'user' };
     const avatarColor = getAvatarColor(otherParticipant.name || 'Unknown');
     container.innerHTML = `
         <div class="chat-container premium-chat">
@@ -1585,12 +1625,10 @@ async function renderConversationView(conversationOrId) {
             let messagesHTML = '';
             let lastDate = null;
             messages.forEach((msg, index) => {
-                const messageDate = new Date(msg.createdAt).toDateString();
+                // Use improved date handling
+                const messageDate = formatMessageDate(msg.createdAt);
                 if(messageDate !== lastDate) {
-                    const dateStr = new Date(msg.createdAt).toLocaleDateString([], {
-                         month: 'long', day: 'numeric', year: 'numeric'
-                     });
-                    messagesHTML += `<div class="chat-date-separator"><span>${dateStr}</span></div>`;
+                    messagesHTML += `<div class="chat-date-separator"><span>${messageDate}</span></div>`;
                     lastDate = messageDate;
                 }
                 const isMine = msg.senderId === appState.currentUser.id;
@@ -1619,7 +1657,7 @@ async function renderConversationView(conversationOrId) {
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
         // Focus on input
         document.getElementById('message-text-input').focus();
-            } catch (error) {
+    } catch (error) {
         console.error('Error loading messages:', error);
         messagesContainer.innerHTML = `
             <div class="error-messages premium-error-messages">
@@ -1633,7 +1671,7 @@ async function renderConversationView(conversationOrId) {
     }
 }
 
-// FIXED: Enhanced message sending function
+// FIXED: Enhanced message sending function - Replace in your script.js
 async function handleSendMessage(conversationId) {
     const input = document.getElementById('message-text-input');
     const sendBtn = document.querySelector('.send-button');
@@ -1685,12 +1723,10 @@ async function handleSendMessage(conversationId) {
                 </div>`;
             messagesContainer.appendChild(messageBubble);
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            // Refresh notifications after a short delay
+            // Refresh notifications after a short delay to get message notifications
             setTimeout(() => {
-                if (typeof fetchNotifications === 'function') {
-                    fetchNotifications();
-                }
-            }, 1500);
+                fetchNotifications();
+            }, 2000); // Increased delay to ensure server processing
         } else {
             throw new Error(data.error || 'Failed to send message');
         }
@@ -1702,6 +1738,31 @@ async function handleSendMessage(conversationId) {
         sendBtn.disabled = false;
         sendBtn.innerHTML = originalBtnContent;
         input.focus();
+    }
+}
+
+// HELPER: Format date for date separators
+function formatMessageDate(date) {
+    try {
+        let messageDate;
+        if (date && typeof date === 'object' && date.toDate) {
+            messageDate = date.toDate();
+        } else if (date) {
+            messageDate = new Date(date);
+        } else {
+            return 'Unknown Date';
+        }
+        if (isNaN(messageDate.getTime())) {
+            return 'Invalid Date';
+        }
+        return messageDate.toLocaleDateString([], {
+             month: 'long',
+             day: 'numeric',
+             year: 'numeric'
+         });
+    } catch (error) {
+        console.error('Error formatting message date:', error);
+        return 'Invalid Date';
     }
 }
 
