@@ -435,26 +435,23 @@ function saveNotificationsToStorage() {
     }
 }
 
-// FIXED: Enhanced notification fetching with proper message handling
+// Enhanced notification fetching with message notification focus
 async function fetchNotifications() {
     if (!appState.currentUser) return;
     try {
-        console.log('🔄 Fetching notifications from server...');
+        console.log('🔄 [FETCH] Fetching notifications from server...');
         const response = await apiCall('/notifications', 'GET');
         const serverNotifications = response.data || [];
-        console.log(`📥 Received ${serverNotifications.length} notifications from server`);
-        // Log message notifications specifically
+        console.log(`📥 [FETCH] Received ${serverNotifications.length} notifications from server`);
+        // Log message notifications specifically for debugging
         const messageNotifications = serverNotifications.filter(n => n.type === 'message');
         if (messageNotifications.length > 0) {
-            console.log(`💬 Found ${messageNotifications.length} message notifications:`,
-                 messageNotifications.map(n => ({
-                    id: n.id,
-                    message: n.message,
-                    isRead: n.isRead,
-                    createdAt: n.createdAt,
-                    metadata: n.metadata
-                }))
-            );
+            console.log(`💬 [FETCH] Found ${messageNotifications.length} message notifications:`);
+            messageNotifications.forEach((n, index) => {
+                console.log(`  ${index + 1}. ID: ${n.id}, From: ${n.metadata?.senderId}, Message: "${n.message.substring(0, 50)}...", Read: ${n.isRead}`);
+            });
+        } else {
+            console.log(`💬 [FETCH] No message notifications found in server response`);
         }
         // Merge server notifications with stored ones
         const mergedNotifications = mergeNotifications(serverNotifications, notificationState.notifications);
@@ -467,15 +464,21 @@ async function fetchNotifications() {
         // Update UI
         renderNotificationPanel();
         updateNotificationBadge();
-        console.log(`✅ Successfully merged and stored ${mergedNotifications.length} total notifications`);
+        console.log(`✅ [FETCH] Successfully merged and stored ${mergedNotifications.length} total notifications`);
+        // Debug: Show breakdown by type
+        const notificationTypes = {};
+        mergedNotifications.forEach(n => {
+            notificationTypes[n.type] = (notificationTypes[n.type] || 0) + 1;
+        });
+        console.log(`📊 [FETCH] Notification breakdown:`, notificationTypes);
     } catch (error) {
-        console.error("❌ Error fetching notifications:", error);
+        console.error("❌ [FETCH] Error fetching notifications:", error);
         // If fetch fails, still show stored notifications
         if (notificationState.notifications.length > 0) {
             appState.notifications = notificationState.notifications;
             renderNotificationPanel();
             updateNotificationBadge();
-            console.log('📱 Using stored notifications due to fetch error');
+            console.log('📱 [FETCH] Using stored notifications due to fetch error');
         }
     }
 }
@@ -1468,30 +1471,42 @@ function getAvatarColor(name) {
     return colors[index];
 }
 
-// FIXED: Enhanced date handling functions with proper error handling
+// FIXED: Enhanced date handling functions for script.js
 function formatDetailedTimestamp(date) {
     try {
         let messageDate;
-        // Handle different date formats
+        // Handle different date formats with better error checking
         if (!date) {
+            console.warn('formatDetailedTimestamp: No date provided');
             return 'Unknown time';
         }
+        // Firebase Timestamp (has .toDate method)
         if (date && typeof date === 'object' && typeof date.toDate === 'function') {
-            // Firebase Timestamp
             messageDate = date.toDate();
-        } else if (date && typeof date === 'object' && typeof date.getTime === 'function') {
-            // Already a Date object
+        }
+        // Already a Date object
+        else if (date instanceof Date) {
             messageDate = date;
-        } else if (typeof date === 'string' || typeof date === 'number') {
-            // Date string or timestamp
+        }
+        // Date string or ISO string
+        else if (typeof date === 'string') {
             messageDate = new Date(date);
-        } else {
-            console.warn('Unrecognized date format:', typeof date, date);
+        }
+        // Unix timestamp (number)
+        else if (typeof date === 'number') {
+            messageDate = new Date(date);
+        }
+        // Object with seconds (Firebase server timestamp format)
+        else if (date && typeof date === 'object' && date.seconds) {
+            messageDate = new Date(date.seconds * 1000);
+        }
+        else {
+            console.warn('formatDetailedTimestamp: Unrecognized date format:', typeof date, date);
             return 'Invalid time';
         }
-        // Check if date is valid
-        if (isNaN(messageDate.getTime())) {
-            console.warn('Invalid date created from:', date);
+        // Validate the resulting date
+        if (!messageDate || isNaN(messageDate.getTime())) {
+            console.warn('formatDetailedTimestamp: Invalid date created from:', date);
             return 'Invalid date';
         }
         const today = new Date();
@@ -1509,7 +1524,7 @@ function formatDetailedTimestamp(date) {
         // Older dates
         return `${messageDate.toLocaleDateString()}, ${time}`;
     } catch (error) {
-        console.error('Error formatting detailed timestamp:', error, 'Input:', date);
+        console.error('formatDetailedTimestamp error:', error, 'Input:', date);
         return 'Invalid date';
     }
 }
@@ -1517,26 +1532,31 @@ function formatDetailedTimestamp(date) {
 function formatMessageTimestamp(date) {
     try {
         let messageDate;
-        // Handle different date formats
         if (!date) {
             return 'Unknown time';
         }
+        // Handle different date formats
         if (date && typeof date === 'object' && typeof date.toDate === 'function') {
-            // Firebase Timestamp
             messageDate = date.toDate();
-        } else if (date && typeof date === 'object' && typeof date.getTime === 'function') {
-            // Already a Date object
+        }
+        else if (date instanceof Date) {
             messageDate = date;
-        } else if (typeof date === 'string' || typeof date === 'number') {
-            // Date string or timestamp
+        }
+        else if (typeof date === 'string') {
             messageDate = new Date(date);
-        } else {
-            console.warn('Unrecognized date format:', typeof date, date);
+        }
+        else if (typeof date === 'number') {
+            messageDate = new Date(date);
+        }
+        else if (date && typeof date === 'object' && date.seconds) {
+            messageDate = new Date(date.seconds * 1000);
+        }
+        else {
+            console.warn('formatMessageTimestamp: Unrecognized date format:', typeof date, date);
             return 'Invalid time';
         }
-        // Check if date is valid
-        if (isNaN(messageDate.getTime())) {
-            console.warn('Invalid date created from:', date);
+        if (!messageDate || isNaN(messageDate.getTime())) {
+            console.warn('formatMessageTimestamp: Invalid date created from:', date);
             return 'Invalid date';
         }
         const now = new Date();
@@ -1552,7 +1572,7 @@ function formatMessageTimestamp(date) {
         if (diffDays < 7) return `${diffDays}d ago`;
         return messageDate.toLocaleDateString();
     } catch (error) {
-        console.error('Error formatting message timestamp:', error, 'Input:', date);
+        console.error('formatMessageTimestamp error:', error, 'Input:', date);
         return 'Invalid date';
     }
 }
@@ -1566,16 +1586,25 @@ function formatMessageDate(date) {
         }
         if (date && typeof date === 'object' && typeof date.toDate === 'function') {
             messageDate = date.toDate();
-        } else if (date && typeof date === 'object' && typeof date.getTime === 'function') {
+        }
+        else if (date instanceof Date) {
             messageDate = date;
-        } else if (typeof date === 'string' || typeof date === 'number') {
+        }
+        else if (typeof date === 'string') {
             messageDate = new Date(date);
-        } else {
-            console.warn('Unrecognized date format:', typeof date, date);
+        }
+        else if (typeof date === 'number') {
+            messageDate = new Date(date);
+        }
+        else if (date && typeof date === 'object' && date.seconds) {
+            messageDate = new Date(date.seconds * 1000);
+        }
+        else {
+            console.warn('formatMessageDate: Unrecognized date format:', typeof date, date);
             return 'Unknown Date';
         }
-        if (isNaN(messageDate.getTime())) {
-            console.warn('Invalid date created from:', date);
+        if (!messageDate || isNaN(messageDate.getTime())) {
+            console.warn('formatMessageDate: Invalid date created from:', date);
             return 'Invalid Date';
         }
         return messageDate.toLocaleDateString([], {
@@ -1584,7 +1613,7 @@ function formatMessageDate(date) {
             year: 'numeric'
         });
     } catch (error) {
-        console.error('Error formatting message date:', error, 'Input:', date);
+        console.error('formatMessageDate error:', error, 'Input:', date);
         return 'Invalid Date';
     }
 }
@@ -1744,7 +1773,7 @@ async function renderConversationView(conversationOrId) {
     }
 }
 
-// FIXED: Enhanced message sending function with proper error handling and notification refresh
+// Enhanced message sending with better notification refresh timing
 async function handleSendMessage(conversationId) {
     const input = document.getElementById('message-text-input');
     const sendBtn = document.querySelector('.send-button');
@@ -1763,7 +1792,7 @@ async function handleSendMessage(conversationId) {
     sendBtn.disabled = true;
     sendBtn.innerHTML = '<div class="btn-spinner"></div>';
     try {
-        console.log(`📤 Sending message to conversation ${conversationId}...`);
+        console.log(`📤 [SEND] Sending message to conversation ${conversationId}...`);
         const response = await fetch(`${BACKEND_URL}/messages/${conversationId}/messages`, {
             method: 'POST',
             headers: {
@@ -1777,7 +1806,7 @@ async function handleSendMessage(conversationId) {
             throw new Error(data.error || data.message || `Failed to send message: ${response.status}`);
         }
         if (data.success) {
-            console.log(`✅ Message sent successfully:`, data.data);
+            console.log(`✅ [SEND] Message sent successfully:`, data.data);
             input.value = '';
             const messagesContainer = document.getElementById('chat-messages-container');
             // Remove empty state if it exists
@@ -1798,22 +1827,28 @@ async function handleSendMessage(conversationId) {
                 </div>`;
             messagesContainer.appendChild(messageBubble);
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            // FIXED: Force refresh notifications after message send with proper timing
-            console.log(`🔔 Scheduling notification refresh...`);
+            // FIXED: Enhanced notification refresh with multiple attempts
+            console.log(`🔔 [REFRESH] Scheduling notification refresh...`);
+            // First refresh after 2 seconds
             setTimeout(async () => {
-                try {
-                    console.log(`🔄 Refreshing notifications after message send...`);
-                    await fetchNotifications();
-                    console.log(`✅ Notifications refreshed successfully`);
-                } catch (error) {
-                    console.error(`❌ Failed to refresh notifications:`, error);
-                }
-            }, 3000); // 3 second delay to ensure server processing
+                console.log(`🔄 [REFRESH] First notification refresh attempt...`);
+                await fetchNotifications();
+            }, 2000);
+            // Second refresh after 5 seconds (in case first one was too early)
+            setTimeout(async () => {
+                console.log(`🔄 [REFRESH] Second notification refresh attempt...`);
+                await fetchNotifications();
+            }, 5000);
+            // Third refresh after 10 seconds (final attempt)
+            setTimeout(async () => {
+                console.log(`🔄 [REFRESH] Final notification refresh attempt...`);
+                await fetchNotifications();
+            }, 10000);
         } else {
             throw new Error(data.error || 'Failed to send message');
         }
     } catch(error) {
-        console.error('❌ Message send failed:', error);
+        console.error('❌ [SEND] Message send failed:', error);
         showNotification(error.message || 'Failed to send message. Please try again.', 'error');
     } finally {
         input.disabled = false;
@@ -1824,6 +1859,7 @@ async function handleSendMessage(conversationId) {
         }
     }
 }
+
 
 // --- ENHANCED UI & MODAL FUNCTIONS ---
 function showAuthModal(view) {
@@ -2560,184 +2596,24 @@ function getSettingsTemplate(user) {
     `;
 }
 
-// Add this to your script.js for debugging notification issues
-// Enhanced debug function to trace notification flow
-async function debugNotificationFlow() {
-    console.log('=== NOTIFICATION DEBUG TEST ===');
+// Debug function to test message notification flow
+async function testMessageNotificationFlow(conversationId) {
+    console.log('🧪 [TEST] Testing message notification flow...');
     // 1. Check current notifications
-    console.log('1. Fetching current notifications...');
-    try {
-        const response = await apiCall('/notifications', 'GET');
-        console.log(`Found ${response.data.length} total notifications`);
-        const messageNotifications = response.data.filter(n => n.type === 'message');
-        console.log(`Found ${messageNotifications.length} message notifications`);
-        if (messageNotifications.length > 0) {
-            console.log('Recent message notifications:', messageNotifications.slice(0, 3).map(n => ({
-                id: n.id,
-                message: n.message,
-                isRead: n.isRead,
-                createdAt: n.createdAt,
-                metadata: n.metadata
-            })));
-        }
-    } catch (error) {
-        console.error('Error fetching notifications:', error);
+    console.log('📊 [TEST] Current notifications:', appState.notifications.length);
+    // 2. Send a test message
+    if (conversationId) {
+        console.log(`📤 [TEST] Sending test message to conversation ${conversationId}...`);
+        await handleSendMessage(conversationId);
     }
-    // 2. Check current user info
-    console.log('2. Current user info:');
-    console.log('User ID:', appState.currentUser.id);
-    console.log('User Name:', appState.currentUser.name);
-    console.log('JWT Token exists:', !!appState.jwtToken);
-    // 3. Check conversations
-    console.log('3. Current conversations:');
-    console.log('Conversations loaded:', appState.conversations.length);
-    if (appState.conversations.length > 0) {
-        console.log('First conversation:', {
-            id: appState.conversations[0].id,
-            participants: appState.conversations[0].participants?.map(p => p.name),
-            jobTitle: appState.conversations[0].jobTitle
-        });
-    }
-    // 4. Test notification creation manually
-    console.log('4. Creating test notification...');
-    try {
-        addNotification('Test message notification - click to test handler', 'message', {
-            conversationId: 'test123',
-            senderId: 'test456',
-            action: 'new_message'
-        });
-        console.log('Test notification created successfully');
-    } catch (error) {
-        console.error('Error creating test notification:', error);
-    }
-    // 5. Check notification system state
-    console.log('5. Notification system state:');
-    console.log('App notifications:', appState.notifications.length);
-    console.log('Stored notifications:', notificationState.notifications.length);
-    console.log('Polling active:', !!notificationState.pollingInterval);
-    console.log('Last fetch time:', notificationState.lastFetchTime);
-    // 6. Test backend notification endpoint directly
-    console.log('6. Testing backend notification endpoint...');
-    try {
-        const testResponse = await fetch(`${BACKEND_URL}/notifications`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${appState.jwtToken}`,
-                'Content-Type': 'application/json'
-            }
-        });
-        if (testResponse.ok) {
-            const testData = await testResponse.json();
-            console.log('Backend response status:', testResponse.status);
-            console.log('Backend notifications count:', testData.data?.length || 0);
-        } else {
-            console.error('Backend response error:', testResponse.status, testResponse.statusText);
-        }
-    } catch (error) {
-        console.error('Backend request failed:', error);
-    }
-    console.log('=== DEBUG TEST COMPLETE ===');
-}
-
-// Test message sending with detailed logging
-async function testMessageSending(conversationId, messageText = 'Test message for notification debugging') {
-    console.log('=== TESTING MESSAGE SEND ===');
-    console.log('Conversation ID:', conversationId);
-    console.log('Message text:', messageText);
-    console.log('Current user:', appState.currentUser.name);
-    try {
-        // Send message
-        const response = await fetch(`${BACKEND_URL}/messages/${conversationId}/messages`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${appState.jwtToken}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ text: messageText })
-        });
-        const data = await response.json();
-        console.log('Send message response:', data);
-        if (data.success) {
-            console.log('Message sent successfully! Message ID:', data.data.id);
-            // Wait and check for notifications multiple times
-            const checkNotifications = async (attempt) => {
-                console.log(`Checking notifications (attempt ${attempt})...`);
-                const notificationResponse = await apiCall('/notifications', 'GET');
-                const messageNotifications = notificationResponse.data.filter(n =>
-                    n.type === 'message' &&
-                    n.metadata &&
-                    n.metadata.conversationId === conversationId
-                );
-                console.log(`Found ${messageNotifications.length} notifications for this conversation`);
-                if (messageNotifications.length > 0) {
-                    console.log('Latest message notification:', messageNotifications[0]);
-                    return true;
-                }
-                return false;
-            };
-            // Check immediately
-            await checkNotifications(1);
-            // Check after 3 seconds
-            setTimeout(() => checkNotifications(2), 3000);
-            // Check after 6 seconds
-            setTimeout(() => checkNotifications(3), 6000);
-        } else {
-            console.error('Message send failed:', data.error);
-        }
-        return data;
-    } catch (error) {
-        console.error('Error sending test message:', error);
-        throw error;
-    }
-}
-
-// Check notification service health
-async function checkNotificationServiceHealth() {
-    console.log('=== NOTIFICATION SERVICE HEALTH CHECK ===');
-    try {
-        // Test unread count endpoint
-        const unreadResponse = await apiCall('/notifications/unread-count', 'GET');
-        console.log('Unread count response:', unreadResponse);
-        // Test mark as read functionality
-        if (appState.notifications.length > 0) {
-            const testNotification = appState.notifications[0];
-            console.log('Testing mark as read with notification:', testNotification.id);
-            try {
-                await apiCall(`/notifications/${testNotification.id}/read`, 'PUT');
-                console.log('Mark as read test: SUCCESS');
-            } catch (error) {
-                console.error('Mark as read test: FAILED', error);
-            }
-        }
-        console.log('Notification service health check complete');
-    } catch (error) {
-        console.error('Notification service health check failed:', error);
-    }
-}
-
-// Force refresh all notification data
-async function forceRefreshNotifications() {
-    console.log('=== FORCING NOTIFICATION REFRESH ===');
-    try {
-        // Clear local storage
-        localStorage.removeItem(notificationState.storageKey);
-        // Reset state
-        notificationState.notifications = [];
-        appState.notifications = [];
-        // Force fresh fetch
+    // 3. Check for new notifications after 15 seconds
+    setTimeout(async () => {
+        console.log('🔍 [TEST] Checking for new notifications...');
         await fetchNotifications();
-        console.log('Notification refresh complete');
-        console.log('Current notifications:', appState.notifications.length);
-    } catch (error) {
-        console.error('Failed to refresh notifications:', error);
-    }
+        const messageNotifications = appState.notifications.filter(n => n.type === 'message');
+        console.log(`💬 [TEST] Found ${messageNotifications.length} message notifications total`);
+    }, 15000);
 }
-
-// Add these functions to window for console access
-window.debugNotificationFlow = debugNotificationFlow;
-window.testMessageSending = testMessageSending;
-window.checkNotificationServiceHealth = checkNotificationServiceHealth;
-window.forceRefreshNotifications = forceRefreshNotifications;
 
 // Auto-run basic debug on login (can be removed later)
 function runBasicNotificationDebug() {
@@ -2748,3 +2624,9 @@ function runBasicNotificationDebug() {
         }, 2000);
     }
 }
+
+// Add these functions to window for console access
+window.debugNotificationFlow = debugNotificationFlow;
+window.testMessageNotificationFlow = testMessageNotificationFlow;
+window.formatDetailedTimestamp = formatDetailedTimestamp;
+window.formatMessageTimestamp = formatMessageTimestamp;
