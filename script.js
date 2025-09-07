@@ -55,12 +55,6 @@ const appState = {
     userSubmittedQuotes: new Set(),
     uploadedFile: null,
     myEstimations: [],
-    // Caching Timestamps
-    myEstimationsLastFetched: null,
-    jobsLastFetched: null,
-    recentActivityLastFetched: null,
-    myQuotesLastFetched: null,
-    // End Caching Timestamps
     currentHeaderSlide: 0,
     notifications: [],
 };
@@ -107,7 +101,7 @@ const headerFeatures = [
     }
 ];
 
-// --- INACTIVITY TIMER FOR AUTO-LOGOUT (ENHANCED) ---
+// --- INACTIVITY TIMER FOR AUTO-LOGOUT ---
 let inactivityTimer;
 let warningTimer;
 
@@ -115,14 +109,12 @@ function resetInactivityTimer() {
     clearTimeout(inactivityTimer);
     clearTimeout(warningTimer);
 
-    // Warning at 4 minutes (1 minute before logout)
     warningTimer = setTimeout(() => {
         if (appState.currentUser) {
             showInactivityWarning();
         }
     }, 240000); // 4 minutes
 
-    // Logout at 5 minutes
     inactivityTimer = setTimeout(() => {
         if (appState.currentUser) {
             showNotification('You have been logged out due to inactivity.', 'warning');
@@ -138,23 +130,23 @@ function showInactivityWarning() {
     warning.className = 'inactivity-warning-modal';
     warning.innerHTML = `
         <div class="warning-content">
-            <div class="warning-icon">
-                <i class="fas fa-exclamation-triangle"></i>
-            </div>
+            <div class="warning-icon"><i class="fas fa-exclamation-triangle"></i></div>
             <h3>Session Timeout Warning</h3>
             <p>You will be logged out in 1 minute due to inactivity.</p>
             <p>Click anywhere to stay logged in.</p>
-            <div class="warning-actions">
-                <button class="btn btn-primary" onclick="dismissInactivityWarning()">Stay Logged In</button>
-            </div>
+            <div class="warning-actions"><button class="btn btn-primary" onclick="dismissInactivityWarning()">Stay Logged In</button></div>
         </div>
     `;
     document.body.appendChild(warning);
     const dismissHandler = () => {
         dismissInactivityWarning();
-        ['click', 'keydown', 'mousemove'].forEach(event => document.removeEventListener(event, dismissHandler));
+        document.removeEventListener('click', dismissHandler);
+        document.removeEventListener('keydown', dismissHandler);
+        document.removeEventListener('mousemove', dismissHandler);
     };
-    ['click', 'keydown', 'mousemove'].forEach(event => document.addEventListener(event, dismissHandler));
+    document.addEventListener('click', dismissHandler);
+    document.addEventListener('keydown', dismissHandler);
+    document.addEventListener('mousemove', dismissHandler);
 }
 
 function dismissInactivityWarning() {
@@ -235,18 +227,14 @@ function updateDynamicHeader() {
         const feature = headerFeatures[appState.currentHeaderSlide];
         headerElement.innerHTML = `
             <div class="feature-header-content" style="background: ${feature.gradient};">
-                <div class="feature-icon-container">
-                    <i class="fas ${feature.icon}"></i>
-                </div>
+                <div class="feature-icon-container"><i class="fas ${feature.icon}"></i></div>
                 <div class="feature-text-content">
                     <h2 class="feature-title">${feature.title}</h2>
                     <p class="feature-subtitle">${feature.subtitle}</p>
                     <p class="feature-description">${feature.description}</p>
                 </div>
                 <div class="feature-indicators">
-                    ${headerFeatures.map((_, index) =>
-                        `<div class="indicator ${index === appState.currentHeaderSlide ? 'active' : ''}"></div>`
-                    ).join('')}
+                    ${headerFeatures.map((_, index) => `<div class="indicator ${index === appState.currentHeaderSlide ? 'active' : ''}"></div>`).join('')}
                 </div>
             </div>
         `;
@@ -261,17 +249,12 @@ async function apiCall(endpoint, method, body = null, successMessage = null) {
         }
         if (body) {
             if (body instanceof FormData) {
-                // Let the browser set the Content-Type for FormData
+                options.body = body;
             } else {
                 options.headers['Content-Type'] = 'application/json';
                 options.body = JSON.stringify(body);
             }
         }
-        if (body instanceof FormData) { // Special handling for FormData
-             options.body = body;
-        }
-
-
         const response = await fetch(BACKEND_URL + endpoint, options);
         if (response.status === 204 || response.headers.get("content-length") === "0") {
              if (!response.ok) {
@@ -325,7 +308,7 @@ async function handleLogin(event) {
         initializeEnhancedNotifications();
         showNotification(`Welcome back, ${data.user.name}!`, 'success');
     } catch (error) {
-        // Error is already shown by apiCall
+        // Error is shown by apiCall
     }
 }
 
@@ -337,10 +320,6 @@ function logout() {
     appState.userSubmittedQuotes.clear();
     appState.myEstimations = [];
     appState.notifications = [];
-    appState.myEstimationsLastFetched = null;
-    appState.jobsLastFetched = null;
-    appState.recentActivityLastFetched = null;
-    appState.myQuotesLastFetched = null;
     localStorage.clear();
     clearTimeout(inactivityTimer);
     clearTimeout(warningTimer);
@@ -364,7 +343,7 @@ async function loadUserQuotes() {
     }
 }
 
-// --- ENHANCED NOTIFICATION SYSTEM WITH LOCAL STORAGE PERSISTENCE ---
+// --- ENHANCED NOTIFICATION SYSTEM WITH PERSISTENCE ---
 function loadStoredNotifications() {
     try {
         const stored = localStorage.getItem(notificationState.storageKey);
@@ -395,6 +374,18 @@ function saveNotificationsToStorage() {
     }
 }
 
+function mergeNotifications(serverNotifications, storedNotifications) {
+    const notificationMap = new Map();
+    [...storedNotifications, ...serverNotifications].forEach(notification => {
+        if (notification && notification.id) {
+            notificationMap.set(notification.id, notification);
+        }
+    });
+    return Array.from(notificationMap.values())
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, notificationState.maxStoredNotifications);
+}
+
 async function fetchNotifications() {
     if (!appState.currentUser) return;
     try {
@@ -407,6 +398,7 @@ async function fetchNotifications() {
         saveNotificationsToStorage();
         renderNotificationPanel();
         updateNotificationBadge();
+        console.log(`Fetched and merged ${serverNotifications.length} server notifications`);
     } catch (error) {
         console.error("Error fetching notifications:", error);
         if (notificationState.notifications.length > 0) {
@@ -415,18 +407,6 @@ async function fetchNotifications() {
             updateNotificationBadge();
         }
     }
-}
-
-function mergeNotifications(serverNotifications, storedNotifications) {
-    const notificationMap = new Map();
-    [...storedNotifications, ...serverNotifications].forEach(notification => {
-        if (notification && notification.id) {
-            notificationMap.set(notification.id, notification);
-        }
-    });
-    return Array.from(notificationMap.values())
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-        .slice(0, notificationState.maxStoredNotifications);
 }
 
 function addNotification(message, type = 'info', metadata = {}) {
@@ -444,16 +424,6 @@ function addNotification(message, type = 'info', metadata = {}) {
     renderNotificationPanel();
     updateNotificationBadge();
     showNotification(message, type);
-    console.log('Added local notification:', newNotification);
-}
-
-function getNotificationIcon(type) {
-    const iconMap = {
-        info: 'fa-info-circle', success: 'fa-check-circle', warning: 'fa-exclamation-triangle',
-        error: 'fa-times-circle', message: 'fa-comment-alt', job: 'fa-briefcase',
-        quote: 'fa-file-invoice-dollar', estimation: 'fa-calculator', user: 'fa-user', file: 'fa-paperclip'
-    };
-    return iconMap[type] || 'fa-info-circle';
 }
 
 function renderNotificationPanel() {
@@ -496,27 +466,16 @@ function renderNotificationPanel() {
     }
 }
 
-function handleNotificationClick(notificationId, type, metadata) {
-    markNotificationAsRead(notificationId);
-    switch (type) {
-        case 'job': renderAppSection('jobs'); break;
-        case 'quote': renderAppSection(appState.currentUser.type === 'designer' ? 'my-quotes' : 'jobs'); break;
-        case 'message': metadata.conversationId ? renderConversationView(metadata.conversationId) : renderAppSection('messages'); break;
-        case 'estimation': renderAppSection('my-estimations'); break;
-    }
-    document.getElementById('notification-panel')?.classList.remove('active');
-}
-
 async function markNotificationAsRead(notificationId) {
-    const updateInArray = (arr) => {
-        const notification = arr.find(n => n.id == notificationId);
+    const updateNotification = (notifications) => {
+        const notification = notifications.find(n => n.id == notificationId);
         if (notification && !notification.isRead) {
             notification.isRead = true;
             return true;
         }
         return false;
     };
-    if (updateInArray(appState.notifications) || updateInArray(notificationState.notifications)) {
+    if (updateNotification(appState.notifications) || updateNotification(notificationState.notifications)) {
         saveNotificationsToStorage();
         renderNotificationPanel();
         updateNotificationBadge();
@@ -543,21 +502,6 @@ async function markAllAsRead() {
     } catch (error) {
         console.error('Failed to mark all notifications as read on server:', error);
         showNotification('Marked as read locally (server sync failed)', 'warning');
-    }
-}
-
-function updateNotificationBadge() {
-    const badge = document.getElementById('notification-badge');
-    if (badge) {
-        const unreadCount = (appState.notifications || []).filter(n => !n.isRead).length;
-        if (unreadCount > 0) {
-            badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
-            badge.style.display = 'flex';
-            badge.classList.add('pulse');
-        } else {
-            badge.style.display = 'none';
-            badge.classList.remove('pulse');
-        }
     }
 }
 
@@ -593,21 +537,6 @@ async function toggleNotificationPanel(event) {
     }
 }
 
-function clearOldNotifications(daysToKeep = 30) {
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
-    const filterFn = n => new Date(n.createdAt) > cutoffDate;
-    const originalCount = notificationState.notifications.length;
-    notificationState.notifications = notificationState.notifications.filter(filterFn);
-    appState.notifications = appState.notifications.filter(filterFn);
-    if (originalCount !== notificationState.notifications.length) {
-        saveNotificationsToStorage();
-        renderNotificationPanel();
-        updateNotificationBadge();
-        console.log(`Cleared ${originalCount - notificationState.notifications.length} old notifications`);
-    }
-}
-
 function initializeEnhancedNotifications() {
     loadStoredNotifications();
     if (notificationState.notifications.length > 0) {
@@ -618,7 +547,6 @@ function initializeEnhancedNotifications() {
     if (appState.currentUser) {
         startNotificationPolling();
     }
-    clearOldNotifications(30);
 }
 
 function enhancedLogout() {
@@ -629,19 +557,48 @@ function enhancedLogout() {
     console.log('Enhanced notification system cleaned up for logout');
 }
 
-// --- CACHED DATA FETCHING FUNCTIONS ---
-async function loadUserEstimations(forceRefresh = false) {
-    if (!appState.currentUser) return;
-    const now = new Date();
-    const minutesSinceLastFetch = appState.myEstimationsLastFetched ? (now - appState.myEstimationsLastFetched) / 60000 : Infinity;
-    if (!forceRefresh && appState.myEstimations.length > 0 && minutesSinceLastFetch < 2) {
-        console.log("Using cached user estimations.");
-        return;
+// --- ALL OTHER FUNCTIONS ---
+
+function getNotificationIcon(type) {
+    const iconMap = {
+        info: 'fa-info-circle', success: 'fa-check-circle', warning: 'fa-exclamation-triangle',
+        error: 'fa-times-circle', message: 'fa-comment-alt', job: 'fa-briefcase',
+        quote: 'fa-file-invoice-dollar', estimation: 'fa-calculator', user: 'fa-user', file: 'fa-paperclip'
+    };
+    return iconMap[type] || 'fa-info-circle';
+}
+
+function handleNotificationClick(notificationId, type, metadata) {
+    markNotificationAsRead(notificationId);
+    switch (type) {
+        case 'job': renderAppSection('jobs'); break;
+        case 'quote': renderAppSection(appState.currentUser.type === 'designer' ? 'my-quotes' : 'jobs'); break;
+        case 'message': metadata.conversationId ? renderConversationView(metadata.conversationId) : renderAppSection('messages'); break;
+        case 'estimation': renderAppSection('my-estimations'); break;
     }
+    document.getElementById('notification-panel')?.classList.remove('active');
+}
+
+function updateNotificationBadge() {
+    const badge = document.getElementById('notification-badge');
+    if (badge) {
+        const unreadCount = (appState.notifications || []).filter(n => !n.isRead).length;
+        if (unreadCount > 0) {
+            badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+            badge.style.display = 'flex';
+            badge.classList.add('pulse');
+        } else {
+            badge.style.display = 'none';
+            badge.classList.remove('pulse');
+        }
+    }
+}
+
+async function loadUserEstimations() {
+    if (!appState.currentUser) return;
     try {
         const response = await apiCall(`/estimation/contractor/${appState.currentUser.email}`, 'GET');
         appState.myEstimations = response.estimations || [];
-        appState.myEstimationsLastFetched = new Date();
     } catch (error) {
         console.error('Error loading user estimations:', error);
         appState.myEstimations = [];
@@ -665,9 +622,7 @@ async function fetchAndRenderMyEstimations() {
     updateDynamicHeader();
     const listContainer = document.getElementById('estimations-list');
     listContainer.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Loading estimations...</p></div>';
-
-    await loadUserEstimations(); // Uses cache by default
-
+    await loadUserEstimations();
     if (appState.myEstimations.length === 0) {
         listContainer.innerHTML = `<div class="empty-state premium-empty"><div class="empty-icon"><i class="fas fa-calculator"></i></div><h3>No Estimation Requests Yet</h3><p>Upload your project drawings to get accurate cost estimates.</p><button class="btn btn-primary btn-large" onclick="renderAppSection('estimation-tool')"><i class="fas fa-upload"></i> Upload First Project</button></div>`;
         return;
@@ -740,7 +695,6 @@ async function deleteEstimation(estimationId) {
         try {
             await apiCall(`/estimation/${estimationId}`, 'DELETE', null, 'Estimation deleted successfully');
             addNotification('Estimation request has been deleted.', 'info');
-            await loadUserEstimations(true);
             fetchAndRenderMyEstimations();
         } catch (error) {
             addNotification('Failed to delete estimation request.', 'error');
@@ -748,17 +702,9 @@ async function deleteEstimation(estimationId) {
     }
 }
 
-// --- JOB FUNCTIONS ---
-async function fetchAndRenderJobs(loadMore = false, forceRefresh = false) {
+async function fetchAndRenderJobs(loadMore = false) {
     const jobsListContainer = document.getElementById('jobs-list');
     const loadMoreContainer = document.getElementById('load-more-container');
-    const now = new Date();
-    const minutesSinceLastFetch = appState.jobsLastFetched ? (now - appState.jobsLastFetched) / 60000 : Infinity;
-    if (!forceRefresh && !loadMore && appState.jobs.length > 0 && minutesSinceLastFetch < 2) {
-        console.log("Using cached jobs.");
-        renderJobsHTML(appState.jobs);
-        return;
-    }
     if (!loadMore) {
         appState.jobs = [];
         appState.jobsPage = 1;
@@ -775,12 +721,7 @@ async function fetchAndRenderJobs(loadMore = false, forceRefresh = false) {
     try {
         const response = await apiCall(endpoint, 'GET');
         const newJobs = response.data || [];
-        if (loadMore) {
-            appState.jobs.push(...newJobs);
-        } else {
-            appState.jobs = newJobs;
-        }
-        appState.jobsLastFetched = new Date();
+        appState.jobs.push(...newJobs);
         if (user.type === 'designer') {
             appState.hasMoreJobs = response.pagination.hasNext;
             appState.jobsPage += 1;
@@ -796,7 +737,7 @@ async function fetchAndRenderJobs(loadMore = false, forceRefresh = false) {
         }
         renderJobsHTML(appState.jobs);
     } catch (error) {
-        if (jobsListContainer) jobsListContainer.innerHTML = `<div class="error-state premium-error"><div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div><h3>Error Loading Projects</h3><p>Please try again.</p><button class="btn btn-primary" onclick="fetchAndRenderJobs(false, true)">Retry</button></div>`;
+        if (jobsListContainer) jobsListContainer.innerHTML = `<div class="error-state premium-error"><div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div><h3>Error Loading Projects</h3><p>Please try again.</p><button class="btn btn-primary" onclick="fetchAndRenderJobs(false)">Retry</button></div>`;
     }
 }
 
@@ -804,6 +745,7 @@ function renderJobsHTML(jobs) {
     const jobsListContainer = document.getElementById('jobs-list');
     const loadMoreContainer = document.getElementById('load-more-container');
     const user = appState.currentUser;
+
     const jobsHTML = jobs.map(job => {
         const hasUserQuoted = appState.userSubmittedQuotes.has(job.id);
         const canQuote = user.type === 'designer' && job.status === 'open' && !hasUserQuoted;
@@ -836,6 +778,7 @@ function renderJobsHTML(jobs) {
                 <div class="job-actions">${actions}</div>
             </div>`;
     }).join('');
+
     if (jobsListContainer) jobsListContainer.innerHTML = jobsHTML;
     if (loadMoreContainer) {
         if (user.type === 'designer' && appState.hasMoreJobs) {
@@ -890,7 +833,7 @@ async function markJobCompleted(jobId) {
     }
 }
 
-async function fetchAndRenderMyQuotes(forceRefresh = false) {
+async function fetchAndRenderMyQuotes() {
     const container = document.getElementById('app-container');
     container.innerHTML = `
         <div id="dynamic-feature-header" class="dynamic-feature-header"></div>
@@ -899,28 +842,17 @@ async function fetchAndRenderMyQuotes(forceRefresh = false) {
     updateDynamicHeader();
     const listContainer = document.getElementById('my-quotes-list');
     listContainer.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Loading your quotes...</p></div>';
-
-    const now = new Date();
-    const minutesSinceLastFetch = appState.myQuotesLastFetched ? (now - appState.myQuotesLastFetched) / 60000 : Infinity;
-    if (!forceRefresh && appState.myQuotes.length > 0 && minutesSinceLastFetch < 2) {
-        console.log("Using cached quotes.");
-        renderMyQuotesHTML(appState.myQuotes);
-        return;
-    }
-
     try {
         const response = await apiCall(`/quotes/user/${appState.currentUser.id}`, 'GET');
         appState.myQuotes = response.data || [];
-        appState.myQuotesLastFetched = new Date();
         renderMyQuotesHTML(appState.myQuotes);
     } catch(error) {
-        listContainer.innerHTML = `<div class="error-state premium-error"><h3>Error Loading Quotes</h3><button onclick="fetchAndRenderMyQuotes(true)">Retry</button></div>`;
+        listContainer.innerHTML = `<div class="error-state premium-error"><h3>Error Loading Quotes</h3><button onclick="fetchAndRenderMyQuotes()">Retry</button></div>`;
     }
 }
 
 function renderMyQuotesHTML(quotes) {
     const listContainer = document.getElementById('my-quotes-list');
-    if (!listContainer) return;
     if (quotes.length === 0) {
         listContainer.innerHTML = `<div class="empty-state premium-empty"><div class="empty-icon"><i class="fas fa-file-invoice"></i></div><h3>No Quotes Submitted</h3><p>Browse available projects to get started.</p><button class="btn btn-primary" onclick="renderAppSection('jobs')">Find Projects</button></div>`;
         return;
@@ -983,7 +915,7 @@ async function handleQuoteEdit(event) {
         await apiCall(`/quotes/${form.quoteId.value}`, 'PUT', formData, 'Quote updated successfully!');
         addNotification('Your quote has been updated.', 'quote');
         closeModal();
-        await fetchAndRenderMyQuotes(true);
+        fetchAndRenderMyQuotes();
     } catch (error) {
         addNotification('Failed to update quote.', 'error');
     } finally {
@@ -1007,7 +939,6 @@ async function handlePostJob(event) {
         addNotification(`Your project "${formData.get('title')}" has been posted.`, 'job');
         form.reset();
         renderAppSection('jobs');
-        await fetchAndRenderJobs(false, true); // Force refresh
     } catch (error) {
         addNotification('Failed to post project.', 'error');
     } finally {
@@ -1022,7 +953,7 @@ async function deleteJob(jobId) {
         try {
             await apiCall(`/jobs/${jobId}`, 'DELETE', null, 'Project deleted.');
             addNotification('Project has been deleted.', 'info');
-            await fetchAndRenderJobs(false, true);
+            fetchAndRenderJobs();
         } catch (error) {
             addNotification('Failed to delete project.', 'error');
         }
@@ -1035,8 +966,8 @@ async function deleteQuote(quoteId) {
         try {
             await apiCall(`/quotes/${quoteId}`, 'DELETE', null, 'Quote deleted.');
             addNotification('Quote has been deleted.', 'info');
-            await fetchAndRenderMyQuotes(true);
-            await loadUserQuotes();
+            fetchAndRenderMyQuotes();
+            loadUserQuotes();
         } catch (error) {
             addNotification('Failed to delete quote.', 'error');
         }
@@ -1060,7 +991,6 @@ async function viewQuotes(jobId) {
                 } else if (quote.status === 'approved') {
                     actionButtons = `<span class="status-approved"><i class="fas fa-check-circle"></i> Approved</span>${actionButtons}`;
                 }
-                const statusIcon = {'submitted': 'fa-clock', 'approved': 'fa-check-circle', 'rejected': 'fa-times-circle'}[quote.status] || 'fa-question-circle';
                 return `
                     <div class="quote-item premium-quote-item quote-status-${quote.status}">
                         <div class="quote-item-header">
@@ -1084,7 +1014,7 @@ async function approveQuote(quoteId, jobId) {
             await apiCall(`/quotes/${quoteId}/approve`, 'PUT', { jobId }, 'Quote approved!');
             addNotification('You have approved a quote and assigned the project!', 'quote');
             closeModal();
-            await fetchAndRenderJobs(false, true);
+            fetchAndRenderJobs();
         } catch (error) {
             addNotification('Failed to approve quote.', 'error');
         }
@@ -1120,7 +1050,7 @@ async function handleQuoteSubmit(event) {
         addNotification('Your quote has been submitted.', 'quote');
         appState.userSubmittedQuotes.add(formData.get('jobId'));
         closeModal();
-        await fetchAndRenderJobs(false, true);
+        fetchAndRenderJobs();
     } catch (error) {
         addNotification('Failed to submit quote.', 'error');
     } finally {
@@ -1466,17 +1396,10 @@ function renderAppSection(sectionId) {
     }
 }
 
-async function renderRecentActivityWidgets(forceRefresh = false) {
-    const now = new Date();
-    const minutesSinceLastFetch = appState.recentActivityLastFetched ? (now - appState.recentActivityLastFetched) / 60000 : Infinity;
-    if (!forceRefresh && minutesSinceLastFetch < 2) {
-        console.log("Using cached recent activity.");
-        return;
-    }
+async function renderRecentActivityWidgets() {
     const user = appState.currentUser;
     const projectWidget = document.getElementById('recent-projects-widget');
     const quoteWidget = document.getElementById('recent-quotes-widget');
-    appState.recentActivityLastFetched = new Date();
     if (user.type === 'contractor' && projectWidget) {
         projectWidget.innerHTML = '<div class="widget-loader"><div class="spinner"></div></div>';
         try {
