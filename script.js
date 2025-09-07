@@ -579,9 +579,9 @@ function renderNotificationPanel() {
     }
 }
 
+// FIXED: Enhanced notification click handler for messages
 function handleNotificationClick(notificationId, type, metadata) {
     markNotificationAsRead(notificationId);
-
     switch (type) {
         case 'job':
             if (metadata.action === 'created') {
@@ -598,7 +598,9 @@ function handleNotificationClick(notificationId, type, metadata) {
             }
             break;
         case 'message':
+            // Handle message notifications properly
             if (metadata.conversationId) {
+                console.log('Opening conversation from notification:', metadata.conversationId);
                 renderConversationView(metadata.conversationId);
             } else {
                 renderAppSection('messages');
@@ -608,9 +610,10 @@ function handleNotificationClick(notificationId, type, metadata) {
             renderAppSection('my-estimations');
             break;
         default:
+            console.log('Unknown notification type:', type);
             break;
     }
-
+    // Close notification panel
     const panel = document.getElementById('notification-panel');
     if (panel) {
         panel.classList.remove('active');
@@ -1481,86 +1484,128 @@ function formatMessageTimestamp(date) {
     return messageDate.toLocaleDateString();
 }
 
+// FIXED: Enhanced conversation rendering
 async function renderConversationView(conversationOrId) {
     let conversation;
+    // Handle both conversation object and ID
     if (typeof conversationOrId === 'string') {
-        conversation = appState.conversations.find(c => c.id === conversationOrId) || { id: conversationOrId };
+        conversation = appState.conversations.find(c => c.id === conversationOrId);
+        if (!conversation) {
+            // If not found in local state, create minimal object and fetch details
+            conversation = { id: conversationOrId };
+        }
     } else {
         conversation = conversationOrId;
     }
-
-    if (!conversation.participants) {
+    // If conversation doesn't have full data, try to fetch it
+    if (!conversation.participants && conversation.id) {
         try {
+            showNotification('Loading conversation details...', 'info');
             const response = await apiCall('/messages', 'GET');
             appState.conversations = response.data || [];
             conversation = appState.conversations.find(c => c.id === conversation.id);
-        } catch(e) {}
-        if(!conversation) {
-            showNotification('Conversation not found.', 'error');
+            if (!conversation) {
+                throw new Error('Conversation not found');
+            }
+        } catch(error) {
+            console.error('Failed to load conversation:', error);
+            showNotification('Failed to load conversation. Please try again.', 'error');
+            renderAppSection('messages');
             return;
         }
     }
-
     const container = document.getElementById('app-container');
-    const otherParticipant = conversation.participants.find(p => p.id !== appState.currentUser.id);
-    const avatarColor = getAvatarColor(otherParticipant ? otherParticipant.name : 'Unknown');
-
+    const otherParticipant = conversation.participants ?
+        conversation.participants.find(p => p.id !== appState.currentUser.id) :
+        { name: 'Unknown User', type: 'user' };
+    const avatarColor = getAvatarColor(otherParticipant.name || 'Unknown');
     container.innerHTML = `
         <div class="chat-container premium-chat">
             <div class="chat-header premium-chat-header">
-                <button onclick="renderAppSection('messages')" class="back-btn premium-back-btn"><i class="fas fa-arrow-left"></i></button>
+                <button onclick="renderAppSection('messages')" class="back-btn premium-back-btn">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
                 <div class="chat-header-info">
-                    <div class="chat-avatar premium-avatar" style="background-color: ${avatarColor}">${otherParticipant ? otherParticipant.name.charAt(0).toUpperCase() : '?'}<div class="online-indicator"></div></div>
-                    <div class="chat-details"><h3>${otherParticipant ? otherParticipant.name : 'Conversation'}</h3><p class="chat-project"><i class="fas fa-briefcase"></i> ${conversation.jobTitle || ''}</p><span class="chat-status">Active now</span></div>
+                    <div class="chat-avatar premium-avatar" style="background-color: ${avatarColor}">
+                        ${(otherParticipant.name || 'U').charAt(0).toUpperCase()}
+                        <div class="online-indicator"></div>
+                    </div>
+                    <div class="chat-details">
+                        <h3>${otherParticipant.name || 'Conversation'}</h3>
+                        <p class="chat-project">
+                            <i class="fas fa-briefcase"></i> ${conversation.jobTitle || 'Project Discussion'}
+                        </p>
+                        <span class="chat-status">Active now</span>
+                    </div>
                 </div>
                 <div class="chat-actions">
-                    <span class="participant-type-badge premium-badge ${otherParticipant ? otherParticipant.type : ''}"><i class="fas ${otherParticipant && otherParticipant.type === 'designer' ? 'fa-drafting-compass' : 'fa-building'}"></i> ${otherParticipant ? otherParticipant.type : ''}</span>
-                    <button class="chat-options-btn"><i class="fas fa-ellipsis-v"></i></button>
+                    <span class="participant-type-badge premium-badge ${otherParticipant.type || ''}">
+                        <i class="fas ${otherParticipant.type === 'designer' ? 'fa-drafting-compass' : 'fa-building'}"></i>
+                         ${otherParticipant.type || 'User'}
+                    </span>
                 </div>
             </div>
-            <div class="chat-messages premium-messages" id="chat-messages-container"><div class="loading-messages"><div class="spinner"></div><p>Loading messages...</p></div></div>
+            <div class="chat-messages premium-messages" id="chat-messages-container">
+                <div class="loading-messages">
+                    <div class="spinner"></div>
+                    <p>Loading messages...</p>
+                </div>
+            </div>
             <div class="chat-input-area premium-input-area">
                 <form id="send-message-form" class="message-form premium-message-form">
                     <div class="message-input-container">
-                        <button type="button" class="attachment-btn" title="Add attachment"><i class="fas fa-paperclip"></i></button>
-                        <input type="text" id="message-text-input" placeholder="Type your message..." required autocomplete="off">
-                        <button type="button" class="emoji-btn" title="Add emoji"><i class="fas fa-smile"></i></button>
-                        <button type="submit" class="send-button premium-send-btn" title="Send message"><i class="fas fa-paper-plane"></i></button>
+                        <input type="text" id="message-text-input"
+                                placeholder="Type your message..."
+                                required autocomplete="off">
+                        <button type="submit" class="send-button premium-send-btn" title="Send message">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
                     </div>
                 </form>
             </div>
         </div>`;
-
+    // Add form submit handler
     document.getElementById('send-message-form').addEventListener('submit', (e) => {
         e.preventDefault();
         handleSendMessage(conversation.id);
     });
-
+    // Load messages
     const messagesContainer = document.getElementById('chat-messages-container');
     try {
         const response = await apiCall(`/messages/${conversation.id}/messages`, 'GET');
         const messages = response.data || [];
-
         if (messages.length === 0) {
-            messagesContainer.innerHTML = `<div class="empty-messages premium-empty-messages"><div class="empty-icon"><i class="fas fa-comment-dots"></i></div><h4>Start the conversation</h4><p>Send your first message to begin collaborating on this project.</p></div>`;
+            messagesContainer.innerHTML = `
+                <div class="empty-messages premium-empty-messages">
+                    <div class="empty-icon"><i class="fas fa-comment-dots"></i></div>
+                    <h4>Start the conversation</h4>
+                    <p>Send your first message to begin collaborating on this project.</p>
+                </div>`;
         } else {
             let messagesHTML = '';
             let lastDate = null;
             messages.forEach((msg, index) => {
                 const messageDate = new Date(msg.createdAt).toDateString();
                 if(messageDate !== lastDate) {
-                    messagesHTML += `<div class="chat-date-separator"><span>${new Date(msg.createdAt).toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' })}</span></div>`;
+                    const dateStr = new Date(msg.createdAt).toLocaleDateString([], {
+                         month: 'long', day: 'numeric', year: 'numeric'
+                     });
+                    messagesHTML += `<div class="chat-date-separator"><span>${dateStr}</span></div>`;
                     lastDate = messageDate;
                 }
-
                 const isMine = msg.senderId === appState.currentUser.id;
                 const timestamp = formatDetailedTimestamp(msg.createdAt);
                 const prevMsg = messages[index - 1];
                 const showAvatar = !prevMsg || prevMsg.senderId !== msg.senderId;
-                const avatarColor = getAvatarColor(msg.senderName);
+                const senderAvatarColor = getAvatarColor(msg.senderName);
                 messagesHTML += `
                     <div class="message-wrapper premium-message ${isMine ? 'me' : 'them'}">
-                        ${!isMine && showAvatar ? `<div class="message-avatar premium-msg-avatar" style="background-color: ${avatarColor}">${msg.senderName.charAt(0).toUpperCase()}</div>` : '<div class="message-avatar-spacer" style="width: 40px; flex-shrink: 0;"></div>'}
+                        ${!isMine && showAvatar ?
+                             `<div class="message-avatar premium-msg-avatar" style="background-color: ${senderAvatarColor}">
+                                ${msg.senderName.charAt(0).toUpperCase()}
+                            </div>` :
+                             '<div class="message-avatar-spacer" style="width: 40px; flex-shrink: 0;"></div>'
+                        }
                         <div class="message-content">
                             ${showAvatar && !isMine ? `<div class="message-sender">${msg.senderName}</div>` : ''}
                             <div class="message-bubble premium-bubble ${isMine ? 'me' : 'them'}">${msg.text}</div>
@@ -1570,34 +1615,43 @@ async function renderConversationView(conversationOrId) {
             });
             messagesContainer.innerHTML = messagesHTML;
         }
+        // Scroll to bottom
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    } catch (error) {
-        messagesContainer.innerHTML = `<div class="error-messages premium-error-messages"><div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div><h4>Error loading messages</h4><p>Please try again later.</p></div>`;
+        // Focus on input
+        document.getElementById('message-text-input').focus();
+            } catch (error) {
+        console.error('Error loading messages:', error);
+        messagesContainer.innerHTML = `
+            <div class="error-messages premium-error-messages">
+                <div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                <h4>Error loading messages</h4>
+                <p>Please try again later.</p>
+                <button class="btn btn-primary" onclick="renderConversationView('${conversation.id}')">
+                    Retry
+                </button>
+            </div>`;
     }
 }
 
+// FIXED: Enhanced message sending function
 async function handleSendMessage(conversationId) {
     const input = document.getElementById('message-text-input');
     const sendBtn = document.querySelector('.send-button');
     const text = input.value.trim();
-
     if (!text) {
         showNotification('Please enter a message', 'warning');
         return;
     }
-
     if (!conversationId) {
         showNotification('Conversation not found', 'error');
         return;
     }
-
+    // Store original button state
+    const originalBtnContent = sendBtn.innerHTML;
     input.disabled = true;
     sendBtn.disabled = true;
     sendBtn.innerHTML = '<div class="btn-spinner"></div>';
-
     try {
-        console.log(`Sending message to conversation: ${conversationId}`);
-
         const response = await fetch(`${BACKEND_URL}/messages/${conversationId}/messages`, {
             method: 'POST',
             headers: {
@@ -1612,18 +1666,17 @@ async function handleSendMessage(conversationId) {
         }
         if (data.success) {
             input.value = '';
-
             const messagesContainer = document.getElementById('chat-messages-container');
-            const newMessage = data.data;
-
-            if(messagesContainer.querySelector('.empty-messages')) {
-                messagesContainer.innerHTML = '';
+            // Remove empty state if it exists
+            const emptyState = messagesContainer.querySelector('.empty-messages');
+            if (emptyState) {
+                emptyState.remove();
             }
-
+            // Add message to UI immediately
+            const newMessage = data.data;
+            const timestamp = formatDetailedTimestamp(newMessage.createdAt);
             const messageBubble = document.createElement('div');
             messageBubble.className = 'message-wrapper premium-message me';
-            const timestamp = formatDetailedTimestamp(newMessage.createdAt);
-
             messageBubble.innerHTML = `
                 <div class="message-avatar-spacer" style="width: 40px; flex-shrink: 0;"></div>
                 <div class="message-content">
@@ -1632,6 +1685,12 @@ async function handleSendMessage(conversationId) {
                 </div>`;
             messagesContainer.appendChild(messageBubble);
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            // Refresh notifications after a short delay
+            setTimeout(() => {
+                if (typeof fetchNotifications === 'function') {
+                    fetchNotifications();
+                }
+            }, 1500);
         } else {
             throw new Error(data.error || 'Failed to send message');
         }
@@ -1641,7 +1700,7 @@ async function handleSendMessage(conversationId) {
     } finally {
         input.disabled = false;
         sendBtn.disabled = false;
-        sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
+        sendBtn.innerHTML = originalBtnContent;
         input.focus();
     }
 }
@@ -2381,8 +2440,3 @@ function getSettingsTemplate(user) {
         </div>
     `;
 }
-
-
-
-
-
