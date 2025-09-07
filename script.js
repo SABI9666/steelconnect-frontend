@@ -2501,3 +2501,96 @@ function getSettingsTemplate(user) {
         </div>
     `;
 }
+
+// Add this debug function to your frontend script.js
+async function debugNotificationFlow() {
+    console.log('=== NOTIFICATION DEBUG TEST ===');
+    // 1. Check current notifications
+    console.log('1. Fetching current notifications...');
+    try {
+        const response = await apiCall('/notifications', 'GET');
+        console.log(`Found ${response.data.length} total notifications`);
+        const messageNotifications = response.data.filter(n => n.type === 'message');
+        console.log(`Found ${messageNotifications.length} message notifications`);
+        if (messageNotifications.length > 0) {
+            console.log('Recent message notifications:', messageNotifications.slice(0, 3));
+        }
+    } catch (error) {
+        console.error('Error fetching notifications:', error);
+    }
+    // 2. Check current user info
+    console.log('2. Current user info:');
+    console.log('User ID:', appState.currentUser.id);
+    console.log('User Name:', appState.currentUser.name);
+    console.log('JWT Token exists:', !!appState.jwtToken);
+    // 3. Check conversations
+    console.log('3. Current conversations:');
+    console.log('Conversations loaded:', appState.conversations.length);
+    if (appState.conversations.length > 0) {
+        console.log('First conversation:', appState.conversations[0]);
+    }
+    // 4. Test notification creation manually
+    console.log('4. Creating test notification...');
+    try {
+        addNotification('Test message notification - click to test handler', 'message', {
+            conversationId: 'test123',
+            senderId: 'test456',
+            action: 'new_message'
+        });
+        console.log('Test notification created successfully');
+    } catch (error) {
+        console.error('Error creating test notification:', error);
+    }
+    // 5. Check notification system state
+    console.log('5. Notification system state:');
+    console.log('App notifications:', appState.notifications.length);
+    console.log('Stored notifications:', notificationState.notifications.length);
+    console.log('Polling active:', !!notificationState.pollingInterval);
+    console.log('=== DEBUG TEST COMPLETE ===');
+}
+
+// Add this enhanced send message function with detailed logging
+async function sendMessageWithLogging(conversationId, messageText) {
+    console.log('=== SENDING MESSAGE WITH LOGGING ===');
+    console.log('Conversation ID:', conversationId);
+    console.log('Message text:', messageText);
+    console.log('Current user:', appState.currentUser.name);
+    try {
+        const response = await fetch(`${BACKEND_URL}/messages/${conversationId}/messages`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${appState.jwtToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ text: messageText })
+        });
+        const data = await response.json();
+        console.log('Backend response:', data);
+        if (data.success) {
+            console.log('Message sent successfully!');
+            // Wait and then check for notifications
+            console.log('Waiting 5 seconds before checking notifications...');
+            setTimeout(async () => {
+                console.log('Checking for new notifications...');
+                const notificationResponse = await apiCall('/notifications', 'GET');
+                const messageNotifications = notificationResponse.data.filter(n =>
+                    n.type === 'message' &&
+                    n.metadata &&
+                    n.metadata.conversationId === conversationId
+                );
+                console.log(`Found ${messageNotifications.length} notifications for this conversation`);
+                if (messageNotifications.length > 0) {
+                    console.log('Latest message notification:', messageNotifications[0]);
+                }
+            }, 5000);
+        }
+        return data;
+    } catch (error) {
+        console.error('Error sending message:', error);
+        throw error;
+    }
+}
+
+// Add this to window so you can call it from browser console
+window.debugNotificationFlow = debugNotificationFlow;
+window.sendMessageWithLogging = sendMessageWithLogging;
