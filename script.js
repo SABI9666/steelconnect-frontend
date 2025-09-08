@@ -24,7 +24,7 @@ if (totalSlides > 0) {
 }
 
 document.querySelectorAll('.nav-link[href^="#"]').forEach(link => {
-    link.addEventListener('click', function (e) {
+    link.addEventListener('click', function(e) {
         e.preventDefault();
         const targetId = this.getAttribute('href');
         const targetSection = document.querySelector(targetId);
@@ -114,17 +114,17 @@ let inactivityTimer;
 let warningTimer;
 
 
-// --- INITIALIZATION & CORE APP LOGIC ---
+// --- INITIALIZATION & CORE APP LOGIC (CORRECTED) ---
 async function initializeApp() {
     console.log("SteelConnect App Initializing...");
 
+    // Global click handler for dropdowns
     window.addEventListener('click', (event) => {
         const userInfoContainer = document.getElementById('user-info-container');
         const userInfoDropdown = document.getElementById('user-info-dropdown');
         if (userInfoDropdown && userInfoContainer && !userInfoContainer.contains(event.target)) {
             userInfoDropdown.classList.remove('active');
         }
-
         const notificationPanel = document.getElementById('notification-panel');
         const notificationBellContainer = document.getElementById('notification-bell-container');
         if (notificationPanel && notificationBellContainer && !notificationBellContainer.contains(event.target)) {
@@ -132,6 +132,7 @@ async function initializeApp() {
         }
     });
 
+    // Inactivity timer setup
     const activityEvents = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart', 'touchmove', 'wheel'];
     activityEvents.forEach(event => {
         window.addEventListener(event, resetInactivityTimer, {
@@ -139,13 +140,105 @@ async function initializeApp() {
         });
     });
 
-    const signInBtn = document.getElementById('signin-btn');
-    if (signInBtn) signInBtn.addEventListener('click', () => showAuthModal('login'));
-    const joinBtn = document.getElementById('join-btn');
-    if (joinBtn) joinBtn.addEventListener('click', () => showAuthModal('register'));
-    const getStartedBtn = document.getElementById('get-started-btn');
-    if (getStartedBtn) getStartedBtn.addEventListener('click', () => showAuthModal('register'));
+    // Setup UI handlers with retry mechanism
+    retryAuthButtonSetup();
+    setupLogoHandler();
 
+    // Check for existing session
+    const token = localStorage.getItem('jwtToken');
+    const user = localStorage.getItem('currentUser');
+    if (token && user) {
+        try {
+            appState.jwtToken = token;
+            appState.currentUser = JSON.parse(user);
+            await showAppView();
+            resetInactivityTimer();
+            initializeEnhancedNotifications();
+            console.log('Restored user session');
+        } catch (error) {
+            console.error("Error parsing user data from localStorage:", error);
+            logout();
+        }
+    } else {
+        showLandingPageView();
+    }
+    initializeHeaderRotation();
+}
+
+// Separate function for setting up auth buttons
+function setupAuthButtons() {
+    // Try multiple ways to find the buttons
+    const signInBtn = document.getElementById('signin-btn') ||
+        document.querySelector('#signin-btn') ||
+        document.querySelector('[id="signin-btn"]') ||
+        document.querySelector('.signin-btn');
+
+    const joinBtn = document.getElementById('join-btn') ||
+        document.querySelector('#join-btn') ||
+        document.querySelector('[id="join-btn"]') ||
+        document.querySelector('.join-btn');
+
+    const getStartedBtn = document.getElementById('get-started-btn') ||
+        document.querySelector('#get-started-btn') ||
+        document.querySelector('[id="get-started-btn"]') ||
+        document.querySelector('.get-started-btn');
+
+    console.log('Auth buttons found:', {
+        signInBtn: !!signInBtn,
+        joinBtn: !!joinBtn,
+        getStartedBtn: !!getStartedBtn
+    });
+
+    if (signInBtn) {
+        // Remove any existing listeners to prevent duplicates
+        signInBtn.removeEventListener('click', handleSignInClick);
+        signInBtn.addEventListener('click', handleSignInClick);
+        console.log('Sign-in button listener attached');
+    } else {
+        console.warn('Sign-in button not found');
+    }
+
+    if (joinBtn) {
+        joinBtn.removeEventListener('click', handleJoinClick);
+        joinBtn.addEventListener('click', handleJoinClick);
+        console.log('Join button listener attached');
+    } else {
+        console.warn('Join button not found');
+    }
+
+    if (getStartedBtn) {
+        getStartedBtn.removeEventListener('click', handleGetStartedClick);
+        getStartedBtn.addEventListener('click', handleGetStartedClick);
+        console.log('Get Started button listener attached');
+    } else {
+        console.warn('Get Started button not found');
+    }
+}
+
+// Separate event handler functions
+function handleSignInClick(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('Sign-in button clicked');
+    showAuthModal('login');
+}
+
+function handleJoinClick(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('Join button clicked');
+    showAuthModal('register');
+}
+
+function handleGetStartedClick(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('Get Started button clicked');
+    showAuthModal('register');
+}
+
+// Setup logo handler separately
+function setupLogoHandler() {
     const logo = document.querySelector('.logo');
     if (logo) {
         logo.addEventListener('click', (e) => {
@@ -161,28 +254,39 @@ async function initializeApp() {
             }
         });
     }
-
-    const token = localStorage.getItem('jwtToken');
-    const user = localStorage.getItem('currentUser');
-
-    if (token && user) {
-        try {
-            appState.jwtToken = token;
-            appState.currentUser = JSON.parse(user);
-            await showAppView(); // Changed to await
-            resetInactivityTimer();
-            initializeEnhancedNotifications();
-            console.log('Restored user session');
-        } catch (error) {
-            console.error("Error parsing user data from localStorage:", error);
-            logout();
-        }
-    } else {
-        showLandingPageView();
-    }
-
-    initializeHeaderRotation();
 }
+
+// Add retry mechanism for auth buttons
+function retryAuthButtonSetup() {
+    let retryCount = 0;
+    const maxRetries = 5;
+
+    const attemptSetup = () => {
+        retryCount++;
+        console.log(`Auth button setup attempt ${retryCount}`);
+
+        setupAuthButtons();
+
+        // Check if buttons were found
+        const signInBtn = document.getElementById('signin-btn');
+        const joinBtn = document.getElementById('join-btn');
+
+        if ((!signInBtn || !joinBtn) && retryCount < maxRetries) {
+            console.log(`Retrying auth button setup in 500ms (attempt ${retryCount}/${maxRetries})`);
+            setTimeout(attemptSetup, 500);
+        } else if (retryCount >= maxRetries) {
+            console.warn('Failed to find auth buttons after maximum retries');
+        } else {
+            console.log('Auth buttons successfully set up');
+        }
+    };
+
+    attemptSetup();
+}
+
+// Add global function to manually trigger auth modal (for debugging)
+window.showAuthModal = showAuthModal;
+window.setupAuthButtons = setupAuthButtons;
 
 async function apiCall(endpoint, method, body = null, successMessage = null) {
     try {
@@ -1557,7 +1661,9 @@ async function fetchAndRenderConversations() {
 async function renderConversationView(conversationOrId) {
     let conversation;
     if (typeof conversationOrId === 'string') {
-        conversation = appState.conversations.find(c => c.id === conversationOrId) || { id: conversationOrId };
+        conversation = appState.conversations.find(c => c.id === conversationOrId) || {
+            id: conversationOrId
+        };
     } else {
         conversation = conversationOrId;
     }
@@ -1574,7 +1680,10 @@ async function renderConversationView(conversationOrId) {
         }
     }
     const container = document.getElementById('app-container');
-    const otherParticipant = conversation.participants ? conversation.participants.find(p => p.id !== appState.currentUser.id) : { name: 'Unknown', type: 'user' };
+    const otherParticipant = conversation.participants ? conversation.participants.find(p => p.id !== appState.currentUser.id) : {
+        name: 'Unknown',
+        type: 'user'
+    };
     container.innerHTML = `
         <div class="chat-container premium-chat">
             <div class="chat-header premium-chat-header">
@@ -1727,7 +1836,11 @@ function formatDetailedTimestamp(date) {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const messageDay = new Date(messageDate.getFullYear(), messageDate.getMonth(), messageDate.getDate());
-    const time = messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+    const time = messageDate.toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+    });
     if (today.getTime() === messageDay.getTime()) return time;
     const yesterday = new Date(today);
     yesterday.setDate(today.getDate() - 1);
@@ -1761,33 +1874,118 @@ function formatMessageDate(date) {
     const yesterday = new Date(today);
     yesterday.setDate(today.getDate() - 1);
     if (yesterday.getTime() === messageDay.getTime()) return 'Yesterday';
-    return messageDate.toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' });
+    return messageDate.toLocaleDateString([], {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric'
+    });
 }
 
 
-// --- UI, MODAL & RENDERING FUNCTIONS ---
+// --- UI, MODAL & RENDERING FUNCTIONS (CORRECTED) ---
 function showAuthModal(view) {
-    const modalContainer = document.getElementById('modal-container');
-    if (modalContainer) {
-        modalContainer.innerHTML = `
-            <div class="modal-overlay premium-overlay">
-                <div class="modal-content premium-modal" onclick="event.stopPropagation()">
-                    <button class="modal-close-button premium-close" onclick="closeModal()"><i class="fas fa-times"></i></button>
-                    <div id="modal-form-container"></div>
-                </div>
-            </div>`;
-        modalContainer.querySelector('.modal-overlay').addEventListener('click', closeModal);
-        renderAuthForm(view);
+    console.log('showAuthModal called with view:', view);
+    let modalContainer = document.getElementById('modal-container');
+
+    // Create modal container if it doesn't exist
+    if (!modalContainer) {
+        modalContainer = document.createElement('div');
+        modalContainer.id = 'modal-container';
+        modalContainer.className = 'modal-container';
+        document.body.appendChild(modalContainer);
+        console.log('Created modal container');
     }
+
+    // Enhanced modal HTML with better structure
+    modalContainer.innerHTML = `
+        <div class="modal-overlay premium-overlay" id="modal-overlay">
+            <div class="modal-content premium-modal" onclick="event.stopPropagation()">
+                <button class="modal-close-button premium-close" onclick="closeModal()" type="button">
+                    <i class="fas fa-times"></i>
+                </button>
+                <div id="modal-form-container"></div>
+            </div>
+        </div>`;
+
+    // Add click listener to overlay
+    const overlay = modalContainer.querySelector('.modal-overlay');
+    if (overlay) {
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                closeModal();
+            }
+        });
+    }
+
+    // Add escape key listener
+    const escapeHandler = (e) => {
+        if (e.key === 'Escape') {
+            closeModal();
+            document.removeEventListener('keydown', escapeHandler);
+        }
+    };
+    document.addEventListener('keydown', escapeHandler);
+
+    // Show the modal
+    modalContainer.style.display = 'block';
+    // Use a timeout to allow the display property to apply before adding the active class for transition
+    setTimeout(() => {
+        modalContainer.classList.add('active');
+    }, 10);
+
+
+    // Render the form
+    renderAuthForm(view);
+    console.log('Modal displayed successfully');
 }
 
 function renderAuthForm(view) {
+    console.log('renderAuthForm called with view:', view);
     const container = document.getElementById('modal-form-container');
-    if (!container) return;
-    container.innerHTML = view === 'login' ? getLoginTemplate() : getRegisterTemplate();
-    const formId = view === 'login' ? 'login-form' : 'register-form';
-    const handler = view === 'login' ? handleLogin : handleRegister;
-    document.getElementById(formId).addEventListener('submit', handler);
+    if (!container) {
+        console.error('Modal form container not found');
+        return;
+    }
+    try {
+        if (view === 'login') {
+            container.innerHTML = getLoginTemplate();
+            const form = document.getElementById('login-form');
+            if (form) {
+                form.addEventListener('submit', handleLogin);
+                console.log('Login form event listener attached');
+            }
+        } else if (view === 'register') {
+            container.innerHTML = getRegisterTemplate();
+            const form = document.getElementById('register-form');
+            if (form) {
+                form.addEventListener('submit', handleRegister);
+                console.log('Register form event listener attached');
+            }
+        }
+    } catch (error) {
+        console.error('Error rendering auth form:', error);
+    }
+}
+
+// Enhanced closeModal function
+function closeModal() {
+    console.log('closeModal called');
+    const modalContainer = document.getElementById('modal-container');
+    if (modalContainer) {
+        modalContainer.classList.remove('active');
+        // Add fade out animation before removing content
+        setTimeout(() => {
+            modalContainer.innerHTML = '';
+            modalContainer.style.display = 'none';
+        }, 300); // Duration should match CSS transition
+    }
+    // A robust way to remove a one-time listener without needing a global reference
+    const escapeHandler = (e) => {
+        if (e.key === 'Escape') {
+            closeModal();
+        }
+    };
+    document.removeEventListener('keydown', escapeHandler);
 }
 
 function showGenericModal(innerHTML, style = '') {
@@ -1801,12 +1999,11 @@ function showGenericModal(innerHTML, style = '') {
                 </div>
             </div>`;
         modalContainer.querySelector('.modal-overlay').addEventListener('click', closeModal);
+        modalContainer.style.display = 'block';
+        setTimeout(() => {
+            modalContainer.classList.add('active');
+        }, 10);
     }
-}
-
-function closeModal() {
-    const modalContainer = document.getElementById('modal-container');
-    if (modalContainer) modalContainer.innerHTML = '';
 }
 
 async function showAppView() {
@@ -2184,11 +2381,11 @@ function getDashboardTemplate(user) {
     const isContractor = user.type === 'contractor';
     const quickActions = isContractor ?
         `<div class="quick-action-card" onclick="renderAppSection('post-job')"><i class="fas fa-plus-circle card-icon"></i><h3>Create Project</h3><p>Post a new listing.</p></div>
-         <div class="quick-action-card" onclick="renderAppSection('jobs')"><i class="fas fa-tasks card-icon"></i><h3>My Projects</h3><p>View your active projects.</p></div>
-         <div class="quick-action-card" onclick="renderAppSection('estimation-tool')"><i class="fas fa-calculator card-icon"></i><h3>AI Estimation</h3><p>Get instant cost estimates.</p></div>` :
+       <div class="quick-action-card" onclick="renderAppSection('jobs')"><i class="fas fa-tasks card-icon"></i><h3>My Projects</h3><p>View your active projects.</p></div>
+       <div class="quick-action-card" onclick="renderAppSection('estimation-tool')"><i class="fas fa-calculator card-icon"></i><h3>AI Estimation</h3><p>Get instant cost estimates.</p></div>` :
         `<div class="quick-action-card" onclick="renderAppSection('jobs')"><i class="fas fa-search card-icon"></i><h3>Browse Projects</h3><p>Find new opportunities.</p></div>
-         <div class="quick-action-card" onclick="renderAppSection('my-quotes')"><i class="fas fa-file-invoice-dollar card-icon"></i><h3>My Quotes</h3><p>Track your submitted quotes.</p></div>
-         <div class="quick-action-card" onclick="renderAppSection('messages')"><i class="fas fa-comments card-icon"></i><h3>Messages</h3><p>Communicate with clients.</p></div>`;
+       <div class="quick-action-card" onclick="renderAppSection('my-quotes')"><i class="fas fa-file-invoice-dollar card-icon"></i><h3>My Quotes</h3><p>Track your submitted quotes.</p></div>
+       <div class="quick-action-card" onclick="renderAppSection('messages')"><i class="fas fa-comments card-icon"></i><h3>Messages</h3><p>Communicate with clients.</p></div>`;
     const widgets = isContractor ?
         `<div class="widget-card"><h3><i class="fas fa-history"></i> Recent Projects</h3><div id="recent-projects-widget" class="widget-content"></div></div>` :
         `<div class="widget-card"><h3><i class="fas fa-history"></i> Recent Quotes</h3><div id="recent-quotes-widget" class="widget-content"></div></div>`;
