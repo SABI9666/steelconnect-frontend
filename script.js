@@ -364,6 +364,17 @@ async function handleLogin(event) {
     }
 }
 
+// [CORRECTED] This wrapper now correctly modifies the handleLogin function
+// It is defined here so any subsequent calls to renderAuthForm use the wrapped version.
+const originalHandleLogin = handleLogin;
+window.handleLogin = async function(event) {
+    await originalHandleLogin(event);
+    // Check profile completion status after successful login
+    if (appState.currentUser) {
+        setTimeout(checkProfileCompletionStatus, 1000);
+    }
+};
+
 
 function logout() {
     console.log('Logging out user...');
@@ -1953,7 +1964,8 @@ function renderAuthForm(view) {
     if (!container) return;
     container.innerHTML = view === 'login' ? getLoginTemplate() : getRegisterTemplate();
     const formId = view === 'login' ? 'login-form' : 'register-form';
-    const handler = view === 'login' ? handleLogin : handleRegister;
+    // This now correctly uses the wrapped window.handleLogin if the view is 'login'
+    const handler = view === 'login' ? window.handleLogin : handleRegister;
     document.getElementById(formId).addEventListener('submit', handler);
 }
 
@@ -2667,7 +2679,7 @@ function getSettingsTemplate(user) {
     `;
 }
 
-// --- [NEW] PROFILE COMPLETION SYSTEM ---
+// --- PROFILE COMPLETION SYSTEM ---
 
 // Check profile completion status on login
 async function checkProfileCompletionStatus() {
@@ -3359,16 +3371,6 @@ window.quickNotificationTest = async function() {
     monitorNotificationPolling();
     if (document.getElementById('chat-messages-container')) {
         await testCompleteMessageFlow();
-    }
-};
-
-// [NEW] Update the login handler to check profile status
-const originalHandleLogin = handleLogin;
-window.handleLogin = async function(event) {
-    await originalHandleLogin(event);
-    // Check profile completion status after successful login
-    if (appState.currentUser) {
-        setTimeout(checkProfileCompletionStatus, 1000);
     }
 };
 
