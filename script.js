@@ -2667,7 +2667,461 @@ function getSettingsTemplate(user) {
     `;
 }
 
-// Complete Debug System for Message Notifications - Add to script.js
+// --- [NEW] PROFILE COMPLETION SYSTEM ---
+
+// Check profile completion status on login
+async function checkProfileCompletionStatus() {
+    if (!appState.currentUser) return;
+
+    try {
+        const response = await apiCall('/profile/status', 'GET');
+        const status = response.data;
+
+        // Store profile status in app state
+        appState.currentUser.profileStatus = status;
+
+        if (!status.profileCompleted) {
+            // Profile not completed - show completion form
+            renderProfileCompletionForm();
+        } else if (status.profileStatus === 'pending') {
+            // Profile submitted but pending approval
+            renderProfilePendingView();
+        } else if (status.profileStatus === 'rejected') {
+            // Profile rejected - show rejection reason and allow resubmission
+            renderProfileRejectedView(status.rejectionReason);
+        } else if (status.profileStatus === 'approved' && status.canAccess) {
+            // Profile approved - user can access full functionality
+            console.log('Profile approved - full access granted');
+        } else {
+            // Edge case - profile completed but access denied
+            renderProfileAccessDeniedView();
+        }
+    } catch (error) {
+        console.error('Error checking profile status:', error);
+        // Don't block user if we can't check status
+    }
+}
+
+// Render profile completion form
+async function renderProfileCompletionForm() {
+    try {
+        // Get form fields for user type
+        const fieldsResponse = await apiCall('/profile/form-fields', 'GET');
+        const { userType, fields } = fieldsResponse.data;
+
+        const container = document.getElementById('app-container');
+        container.innerHTML = `
+            <div class="profile-completion-container">
+                <div class="profile-completion-header">
+                    <div class="completion-icon">
+                        <i class="fas fa-user-edit"></i>
+                    </div>
+                    <h2>Complete Your Profile</h2>
+                    <p>Please complete your ${userType} profile to access all features</p>
+                    <div class="completion-progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 20%;"></div>
+                        </div>
+                        <span class="progress-text">Step 1 of 3: Profile Information</span>
+                    </div>
+                </div>
+                <div class="profile-completion-form">
+                    <form id="profile-completion-form" enctype="multipart/form-data">
+                        <div class="form-sections">
+                            ${renderProfileFormFields(fields, userType)}
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary btn-large">
+                                <i class="fas fa-paper-plane"></i>
+                                Submit for Review
+                            </button>
+                            <p class="submission-note">
+                                <i class="fas fa-info-circle"></i>
+                                Your profile will be reviewed by our admin team within 24-48 hours
+                            </p>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        `;
+
+        // Add form submission handler
+        document.getElementById('profile-completion-form').addEventListener('submit', handleProfileSubmission);
+
+        // Add file upload handlers
+        setupFileUploadHandlers();
+
+    } catch (error) {
+        console.error('Error rendering profile form:', error);
+        showNotification('Failed to load profile form. Please refresh the page.', 'error');
+    }
+}
+
+// Render form fields based on user type
+function renderProfileFormFields(fields, userType) {
+    let sectionsHTML = '';
+
+    if (userType === 'designer') {
+        sectionsHTML = `
+            <div class="form-section">
+                <h3><i class="fas fa-user"></i> Professional Information</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label required">LinkedIn Profile</label>
+                        <input type="url" name="linkedinProfile" class="form-input" required
+                                placeholder="https://linkedin.com/in/yourprofile">
+                        <small class="form-help">Your professional LinkedIn profile URL</small>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label required">Professional Skills</label>
+                    <input type="text" name="skills" class="form-input" required
+                            placeholder="AutoCAD, Revit, Structural Analysis, Steel Design">
+                    <small class="form-help">Separate skills with commas</small>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label required">Years of Experience</label>
+                        <select name="experience" class="form-select" required>
+                            <option value="">Select experience level</option>
+                            <option value="0-2">0-2 years</option>
+                            <option value="3-5">3-5 years</option>
+                            <option value="6-10">6-10 years</option>
+                            <option value="11-15">11-15 years</option>
+                            <option value="15+">15+ years</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Specializations</label>
+                        <input type="text" name="specializations" class="form-input"
+                                placeholder="Commercial Buildings, Bridges, Industrial Structures">
+                        <small class="form-help">Your areas of expertise</small>
+                    </div>
+                </div>
+            </div>
+            <div class="form-section">
+                <h3><i class="fas fa-graduation-cap"></i> Education & Background</h3>
+                <div class="form-group">
+                    <label class="form-label required">Education</label>
+                    <textarea name="education" class="form-textarea" required
+                               placeholder="Degree, Institution, Year of graduation..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label required">Professional Bio</label>
+                    <textarea name="bio" class="form-textarea" required
+                               placeholder="Tell clients about your expertise and experience..."></textarea>
+                </div>
+            </div>
+            <div class="form-section">
+                <h3><i class="fas fa-file-upload"></i> Documents</h3>
+                <div class="file-upload-grid">
+                    <div class="file-upload-group">
+                        <label class="form-label required">Resume/CV</label>
+                        <div class="file-upload-area" id="resume-upload">
+                            <input type="file" name="resume" accept=".pdf,.doc,.docx" required hidden>
+                            <div class="upload-placeholder">
+                                <i class="fas fa-file-pdf"></i>
+                                <span>Click to upload resume</span>
+                                <small>PDF, DOC, DOCX (Max 10MB)</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="file-upload-group">
+                        <label class="form-label">Certificates (Optional)</label>
+                        <div class="file-upload-area" id="certificates-upload">
+                            <input type="file" name="certificates" accept=".pdf,.jpg,.png" multiple hidden>
+                            <div class="upload-placeholder">
+                                <i class="fas fa-certificate"></i>
+                                <span>Upload certificates</span>
+                                <small>PDF, JPG, PNG (Max 5 files)</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    } else if (userType === 'contractor') {
+        sectionsHTML = `
+            <div class="form-section">
+                <h3><i class="fas fa-building"></i> Company Information</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label required">Company Name</label>
+                        <input type="text" name="companyName" class="form-input" required
+                                placeholder="Your Company LLC">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">LinkedIn Profile</label>
+                        <input type="url" name="linkedinProfile" class="form-input" required
+                                placeholder="https://linkedin.com/company/yourcompany">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Company Website</label>
+                        <input type="url" name="companyWebsite" class="form-input"
+                                placeholder="https://yourcompany.com">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">Business Type</label>
+                        <select name="businessType" class="form-select" required>
+                            <option value="">Select business type</option>
+                            <option value="Construction">Construction</option>
+                            <option value="Engineering">Engineering</option>
+                            <option value="Architecture">Architecture</option>
+                            <option value="Consulting">Consulting</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Year Established</label>
+                        <input type="number" name="yearEstablished" class="form-input"
+                                min="1900" max="2024" placeholder="2020">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Company Size</label>
+                        <select name="companySize" class="form-select">
+                            <option value="">Select size</option>
+                            <option value="1-10">1-10 employees</option>
+                            <option value="11-50">11-50 employees</option>
+                            <option value="51-200">51-200 employees</option>
+                            <option value="201-500">201-500 employees</option>
+                            <option value="500+">500+ employees</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="form-section">
+                <h3><i class="fas fa-info-circle"></i> Company Details</h3>
+                <div class="form-group">
+                    <label class="form-label required">Company Description</label>
+                    <textarea name="description" class="form-textarea" required
+                               placeholder="Describe your company's services and expertise..."></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Business Address</label>
+                        <textarea name="address" class="form-textarea" rows="3"
+                                  placeholder="Street Address, City, State, ZIP Code"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Business Phone</label>
+                        <input type="tel" name="phone" class="form-input"
+                                placeholder="+1 (555) 123-4567">
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    return sectionsHTML;
+}
+
+// Setup file upload handlers
+function setupFileUploadHandlers() {
+    const uploadAreas = document.querySelectorAll('.file-upload-area');
+
+    uploadAreas.forEach(area => {
+        const input = area.querySelector('input[type="file"]');
+        const placeholder = area.querySelector('.upload-placeholder');
+
+        area.addEventListener('click', () => input.click());
+
+        area.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            area.classList.add('drag-over');
+        });
+
+        area.addEventListener('dragleave', () => {
+            area.classList.remove('drag-over');
+        });
+
+        area.addEventListener('drop', (e) => {
+            e.preventDefault();
+            area.classList.remove('drag-over');
+            if (e.dataTransfer.files.length > 0) {
+                input.files = e.dataTransfer.files;
+                updateFileDisplay(area, input.files);
+            }
+        });
+
+        input.addEventListener('change', () => {
+            updateFileDisplay(area, input.files);
+        });
+    });
+}
+
+// Update file display after selection
+function updateFileDisplay(area, files) {
+    const placeholder = area.querySelector('.upload-placeholder');
+
+    if (files.length === 0) return;
+
+    const fileList = Array.from(files).map(file => `
+        <div class="selected-file">
+            <i class="fas fa-file"></i>
+            <span>${file.name}</span>
+            <small>${(file.size / 1024 / 1024).toFixed(2)} MB</small>
+        </div>
+    `).join('');
+
+    placeholder.innerHTML = `
+        <div class="files-selected">
+            <i class="fas fa-check-circle"></i>
+            <span>${files.length} file(s) selected</span>
+        </div>
+        <div class="selected-files-list">${fileList}</div>
+    `;
+
+    area.classList.add('has-files');
+}
+
+// Handle profile submission
+async function handleProfileSubmission(event) {
+    event.preventDefault();
+
+    const form = event.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+
+    // Disable submit button and show loading
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<div class="btn-spinner"></div> Submitting...';
+
+    try {
+        // Create FormData object
+        const formData = new FormData(form);
+
+        // Validate required fields
+        const requiredFields = form.querySelectorAll('[required]');
+        for (let field of requiredFields) {
+            if (!field.value.trim() && field.type !== 'file') {
+                throw new Error(`Please fill in the required field: ${field.name}`);
+            }
+            if (field.type === 'file' && field.files.length === 0) {
+                throw new Error(`Please upload the required file: ${field.name}`);
+            }
+        }
+
+        // Submit profile
+        const response = await apiCall('/profile/complete', 'PUT', formData, true);
+
+        if (response.success) {
+            showNotification('Profile submitted successfully! You will receive an email when reviewed.', 'success');
+            renderProfilePendingView();
+        }
+
+    } catch (error) {
+        console.error('Profile submission error:', error);
+        showNotification(error.message || 'Failed to submit profile. Please try again.', 'error');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+    }
+}
+
+// Render profile pending view
+function renderProfilePendingView() {
+    const container = document.getElementById('app-container');
+    container.innerHTML = `
+        <div class="profile-status-container">
+            <div class="status-icon pending">
+                <i class="fas fa-clock"></i>
+            </div>
+            <h2>Profile Under Review</h2>
+            <p>Your profile has been submitted and is currently being reviewed by our admin team.</p>
+            <div class="status-details">
+                <div class="timeline-item active">
+                    <i class="fas fa-check"></i>
+                    <span>Profile Submitted</span>
+                </div>
+                <div class="timeline-item pending">
+                    <i class="fas fa-clock"></i>
+                    <span>Admin Review (24-48 hours)</span>
+                </div>
+                <div class="timeline-item">
+                    <i class="fas fa-envelope"></i>
+                    <span>Email Notification</span>
+                </div>
+            </div>
+            <p class="review-note">
+                You will receive an email notification once your profile is reviewed.
+                 Until approval, your account has limited functionality.
+            </p>
+            <div class="status-actions">
+                <button class="btn btn-outline" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Logout
+                </button>
+                <button class="btn btn-secondary" onclick="checkProfileCompletionStatus()">
+                    <i class="fas fa-refresh"></i>
+                    Check Status
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+// Render profile rejected view
+function renderProfileRejectedView(rejectionReason) {
+    const container = document.getElementById('app-container');
+    container.innerHTML = `
+        <div class="profile-status-container">
+            <div class="status-icon rejected">
+                <i class="fas fa-times-circle"></i>
+            </div>
+            <h2>Profile Review Required</h2>
+            <p>Your profile needs some updates before it can be approved.</p>
+            <div class="rejection-reason">
+                <h3>Feedback from our team:</h3>
+                <div class="reason-box">
+                    <i class="fas fa-comment-alt"></i>
+                    <p>${rejectionReason}</p>
+                </div>
+            </div>
+            <p>Please update your profile based on the feedback above and resubmit for review.</p>
+            <div class="status-actions">
+                <button class="btn btn-primary" onclick="renderProfileCompletionForm()">
+                    <i class="fas fa-edit"></i>
+                    Update Profile
+                </button>
+                <button class="btn btn-outline" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Logout
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+// Render profile access denied view
+function renderProfileAccessDeniedView() {
+    const container = document.getElementById('app-container');
+    container.innerHTML = `
+        <div class="profile-status-container">
+            <div class="status-icon denied">
+                <i class="fas fa-ban"></i>
+            </div>
+            <h2>Access Restricted</h2>
+            <p>Your account access is currently restricted. Please contact support for assistance.</p>
+            <div class="status-actions">
+                <button class="btn btn-primary" onclick="window.open('mailto:support@steelconnect.com', '_blank')">
+                    <i class="fas fa-envelope"></i>
+                    Contact Support
+                </button>
+                <button class="btn btn-outline" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Logout
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+
+// --- Complete Debug System for Message Notifications - Add to script.js
 // Comprehensive notification system debug
 async function debugNotificationFlow() {
     console.log('=== COMPREHENSIVE NOTIFICATION DEBUG ===');
@@ -2907,3 +3361,15 @@ window.quickNotificationTest = async function() {
         await testCompleteMessageFlow();
     }
 };
+
+// [NEW] Update the login handler to check profile status
+const originalHandleLogin = handleLogin;
+window.handleLogin = async function(event) {
+    await originalHandleLogin(event);
+    // Check profile completion status after successful login
+    if (appState.currentUser) {
+        setTimeout(checkProfileCompletionStatus, 1000);
+    }
+};
+
+}
