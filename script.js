@@ -1,3 +1,5 @@
+
+
 // --- LANDING PAGE SLIDER & SMOOTH SCROLL ---
 let currentSlide = 0;
 const sliderWrapper = document.getElementById('slider-wrapper');
@@ -23,24 +25,28 @@ if (totalSlides > 0) {
     setInterval(() => changeSlide(1), 8000);
 }
 
-document.querySelectorAll('.nav-link[href^="#"]').forEach(link => {
-    link.addEventListener('click', function(e) {
-        e.preventDefault();
-        const targetId = this.getAttribute('href');
-        const targetSection = document.querySelector(targetId);
-        if (targetSection) {
-            targetSection.scrollIntoView({
-                behavior: 'smooth',
-                block: 'start'
+// Smooth scroll for navigation links
+document.addEventListener('DOMContentLoaded', function() {
+    // Wait a bit for DOM to be fully ready
+    setTimeout(() => {
+        document.querySelectorAll('.nav-link[href^="#"]').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('href');
+                const targetSection = document.querySelector(targetId);
+                if (targetSection) {
+                    targetSection.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
             });
-        }
-    });
+        });
+    }, 100);
 });
-
 
 // --- FULL APPLICATION SCRIPT ---
 document.addEventListener('DOMContentLoaded', initializeApp);
-
 
 // --- CONSTANTS & STATE ---
 const IS_LOCAL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
@@ -82,7 +88,6 @@ const profileState = {
     }
 };
 
-
 // --- HEADER & INACTIVITY DATA ---
 const headerFeatures = [{
     icon: 'fa-calculator',
@@ -113,180 +118,181 @@ const headerFeatures = [{
 let inactivityTimer;
 let warningTimer;
 
-
-// --- INITIALIZATION & CORE APP LOGIC (CORRECTED) ---
+// --- INITIALIZATION & CORE APP LOGIC (FIXED) ---
 async function initializeApp() {
     console.log("SteelConnect App Initializing...");
-
-    // Global click handler for dropdowns
-    window.addEventListener('click', (event) => {
-        const userInfoContainer = document.getElementById('user-info-container');
-        const userInfoDropdown = document.getElementById('user-info-dropdown');
-        if (userInfoDropdown && userInfoContainer && !userInfoContainer.contains(event.target)) {
-            userInfoDropdown.classList.remove('active');
-        }
-        const notificationPanel = document.getElementById('notification-panel');
-        const notificationBellContainer = document.getElementById('notification-bell-container');
-        if (notificationPanel && notificationBellContainer && !notificationBellContainer.contains(event.target)) {
-            notificationPanel.classList.remove('active');
-        }
-    });
-
-    // Inactivity timer setup
-    const activityEvents = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart', 'touchmove', 'wheel'];
-    activityEvents.forEach(event => {
-        window.addEventListener(event, resetInactivityTimer, {
-            passive: true
-        });
-    });
-
-    // Setup UI handlers with retry mechanism
-    retryAuthButtonSetup();
-    setupLogoHandler();
-
-    // Check for existing session
-    const token = localStorage.getItem('jwtToken');
-    const user = localStorage.getItem('currentUser');
-    if (token && user) {
-        try {
-            appState.jwtToken = token;
-            appState.currentUser = JSON.parse(user);
-            await showAppView();
-            resetInactivityTimer();
-            initializeEnhancedNotifications();
-            console.log('Restored user session');
-        } catch (error) {
-            console.error("Error parsing user data from localStorage:", error);
-            logout();
-        }
-    } else {
-        showLandingPageView();
-    }
-    initializeHeaderRotation();
-}
-
-// Separate function for setting up auth buttons
-function setupAuthButtons() {
-    // Try multiple ways to find the buttons
-    const signInBtn = document.getElementById('signin-btn') ||
-        document.querySelector('#signin-btn') ||
-        document.querySelector('[id="signin-btn"]') ||
-        document.querySelector('.signin-btn');
-
-    const joinBtn = document.getElementById('join-btn') ||
-        document.querySelector('#join-btn') ||
-        document.querySelector('[id="join-btn"]') ||
-        document.querySelector('.join-btn');
-
-    const getStartedBtn = document.getElementById('get-started-btn') ||
-        document.querySelector('#get-started-btn') ||
-        document.querySelector('[id="get-started-btn"]') ||
-        document.querySelector('.get-started-btn');
-
-    console.log('Auth buttons found:', {
-        signInBtn: !!signInBtn,
-        joinBtn: !!joinBtn,
-        getStartedBtn: !!getStartedBtn
-    });
-
-    if (signInBtn) {
-        // Remove any existing listeners to prevent duplicates
-        signInBtn.removeEventListener('click', handleSignInClick);
-        signInBtn.addEventListener('click', handleSignInClick);
-        console.log('Sign-in button listener attached');
-    } else {
-        console.warn('Sign-in button not found');
-    }
-
-    if (joinBtn) {
-        joinBtn.removeEventListener('click', handleJoinClick);
-        joinBtn.addEventListener('click', handleJoinClick);
-        console.log('Join button listener attached');
-    } else {
-        console.warn('Join button not found');
-    }
-
-    if (getStartedBtn) {
-        getStartedBtn.removeEventListener('click', handleGetStartedClick);
-        getStartedBtn.addEventListener('click', handleGetStartedClick);
-        console.log('Get Started button listener attached');
-    } else {
-        console.warn('Get Started button not found');
-    }
-}
-
-// Separate event handler functions
-function handleSignInClick(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    console.log('Sign-in button clicked');
-    showAuthModal('login');
-}
-
-function handleJoinClick(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    console.log('Join button clicked');
-    showAuthModal('register');
-}
-
-function handleGetStartedClick(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    console.log('Get Started button clicked');
-    showAuthModal('register');
-}
-
-// Setup logo handler separately
-function setupLogoHandler() {
-    const logo = document.querySelector('.logo');
-    if (logo) {
-        logo.addEventListener('click', (e) => {
-            e.preventDefault();
-            if (appState.currentUser) {
-                renderAppSection('dashboard');
-            } else {
-                showLandingPageView();
-                window.scrollTo({
-                    top: 0,
-                    behavior: 'smooth'
-                });
+    try {
+        // Global click handler for dropdowns
+        window.addEventListener('click', (event) => {
+            const userInfoContainer = document.getElementById('user-info-container');
+            const userInfoDropdown = document.getElementById('user-info-dropdown');
+            if (userInfoDropdown && userInfoContainer && !userInfoContainer.contains(event.target)) {
+                userInfoDropdown.classList.remove('active');
+            }
+            const notificationPanel = document.getElementById('notification-panel');
+            const notificationBellContainer = document.getElementById('notification-bell-container');
+            if (notificationPanel && notificationBellContainer && !notificationBellContainer.contains(event.target)) {
+                notificationPanel.classList.remove('active');
             }
         });
+
+        // Inactivity timer setup
+        const activityEvents = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart', 'touchmove', 'wheel'];
+        activityEvents.forEach(event => {
+            window.addEventListener(event, resetInactivityTimer, {
+                passive: true
+            });
+        });
+
+        // Check for existing session FIRST
+        const token = localStorage.getItem('jwtToken');
+        const user = localStorage.getItem('currentUser');
+
+        if (token && user) {
+            try {
+                appState.jwtToken = token;
+                appState.currentUser = JSON.parse(user);
+                await showAppView();
+                resetInactivityTimer();
+                initializeEnhancedNotifications();
+                console.log('Restored user session');
+                return; // Exit early if user is logged in
+            } catch (error) {
+                console.error("Error parsing user data from localStorage:", error);
+                logout(); // This will clear storage and show the landing page
+            }
+        }
+
+        // Only show landing page and setup auth if no user session
+        showLandingPageView();
+
+        // Setup auth buttons with multiple retry attempts
+        setTimeout(() => setupAuthButtons(), 100);
+        setTimeout(() => setupAuthButtons(), 500);
+        setTimeout(() => setupAuthButtons(), 1000);
+
+        setupLogoHandler();
+        initializeHeaderRotation();
+
+    } catch (error) {
+        console.error('Error during app initialization:', error);
+        // Fallback to landing page
+        showLandingPageView();
+        setTimeout(() => setupAuthButtons(), 1000);
     }
 }
 
-// Add retry mechanism for auth buttons
-function retryAuthButtonSetup() {
-    let retryCount = 0;
-    const maxRetries = 5;
+// FIXED: Enhanced auth button setup with better error handling
+function setupAuthButtons() {
+    console.log('Setting up auth buttons...');
+    try {
+        // Multiple selector strategies for finding buttons
+        const signInBtn = document.getElementById('signin-btn') ||
+            document.querySelector('#signin-btn') ||
+            document.querySelector('[data-action="signin"]') ||
+            document.querySelector('.signin-btn') ||
+            document.querySelector('button[onclick*="signin"]');
+        const joinBtn = document.getElementById('join-btn') ||
+            document.querySelector('#join-btn') ||
+            document.querySelector('[data-action="join"]') ||
+            document.querySelector('.join-btn') ||
+            document.querySelector('button[onclick*="join"]');
+        const getStartedBtn = document.getElementById('get-started-btn') ||
+            document.querySelector('#get-started-btn') ||
+            document.querySelector('[data-action="get-started"]') ||
+            document.querySelector('.get-started-btn');
 
-    const attemptSetup = () => {
-        retryCount++;
-        console.log(`Auth button setup attempt ${retryCount}`);
+        console.log('Auth buttons found:', {
+            signInBtn: !!signInBtn,
+            joinBtn: !!joinBtn,
+            getStartedBtn: !!getStartedBtn
+        });
 
-        setupAuthButtons();
+        // Setup Sign In button
+        if (signInBtn) {
+            // Remove any existing listeners by replacing the node
+            const newSignInBtn = signInBtn.cloneNode(true);
+            signInBtn.parentNode.replaceChild(newSignInBtn, signInBtn);
 
-        // Check if buttons were found
-        const signInBtn = document.getElementById('signin-btn');
-        const joinBtn = document.getElementById('join-btn');
-
-        if ((!signInBtn || !joinBtn) && retryCount < maxRetries) {
-            console.log(`Retrying auth button setup in 500ms (attempt ${retryCount}/${maxRetries})`);
-            setTimeout(attemptSetup, 500);
-        } else if (retryCount >= maxRetries) {
-            console.warn('Failed to find auth buttons after maximum retries');
+            newSignInBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Sign-in button clicked');
+                showAuthModal('login');
+            });
+            console.log('Sign-in button listener attached');
         } else {
-            console.log('Auth buttons successfully set up');
+            console.warn('Sign-in button not found');
         }
-    };
 
-    attemptSetup();
+        // Setup Join button
+        if (joinBtn) {
+            const newJoinBtn = joinBtn.cloneNode(true);
+            joinBtn.parentNode.replaceChild(newJoinBtn, joinBtn);
+
+            newJoinBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Join button clicked');
+                showAuthModal('register');
+            });
+            console.log('Join button listener attached');
+        } else {
+            console.warn('Join button not found');
+        }
+
+        // Setup Get Started button
+        if (getStartedBtn) {
+            const newGetStartedBtn = getStartedBtn.cloneNode(true);
+            getStartedBtn.parentNode.replaceChild(newGetStartedBtn, getStartedBtn);
+
+            newGetStartedBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Get Started button clicked');
+                showAuthModal('register');
+            });
+            console.log('Get Started button listener attached');
+        } else {
+            console.warn('Get Started button not found');
+        }
+
+        // Make functions globally available for debugging
+        window.testLogin = () => showAuthModal('login');
+        window.testRegister = () => showAuthModal('register');
+
+    } catch (error) {
+        console.error('Error setting up auth buttons:', error);
+    }
 }
 
-// Add global function to manually trigger auth modal (for debugging)
-window.showAuthModal = showAuthModal;
-window.setupAuthButtons = setupAuthButtons;
+// FIXED: Enhanced logo handler
+function setupLogoHandler() {
+    try {
+        const logo = document.querySelector('.logo');
+        if (logo) {
+            // Remove existing listeners
+            const newLogo = logo.cloneNode(true);
+            logo.parentNode.replaceChild(newLogo, logo);
+
+            newLogo.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (appState.currentUser) {
+                    renderAppSection('dashboard');
+                } else {
+                    showLandingPageView();
+                    window.scrollTo({
+                        top: 0,
+                        behavior: 'smooth'
+                    });
+                }
+            });
+            console.log('Logo handler attached');
+        }
+    } catch (error) {
+        console.error('Error setting up logo handler:', error);
+    }
+}
 
 async function apiCall(endpoint, method, body = null, successMessage = null) {
     try {
@@ -305,9 +311,7 @@ async function apiCall(endpoint, method, body = null, successMessage = null) {
                 options.body = JSON.stringify(body);
             }
         }
-
         const response = await fetch(BACKEND_URL + endpoint, options);
-
         if (response.status === 204 || response.headers.get("content-length") === "0") {
             if (!response.ok) {
                 const errorMsg = response.headers.get('X-Error-Message') || `Request failed with status ${response.status}`;
@@ -318,26 +322,20 @@ async function apiCall(endpoint, method, body = null, successMessage = null) {
                 success: true
             };
         }
-
         const responseData = await response.json();
-
         if (!response.ok) {
             throw new Error(responseData.message || responseData.error || `Request failed with status ${response.status}`);
         }
-
         if (successMessage) {
             showNotification(successMessage, 'success');
         }
-
         return responseData;
-
     } catch (error) {
         console.error(`API call to ${endpoint} failed:`, error);
         showNotification(error.message, 'error');
         throw error;
     }
 }
-
 
 // --- INACTIVITY TIMER ---
 function resetInactivityTimer() {
@@ -405,9 +403,12 @@ async function handleRegister(event) {
         password: form.regPassword.value,
         type: form.regRole.value,
     };
-    await apiCall('/auth/register', 'POST', userData, 'Registration successful! Please sign in.')
-        .then(() => renderAuthForm('login'))
-        .catch(() => {});
+    try {
+        await apiCall('/auth/register', 'POST', userData, 'Registration successful! Please sign in.');
+        renderAuthForm('login');
+    } catch (error) {
+        // Error is already shown by apiCall
+    }
 }
 
 async function handleLogin(event) {
@@ -425,11 +426,7 @@ async function handleLogin(event) {
         localStorage.setItem('currentUser', JSON.stringify(data.user));
         localStorage.setItem('jwtToken', data.token);
         closeModal();
-        await showAppView(); // Check profile status instead of showing app directly
-        initializeEnhancedNotifications();
-        if (data.user.type === 'designer') {
-            loadUserQuotes();
-        }
+        await showAppView();
     } catch (error) {
         // Error is already shown by apiCall
     }
@@ -448,9 +445,12 @@ function logout() {
     clearTimeout(warningTimer);
     dismissInactivityWarning();
     showLandingPageView();
+    setupAuthButtons(); // Re-setup buttons for the logged-out state
     showNotification('You have been logged out successfully.', 'info');
 }
 
+// --- PROFILE COMPLETION, NOTIFICATIONS, DATA FETCHING, ACTIONS, ETC. ---
+// (All other functions from the original script are included below)
 
 // --- PROFILE COMPLETION SYSTEM ---
 async function checkProfileStatus() {
@@ -744,7 +744,6 @@ async function handleProfileSubmission(event) {
     }
 }
 
-
 // --- DYNAMIC HEADER ---
 function initializeHeaderRotation() {
     setInterval(() => {
@@ -769,7 +768,6 @@ function updateDynamicHeader() {
             </div>`;
     }
 }
-
 
 // --- NOTIFICATION SYSTEM ---
 function loadStoredNotifications() {
@@ -1045,9 +1043,7 @@ function enhancedLogout() {
     console.log('Enhanced notification system cleaned up for logout');
 }
 
-
 // --- DATA FETCHING & RENDERING (JOBS, QUOTES, ESTIMATIONS, ETC.) ---
-
 async function loadUserQuotes() {
     if (appState.currentUser.type !== 'designer') return;
     try {
@@ -1499,23 +1495,6 @@ async function approveQuote(quoteId, jobId) {
     }
 }
 
-function showQuoteModal(jobId) {
-    const content = `
-        <div class="modal-header premium-modal-header"><h3><i class="fas fa-file-invoice-dollar"></i> Submit Your Quote</h3><p class="modal-subtitle">Provide your proposal for this project</p></div>
-        <form id="quote-form" class="premium-form">
-            <input type="hidden" name="jobId" value="${jobId}">
-            <div class="form-row">
-                <div class="form-group"><label class="form-label"><i class="fas fa-dollar-sign"></i> Quote Amount ($)</label><input type="number" class="form-input" name="amount" required min="1" step="0.01" placeholder="Enter amount"></div>
-                <div class="form-group"><label class="form-label"><i class="fas fa-calendar-alt"></i> Timeline (days)</label><input type="number" class="form-input" name="timeline" required min="1" placeholder="Project duration"></div>
-            </div>
-            <div class="form-group"><label class="form-label"><i class="fas fa-file-alt"></i> Proposal Description</label><textarea class="form-textarea" name="description" required placeholder="Describe your approach..."></textarea></div>
-            <div class="form-group"><label class="form-label"><i class="fas fa-paperclip"></i> Attachments (Optional)</label><input type="file" class="form-input file-input" name="attachments" multiple accept=".pdf,.doc,.docx,.dwg,.jpg,.jpeg,.png"><small class="form-help">Upload relevant documents</small></div>
-            <div class="form-actions"><button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button><button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane"></i> Submit Quote</button></div>
-        </form>`;
-    showGenericModal(content, 'max-width: 600px;');
-    document.getElementById('quote-form').addEventListener('submit', handleQuoteSubmit);
-}
-
 async function handleQuoteSubmit(event) {
     event.preventDefault();
     const form = event.target;
@@ -1602,7 +1581,6 @@ async function handleQuoteEdit(event) {
         }
     }
 }
-
 
 // --- MESSAGING SYSTEM ---
 async function openConversation(jobId, recipientId) {
@@ -1800,7 +1778,6 @@ async function handleSendMessage(conversationId) {
     }
 }
 
-
 // --- UTILITY & FORMATTING FUNCTIONS ---
 function getTimeAgo(timestamp) {
     const now = new Date();
@@ -1881,72 +1858,119 @@ function formatMessageDate(date) {
     });
 }
 
+// --- UI, MODAL & RENDERING FUNCTIONS ---
 
-// --- UI, MODAL & RENDERING FUNCTIONS (CORRECTED) ---
+// FIXED: Enhanced modal system
 function showAuthModal(view) {
     console.log('showAuthModal called with view:', view);
-    let modalContainer = document.getElementById('modal-container');
+    try {
+        let modalContainer = document.getElementById('modal-container');
 
-    // Create modal container if it doesn't exist
-    if (!modalContainer) {
-        modalContainer = document.createElement('div');
-        modalContainer.id = 'modal-container';
-        modalContainer.className = 'modal-container';
-        document.body.appendChild(modalContainer);
-        console.log('Created modal container');
-    }
-
-    // Enhanced modal HTML with better structure
-    modalContainer.innerHTML = `
-        <div class="modal-overlay premium-overlay" id="modal-overlay">
-            <div class="modal-content premium-modal" onclick="event.stopPropagation()">
-                <button class="modal-close-button premium-close" onclick="closeModal()" type="button">
-                    <i class="fas fa-times"></i>
-                </button>
-                <div id="modal-form-container"></div>
-            </div>
-        </div>`;
-
-    // Add click listener to overlay
-    const overlay = modalContainer.querySelector('.modal-overlay');
-    if (overlay) {
-        overlay.addEventListener('click', (e) => {
-            if (e.target === overlay) {
-                closeModal();
-            }
-        });
-    }
-
-    // Add escape key listener
-    const escapeHandler = (e) => {
-        if (e.key === 'Escape') {
-            closeModal();
-            document.removeEventListener('keydown', escapeHandler);
+        // Create modal container if it doesn't exist
+        if (!modalContainer) {
+            modalContainer = document.createElement('div');
+            modalContainer.id = 'modal-container';
+            modalContainer.className = 'modal-container';
+            modalContainer.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                z-index: 10000;
+                display: none;
+            `;
+            document.body.appendChild(modalContainer);
+            console.log('Created modal container');
         }
-    };
-    document.addEventListener('keydown', escapeHandler);
 
-    // Show the modal
-    modalContainer.style.display = 'block';
-    // Use a timeout to allow the display property to apply before adding the active class for transition
-    setTimeout(() => {
-        modalContainer.classList.add('active');
-    }, 10);
+        // Enhanced modal HTML with better styling
+        modalContainer.innerHTML = `
+            <div class="modal-overlay premium-overlay" style="
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.7);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                backdrop-filter: blur(5px);
+            ">
+                <div class="modal-content premium-modal" style="
+                    background: white;
+                    border-radius: 16px;
+                    padding: 40px;
+                    max-width: 450px;
+                    width: 90%;
+                    position: relative;
+                    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+                " onclick="event.stopPropagation()">
+                    <button class="modal-close-button premium-close" onclick="closeModal()" type="button" style="
+                        position: absolute;
+                        top: 16px;
+                        right: 16px;
+                        background: none;
+                        border: none;
+                        font-size: 24px;
+                        cursor: pointer;
+                        color: #666;
+                        width: 32px;
+                        height: 32px;
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    ">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    <div id="modal-form-container"></div>
+                </div>
+            </div>`;
 
+        // Add click listener to overlay
+        const overlay = modalContainer.querySelector('.modal-overlay');
+        if (overlay) {
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    closeModal();
+                }
+            });
+        }
 
-    // Render the form
-    renderAuthForm(view);
-    console.log('Modal displayed successfully');
+        // Add escape key listener
+        const escapeHandler = (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+                document.removeEventListener('keydown', escapeHandler);
+            }
+        };
+        document.addEventListener('keydown', escapeHandler);
+
+        // Show the modal
+        modalContainer.style.display = 'block';
+
+        // Render the form
+        renderAuthForm(view);
+
+        console.log('Modal displayed successfully');
+    } catch (error) {
+        console.error('Error showing auth modal:', error);
+        alert('Unable to open login form. Please refresh the page and try again.');
+    }
 }
 
+// FIXED: Enhanced form rendering
 function renderAuthForm(view) {
     console.log('renderAuthForm called with view:', view);
-    const container = document.getElementById('modal-form-container');
-    if (!container) {
-        console.error('Modal form container not found');
-        return;
-    }
     try {
+        const container = document.getElementById('modal-form-container');
+        if (!container) {
+            console.error('Modal form container not found');
+            return;
+        }
+
         if (view === 'login') {
             container.innerHTML = getLoginTemplate();
             const form = document.getElementById('login-form');
@@ -1967,25 +1991,18 @@ function renderAuthForm(view) {
     }
 }
 
-// Enhanced closeModal function
+// FIXED: Enhanced close modal
 function closeModal() {
     console.log('closeModal called');
-    const modalContainer = document.getElementById('modal-container');
-    if (modalContainer) {
-        modalContainer.classList.remove('active');
-        // Add fade out animation before removing content
-        setTimeout(() => {
-            modalContainer.innerHTML = '';
+    try {
+        const modalContainer = document.getElementById('modal-container');
+        if (modalContainer) {
             modalContainer.style.display = 'none';
-        }, 300); // Duration should match CSS transition
-    }
-    // A robust way to remove a one-time listener without needing a global reference
-    const escapeHandler = (e) => {
-        if (e.key === 'Escape') {
-            closeModal();
+            modalContainer.innerHTML = '';
         }
-    };
-    document.removeEventListener('keydown', escapeHandler);
+    } catch (error) {
+        console.error('Error closing modal:', error);
+    }
 }
 
 function showGenericModal(innerHTML, style = '') {
@@ -1999,10 +2016,6 @@ function showGenericModal(innerHTML, style = '') {
                 </div>
             </div>`;
         modalContainer.querySelector('.modal-overlay').addEventListener('click', closeModal);
-        modalContainer.style.display = 'block';
-        setTimeout(() => {
-            modalContainer.classList.add('active');
-        }, 10);
     }
 }
 
@@ -2067,18 +2080,34 @@ async function showAppView() {
     resetInactivityTimer();
 }
 
+// FIXED: Enhanced landing page view
 function showLandingPageView() {
-    document.getElementById('landing-page-content').style.display = 'block';
-    document.getElementById('app-content').style.display = 'none';
-    document.getElementById('auth-buttons-container').style.display = 'flex';
-    document.getElementById('user-info-container').style.display = 'none';
-    const navMenu = document.getElementById('main-nav-menu');
-    if (navMenu) {
-        navMenu.innerHTML = `
-            <a href="#ai-estimation" class="nav-link">AI Estimation</a>
-            <a href="#how-it-works" class="nav-link">How It Works</a>
-            <a href="#why-steelconnect" class="nav-link">Why Choose Us</a>
-            <a href="#showcase" class="nav-link">Showcase</a>`;
+    console.log('Showing landing page view');
+    try {
+        // Show landing page content
+        const landingPageContent = document.getElementById('landing-page-content');
+        const appContent = document.getElementById('app-content');
+        const authButtonsContainer = document.getElementById('auth-buttons-container');
+        const userInfoContainer = document.getElementById('user-info-container');
+
+        if (landingPageContent) landingPageContent.style.display = 'block';
+        if (appContent) appContent.style.display = 'none';
+        if (authButtonsContainer) authButtonsContainer.style.display = 'flex';
+        if (userInfoContainer) userInfoContainer.style.display = 'none';
+
+        // Setup navigation menu for landing page
+        const navMenu = document.getElementById('main-nav-menu');
+        if (navMenu) {
+            navMenu.innerHTML = `
+                <a href="#ai-estimation" class="nav-link">AI Estimation</a>
+                <a href="#how-it-works" class="nav-link">How It Works</a>
+                <a href="#why-steelconnect" class="nav-link">Why Choose Us</a>
+                <a href="#showcase" class="nav-link">Showcase</a>`;
+        }
+
+        console.log('Landing page view configured');
+    } catch (error) {
+        console.error('Error showing landing page view:', error);
     }
 }
 
@@ -2151,7 +2180,6 @@ function renderAppSection(sectionId) {
     }
 }
 
-
 // --- DASHBOARD WIDGETS ---
 async function renderRecentActivityWidgets() {
     const user = appState.currentUser;
@@ -2192,7 +2220,6 @@ async function renderRecentActivityWidgets() {
         container.innerHTML = `<p class="widget-empty-text">Could not load ${user.type === 'contractor' ? 'projects' : 'quotes'}.</p>`;
     }
 }
-
 
 // --- ESTIMATION TOOL ---
 function setupEstimationToolEventListeners() {
@@ -2278,54 +2305,129 @@ async function handleEstimationSubmit() {
     }
 }
 
+// FIXED: Enhanced notification function
 function showNotification(message, type = 'info', duration = 4000) {
     let container = document.getElementById('notification-container');
     if (!container) {
         container = document.createElement('div');
         container.id = 'notification-container';
         container.className = 'notification-container';
+        container.style.cssText = `
+            position: fixed;
+            top: 80px;
+            right: 24px;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        `;
         document.body.appendChild(container);
     }
+
     const notification = document.createElement('div');
     notification.className = `notification premium-notification notification-${type}`;
+    notification.style.cssText = `
+        padding: 16px 20px;
+        border-radius: 8px;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 300px;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        animation: slideIn 0.5s forwards;
+        border-left: 5px solid;
+        background: white;
+        color: #1f2937;
+        border-left-color: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : type === 'warning' ? '#f59e0b' : '#0ea5e9'};
+    `;
+
     notification.innerHTML = `
-        <div class="notification-content">
-            <i class="fas ${getNotificationIcon(type)}"></i><span>${message}</span>
+        <div class="notification-content" style="display: flex; align-items: center; gap: 12px;">
+            <i class="fas ${getNotificationIcon(type)}"></i>
+            <span>${message}</span>
         </div>
-        <button class="notification-close" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>`;
+        <button class="notification-close" onclick="this.parentElement.remove()" style="
+            background: none; border: none; color: #9ca3af; cursor: pointer; padding: 0;
+            width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;
+        ">
+            <i class="fas fa-times"></i>
+        </button>`;
+
     container.appendChild(notification);
+
     setTimeout(() => {
         if (notification.parentElement) {
             notification.style.opacity = '0';
+            notification.style.transform = 'translateX(100%)';
             setTimeout(() => notification.remove(), 300);
         }
     }, duration);
 }
 
-
 // --- TEMPLATE GETTERS ---
 function getLoginTemplate() {
     return `
-        <div class="auth-header premium-auth-header"><div class="auth-logo"><i class="fas fa-drafting-compass"></i></div><h2>Welcome Back</h2><p>Sign in to your SteelConnect account</p></div>
+        <div class="auth-header premium-auth-header">
+            <div class="auth-logo"><i class="fas fa-drafting-compass"></i></div>
+            <h2>Welcome Back</h2>
+            <p>Sign in to your SteelConnect account</p>
+        </div>
         <form id="login-form" class="premium-form">
-            <div class="form-group"><label class="form-label"><i class="fas fa-envelope"></i> Email</label><input type="email" class="form-input" name="loginEmail" required placeholder="Enter your email"></div>
-            <div class="form-group"><label class="form-label"><i class="fas fa-lock"></i> Password</label><input type="password" class="form-input" name="loginPassword" required placeholder="Enter your password"></div>
-            <button type="submit" class="btn btn-primary btn-full"><i class="fas fa-sign-in-alt"></i> Sign In</button>
+            <div class="form-group">
+                <label class="form-label"><i class="fas fa-envelope"></i> Email</label>
+                <input type="email" class="form-input" name="loginEmail" required placeholder="Enter your email">
+            </div>
+            <div class="form-group">
+                <label class="form-label"><i class="fas fa-lock"></i> Password</label>
+                <input type="password" class="form-input" name="loginPassword" required placeholder="Enter your password">
+            </div>
+            <button type="submit" class="btn btn-primary btn-full">
+                <i class="fas fa-sign-in-alt"></i> Sign In
+            </button>
         </form>
-        <div class="auth-switch">Don't have an account? <a onclick="renderAuthForm('register')" class="auth-link">Create one</a></div>`;
+        <div class="auth-switch">
+            Don't have an account? 
+             <a onclick="renderAuthForm('register')" class="auth-link" style="cursor: pointer;">Create one</a>
+        </div>`;
 }
 
 function getRegisterTemplate() {
     return `
-        <div class="auth-header premium-auth-header"><div class="auth-logo"><i class="fas fa-drafting-compass"></i></div><h2>Join SteelConnect</h2><p>Create your professional account</p></div>
+        <div class="auth-header premium-auth-header">
+            <div class="auth-logo"><i class="fas fa-drafting-compass"></i></div>
+            <h2>Join SteelConnect</h2>
+            <p>Create your professional account</p>
+        </div>
         <form id="register-form" class="premium-form">
-            <div class="form-group"><label class="form-label"><i class="fas fa-user"></i> Full Name</label><input type="text" class="form-input" name="regName" required placeholder="Enter your name"></div>
-            <div class="form-group"><label class="form-label"><i class="fas fa-envelope"></i> Email</label><input type="email" class="form-input" name="regEmail" required placeholder="Enter your email"></div>
-            <div class="form-group"><label class="form-label"><i class="fas fa-lock"></i> Password</label><input type="password" class="form-input" name="regPassword" required placeholder="Create a password"></div>
-            <div class="form-group"><label class="form-label"><i class="fas fa-user-tag"></i> I am a...</label><select class="form-select" name="regRole" required><option value="" disabled selected>Select your role</option><option value="contractor">Client / Contractor</option><option value="designer">Designer / Engineer</option></select></div>
-            <button type="submit" class="btn btn-primary btn-full"><i class="fas fa-user-plus"></i> Create Account</button>
+            <div class="form-group">
+                <label class="form-label"><i class="fas fa-user"></i> Full Name</label>
+                <input type="text" class="form-input" name="regName" required placeholder="Enter your name">
+            </div>
+            <div class="form-group">
+                <label class="form-label"><i class="fas fa-envelope"></i> Email</label>
+                <input type="email" class="form-input" name="regEmail" required placeholder="Enter your email">
+            </div>
+            <div class="form-group">
+                <label class="form-label"><i class="fas fa-lock"></i> Password</label>
+                <input type="password" class="form-input" name="regPassword" required placeholder="Create a password">
+            </div>
+            <div class="form-group">
+                <label class="form-label"><i class="fas fa-user-tag"></i> I am a...</label>
+                <select class="form-select" name="regRole" required>
+                    <option value="" disabled selected>Select your role</option>
+                    <option value="contractor">Client / Contractor</option>
+                    <option value="designer">Designer / Engineer</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary btn-full">
+                <i class="fas fa-user-plus"></i> Create Account
+            </button>
         </form>
-        <div class="auth-switch">Already have an account? <a onclick="renderAuthForm('login')" class="auth-link">Sign In</a></div>`;
+        <div class="auth-switch">
+            Already have an account? 
+             <a onclick="renderAuthForm('login')" class="auth-link" style="cursor: pointer;">Sign In</a>
+        </div>`;
 }
 
 function getPostJobTemplate() {
@@ -2468,7 +2570,6 @@ function getProfileCompletionTemplate() {
         </div>`;
 }
 
-
 // --- SETTINGS PAGE ACTIONS ---
 async function handleProfileUpdate(event) {
     event.preventDefault();
@@ -2521,3 +2622,82 @@ async function handlePasswordChange(event) {
     event.preventDefault();
     showNotification('Password change functionality will be implemented soon.', 'info');
 }
+
+// Add CSS animation for notifications
+if (!document.getElementById('notification-styles')) {
+    const style = document.createElement('style');
+    style.id = 'notification-styles';
+    style.textContent = `
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(100%); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .auth-link {
+            color: #3b82f6;
+            font-weight: 500;
+            text-decoration: none;
+        }
+        .auth-link:hover {
+            text-decoration: underline;
+        }
+        .btn-full {
+            width: 100%;
+        }
+        .auth-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .auth-logo {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            margin: 0 auto 1rem;
+        }
+        .auth-switch {
+            text-align: center;
+            margin-top: 1rem;
+            font-size: 14px;
+            color: #6b7280;
+        }
+        .premium-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .form-label {
+            font-weight: 600;
+            color: #374151;
+            font-size: 14px;
+        }
+        .form-input, .form-select {
+            padding: 12px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.2s;
+        }
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+// FIXED: Make key functions globally available for debugging
+window.showAuthModal = showAuthModal;
+window.closeModal = closeModal;
+window.setupAuthButtons = setupAuthButtons;
+window.showLandingPageView = showLandingPageView;
