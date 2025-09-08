@@ -242,12 +242,66 @@
             <nav id="sidebar-nav-menu" class="sidebar-nav"></nav>
         </aside>
         <main class="main-content">
-            <div id="app-container" class="main-container"></div>
-        </main>
+            <div id="app-container" class="main-container">
+                </div>
+            
+            <div class="profile-completion-container" style="display: none;">
+                <div class="profile-completion-header">
+                    <div class="completion-icon"><i class="fa fa-user-pen"></i></div>
+                    <h2>Complete Your Profile</h2>
+                    <p>A complete and verified profile helps you get hired faster.</p>
+                    <div class="completion-progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 60%;"></div>
+                        </div>
+                        <div class="progress-text">60% Complete</div>
+                    </div>
+                </div>
+                <form class="profile-completion-form">
+                    <div class="form-section">
+                        <h3><i class="fa fa-user"></i> Basic Information</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="fullName" class="form-label required">Full Name</label>
+                                <input type="text" id="fullName" class="form-input" placeholder="e.g., John Doe">
+                            </div>
+                            <div class="form-group">
+                                <label for="jobTitle" class="form-label required">Professional Title</label>
+                                <input type="text" id="jobTitle" class="form-input" placeholder="e.g., Structural Engineer">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-section">
+                        <h3><i class="fa fa-briefcase"></i> Professional Details</h3>
+                        <div class="form-group">
+                            <label for="bio" class="form-label">Bio / Summary</label>
+                            <textarea id="bio" class="form-textarea" placeholder="Tell us about your experience and skills."></textarea>
+                            <small class="form-help">A short summary of your professional background.</small>
+                        </div>
+                         <div class="form-row">
+                            <div class="form-group">
+                                <label for="experience" class="form-label">Years of Experience</label>
+                                <input type="number" id="experience" class="form-input" placeholder="e.g., 10">
+                            </div>
+                            <div class="form-group">
+                                <label for="hourlyRate" class="form-label">Standard Hourly Rate ($)</label>
+                                <input type="number" id="hourlyRate" class="form-input" placeholder="e.g., 75">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="status-actions">
+                        <button id="back-to-settings-btn" class="btn btn-outline">
+                            Back to Settings
+                        </button>
+                        <button type="submit" class="btn btn-primary" onclick="event.preventDefault(); showNotification('Profile updated!', 'success');">
+                            Save Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+            </main>
     </div>
 
     <script src="script.js" defer></script>
 </body>
-
 </html>
-
