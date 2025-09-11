@@ -190,7 +190,7 @@ function initializeApp() {
         }
     });
 
-    // **FIX START: Move one-time listener setup here**
+    // **FIX: Move one-time listener setup here to prevent re-binding**
     const userInfo = document.getElementById('user-info');
     if (userInfo) {
         userInfo.addEventListener('click', (e) => {
@@ -228,7 +228,6 @@ function initializeApp() {
             markAllAsRead();
         });
     }
-    // **FIX END**
 
     // Comprehensive activity listeners for 5-minute auto-logout
     const activityEvents = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart', 'touchmove', 'wheel'];
@@ -2304,6 +2303,41 @@ async function renderProfileCompletionView() {
                 </form>
             </div>
         `;
+
+        // **FIX: Add event listeners for custom file inputs to make them clickable and support drag/drop**
+        document.querySelectorAll('.custom-file-input-wrapper').forEach(wrapper => {
+            const customInput = wrapper.querySelector('.custom-file-input');
+            const realInput = wrapper.querySelector('input[type="file"]');
+
+            if (customInput && realInput) {
+                // Forward clicks from the custom div to the real file input
+                customInput.addEventListener('click', () => {
+                    realInput.click();
+                });
+
+                // Add drag and drop functionality
+                customInput.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    customInput.classList.add('drag-over');
+                });
+
+                customInput.addEventListener('dragleave', () => {
+                    customInput.classList.remove('drag-over');
+                });
+
+                customInput.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    customInput.classList.remove('drag-over');
+                    if (e.dataTransfer.files.length > 0) {
+                        // Assign the dropped files to the input and trigger the change event
+                        realInput.files = e.dataTransfer.files;
+                        const changeEvent = new Event('change', { bubbles: true });
+                        realInput.dispatchEvent(changeEvent);
+                    }
+                });
+            }
+        });
+        
         document.getElementById('profile-completion-form').addEventListener('submit', handleProfileCompletionSubmit);
 
     } catch (error) {
