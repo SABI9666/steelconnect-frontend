@@ -190,6 +190,46 @@ function initializeApp() {
         }
     });
 
+    // **FIX START: Move one-time listener setup here**
+    const userInfo = document.getElementById('user-info');
+    if (userInfo) {
+        userInfo.addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.getElementById('user-info-dropdown').classList.toggle('active');
+        });
+    }
+
+    const settingsLink = document.getElementById('user-settings-link');
+    if (settingsLink) {
+        settingsLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            renderAppSection('settings');
+            document.getElementById('user-info-dropdown').classList.remove('active');
+        });
+    }
+    
+    const logoutLink = document.getElementById('user-logout-link');
+    if (logoutLink) {
+        logoutLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            logout();
+        });
+    }
+
+    const notificationBell = document.getElementById('notification-bell-container');
+    if (notificationBell) {
+        notificationBell.addEventListener('click', toggleNotificationPanel);
+    }
+    
+    const clearBtn = document.getElementById('clear-notifications-btn');
+    if (clearBtn) {
+        clearBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            markAllAsRead();
+        });
+    }
+    // **FIX END**
+
     // Comprehensive activity listeners for 5-minute auto-logout
     const activityEvents = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart', 'touchmove', 'wheel'];
     activityEvents.forEach(event => {
@@ -1975,39 +2015,9 @@ function showAppView() {
     document.getElementById('user-info-name').textContent = user.name;
     document.getElementById('user-info-avatar').textContent = (user.name || "A").charAt(0).toUpperCase();
 
-    // Setup user dropdown
-    document.getElementById('user-info').addEventListener('click', (e) => {
-        e.stopPropagation();
-        document.getElementById('user-info-dropdown').classList.toggle('active');
-    });
-
-    document.getElementById('user-settings-link').addEventListener('click', (e) => {
-        e.preventDefault();
-        renderAppSection('settings');
-        document.getElementById('user-info-dropdown').classList.remove('active');
-    });
-
-    document.getElementById('user-logout-link').addEventListener('click', (e) => {
-        e.preventDefault();
-        logout();
-    });
-
-    // Enhanced notification panel setup
-    const notificationBell = document.getElementById('notification-bell-container');
-    if (notificationBell) {
-        notificationBell.removeEventListener('click', toggleNotificationPanel);
-        notificationBell.addEventListener('click', toggleNotificationPanel);
-    }
-
-    const clearBtn = document.getElementById('clear-notifications-btn');
-    if (clearBtn) {
-        const newClearBtn = clearBtn.cloneNode(true);
-        clearBtn.parentNode.replaceChild(newClearBtn, clearBtn);
-        newClearBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            markAllAsRead();
-        });
-    }
+    // **FIX:** All event listeners for the user menu and notification bell 
+    // have been moved to initializeApp to prevent re-binding. This function
+    // is now only responsible for updating UI visibility and content.
 
     checkProfileAndRoute();
 }
@@ -2372,7 +2382,16 @@ async function handleProfileCompletionSubmit(event) {
     try {
         const formData = new FormData(form);
 
-        // Append files from our state object
+        // **FIX:** Use appState as the single source of truth for files.
+        // First, delete any file entries that might have been automatically 
+        // added by `new FormData(form)`. This is crucial to prevent duplicates
+        // or submitting files that the user has removed from the UI.
+        for (const fieldName in appState.profileFiles) {
+             formData.delete(fieldName);
+        }
+
+        // Now, append the files correctly from the appState object, which
+        // accurately reflects the user's selection.
         for (const fieldName in appState.profileFiles) {
             const files = appState.profileFiles[fieldName];
             if (files && files.length > 0) {
