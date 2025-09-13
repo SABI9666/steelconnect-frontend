@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SteelConnect - Professional Steel & Rebar Design Marketplace</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" defer>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="notification-container"></div>
+    <div id="modal-container"></div>
+
+    <header class="header">
+        <div class="header-container">
+            <a href="#" class="logo">
+                <div class="logo-icon">SC</div>
+                SteelConnect
+            </a>
+            <nav id="main-nav-menu" class="nav-menu">
+                <a href="#ai-estimation" class="nav-link">AI Estimation</a>
+                <a href="#how-it-works" class="nav-link">How It Works</a>
+                <a href="#why-steelconnect" class="nav-link">Why Choose Us</a>
+                <a href="#showcase" class="nav-link">Showcase</a>
+            </nav>
+            <div class="header-actions">
+                <div id="auth-buttons-container" class="auth-buttons">
+                    <button id="signin-btn" class="btn btn-outline">Sign In</button>
+                    <button id="join-btn" class="btn btn-primary">Join Now</button>
+                </div>
+                <div id="user-info-container" style="display: none;">
+                    <div id="notification-bell-container" class="notification-bell-container">
+                        <i class="fas fa-bell notification-bell"></i>
+                        <div id="notification-badge" class="notification-badge" style="display: none;"></div>
+                        <div id="notification-panel" class="notification-panel">
+                            <div class="notification-panel-header">
+                                <h3>Notifications</h3>
+                                <button id="clear-notifications-btn" class="clear-notifications-btn">Clear All</button>
+                            </div>
+                            <div id="notification-panel-list" class="notification-panel-list">
+                                <div class="notification-empty-state">
+                                    <i class="fas fa-bell-slash"></i>
+                                    <p>No new notifications</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="user-info" class="user-info-widget">
+                        <div id="user-info-avatar" class="user-avatar-small"></div>
+                        <span id="user-info-name"></span>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div id="user-info-dropdown" class="user-dropdown">
+                        <a href="#" id="user-profile-link" class="dropdown-item"><i class="fas fa-user-circle"></i> Profile</a>
+                        <a href="#" id="user-settings-link" class="dropdown-item"><i class="fas fa-cog"></i> Settings</a>
+                        <a href="#" id="user-logout-link" class="dropdown-item"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div id="landing-page-content">
+        <main>
+            <section class="hero">
+                <div class="hero-background"></div>
+                <div class="hero-content">
+                    <div class="hero-text">
+                        <h1>SteelConnect: The <span class="highlight">Premier Platform</span> with <span class="ai-highlight">AI-Powered Estimation</span></h1>
+                        <p>Join the leading marketplace where steel designers, structural engineers, and contractors collaborate seamlessly. Get instant AI estimates, build your professional network, and deliver exceptional projects together.</p>
+                        <div class="hero-cta">
+                            <button id="get-started-btn" class="btn btn-primary">
+                                Start Building Today <i class="fas fa-rocket"></i>
+                            </button>
+                             <a href="#ai-estimation" class="btn btn-ai">
+                                Try AI Estimation <i class="fas fa-brain"></i>
+                            </a>
+                        </div>
+                        <div class="hero-stats">
+                            <div class="hero-stat">
+                                <span class="hero-stat-number">2,500+</span>
+                                <span class="hero-stat-label">Professionals</span>
+                            </div>
+                            <div class="hero-stat">
+                                <span class="hero-stat-number">850+</span>
+                                <span class="hero-stat-label">Projects</span>
+                            </div>
+                            <div class="hero-stat">
+                                <span class="hero-stat-number">50+</span>
+                                <span class="hero-stat-label">Countries</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="hero-visual">
+                        <div class="hero-image-container">
+                            <img src="https://images.unsplash.com/photo-1504307651254-35680f356dfd?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3" alt="Steel construction professionals at work" class="hero-image" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2940&auto=format&fit=crop';">
+                            <div class="hero-image-overlay">
+                                <h3>Professional Excellence</h3>
+                                <p>Connecting top-tier engineers and contractors worldwide</p>
+                            </div>
+                        </div>
+                        <div class="floating-cards">
+                            <div class="floating-card">
+                                <div class="floating-card-icon"><i class="fas fa-handshake"></i></div>
+                                <h4>Active Connections</h4>
+                                <span class="floating-card-number">1,200+</span>
+                                <p>Designer-contractor partnerships</p>
+                            </div>
+                            <div class="floating-card connection-card">
+                                <div class="floating-card-icon"><i class="fas fa-network-wired"></i></div>
+                                <h4>SteelConnect Network</h4>
+                                <span class="floating-card-number">Live</span>
+                                <p>Real-time collaboration platform</p>
+                            </div>
+                            <div class="floating-card">
+                                <div class="floating-card-icon"><i class="fas fa-award"></i></div>
+                                <h4>Success Rate</h4>
+                                <span class="floating-card-number">99.8%</span>
+                                <p>Completed project satisfaction</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            </main>
+    </div>
+
+    <div id="app-content" class="main-layout" style="display: none;">
+        <aside class="sidebar">
+            <div class="sidebar-user-profile">
+                <div id="sidebarUserAvatar" class="sidebar-avatar">A</div>
+                <h3 id="sidebarUserName">User Name</h3>
+                <p id="sidebarUserType">Contractor</p>
+            </div>
+            <nav id="sidebar-nav-menu" class="sidebar-nav"></nav>
+        </aside>
+        <main class="main-content">
+            <div id="app-container" class="main-container">
+                 <h1>Welcome to your Dashboard</h1>
+                 <p>Portal content goes here.</p>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- Get All Required Elements ---
+            const mainNavMenu = document.getElementById('main-nav-menu');
+            const landingPageContent = document.getElementById('landing-page-content');
+            const appContent = document.getElementById('app-content');
+            const authButtons = document.getElementById('auth-buttons-container');
+            const userInfoContainer = document.getElementById('user-info-container');
+            const signInBtn = document.getElementById('signin-btn');
+            const logoutLink = document.getElementById('user-logout-link');
+
+            // --- Core Functions to Switch Views ---
+
+            /**
+             * Shows the main portal/app view and hides landing page elements.
+             */
+            function showPortalView() {
+                landingPageContent.style.display = 'none';
+                mainNavMenu.style.display = 'none'; // **FIX: Hide the main nav**
+
+                appContent.style.display = 'flex';
+                authButtons.style.display = 'none';
+                userInfoContainer.style.display = 'flex';
+            }
+
+            /**
+             * Shows the public landing page and hides the portal elements.
+             */
+            function showLandingPageView() {
+                landingPageContent.style.display = 'block';
+                mainNavMenu.style.display = 'flex'; // **FIX: Show the main nav**
+
+                appContent.style.display = 'none';
+                authButtons.style.display = 'flex';
+                userInfoContainer.style.display = 'none';
+            }
+
+            // --- Event Listeners for Login/Logout Simulation ---
+            
+            if (signInBtn) {
+                signInBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    // In a real app, this would happen after a successful login API call
+                    showPortalView();
+                });
+            }
+
+            if (logoutLink) {
+                logoutLink.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    showLandingPageView();
+                });
+            }
+
+            // --- Dropdown and Panel Logic (Unaffected) ---
+            const userInfoWidget = document.getElementById('user-info');
+            const userDropdown = document.getElementById('user-info-dropdown');
+            const notificationBell = document.getElementById('notification-bell-container');
+            const notificationPanel = document.getElementById('notification-panel');
+
+            if (userInfoWidget) {
+                userInfoWidget.addEventListener('click', (event) => {
+                    event.stopPropagation();
+                    notificationPanel.classList.remove('active');
+                    userDropdown.classList.toggle('active');
+                });
+            }
+            if (notificationBell) {
+                notificationBell.addEventListener('click', (event) => {
+                    event.stopPropagation();
+                    userDropdown.classList.remove('active');
+                    notificationPanel.classList.toggle('active');
+                });
+            }
+            window.addEventListener('click', () => {
+                if (userDropdown) userDropdown.classList.remove('active');
+                if (notificationPanel) notificationPanel.classList.remove('active');
+            });
+            if (userDropdown) userDropdown.addEventListener('click', (e) => e.stopPropagation());
+            if (notificationPanel) notificationPanel.addEventListener('click', (e) => e.stopPropagation());
+        });
+    </script>
+</body>
+</html>
