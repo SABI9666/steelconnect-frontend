@@ -11,26 +11,23 @@
     <link rel="stylesheet" href="style.css">
     
     <style>
-        /* This ensures your existing styles from style.css are not overridden by accident */
         :root {
             --primary-color: #3b82f6;
             --primary-hover: #2563eb;
         }
 
-        /* Header User Area & Auth Buttons */
         .header-actions {
             display: flex;
             align-items: center;
             gap: 1rem;
         }
 
-        .user-info-container {
+        #user-info-container {
             display: flex;
             align-items: center;
             position: relative;
         }
 
-        /* Notification Bell Styling */
         .notification-bell-container {
             position: relative;
             cursor: pointer;
@@ -57,10 +54,9 @@
             padding: 2px 6px;
             font-size: 0.7rem;
             font-weight: 600;
-            border: 2px solid #1f2937; /* Match header background */
+            border: 2px solid #1f2937;
         }
         
-        /* User Info Widget (Avatar, Name) */
         .user-info-widget {
             display: flex;
             align-items: center;
@@ -97,8 +93,8 @@
             font-size: 0.8rem;
         }
         
-        /* User Dropdown Menu */
-        .user-dropdown {
+        /* Dropdown & Panel Visibility Control */
+        .user-dropdown, .notification-panel {
             display: none; /* Hide by default */
             position: absolute;
             top: 130%;
@@ -107,13 +103,17 @@
             border-radius: 8px;
             box-shadow: 0 10px 25px rgba(0,0,0,0.1);
             border: 1px solid #e5e7eb;
-            width: 200px;
             z-index: 100;
             overflow: hidden;
         }
         
-        .user-dropdown.active {
-            display: block; /* Show when active */
+        .user-dropdown.active, .notification-panel.active {
+            display: block; /* Show when active class is present */
+        }
+
+        /* User Dropdown Specifics */
+        .user-dropdown {
+            width: 200px;
         }
 
         .dropdown-item {
@@ -134,6 +134,43 @@
             width: 16px;
             text-align: center;
             color: #6b7280;
+        }
+
+        /* Notification Panel Specifics */
+        .notification-panel {
+            width: 360px;
+            color: #374151;
+        }
+        .notification-panel-header {
+            padding: 0.75rem 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .notification-panel-header h3 {
+            margin: 0;
+            font-size: 1rem;
+        }
+        #clear-notifications-btn {
+            background: none;
+            border: none;
+            color: var(--primary-color);
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        .notification-panel-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .notification-empty-state {
+            padding: 2rem;
+            text-align: center;
+            color: #9ca3af;
+        }
+        .notification-empty-state i {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
         }
     </style>
 </head>
@@ -159,11 +196,24 @@
                     <button id="join-btn" class="btn btn-primary">Join Now</button>
                 </div>
                 
-                <div id="user-info-container" style="display: none;">
+                <div id="user-info-container" class="user-info-container">
                     <div id="notification-bell-container" class="notification-bell-container">
                         <i class="fas fa-bell"></i>
-                        <div id="notification-badge" class="notification-badge" style="display: none;"></div>
+                        <div id="notification-badge" class="notification-badge" style="display: none;">3</div>
+                        
+                        <div id="notification-panel" class="notification-panel">
+                            <div class="notification-panel-header">
+                                <h3>Notifications</h3>
+                                <button id="clear-notifications-btn">Clear All</button>
+                            </div>
+                            <div id="notification-panel-list" class="notification-panel-list">
+                                <div class="notification-empty-state">
+                                    <i class="fas fa-bell-slash"></i>
+                                    <p>No new notifications</p>
+                                </div>
+                            </div>
                         </div>
+                    </div>
                     
                     <div id="user-info" class="user-info-widget">
                         <div id="user-info-avatar" class="user-avatar-small">A</div>
@@ -243,12 +293,10 @@
                     </div>
                 </div>
             </section>
-
             <section id="ai-estimation" class="ai-estimation">
                 <div class="ai-section-container">
                     <h2 class="ai-section-title">AI-Powered Steel Estimation</h2>
                     <p class="ai-section-subtitle">Get instant, accurate cost estimates for your steel construction projects by providing a few key details. Our AI analyzes the data to give you a preliminary budget and timeline.</p>
-                    
                     <div class="ai-content">
                         <div style="display: flex; flex-direction: column; gap: 32px;">
                             <div style="display: flex; align-items: flex-start; gap: 20px; padding: 24px; background: var(--bg-white); border-radius: 16px; box-shadow: var(--shadow-lg);">
@@ -260,58 +308,34 @@
                                 <div><h3 style="margin-bottom: 4px;">PDF Uploads for Pros</h3><p style="color: var(--text-gray); margin:0;">Registered users can upload structural drawings directly for a more detailed and accurate AI-powered cost breakdown.</p></div>
                             </div>
                         </div>
-                        
                         <div class="ai-demo">
                             <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border-color);">
                                 <div style="width: 40px; height: 40px; background: var(--ai-gradient); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white;"><i class="fas fa-calculator"></i></div>
                                 <div style="font-size: 18px; font-weight: 700;">Quick Project Estimator</div>
                             </div>
-                            
                             <div class="ai-input-group">
                                 <label>Project Type</label>
-                                <select id="preview-project-type" class="ai-input">
-                                    <option value="">Select project type</option>
-                                    <option value="residential">Residential Building</option>
-                                    <option value="commercial">Commercial Complex</option>
-                                    <option value="industrial">Industrial Facility</option>
-                                </select>
+                                <select id="preview-project-type" class="ai-input"><option value="">Select project type</option><option value="residential">Residential Building</option><option value="commercial">Commercial Complex</option><option value="industrial">Industrial Facility</option></select>
                             </div>
-                            
                             <div class="ai-input-group">
                                 <label>Estimated Steel Tonnage (tons)</label>
                                 <input type="number" id="preview-steel-tonnage" class="ai-input" placeholder="e.g., 150" min="1">
                             </div>
-                                                        
-                            <button class="ai-estimate-btn" id="preview-generate-btn">
-                                <i class="fas fa-brain"></i> Generate AI Preview
-                            </button>
-                            
+                            <button class="ai-estimate-btn" id="preview-generate-btn"><i class="fas fa-brain"></i> Generate AI Preview</button>
                             <div id="preview-ai-result" class="ai-result">
-                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
-                                    <i class="fas fa-check-circle" style="color: var(--ai-purple);"></i>
-                                    <h4>AI Analysis Complete</h4>
-                                </div>
+                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;"><i class="fas fa-check-circle" style="color: var(--ai-purple);"></i><h4>AI Analysis Complete</h4></div>
                                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                                    <div style="text-align: center; padding: 12px; background: var(--bg-white); border-radius: 8px;">
-                                        <span id="preview-estimated-cost" style="font-size: 24px; font-weight: 900; background: var(--ai-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: block;">$0</span>
-                                        <span style="font-size: 12px; color: var(--text-gray);">Estimated Cost</span>
-                                    </div>
-                                    <div style="text-align: center; padding: 12px; background: var(--bg-white); border-radius: 8px;">
-                                        <span id="preview-timeline-estimate" style="font-size: 24px; font-weight: 900; background: var(--ai-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: block;">0 weeks</span>
-                                        <span style="font-size: 12px; color: var(--text-gray);">Timeline</span>
-                                    </div>
+                                    <div style="text-align: center; padding: 12px; background: var(--bg-white); border-radius: 8px;"><span id="preview-estimated-cost" style="font-size: 24px; font-weight: 900; background: var(--ai-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: block;">$0</span><span style="font-size: 12px; color: var(--text-gray);">Estimated Cost</span></div>
+                                    <div style="text-align: center; padding: 12px; background: var(--bg-white); border-radius: 8px;"><span id="preview-timeline-estimate" style="font-size: 24px; font-weight: 900; background: var(--ai-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: block;">0 weeks</span><span style="font-size: 12px; color: var(--text-gray);">Timeline</span></div>
                                 </div>
-                                <p style="font-size: 12px; color: var(--text-gray); margin-top: 16px; text-align: center;">
-                                    *This is a preview. <a href="#" id="signup-link" style="color: var(--primary-color);">Sign up</a> for the full tool with PDF uploads.
-                                </p>
+                                <p style="font-size: 12px; color: var(--text-gray); margin-top: 16px; text-align: center;">*This is a preview. <a href="#" id="signup-link" style="color: var(--primary-color);">Sign up</a> for the full tool with PDF uploads.</p>
                             </div>
                         </div>
                     </div>
                 </div>
             </section>
-            
             <section id="how-it-works" class="how-it-works">
-                 <div class="section-container">
+                <div class="section-container">
                     <h2 class="section-title">How It Works</h2>
                     <p class="section-subtitle">Simple steps to connect with the right professionals for your steel construction needs</p>
                     <div class="steps-container">
@@ -321,7 +345,6 @@
                     </div>
                 </div>
             </section>
-            
             <section id="why-steelconnect" class="sliding-section">
                 <div class="section-container">
                     <h2 class="section-title">Why SteelConnect?</h2>
@@ -337,7 +360,6 @@
                     <div class="slider-controls"><span class="slider-dot active" onclick="goToSlide(0)"></span><span class="slider-dot" onclick="goToSlide(1)"></span><span class="slider-dot" onclick="goToSlide(2)"></span></div>
                 </div>
             </section>
-            
             <section id="showcase" class="showcase">
                 <div class="section-container">
                     <h2 class="section-title">Industry Excellence Showcase</h2>
@@ -367,63 +389,72 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // --- Elements ---
+            // --- Get Elements for Menus ---
             const userInfoWidget = document.getElementById('user-info');
             const userDropdown = document.getElementById('user-info-dropdown');
+            const notificationBell = document.getElementById('notification-bell-container');
+            const notificationPanel = document.getElementById('notification-panel');
 
-            // --- Event Listener for User Dropdown ---
+            // --- Event Listeners for Menus ---
+            
+            // Toggle User Dropdown
             if (userInfoWidget) {
                 userInfoWidget.addEventListener('click', (event) => {
-                    // Stop the click from bubbling up to the window
                     event.stopPropagation();
-                    // Toggle the 'active' class to show/hide the dropdown
+                    // Close the notification panel if it's open
+                    notificationPanel.classList.remove('active');
+                    // Toggle the user dropdown
                     userDropdown.classList.toggle('active');
                 });
             }
 
-            // --- Global Click Listener to Close Dropdown ---
-            window.addEventListener('click', () => {
-                // If the dropdown is active, hide it
-                if (userDropdown && userDropdown.classList.contains('active')) {
-                    userDropdown.classList.remove('active');
-                }
-            });
-
-            // Prevent the dropdown from closing when clicking inside it
-            if (userDropdown) {
-                userDropdown.addEventListener('click', (event) => {
+            // Toggle Notification Panel
+            if (notificationBell) {
+                notificationBell.addEventListener('click', (event) => {
                     event.stopPropagation();
+                    // Close the user dropdown if it's open
+                    userDropdown.classList.remove('active');
+                    // Toggle the notification panel
+                    notificationPanel.classList.toggle('active');
                 });
             }
 
-            // --- Mock Slider Logic ---
+            // Global Click Listener to Close Both Menus
+            window.addEventListener('click', () => {
+                if (userDropdown) userDropdown.classList.remove('active');
+                if (notificationPanel) notificationPanel.classList.remove('active');
+            });
+
+            // Prevent menus from closing when clicking inside them
+            if (userDropdown) userDropdown.addEventListener('click', (e) => e.stopPropagation());
+            if (notificationPanel) notificationPanel.addEventListener('click', (e) => e.stopPropagation());
+
+            // --- Other Page Logic (Slider, etc.) ---
             let currentSlide = 0;
             const slides = document.querySelectorAll('.slide');
             const dots = document.querySelectorAll('.slider-dot');
-            const totalSlides = slides.length;
+            if (slides.length > 0) {
+                const totalSlides = slides.length;
 
-            function updateSlider() {
-                const sliderWrapper = document.getElementById('slider-wrapper');
-                sliderWrapper.style.transform = `translateX(-${currentSlide * 100}%)`;
-                dots.forEach((dot, index) => {
-                    dot.classList.toggle('active', index === currentSlide);
-                });
+                function updateSlider() {
+                    const sliderWrapper = document.getElementById('slider-wrapper');
+                    sliderWrapper.style.transform = `translateX(-${currentSlide * 100}%)`;
+                    dots.forEach((dot, index) => {
+                        dot.classList.toggle('active', index === currentSlide);
+                    });
+                }
+
+                window.changeSlide = function(direction) {
+                    currentSlide = (currentSlide + direction + totalSlides) % totalSlides;
+                    updateSlider();
+                }
+
+                window.goToSlide = function(index) {
+                    currentSlide = index;
+                    updateSlider();
+                }
             }
-
-            window.changeSlide = function(direction) {
-                currentSlide = (currentSlide + direction + totalSlides) % totalSlides;
-                updateSlider();
-            }
-
-            window.goToSlide = function(index) {
-                currentSlide = index;
-                updateSlider();
-            }
-
-            // Auto-play slider
-            // setInterval(() => changeSlide(1), 5000);
         });
     </script>
-    <script src="script.js" defer></script>
 </body>
 </html>
