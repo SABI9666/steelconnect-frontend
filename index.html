@@ -4,214 +4,137 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SteelConnect - Professional Steel & Rebar Design Marketplace</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" defer>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
     
     <style>
-        /* Base Variables */
+        /* This ensures your existing styles from style.css are not overridden by accident */
         :root {
             --primary-color: #3b82f6;
             --primary-hover: #2563eb;
-            --text-dark: #1f2937;
-            --text-gray: #6b7280;
-            --bg-light: #f9fafb;
-            --bg-white: #ffffff;
-            --border-color: #e5e7eb;
-            --ai-purple: #8b5cf6;
-            --ai-gradient: linear-gradient(45deg, #8b5cf6, #ec4899);
-            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
         }
 
-        /* General Body Styles */
-        body {
-            font-family: 'Inter', sans-serif;
-            margin: 0;
-            background-color: var(--bg-light);
-            color: var(--text-dark);
-        }
-
-        /* Header */
-        .header {
-            background: var(--text-dark);
-            color: white;
-            padding: 1rem 2rem;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            box-shadow: var(--shadow-md);
-        }
-        .header-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            max-width: 1200px;
-            margin: auto;
-        }
-        .logo {
-            display: flex;
-            align-items: center;
-            font-weight: 800;
-            font-size: 1.5rem;
-            text-decoration: none;
-            color: white;
-        }
-        .logo-icon {
-            background-color: var(--primary-color);
-            width: 40px;
-            height: 40px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 0.5rem;
-            font-weight: 900;
-        }
-        .nav-menu {
-            display: flex;
-            gap: 1.5rem;
-        }
-        .nav-link {
-            color: #d1d5db;
-            text-decoration: none;
-            font-weight: 500;
-            transition: color 0.3s ease;
-        }
-        .nav-link:hover {
-            color: white;
-        }
+        /* Header User Area & Auth Buttons */
         .header-actions {
             display: flex;
             align-items: center;
             gap: 1rem;
         }
-        
-        /* Buttons */
-        .btn {
-            padding: 0.6rem 1.2rem;
-            border: none;
-            border-radius: 8px;
+
+        .user-info-container {
+            display: flex;
+            align-items: center;
+            position: relative;
+        }
+
+        /* Notification Bell Styling */
+        .notification-bell-container {
+            position: relative;
             cursor: pointer;
+            margin-right: 1rem;
+        }
+
+        .notification-bell-container .fa-bell {
+            font-size: 1.4rem;
+            color: #d1d5db;
+            transition: color 0.2s ease;
+        }
+        
+        .notification-bell-container:hover .fa-bell {
+            color: white;
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -8px;
+            background-color: #ef4444;
+            color: white;
+            border-radius: 50%;
+            padding: 2px 6px;
+            font-size: 0.7rem;
             font-weight: 600;
+            border: 2px solid #1f2937; /* Match header background */
+        }
+        
+        /* User Info Widget (Avatar, Name) */
+        .user-info-widget {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            gap: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 8px;
+            transition: background-color 0.2s ease;
+        }
+
+        .user-info-widget:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .user-avatar-small {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+
+        .user-info-widget span {
+            color: white;
+            font-weight: 500;
+        }
+
+        .user-info-widget .fa-chevron-down {
+            color: #9ca3af;
+            font-size: 0.8rem;
+        }
+        
+        /* User Dropdown Menu */
+        .user-dropdown {
+            display: none; /* Hide by default */
+            position: absolute;
+            top: 130%;
+            right: 0;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            border: 1px solid #e5e7eb;
+            width: 200px;
+            z-index: 100;
+            overflow: hidden;
+        }
+        
+        .user-dropdown.active {
+            display: block; /* Show when active */
+        }
+
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            color: #374151;
+            text-decoration: none;
             font-size: 0.9rem;
-            transition: all 0.3s ease;
-        }
-        .btn-primary {
-            background-color: var(--primary-color);
-            color: white;
-        }
-        .btn-primary:hover {
-            background-color: var(--primary-hover);
-        }
-        .btn-outline {
-            background-color: transparent;
-            color: white;
-            border: 1px solid var(--primary-color);
-        }
-        .btn-outline:hover {
-            background-color: var(--primary-color);
-        }
-        .btn-ai {
-             background: var(--ai-gradient);
-             color: white;
         }
 
-        /* Hero Section */
-        .hero {
-             padding: 4rem 2rem;
-             text-align: center;
+        .dropdown-item:hover {
+            background-color: #f3f4f6;
         }
-        .hero-content {
-             max-width: 1200px;
-             margin: auto;
-             display: grid;
-             grid-template-columns: 1fr 1fr;
-             gap: 2rem;
-             text-align: left;
-             align-items: center;
-        }
-         .hero-text h1 {
-            font-size: 3rem;
-            font-weight: 900;
-            line-height: 1.2;
-        }
-        .highlight { color: var(--primary-color); }
-        .ai-highlight {
-            background: var(--ai-gradient);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .hero-cta { margin: 2rem 0; display: flex; gap: 1rem; }
 
-        /* AI Estimation Section */
-        .ai-estimation { padding: 4rem 2rem; background: var(--bg-light); }
-        .ai-section-container { max-width: 1000px; margin: auto; }
-        .ai-section-title { text-align: center; font-size: 2.5rem; font-weight: 800; margin-bottom: 0.5rem; }
-        .ai-section-subtitle { text-align: center; color: var(--text-gray); max-width: 600px; margin: auto auto 2rem auto; }
-        .ai-content { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: start; }
-        .ai-demo { padding: 2rem; background: var(--bg-white); border-radius: 16px; box-shadow: var(--shadow-lg); }
-        .ai-input-group { margin-bottom: 1rem; }
-        .ai-input-group label { display: block; font-weight: 500; margin-bottom: 0.5rem; font-size: 0.9rem; }
-        .ai-input, .ai-input select { width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 8px; font-size: 1rem; box-sizing: border-box;}
-        .ai-estimate-btn { width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: var(--ai-gradient); color: white; padding: 0.85rem; border:none; border-radius: 8px; font-size: 1rem; font-weight: 700; cursor: pointer; }
-        .ai-result { margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1.5rem; display: none; }
-        
-        /* Other Sections */
-        .section-container { max-width: 1200px; margin: auto; padding: 4rem 2rem; }
-        .section-title { text-align: center; font-size: 2.5rem; font-weight: 800; margin-bottom: 0.5rem; }
-        .section-subtitle { text-align: center; color: var(--text-gray); max-width: 600px; margin: auto auto 3rem auto; }
-        
-        /* How It Works */
-        .steps-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; }
-        .step-card { background: var(--bg-white); padding: 2rem; border-radius: 12px; box-shadow: var(--shadow-md); }
-
-        /* Showcase Section */
-        .showcase-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; }
-        .showcase-card { background: var(--bg-white); border-radius: 12px; overflow: hidden; box-shadow: var(--shadow-md); }
-        .showcase-image { width: 100%; height: 200px; object-fit: cover; }
-        .showcase-content { padding: 1.5rem; }
-
-        /* App Layout */
-        .app-content { display: flex; }
-        .sidebar { width: 250px; background: var(--text-dark); color: white; padding: 1.5rem; }
-        .main-content { flex: 1; padding: 2rem; }
-        
-        /* --- Notification & User Dropdown CSS --- */
-        .header-user-area { display: flex; align-items: center; gap: 1rem; }
-        .user-info-container { display: flex; align-items: center; position: relative; }
-        .notification-bell-container { position: relative; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; background: rgba(255, 255, 255, 0.1); transition: all 0.3s ease; margin-right: 1rem; }
-        .notification-bell-container:hover { background: rgba(255, 255, 255, 0.2); transform: scale(1.05); }
-        .notification-bell-container i.fa-bell { font-size: 1.2rem; color: white; }
-        .notification-badge { position: absolute; top: -4px; right: -4px; background: #ef4444; color: white; font-size: 0.75rem; font-weight: 600; padding: 2px 6px; border-radius: 10px; min-width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); animation: fadeIn 0.3s ease; }
-        .notification-panel { position: absolute; top: 120%; right: 0; width: 360px; background: white; border-radius: 12px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15); border: 1px solid #e5e7eb; opacity: 0; visibility: hidden; transform: translateY(-10px); transition: all 0.3s ease; z-index: 1000; }
-        .notification-panel.active { opacity: 1; visibility: visible; transform: translateY(0); }
-        .user-info { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem 1rem; border-radius: 8px; transition: background 0.2s ease; color: white; position: relative; }
-        .user-info:hover { background: rgba(255, 255, 255, 0.1); }
-        .user-avatar { width: 32px; height: 32px; border-radius: 50%; background: #3b82f6; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.9rem; color: white; }
-        .user-name { font-weight: 500; }
-        .user-dropdown { position: absolute; top: 100%; right: 0; background: white; border-radius: 8px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15); border: 1px solid #e5e7eb; min-width: 180px; opacity: 0; visibility: hidden; transform: translateY(-10px); transition: all 0.3s ease; z-index: 1000; margin-top: 0.5rem; }
-        .user-dropdown.active { opacity: 1; visibility: visible; transform: translateY(0); }
-        .dropdown-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; color: #374151; text-decoration: none; transition: background 0.2s ease; font-size: 0.9rem; }
-        .dropdown-item:hover { background: #f3f4f6; color: #1f2937; }
-        .dropdown-item i { font-size: 0.85rem; width: 16px; }
-        .dropdown-divider { margin: 0.5rem 0; border: none; border-top: 1px solid #e5e7eb; }
-        .notification-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
-        
-        /* --- Modal Styles --- */
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); display: flex; justify-content: center; align-items: center; z-index: 1000; animation: fadeIn 0.3s ease; }
-        .modal-content { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.2); width: 100%; max-width: 420px; position: relative; animation: slideIn 0.4s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slideIn { from { transform: translateY(-50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        .modal-close-btn { position: absolute; top: 10px; right: 15px; background: none; border: none; font-size: 2rem; color: #aaa; cursor: pointer; line-height: 1; }
-        .modal-content h3 { margin-top: 0; margin-bottom: 1.5rem; text-align: center; color: #1f2937; }
-        .auth-form .form-group { margin-bottom: 1rem; }
-        .auth-form label { display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.9rem; color: #374151; }
-        .auth-form input, .auth-form select { width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 8px; font-size: 1rem; box-sizing: border-box; }
-        .btn-full { width: 100%; padding: 0.85rem; font-size: 1rem; margin-top: 0.5rem; }
-        .modal-switch { text-align: center; margin-top: 1rem; font-size: 0.9rem; color: #6b7280; }
-        .modal-switch a { color: var(--primary-color); font-weight: 600; text-decoration: none; }
+        .dropdown-item i {
+            width: 16px;
+            text-align: center;
+            color: #6b7280;
+        }
     </style>
 </head>
 <body>
@@ -235,53 +158,117 @@
                     <button id="signin-btn" class="btn btn-outline">Sign In</button>
                     <button id="join-btn" class="btn btn-primary">Join Now</button>
                 </div>
-                <div id="user-info-container" class="user-info-container" style="display: none;">
+                
+                <div id="user-info-container" style="display: none;">
                     <div id="notification-bell-container" class="notification-bell-container">
                         <i class="fas fa-bell"></i>
                         <div id="notification-badge" class="notification-badge" style="display: none;"></div>
-                        <div id="notification-panel" class="notification-panel"></div>
-                    </div>
-                    <div id="user-info" class="user-info">
-                        <div id="user-info-avatar" class="user-avatar"></div>
-                        <span id="user-info-name" class="user-name"></span>
-                        <i class="fas fa-chevron-down"></i>
-                        <div id="user-info-dropdown" class="user-dropdown">
-                            <a href="#" id="user-profile-link" class="dropdown-item"><i class="fas fa-user-circle"></i> Profile</a>
-                            <a href="#" id="user-settings-link" class="dropdown-item"><i class="fas fa-cog"></i> Settings</a>
-                            <hr class="dropdown-divider">
-                            <a href="#" id="user-logout-link" class="dropdown-item"><i class="fas fa-sign-out-alt"></i> Logout</a>
                         </div>
+                    
+                    <div id="user-info" class="user-info-widget">
+                        <div id="user-info-avatar" class="user-avatar-small">A</div>
+                        <span id="user-info-name">User</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    
+                    <div id="user-info-dropdown" class="user-dropdown">
+                        <a href="#" id="user-profile-link" class="dropdown-item"><i class="fas fa-user-circle"></i> Profile</a>
+                        <a href="#" id="user-settings-link" class="dropdown-item"><i class="fas fa-cog"></i> Settings</a>
+                        <a href="#" id="user-logout-link" class="dropdown-item"><i class="fas fa-sign-out-alt"></i> Logout</a>
                     </div>
                 </div>
             </div>
         </div>
     </header>
-
+    
     <div id="landing-page-content">
         <main>
-             <section class="hero">
+            <section class="hero">
+                <div class="hero-background"></div>
                 <div class="hero-content">
                     <div class="hero-text">
                         <h1>SteelConnect: The <span class="highlight">Premier Platform</span> with <span class="ai-highlight">AI-Powered Estimation</span></h1>
                         <p>Join the leading marketplace where steel designers, structural engineers, and contractors collaborate seamlessly. Get instant AI estimates, build your professional network, and deliver exceptional projects together.</p>
                         <div class="hero-cta">
-                            <button id="get-started-btn" class="btn btn-primary">Start Building Today <i class="fas fa-rocket"></i></button>
-                             <a href="#ai-estimation" class="btn btn-ai">Try AI Estimation <i class="fas fa-brain"></i></a>
+                            <button id="get-started-btn" class="btn btn-primary">
+                                Start Building Today <i class="fas fa-rocket"></i>
+                            </button>
+                             <a href="#ai-estimation" class="btn btn-ai">
+                                Try AI Estimation <i class="fas fa-brain"></i>
+                            </a>
+                        </div>
+                        <div class="hero-stats">
+                            <div class="hero-stat">
+                                <span class="hero-stat-number">2,500+</span>
+                                <span class="hero-stat-label">Professionals</span>
+                            </div>
+                            <div class="hero-stat">
+                                <span class="hero-stat-number">850+</span>
+                                <span class="hero-stat-label">Projects</span>
+                            </div>
+                            <div class="hero-stat">
+                                <span class="hero-stat-number">50+</span>
+                                <span class="hero-stat-label">Countries</span>
+                            </div>
                         </div>
                     </div>
+                    <div class="hero-visual">
+                        <div class="hero-image-container">
+                            <img src="https://images.unsplash.com/photo-1504307651254-35680f356dfd?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3" alt="Steel construction professionals at work" class="hero-image" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2940&auto=format&fit=crop';">
+                            <div class="hero-image-overlay">
+                                <h3>Professional Excellence</h3>
+                                <p>Connecting top-tier engineers and contractors worldwide</p>
+                            </div>
+                        </div>
+                        <div class="floating-cards">
+                            <div class="floating-card">
+                                <div class="floating-card-icon"><i class="fas fa-handshake"></i></div>
+                                <h4>Active Connections</h4>
+                                <span class="floating-card-number">1,200+</span>
+                                <p>Designer-contractor partnerships</p>
+                            </div>
+                            <div class="floating-card connection-card">
+                                <div class="floating-card-icon"><i class="fas fa-network-wired"></i></div>
+                                <h4>SteelConnect Network</h4>
+                                <span class="floating-card-number">Live</span>
+                                <p>Real-time collaboration platform</p>
+                            </div>
+                            <div class="floating-card">
+                                <div class="floating-card-icon"><i class="fas fa-award"></i></div>
+                                <h4>Success Rate</h4>
+                                <span class="floating-card-number">99.8%</span>
+                                <p>Completed project satisfaction</p>
+                            </div>
+                        </div>
                     </div>
+                </div>
             </section>
 
             <section id="ai-estimation" class="ai-estimation">
                 <div class="ai-section-container">
                     <h2 class="ai-section-title">AI-Powered Steel Estimation</h2>
-                    <p class="ai-section-subtitle">Get instant, accurate cost estimates for your steel construction projects by providing a few key details.</p>
+                    <p class="ai-section-subtitle">Get instant, accurate cost estimates for your steel construction projects by providing a few key details. Our AI analyzes the data to give you a preliminary budget and timeline.</p>
+                    
                     <div class="ai-content">
-                        <div> </div>
+                        <div style="display: flex; flex-direction: column; gap: 32px;">
+                            <div style="display: flex; align-items: flex-start; gap: 20px; padding: 24px; background: var(--bg-white); border-radius: 16px; box-shadow: var(--shadow-lg);">
+                                <div style="width: 48px; height: 48px; background: var(--ai-gradient); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; flex-shrink: 0;"><i class="fas fa-bolt"></i></div>
+                                <div><h3 style="margin-bottom: 4px;">Instant Analysis</h3><p style="color: var(--text-gray); margin:0;">Our AI provides preliminary cost and timeline estimates in seconds, helping you make quicker decisions.</p></div>
+                            </div>
+                             <div style="display: flex; align-items: flex-start; gap: 20px; padding: 24px; background: var(--bg-white); border-radius: 16px; box-shadow: var(--shadow-lg);">
+                                <div style="width: 48px; height: 48px; background: var(--ai-gradient); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; flex-shrink: 0;"><i class="fas fa-file-upload"></i></div>
+                                <div><h3 style="margin-bottom: 4px;">PDF Uploads for Pros</h3><p style="color: var(--text-gray); margin:0;">Registered users can upload structural drawings directly for a more detailed and accurate AI-powered cost breakdown.</p></div>
+                            </div>
+                        </div>
+                        
                         <div class="ai-demo">
-                            <h4>Quick Project Estimator</h4>
+                            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border-color);">
+                                <div style="width: 40px; height: 40px; background: var(--ai-gradient); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white;"><i class="fas fa-calculator"></i></div>
+                                <div style="font-size: 18px; font-weight: 700;">Quick Project Estimator</div>
+                            </div>
+                            
                             <div class="ai-input-group">
-                                <label for="preview-project-type">Project Type</label>
+                                <label>Project Type</label>
                                 <select id="preview-project-type" class="ai-input">
                                     <option value="">Select project type</option>
                                     <option value="residential">Residential Building</option>
@@ -289,160 +276,154 @@
                                     <option value="industrial">Industrial Facility</option>
                                 </select>
                             </div>
+                            
                             <div class="ai-input-group">
-                                <label for="preview-steel-tonnage">Estimated Steel Tonnage (tons)</label>
+                                <label>Estimated Steel Tonnage (tons)</label>
                                 <input type="number" id="preview-steel-tonnage" class="ai-input" placeholder="e.g., 150" min="1">
                             </div>
-                            <button class="ai-estimate-btn" id="preview-generate-btn"><i class="fas fa-brain"></i> Generate AI Preview</button>
+                                                        
+                            <button class="ai-estimate-btn" id="preview-generate-btn">
+                                <i class="fas fa-brain"></i> Generate AI Preview
+                            </button>
+                            
                             <div id="preview-ai-result" class="ai-result">
+                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+                                    <i class="fas fa-check-circle" style="color: var(--ai-purple);"></i>
+                                    <h4>AI Analysis Complete</h4>
                                 </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                                    <div style="text-align: center; padding: 12px; background: var(--bg-white); border-radius: 8px;">
+                                        <span id="preview-estimated-cost" style="font-size: 24px; font-weight: 900; background: var(--ai-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: block;">$0</span>
+                                        <span style="font-size: 12px; color: var(--text-gray);">Estimated Cost</span>
+                                    </div>
+                                    <div style="text-align: center; padding: 12px; background: var(--bg-white); border-radius: 8px;">
+                                        <span id="preview-timeline-estimate" style="font-size: 24px; font-weight: 900; background: var(--ai-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: block;">0 weeks</span>
+                                        <span style="font-size: 12px; color: var(--text-gray);">Timeline</span>
+                                    </div>
+                                </div>
+                                <p style="font-size: 12px; color: var(--text-gray); margin-top: 16px; text-align: center;">
+                                    *This is a preview. <a href="#" id="signup-link" style="color: var(--primary-color);">Sign up</a> for the full tool with PDF uploads.
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </div>
             </section>
-
-            <section id="how-it-works">
+            
+            <section id="how-it-works" class="how-it-works">
                  <div class="section-container">
                     <h2 class="section-title">How It Works</h2>
                     <p class="section-subtitle">Simple steps to connect with the right professionals for your steel construction needs</p>
                     <div class="steps-container">
-                        <div class="step-card"><h3>1. Post Your Project</h3><p>Describe your needs, set your budget, and upload drawings.</p></div>
-                        <div class="step-card"><h3>2. Receive Quotes</h3><p>Licensed professionals submit detailed proposals.</p></div>
-                        <div class="step-card"><h3>3. Collaborate & Deliver</h3><p>Choose the best fit and track progress to completion.</p></div>
+                        <div class="step-card"><div class="step-number">1</div><h3>Post Your Project</h3><p>Describe your steel construction needs, set your budget, and specify required skills. Upload drawings or specifications for better quotes.</p></div>
+                        <div class="step-card"><div class="step-number">2</div><h3>Receive Quotes</h3><p>Licensed professionals and certified engineers submit detailed proposals with timelines, costs, and their approach to your project.</p></div>
+                        <div class="step-card"><div class="step-number">3</div><h3>Collaborate & Deliver</h3><p>Choose the best fit, communicate directly through our platform, and track progress from design to completion.</p></div>
                     </div>
                 </div>
             </section>
             
-            <section id="showcase">
+            <section id="why-steelconnect" class="sliding-section">
+                <div class="section-container">
+                    <h2 class="section-title">Why SteelConnect?</h2>
+                    <div class="slider-container">
+                        <div class="slider-wrapper" id="slider-wrapper">
+                            <div class="slide"><div class="slide-content"><h3>Global Network of Experts</h3><p>Connect with a worldwide community of freelance steel designers, structural engineers, and certified professionals ready to tackle your most challenging projects.</p><ul class="slide-features"><li><i class="fas fa-check"></i> PE-licensed engineers across multiple jurisdictions</li><li><i class="fas fa-check"></i> Specialized expertise in seismic and wind engineering</li><li><i class="fas fa-check"></i> Multi-language support for international projects</li><li><i class="fas fa-check"></i> 24/7 availability across time zones</li></ul></div><div class="slide-visual"><img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=2940&auto=format&fit=crop" alt="Global network" onerror="this.onerror=null;this.src='https://placehold.co/600x400/0f766e/ffffff?text=Expert';"></div></div>
+                            <div class="slide"><div class="slide-content"><h3>Advanced Engineering Solutions</h3><p>From initial concept to final construction drawings, our professionals use cutting-edge technology and industry-leading software to deliver precision engineering.</p><ul class="slide-features"><li><i class="fas fa-check"></i> Latest BIM and 3D modeling capabilities</li><li><i class="fas fa-check"></i> Advanced structural analysis software</li><li><i class="fas fa-check"></i> Code compliance across all major standards</li><li><i class="fas fa-check"></i> Sustainable design practices</li></ul></div><div class="slide-visual"><img src="https://images.unsplash.com/photo-1581094794329-c8112a89af12?q=80&w=2940&auto=format&fit=crop" alt="Engineering solutions" onerror="this.onerror=null;this.src='https://placehold.co/600x400/0891b2/ffffff?text=Engineer';"></div></div>
+                            <div class="slide"><div class="slide-content"><h3>Proven Track Record</h3><p>Our platform has facilitated thousands of successful projects, from residential developments to major infrastructure, with verified reviews and portfolio showcases.</p><ul class="slide-features"><li><i class="fas fa-check"></i> Verified professional credentials and licenses</li><li><i class="fas fa-check"></i> Comprehensive project portfolios</li><li><i class="fas fa-check"></i> Client reviews and ratings system</li><li><i class="fas fa-check"></i> Quality assurance and project insurance</li></ul></div><div class="slide-visual"><img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2940&auto=format&fit=crop" alt="Proven results" onerror="this.onerror=null;this.src='https://placehold.co/600x400/1e40af/ffffff?text=Success';"></div></div>
+                        </div>
+                        <button class="slider-nav prev" onclick="changeSlide(-1)"><i class="fas fa-chevron-left"></i></button>
+                        <button class="slider-nav next" onclick="changeSlide(1)"><i class="fas fa-chevron-right"></i></button>
+                    </div>
+                    <div class="slider-controls"><span class="slider-dot active" onclick="goToSlide(0)"></span><span class="slider-dot" onclick="goToSlide(1)"></span><span class="slider-dot" onclick="goToSlide(2)"></span></div>
+                </div>
+            </section>
+            
+            <section id="showcase" class="showcase">
                 <div class="section-container">
                     <h2 class="section-title">Industry Excellence Showcase</h2>
-                     <div class="showcase-grid">
-                        <div class="showcase-card"><img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2940&auto=format&fit=crop" alt="High-Rise" class="showcase-image"><div class="showcase-content"><h3>High-Rise Construction</h3></div></div>
-                        <div class="showcase-card"><img src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?q=80&w=2940&auto=format&fit=crop" alt="Bridge" class="showcase-image"><div class="showcase-content"><h3>Infrastructure Projects</h3></div></div>
-                        <div class="showcase-card"><img src="https://images.unsplash.com/photo-1565008447742-97f6f38c985c?q=80&w=2940&auto=format&fit=crop" alt="Industrial" class="showcase-image"><div class="showcase-content"><h3>Industrial Facilities</h3></div></div>
+                    <div class="showcase-grid">
+                        <div class="showcase-card"><img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2940&auto=format&fit=crop" alt="Modern skyscraper" class="showcase-image" onerror="this.onerror=null;this.src='https://placehold.co/400x240/1e293b/ffffff?text=High-Rise';"><div class="showcase-content"><h3>High-Rise Construction</h3><p>Structural steel design for towers and commercial buildings with advanced seismic engineering and wind load analysis.</p></div></div>
+                        <div class="showcase-card"><img src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?q=80&w=2940&auto=format&fit=crop" alt="Steel bridge" class="showcase-image" onerror="this.onerror=null;this.src='https://placehold.co/400x240/1e293b/ffffff?text=Bridge';"><div class="showcase-content"><h3>Infrastructure Projects</h3><p>Complex bridge design, highway infrastructure, and transportation networks engineered for safety and longevity.</p></div></div>
+                        <div class="showcase-card"><img src="https://images.unsplash.com/photo-1565008447742-97f6f38c985c?q=80&w=2940&auto=format&fit=crop" alt="Industrial facility" class="showcase-image" onerror="this.onerror=null;this.src='https://placehold.co/400x240/1e293b/ffffff?text=Industrial';"><div class="showcase-content"><h3>Industrial Facilities</h3><p>Manufacturing plants, warehouses, and industrial complexes with specialized steel frame solutions and heavy load engineering.</p></div></div>
                     </div>
                 </div>
             </section>
         </main>
     </div>
 
-    <div id="app-content" class="app-content" style="display: none;">
+    <div id="app-content" class="main-layout" style="display: none;">
         <aside class="sidebar">
+            <div class="sidebar-user-profile">
+                <div id="sidebarUserAvatar" class="sidebar-avatar"></div>
+                <h3 id="sidebarUserName"></h3>
+                <p id="sidebarUserType"></p>
+            </div>
             <nav id="sidebar-nav-menu" class="sidebar-nav"></nav>
         </aside>
-        <main id="app-container" class="main-content"></main>
+        <main class="main-content">
+            <div id="app-container" class="main-container"></div>
+        </main>
     </div>
 
     <script>
-    document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- Elements ---
+            const userInfoWidget = document.getElementById('user-info');
+            const userDropdown = document.getElementById('user-info-dropdown');
 
-        // --- DOM Elements ---
-        const signInBtn = document.getElementById('signin-btn');
-        const joinBtn = document.getElementById('join-btn');
-        const getStartedBtn = document.getElementById('get-started-btn');
-        const userInfoContainer = document.getElementById('user-info-container');
-        const userInfo = document.getElementById('user-info');
-        const userInfoDropdown = document.getElementById('user-info-dropdown');
-
-        // --- Mock Functions & State ---
-        let appState = { currentUser: null };
-        const showNotification = (message, type = 'info') => {
-            console.log(`Notification: [${type}] ${message}`);
-            const notification = document.createElement('div');
-            notification.textContent = message;
-            notification.style.cssText = "background-color: #333; color: white; padding: 10px 15px; border-radius: 5px; margin-bottom: 5px;";
-            document.getElementById('notification-container').appendChild(notification);
-            setTimeout(() => notification.remove(), 3000);
-        };
-
-        // --- Modal Logic ---
-        const closeModal = () => {
-            const modal = document.querySelector('.modal-overlay');
-            if (modal) modal.remove();
-        };
-
-        const showAuthModal = (type) => {
-            closeModal();
-            const isLogin = type === 'login';
-            const title = isLogin ? 'Sign In to SteelConnect' : 'Join SteelConnect';
-            const buttonText = isLogin ? 'Sign In' : 'Create Account';
-            const switchPrompt = isLogin ? "Don't have an account?" : 'Already have an account?';
-            const switchAction = isLogin ? "Join Now" : "Sign In";
-            const switchType = isLogin ? "'register'" : "'login'";
-
-            const modalHTML = `
-                <div class="modal-overlay">
-                    <div class="modal-content">
-                        <button class="modal-close-btn">&times;</button>
-                        <h3>${title}</h3>
-                        <form id="auth-form" class="auth-form">
-                            ${!isLogin ? `<div class="form-group"><label for="name">Full Name</label><input type="text" id="name" name="name" placeholder="Enter your full name" required></div>` : ''}
-                            <div class="form-group"><label for="email">Email Address</label><input type="email" id="email" name="email" placeholder="Enter your email" required></div>
-                            <div class="form-group"><label for="password">Password</label><input type="password" id="password" name="password" placeholder="Enter your password" required></div>
-                            ${!isLogin ? `<div class="form-group"><label for="role">I am a...</label><select id="role" name="role" required><option value="" disabled selected>Select your role</option><option value="designer">Designer / Engineer</option><option value="contractor">Contractor / Client</option></select></div>` : ''}
-                            <button type="submit" class="btn btn-primary btn-full">${buttonText}</button>
-                        </form>
-                        <div class="modal-switch">${switchPrompt} <a href="#" onclick="event.preventDefault(); window.showAuthModal(${switchType});">${switchAction}</a></div>
-                    </div>
-                </div>`;
-            document.getElementById('modal-container').innerHTML = modalHTML;
-            
-            document.querySelector('.modal-close-btn').addEventListener('click', closeModal);
-            document.querySelector('.modal-overlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
-            document.getElementById('auth-form').addEventListener('submit', e => {
-                e.preventDefault();
-                showNotification('Login/Register functionality is for demonstration only.', 'info');
-                closeModal();
-            });
-        };
-        window.showAuthModal = showAuthModal; // Make it globally accessible for the onclick attribute
-
-        // --- Event Listeners ---
-        signInBtn.addEventListener('click', () => showAuthModal('login'));
-        joinBtn.addEventListener('click', () => showAuthModal('register'));
-        if(getStartedBtn) getStartedBtn.addEventListener('click', () => showAuthModal('register'));
-
-        if (userInfo) {
-            userInfo.addEventListener('click', (e) => {
-                e.stopPropagation();
-                userInfoDropdown.classList.toggle('active');
-            });
-        }
-        
-        window.addEventListener('click', (event) => {
-            if (userInfoDropdown && !userInfoContainer.contains(event.target)) {
-                userInfoDropdown.classList.remove('active');
+            // --- Event Listener for User Dropdown ---
+            if (userInfoWidget) {
+                userInfoWidget.addEventListener('click', (event) => {
+                    // Stop the click from bubbling up to the window
+                    event.stopPropagation();
+                    // Toggle the 'active' class to show/hide the dropdown
+                    userDropdown.classList.toggle('active');
+                });
             }
-        });
 
-        // AI Estimator Preview Logic
-        const generateBtn = document.getElementById('preview-generate-btn');
-        if (generateBtn) {
-            generateBtn.addEventListener('click', () => {
-                const type = document.getElementById('preview-project-type').value;
-                const tonnage = parseFloat(document.getElementById('preview-steel-tonnage').value);
-                if (!type || !tonnage || tonnage <= 0) {
-                    showNotification('Please select a project type and enter a valid tonnage.', 'warning');
-                    return;
+            // --- Global Click Listener to Close Dropdown ---
+            window.addEventListener('click', () => {
+                // If the dropdown is active, hide it
+                if (userDropdown && userDropdown.classList.contains('active')) {
+                    userDropdown.classList.remove('active');
                 }
-                // Mock calculation
-                const costPerTon = type === 'residential' ? 2500 : (type === 'commercial' ? 3200 : 4000);
-                const estimatedCost = (costPerTon * tonnage).toLocaleString();
-                const timeline = Math.ceil(tonnage / 10);
-                
-                const resultDiv = document.getElementById('preview-ai-result');
-                resultDiv.innerHTML = `<h4>AI Analysis Complete</h4>
-                <p><strong>Estimated Cost:</strong> $${estimatedCost}</p>
-                <p><strong>Estimated Timeline:</strong> ${timeline} weeks</p>
-                <small>*This is a preview. Sign up for more detailed analysis.</small>`;
-                resultDiv.style.display = 'block';
             });
-        }
-    });
+
+            // Prevent the dropdown from closing when clicking inside it
+            if (userDropdown) {
+                userDropdown.addEventListener('click', (event) => {
+                    event.stopPropagation();
+                });
+            }
+
+            // --- Mock Slider Logic ---
+            let currentSlide = 0;
+            const slides = document.querySelectorAll('.slide');
+            const dots = document.querySelectorAll('.slider-dot');
+            const totalSlides = slides.length;
+
+            function updateSlider() {
+                const sliderWrapper = document.getElementById('slider-wrapper');
+                sliderWrapper.style.transform = `translateX(-${currentSlide * 100}%)`;
+                dots.forEach((dot, index) => {
+                    dot.classList.toggle('active', index === currentSlide);
+                });
+            }
+
+            window.changeSlide = function(direction) {
+                currentSlide = (currentSlide + direction + totalSlides) % totalSlides;
+                updateSlider();
+            }
+
+            window.goToSlide = function(index) {
+                currentSlide = index;
+                updateSlider();
+            }
+
+            // Auto-play slider
+            // setInterval(() => changeSlide(1), 5000);
+        });
     </script>
+    <script src="script.js" defer></script>
 </body>
 </html>
-
-
-
-Gemini ca
