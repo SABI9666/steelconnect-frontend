@@ -61,13 +61,7 @@ const appState = {
 };
 
 // --- ENHANCED NOTIFICATION SYSTEM STATE ---
-const notificationState = {
-    notifications: [],
-    maxStoredNotifications: 50,
-    storageKey: 'steelconnect_notifications',
-    lastFetchTime: null,
-    pollingInterval: null,
-};
+// This section will be replaced by the new code.
 
 
 // Professional Features Header Data
@@ -182,12 +176,7 @@ function initializeApp() {
             userInfoDropdown.classList.remove('active');
         }
 
-        // Close notification panel if click is outside
-        const notificationPanel = document.getElementById('notification-panel');
-        const notificationBellContainer = document.getElementById('notification-bell-container');
-        if (notificationPanel && notificationBellContainer && !notificationBellContainer.contains(event.target)) {
-            notificationPanel.classList.remove('active');
-        }
+        // Notification panel closing is handled by the new notification system
     });
 
     // **FIX: Move one-time listener setup here to prevent re-binding**
@@ -216,18 +205,7 @@ function initializeApp() {
         });
     }
 
-    const notificationBell = document.getElementById('notification-bell-container');
-    if (notificationBell) {
-        notificationBell.addEventListener('click', toggleNotificationPanel);
-    }
-    
-    const clearBtn = document.getElementById('clear-notifications-btn');
-    if (clearBtn) {
-        clearBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            markAllAsRead();
-        });
-    }
+    // Notification listeners are now handled by initializeNotificationSystem()
 
     // Comprehensive activity listeners for 5-minute auto-logout
     const activityEvents = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart', 'touchmove', 'wheel'];
@@ -269,7 +247,7 @@ function initializeApp() {
             appState.jwtToken = token;
             appState.currentUser = JSON.parse(user);
             showAppView();
-            // Timer and notifications are started inside checkProfileAndRoute
+            // Timer and notifications are started inside showAppView -> checkProfileAndRoute
             console.log('Restored user session');
         } catch (error) {
             console.error("Error parsing user data from localStorage:", error);
@@ -392,26 +370,715 @@ async function handleLogin(event) {
     }
 }
 
+// ========================================
+// START: NEW NOTIFICATION SYSTEM
+// ========================================
 
-function logout() {
-    console.log('Logging out user...');
-    enhancedLogout(); // Clean up notification system
+// ========================================
+// NOTIFICATION STATE MANAGEMENT
+// ========================================
+const notificationState = {
+    notifications: [],
+    maxStoredNotifications: 100,
+    storageKey: 'steelconnect_notifications',
+    lastFetchTime: null,
+    pollingInterval: null,
+    unreadCount: 0,
+    unseenCount: 0,
+};
 
-    appState.currentUser = null;
-    appState.jwtToken = null;
-    appState.userSubmittedQuotes.clear();
-    appState.myEstimations = [];
-    appState.notifications = [];
-    appState.profileFiles = {};
-    localStorage.clear();
-    clearTimeout(inactivityTimer);
-    clearTimeout(warningTimer);
+// ========================================
+// NOTIFICATION FETCHING & MANAGEMENT
+// ========================================
 
-    dismissInactivityWarning();
+// Enhanced notification fetching with better error handling
+async function fetchNotifications() {
+    if (!appState.currentUser) return;
 
-    showLandingPageView();
-    showNotification('You have been logged out successfully.', 'info');
+    try {
+        console.log('🔄 [FETCH] Fetching notifications from server...');
+
+        const response = await apiCall('/notifications?markSeen=true', 'GET');
+
+        if (response.success) {
+            const serverNotifications = response.notifications || [];
+            console.log(`📥 [FETCH] Received ${serverNotifications.length} notifications from server`);
+
+            // Update state
+            notificationState.notifications = serverNotifications;
+            appState.notifications = serverNotifications;
+            notificationState.unreadCount = response.unreadCount || 0;
+            notificationState.unseenCount = response.unseenCount || 0;
+            notificationState.lastFetchTime = new Date();
+
+            // Save to localStorage
+            saveNotificationsToStorage();
+
+            // Update UI
+            renderNotificationPanel();
+            updateNotificationBadge();
+
+            console.log(`✅ [FETCH] Successfully processed ${serverNotifications.length} notifications`);
+
+            // Log notification breakdown
+            const notificationTypes = {};
+            serverNotifications.forEach(n => {
+                notificationTypes[n.type] = (notificationTypes[n.type] || 0) + 1;
+            });
+            console.log(`📊 [FETCH] Notification breakdown:`, notificationTypes);
+        }
+    } catch (error) {
+        console.error('❌ [FETCH] Error fetching notifications:', error);
+
+        // Use stored notifications if available
+        loadStoredNotifications();
+        if (notificationState.notifications.length > 0) {
+            appState.notifications = notificationState.notifications;
+            renderNotificationPanel();
+            updateNotificationBadge();
+            console.log('📱 [FETCH] Using stored notifications due to fetch error');
+        }
+    }
 }
+
+
+// Load notifications from localStorage
+function loadStoredNotifications() {
+    try {
+        const stored = localStorage.getItem(notificationState.storageKey);
+        if (stored) {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed.notifications)) {
+                notificationState.notifications = parsed.notifications;
+                notificationState.lastFetchTime = parsed.lastFetchTime ? new Date(parsed.lastFetchTime) : null;
+                notificationState.unreadCount = parsed.unreadCount || 0;
+                notificationState.unseenCount = parsed.unseenCount || 0;
+
+                console.log(`📱 Loaded ${notificationState.notifications.length} stored notifications`);
+            }
+        }
+    } catch (error) {
+        console.error('Error loading stored notifications:', error);
+        notificationState.notifications = [];
+    }
+}
+
+// Save notifications to localStorage
+function saveNotificationsToStorage() {
+    try {
+        const dataToStore = {
+            notifications: notificationState.notifications.slice(0, notificationState.maxStoredNotifications),
+            lastFetchTime: notificationState.lastFetchTime,
+            unreadCount: notificationState.unreadCount,
+            unseenCount: notificationState.unseenCount,
+            savedAt: new Date().toISOString()
+        };
+        localStorage.setItem(notificationState.storageKey, JSON.stringify(dataToStore));
+    } catch (error) {
+        console.error('Error saving notifications to storage:', error);
+    }
+}
+
+
+// ========================================
+// NOTIFICATION UI RENDERING
+// ========================================
+
+function getNotificationIcon(type) {
+    const iconMap = {
+        info: 'fa-info-circle',
+        success: 'fa-check-circle',
+        warning: 'fa-exclamation-triangle',
+        error: 'fa-times-circle',
+        message: 'fa-comment-alt',
+        job: 'fa-briefcase',
+        quote: 'fa-file-invoice-dollar',
+        estimation: 'fa-calculator',
+        profile: 'fa-user-circle',
+        user: 'fa-user',
+        file: 'fa-paperclip'
+    };
+    return iconMap[type] || 'fa-info-circle';
+}
+
+function getNotificationColor(type) {
+    const colorMap = {
+        info: '#3b82f6',
+        success: '#10b981',
+        warning: '#f59e0b',
+        error: '#ef4444',
+        message: '#8b5cf6',
+        job: '#06b6d4',
+        quote: '#f97316',
+        estimation: '#84cc16',
+        profile: '#6366f1',
+        user: '#64748b',
+        file: '#94a3b8'
+    };
+    return colorMap[type] || '#6b7280';
+}
+
+// Enhanced notification panel rendering
+function renderNotificationPanel() {
+    const panelList = document.getElementById('notification-panel-list');
+    if (!panelList) return;
+
+    const notifications = notificationState.notifications || [];
+
+    if (notifications.length === 0) {
+        panelList.innerHTML = `
+            <div class="notification-empty-state">
+                <i class="fas fa-bell-slash"></i>
+                <p>No notifications</p>
+                <small>You'll see updates here when things happen</small>
+            </div>`;
+        return;
+    }
+
+    try {
+        // Group notifications by date
+        const groupedNotifications = groupNotificationsByDate(notifications);
+
+        let notificationsHTML = '';
+
+        Object.keys(groupedNotifications).forEach(dateGroup => {
+            notificationsHTML += `
+                <div class="notification-date-group">
+                    <div class="notification-date-header">${dateGroup}</div>
+                    ${groupedNotifications[dateGroup].map(n => {
+                        const icon = getNotificationIcon(n.type);
+                        const color = getNotificationColor(n.type);
+                        const timeAgo = formatMessageTimestamp(n.createdAt);
+                        const metadataString = JSON.stringify(n.metadata || {}).replace(/"/g, '&quot;');
+
+                        return `
+                            <div class="notification-item ${n.isRead || n.read ? 'read' : 'unread'}"
+                                  data-id="${n.id}"
+                                 onclick="handleNotificationClick('${n.id}', '${n.type}', ${metadataString})">
+                                <div class="notification-item-icon" style="background-color: ${color}20; color: ${color}">
+                                    <i class="fas ${icon}"></i>
+                                </div>
+                                <div class="notification-item-content">
+                                    <div class="notification-item-header">
+                                        <span class="notification-title">${n.title || 'Notification'}</span>
+                                        <span class="notification-time">${timeAgo}</span>
+                                    </div>
+                                    <p class="notification-message">${n.message}</p>
+                                    ${getNotificationActionButtons(n)}
+                                </div>
+                                ${!n.isRead && !n.read ? '<div class="unread-indicator"></div>' : ''}
+                            </div>`;
+                    }).join('')}
+                </div>`;
+        });
+
+        panelList.innerHTML = notificationsHTML;
+    } catch (error) {
+        console.error('Error rendering notifications:', error);
+        panelList.innerHTML = `
+            <div class="notification-error-state">
+                <i class="fas fa-exclamation-triangle"></i>
+                <p>Error loading notifications</p>
+                <button onclick="fetchNotifications()" class="btn btn-sm btn-outline">Retry</button>
+            </div>`;
+    }
+}
+
+
+// Group notifications by date for better organization
+function groupNotificationsByDate(notifications) {
+    const groups = {};
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    notifications.forEach(notification => {
+        const notificationDate = new Date(notification.createdAt);
+        let groupKey;
+
+        if (isSameDay(notificationDate, today)) {
+            groupKey = 'Today';
+        } else if (isSameDay(notificationDate, yesterday)) {
+            groupKey = 'Yesterday';
+        } else if (isWithinDays(notificationDate, 7)) {
+            groupKey = notificationDate.toLocaleDateString([], { weekday: 'long' });
+        } else {
+            groupKey = notificationDate.toLocaleDateString([], {
+                month: 'short',
+                day: 'numeric',
+                year: notificationDate.getFullYear() !== today.getFullYear() ? 'numeric' : undefined
+            });
+        }
+
+        if (!groups[groupKey]) {
+            groups[groupKey] = [];
+        }
+        groups[groupKey].push(notification);
+    });
+
+    return groups;
+}
+
+// Helper functions for date comparisons
+function isSameDay(date1, date2) {
+    return date1.toDateString() === date2.toDateString();
+}
+
+function isWithinDays(date, days) {
+    const now = new Date();
+    const diffTime = Math.abs(now - date);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays <= days;
+}
+
+
+// Get action buttons for different notification types
+function getNotificationActionButtons(notification) {
+    const { type, metadata } = notification;
+    let buttons = '';
+
+    switch (type) {
+        case 'message':
+            buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); openConversation('${metadata?.jobId}', '${metadata?.senderId}')">
+                <i class="fas fa-reply"></i> Reply
+            </button>`;
+            break;
+
+        case 'quote':
+            if (metadata?.action === 'quote_submitted' && appState.currentUser?.type === 'contractor') {
+                buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); viewQuotes('${metadata?.jobId}')">
+                    <i class="fas fa-eye"></i> View Quote
+                </button>`;
+            } else if (metadata?.action === 'quote_approved' && appState.currentUser?.type === 'designer') {
+                buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); openConversation('${metadata?.jobId}', '${metadata?.contractorId}')">
+                    <i class="fas fa-comments"></i> Message Client
+                </button>`;
+            }
+            break;
+
+        case 'job':
+            if (metadata?.action === 'job_created' && appState.currentUser?.type === 'designer') {
+                buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); renderAppSection('jobs')">
+                    <i class="fas fa-search"></i> View Job
+                </button>`;
+            }
+            break;
+
+        case 'estimation':
+            if (metadata?.action === 'estimation_completed') {
+                buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); renderAppSection('my-estimations')">
+                    <i class="fas fa-download"></i> View Result
+                </button>`;
+            }
+            break;
+
+        case 'profile':
+            if (metadata?.action === 'profile_approved') {
+                buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); renderAppSection('dashboard')">
+                    <i class="fas fa-tachometer-alt"></i> Explore Features
+                </button>`;
+            } else if (metadata?.action === 'profile_rejected') {
+                buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); renderAppSection('profile-completion')">
+                    <i class="fas fa-edit"></i> Update Profile
+                </button>`;
+            }
+            break;
+    }
+
+    return buttons ? `<div class="notification-actions">${buttons}</div>` : '';
+}
+
+
+// ========================================
+// NOTIFICATION INTERACTION HANDLERS
+// ========================================
+
+// Enhanced notification click handler with better routing
+function handleNotificationClick(notificationId, type, metadata) {
+    // Mark as read first
+    markNotificationAsRead(notificationId);
+
+    // Handle navigation based on notification type
+    switch (type) {
+        case 'message':
+            if (metadata.conversationId) {
+                renderConversationView(metadata.conversationId);
+            } else if (metadata.jobId && metadata.senderId) {
+                openConversation(metadata.jobId, metadata.senderId);
+            } else {
+                renderAppSection('messages');
+            }
+            break;
+
+        case 'quote':
+            if (metadata.action === 'quote_submitted' && appState.currentUser.type === 'contractor') {
+                if (metadata.jobId) {
+                    renderAppSection('jobs');
+                    // Optionally show quote modal after navigation
+                    setTimeout(() => viewQuotes(metadata.jobId), 500);
+                } else {
+                    renderAppSection('jobs');
+                }
+            } else if (appState.currentUser.type === 'designer') {
+                renderAppSection('my-quotes');
+            }
+            break;
+
+        case 'job':
+            if (metadata.action === 'job_created') {
+                renderAppSection('jobs');
+            } else if (metadata.jobId) {
+                renderAppSection('jobs');
+            } else {
+                renderAppSection('dashboard');
+            }
+            break;
+
+        case 'estimation':
+            if (metadata.action === 'estimation_completed' || metadata.action === 'estimation_submitted_confirmation') {
+                renderAppSection('my-estimations');
+            } else {
+                renderAppSection('dashboard');
+            }
+            break;
+
+        case 'profile':
+            if (metadata.action === 'profile_approved') {
+                renderAppSection('dashboard');
+            } else if (metadata.action === 'profile_rejected') {
+                renderAppSection('profile-completion');
+            } else {
+                renderAppSection('settings');
+            }
+            break;
+
+        default:
+            renderAppSection('dashboard');
+            break;
+    }
+
+    // Close notification panel
+    const panel = document.getElementById('notification-panel');
+    if (panel) {
+        panel.classList.remove('active');
+    }
+}
+
+
+// Enhanced mark as read with server sync
+async function markNotificationAsRead(notificationId) {
+    try {
+        // Update local state immediately for better UX
+        const notification = notificationState.notifications.find(n => n.id === notificationId);
+        if (notification && !notification.isRead && !notification.read) {
+            notification.isRead = true;
+            notification.read = true;
+            notification.readAt = new Date().toISOString();
+
+            // Update counts
+            if (notificationState.unreadCount > 0) {
+                notificationState.unreadCount--;
+            }
+
+            // Update UI immediately
+            updateNotificationBadge();
+            renderNotificationPanel();
+            saveNotificationsToStorage();
+        }
+
+        // Sync with server (don't wait for it)
+        apiCall(`/notifications/${notificationId}/read`, 'PATCH').catch(error => {
+            console.warn('Failed to sync read status with server:', error);
+        });
+    } catch (error) {
+        console.error('Error marking notification as read:', error);
+    }
+}
+
+
+// Enhanced mark all as read
+async function markAllAsRead() {
+    try {
+        // Update local state
+        let hasUnread = false;
+        notificationState.notifications.forEach(n => {
+            if (!n.isRead && !n.read) {
+                n.isRead = true;
+                n.read = true;
+                n.readAt = new Date().toISOString();
+                hasUnread = true;
+            }
+        });
+
+        if (hasUnread) {
+            notificationState.unreadCount = 0;
+            updateNotificationBadge();
+            renderNotificationPanel();
+            saveNotificationsToStorage();
+        }
+
+        // Sync with server
+        await apiCall('/notifications/mark-all-read', 'POST');
+        showNotification('All notifications marked as read.', 'success');
+    } catch (error) {
+        console.error('Failed to mark all notifications as read:', error);
+        showNotification('Marked as read locally (server sync failed)', 'warning');
+    }
+}
+
+
+// Enhanced notification badge with animations
+function updateNotificationBadge() {
+    const badge = document.getElementById('notification-badge');
+    if (badge) {
+        const unreadCount = notificationState.unreadCount;
+
+        if (unreadCount > 0) {
+            badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+            badge.style.display = 'flex';
+
+            // Add pulse animation for new notifications
+            if (!badge.classList.contains('pulse')) {
+                badge.classList.add('pulse');
+                setTimeout(() => badge.classList.remove('pulse'), 2000);
+            }
+        } else {
+            badge.style.display = 'none';
+            badge.classList.remove('pulse');
+        }
+    }
+}
+
+
+// ========================================
+// NOTIFICATION POLLING & LIFECYCLE
+// ========================================
+
+// Enhanced notification polling with better error handling
+function startNotificationPolling() {
+    // Clear any existing interval
+    if (notificationState.pollingInterval) {
+        clearInterval(notificationState.pollingInterval);
+    }
+
+    // Initial fetch
+    fetchNotifications();
+
+    // Set up polling every 20 seconds
+    notificationState.pollingInterval = setInterval(() => {
+        if (appState.currentUser) {
+            fetchNotifications();
+        } else {
+            stopNotificationPolling();
+        }
+    }, 20000); // 20 seconds
+
+    console.log('🔔 Notification polling started (20 second intervals)');
+}
+
+function stopNotificationPolling() {
+    if (notificationState.pollingInterval) {
+        clearInterval(notificationState.pollingInterval);
+        notificationState.pollingInterval = null;
+        console.log('🔕 Notification polling stopped');
+    }
+}
+
+
+// Enhanced notification panel toggle
+async function toggleNotificationPanel(event) {
+    event.stopPropagation();
+
+    const panel = document.getElementById('notification-panel');
+    if (!panel) return;
+
+    const isActive = panel.classList.toggle('active');
+
+    if (isActive) {
+        // Show loading state if no notifications
+        const panelList = document.getElementById('notification-panel-list');
+        if (panelList && notificationState.notifications.length === 0) {
+            panelList.innerHTML = `
+                <div class="notification-loading-state">
+                    <div class="spinner"></div>
+                    <p>Loading notifications...</p>
+                </div>`;
+        }
+
+        // Fetch fresh notifications
+        await fetchNotifications();
+
+        // Mark unseen notifications as seen
+        if (notificationState.unseenCount > 0) {
+            notificationState.unseenCount = 0;
+            saveNotificationsToStorage();
+        }
+    }
+}
+
+
+// ========================================
+// NOTIFICATION SYSTEM INITIALIZATION
+// ========================================
+
+// Initialize the complete notification system
+function initializeNotificationSystem() {
+    console.log('🚀 Initializing notification system...');
+
+    // Load stored notifications first
+    loadStoredNotifications();
+
+    // If we have stored notifications, show them immediately
+    if (notificationState.notifications.length > 0) {
+        appState.notifications = notificationState.notifications;
+        renderNotificationPanel();
+        updateNotificationBadge();
+        console.log(`📱 Loaded ${notificationState.notifications.length} stored notifications`);
+    }
+
+    // Start polling for new notifications if user is logged in
+    if (appState.currentUser) {
+        startNotificationPolling();
+    }
+
+    // Set up event listeners
+    setupNotificationEventListeners();
+
+    console.log('✅ Notification system initialized');
+}
+
+// Set up event listeners for notification system
+function setupNotificationEventListeners() {
+    // Notification bell click handler
+    const notificationBell = document.getElementById('notification-bell-container');
+    if (notificationBell) {
+        notificationBell.addEventListener('click', toggleNotificationPanel);
+    }
+
+    // Clear all notifications button
+    const clearBtn = document.getElementById('clear-notifications-btn');
+    if (clearBtn) {
+        clearBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            markAllAsRead();
+        });
+    }
+
+    // Close panel when clicking outside
+    document.addEventListener('click', (event) => {
+        const panel = document.getElementById('notification-panel');
+        const bellContainer = document.getElementById('notification-bell-container');
+
+        if (panel && bellContainer &&
+            !bellContainer.contains(event.target) &&
+            !panel.contains(event.target)) {
+            panel.classList.remove('active');
+        }
+    });
+}
+
+// ========================================
+// NOTIFICATION SYSTEM CLEANUP
+// ========================================
+
+// Clean up notification system on logout
+function cleanupNotificationSystem() {
+    stopNotificationPolling();
+
+    // Save final state before cleanup
+    if (notificationState.notifications.length > 0) {
+        saveNotificationsToStorage();
+    }
+
+    // Clear state
+    notificationState.notifications = [];
+    notificationState.unreadCount = 0;
+    notificationState.unseenCount = 0;
+    appState.notifications = [];
+
+    // Update UI
+    updateNotificationBadge();
+
+    const panelList = document.getElementById('notification-panel-list');
+    if (panelList) {
+        panelList.innerHTML = `
+            <div class="notification-empty-state">
+                <i class="fas fa-bell-slash"></i>
+                <p>No notifications</p>
+                <small>Sign in to see your notifications</small>
+            </div>`;
+    }
+
+    console.log('🧹 Notification system cleaned up');
+}
+
+// ========================================
+// UTILITY FUNCTIONS
+// ========================================
+
+// Add a local notification (for immediate feedback)
+function addLocalNotification(title, message, type = 'info', metadata = {}) {
+    const newNotification = {
+        id: `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        title,
+        message,
+        type,
+        metadata,
+        createdAt: new Date().toISOString(),
+        isRead: false,
+        read: false,
+        seen: false,
+        isLocal: true
+    };
+
+    // Add to state
+    notificationState.notifications.unshift(newNotification);
+    appState.notifications.unshift(newNotification);
+    notificationState.unreadCount++;
+
+    // Maintain size limits
+    if (notificationState.notifications.length > notificationState.maxStoredNotifications) {
+        notificationState.notifications = notificationState.notifications.slice(0, notificationState.maxStoredNotifications);
+    }
+
+    // Save and update UI
+    saveNotificationsToStorage();
+    renderNotificationPanel();
+    updateNotificationBadge();
+
+    // Also show toast
+    showNotification(message, type);
+
+    console.log('📱 Added local notification:', newNotification);
+}
+
+// Clear old notifications (maintenance function)
+function clearOldNotifications(daysToKeep = 30) {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
+
+    const originalCount = notificationState.notifications.length;
+
+    notificationState.notifications = notificationState.notifications.filter(n => {
+        const notificationDate = new Date(n.createdAt);
+        return notificationDate > cutoffDate;
+    });
+
+    appState.notifications = notificationState.notifications;
+
+    if (originalCount !== notificationState.notifications.length) {
+        saveNotificationsToStorage();
+        renderNotificationPanel();
+        updateNotificationBadge();
+
+        const clearedCount = originalCount - notificationState.notifications.length;
+        console.log(`🗑️ Cleared ${clearedCount} old notifications`);
+    }
+}
+
+// ========================================
+// END: NEW NOTIFICATION SYSTEM
+// ========================================
 
 
 async function loadUserQuotes() {
@@ -429,414 +1096,6 @@ async function loadUserQuotes() {
         console.error('Error loading user quotes:', error);
     }
 }
-
-// --- ENHANCED NOTIFICATION SYSTEM WITH LOCAL STORAGE PERSISTENCE ---
-
-// Load notifications from localStorage on app initialization
-function loadStoredNotifications() {
-    try {
-        const stored = localStorage.getItem(notificationState.storageKey);
-        if (stored) {
-            const parsed = JSON.parse(stored);
-            if (Array.isArray(parsed.notifications)) {
-                notificationState.notifications = parsed.notifications;
-                notificationState.lastFetchTime = parsed.lastFetchTime ? new Date(parsed.lastFetchTime) : null;
-                console.log(`Loaded ${notificationState.notifications.length} stored notifications`);
-            }
-        }
-    } catch (error) {
-        console.error('Error loading stored notifications:', error);
-        notificationState.notifications = [];
-    }
-}
-
-// Save notifications to localStorage
-function saveNotificationsToStorage() {
-    try {
-        const dataToStore = {
-            notifications: notificationState.notifications.slice(0, notificationState.maxStoredNotifications),
-            lastFetchTime: notificationState.lastFetchTime,
-            savedAt: new Date().toISOString()
-        };
-        localStorage.setItem(notificationState.storageKey, JSON.stringify(dataToStore));
-    } catch (error) {
-        console.error('Error saving notifications to storage:', error);
-    }
-}
-
-// Enhanced notification fetching with message notification focus
-async function fetchNotifications() {
-    if (!appState.currentUser) return;
-    try {
-        console.log('🔄 [FETCH] Fetching notifications from server...');
-        const response = await apiCall('/notifications', 'GET');
-        const serverNotifications = response.data || [];
-        console.log(`📥 [FETCH] Received ${serverNotifications.length} notifications from server`);
-        // Enhanced logging for message notifications
-        const messageNotifications = serverNotifications.filter(n => n.type === 'message');
-        if (messageNotifications.length > 0) {
-            console.log(`💬 [FETCH] Found ${messageNotifications.length} message notifications:`);
-            messageNotifications.forEach((n, index) => {
-                const createdTime = formatMessageTimestamp(n.createdAt);
-                console.log(`  ${index + 1}. ID: ${n.id}`);
-                console.log(`     From: ${n.metadata?.senderId || 'unknown'}`);
-                console.log(`     Message: "${n.message.substring(0, 50)}..."`);
-                console.log(`     Created: ${createdTime} (${n.createdAt})`);
-                console.log(`     Read: ${n.isRead}`);
-                console.log(`     Conversation: ${n.metadata?.conversationId || 'unknown'}`);
-            });
-        } else {
-            console.log(`💬 [FETCH] No message notifications found in server response`);
-        }
-        // Merge and update
-        const mergedNotifications = mergeNotifications(serverNotifications, notificationState.notifications);
-        appState.notifications = mergedNotifications;
-        notificationState.notifications = mergedNotifications;
-        notificationState.lastFetchTime = new Date();
-        saveNotificationsToStorage();
-        renderNotificationPanel();
-        updateNotificationBadge();
-        console.log(`✅ [FETCH] Successfully processed ${mergedNotifications.length} total notifications`);
-        // Debug: Show breakdown by type
-        const notificationTypes = {};
-        mergedNotifications.forEach(n => {
-            notificationTypes[n.type] = (notificationTypes[n.type] || 0) + 1;
-        });
-        console.log(`📊 [FETCH] Notification breakdown:`, notificationTypes);
-    } catch (error) {
-        console.error("❌ [FETCH] Error fetching notifications:", error);
-        if (notificationState.notifications.length > 0) {
-            appState.notifications = notificationState.notifications;
-            renderNotificationPanel();
-            updateNotificationBadge();
-            console.log('📱 [FETCH] Using stored notifications due to fetch error');
-        }
-    }
-}
-
-
-// Smart notification merging to avoid duplicates
-function mergeNotifications(serverNotifications, storedNotifications) {
-    const notificationMap = new Map();
-    // Add stored notifications first (older ones)
-    storedNotifications.forEach(notification => {
-        if (notification.id) {
-            notificationMap.set(notification.id, notification);
-        }
-    });
-    // Add/update with server notifications (newer ones take precedence)
-    serverNotifications.forEach(notification => {
-        if (notification.id) {
-            notificationMap.set(notification.id, notification);
-        }
-    });
-    // Convert back to array and sort by creation date (newest first)
-    const merged = Array.from(notificationMap.values()).sort((a, b) => {
-        const dateA = new Date(a.createdAt);
-        const dateB = new Date(b.createdAt);
-        return dateB - dateA;
-    });
-    // Limit to max stored notifications
-    return merged.slice(0, notificationState.maxStoredNotifications);
-}
-
-// Enhanced local notification addition with persistence
-function addNotification(message, type = 'info', metadata = {}) {
-    const newNotification = {
-        id: `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        message,
-        type,
-        createdAt: new Date().toISOString(),
-        isRead: false,
-        metadata,
-        isLocal: true // Mark as locally generated
-    };
-    // Add to both arrays
-    appState.notifications.unshift(newNotification);
-    notificationState.notifications.unshift(newNotification);
-    // Maintain size limits
-    if (appState.notifications.length > notificationState.maxStoredNotifications) {
-        appState.notifications = appState.notifications.slice(0, notificationState.maxStoredNotifications);
-    }
-    if (notificationState.notifications.length > notificationState.maxStoredNotifications) {
-        notificationState.notifications = notificationState.notifications.slice(0, notificationState.maxStoredNotifications);
-    }
-    // Save to storage
-    saveNotificationsToStorage();
-    // Update UI
-    renderNotificationPanel();
-    updateNotificationBadge();
-    // Show toast notification for immediate feedback
-    showNotification(message, type);
-    console.log('Added local notification:', newNotification);
-}
-
-function getNotificationIcon(type) {
-    const iconMap = {
-        info: 'fa-info-circle',
-        success: 'fa-check-circle',
-        warning: 'fa-exclamation-triangle',
-        error: 'fa-times-circle',
-        message: 'fa-comment-alt',
-        job: 'fa-briefcase',
-        quote: 'fa-file-invoice-dollar',
-        estimation: 'fa-calculator',
-        user: 'fa-user',
-        file: 'fa-paperclip'
-    };
-    return iconMap[type] || 'fa-info-circle';
-}
-
-// Enhanced notification panel rendering with better error handling
-function renderNotificationPanel() {
-    const panelList = document.getElementById('notification-panel-list');
-    if (!panelList) return;
-    const notifications = appState.notifications || [];
-    if (notifications.length === 0) {
-        panelList.innerHTML = `
-            <div class="notification-empty-state">
-                <i class="fas fa-bell-slash"></i>
-                <p>No notifications</p>
-                <small>You'll see updates here when things happen</small>
-            </div>`;
-        return;
-    }
-    try {
-        panelList.innerHTML = notifications.map(n => {
-            const icon = getNotificationIcon(n.type);
-            const timeAgo = formatMessageTimestamp(n.createdAt);
-            const metadataString = JSON.stringify(n.metadata || {}).replace(/"/g, '&quot;');
-            const isLocalClass = n.isLocal ? 'local-notification' : '';
-            return `
-                <div class="notification-item ${n.isRead ? 'read' : 'unread'} ${isLocalClass}"
-                     data-id="${n.id}"
-                     onclick="handleNotificationClick('${n.id}', '${n.type}', ${metadataString})">
-                    <div class="notification-item-icon ${n.type}">
-                        <i class="fas ${icon}"></i>
-                        ${n.isLocal ? '<div class="local-indicator" title="Local notification"></div>' : ''}
-                    </div>
-                    <div class="notification-item-content">
-                        <p>${n.message}</p>
-                        <span class="timestamp">${timeAgo}</span>
-                    </div>
-                    ${!n.isRead ? '<div class="unread-indicator"></div>' : ''}
-                </div>`;
-        }).join('');
-    } catch (error) {
-        console.error('Error rendering notifications:', error);
-        panelList.innerHTML = `
-            <div class="notification-error-state">
-                <i class="fas fa-exclamation-triangle"></i>
-                <p>Error loading notifications</p>
-                <button onclick="fetchNotifications()" class="btn btn-sm btn-outline">Retry</button>
-            </div>`;
-    }
-}
-
-function handleNotificationClick(notificationId, type, metadata) {
-    markNotificationAsRead(notificationId);
-
-    switch (type) {
-        case 'job':
-            if (metadata.action === 'created') {
-                renderAppSection('jobs');
-            } else if (metadata.jobId) {
-                renderAppSection('jobs');
-            }
-            break;
-        case 'quote':
-            if (appState.currentUser.type === 'designer') {
-                renderAppSection('my-quotes');
-            } else {
-                renderAppSection('jobs');
-            }
-            break;
-        case 'message':
-            if (metadata.conversationId) {
-                renderConversationView(metadata.conversationId);
-            } else {
-                renderAppSection('messages');
-            }
-            break;
-        case 'estimation':
-            renderAppSection('my-estimations');
-            break;
-        default:
-            break;
-    }
-
-    const panel = document.getElementById('notification-panel');
-    if (panel) {
-        panel.classList.remove('active');
-    }
-}
-
-// Enhanced mark as read with persistence
-async function markNotificationAsRead(notificationId) {
-    // Update in both arrays
-    const updateNotification = (notifications) => {
-        const notification = notifications.find(n => n.id == notificationId);
-        if (notification && !notification.isRead) {
-            notification.isRead = true;
-            return true;
-        }
-        return false;
-    };
-    const updatedApp = updateNotification(appState.notifications);
-    const updatedStored = updateNotification(notificationState.notifications);
-    if (updatedApp || updatedStored) {
-        // Save to storage
-        saveNotificationsToStorage();
-        // Update UI
-        renderNotificationPanel();
-        updateNotificationBadge();
-    }
-    // Try to update on server (only for server notifications)
-    const notification = appState.notifications.find(n => n.id == notificationId);
-    if (notification && !notification.isLocal) {
-        try {
-            await apiCall(`/notifications/${notificationId}/read`, 'PUT');
-        } catch (error) {
-            console.error('Failed to mark notification as read on server:', error);
-            // Don't revert - keep local state since user interaction happened
-        }
-    }
-}
-
-// Enhanced mark all as read
-async function markAllAsRead() {
-    try {
-        // Mark all as read locally first
-        appState.notifications.forEach(n => n.isRead = true);
-        notificationState.notifications.forEach(n => n.isRead = true);
-        // Save to storage
-        saveNotificationsToStorage();
-        // Update UI
-        renderNotificationPanel();
-        updateNotificationBadge();
-        // Try to update server notifications
-        await apiCall('/notifications/mark-all-read', 'PUT');
-        showNotification('All notifications marked as read.', 'success');
-    } catch (error) {
-        console.error('Failed to mark all notifications as read on server:', error);
-        showNotification('Marked as read locally (server sync failed)', 'warning');
-    }
-}
-
-// Enhanced notification badge with better counting
-function updateNotificationBadge() {
-    const badge = document.getElementById('notification-badge');
-    if (badge) {
-        const unreadCount = (appState.notifications || []).filter(n => !n.isRead).length;
-        if (unreadCount > 0) {
-            badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
-            badge.style.display = 'flex';
-            badge.classList.add('pulse');
-        } else {
-            badge.style.display = 'none';
-            badge.classList.remove('pulse');
-        }
-    }
-}
-
-// Enhanced notification polling with more frequent checks for messages
-function startNotificationPolling() {
-    // Clear any existing interval
-    if (notificationState.pollingInterval) {
-        clearInterval(notificationState.pollingInterval);
-    }
-    // Initial fetch
-    fetchNotifications();
-    // Set up polling every 15 seconds (more frequent for better message notification responsiveness)
-    notificationState.pollingInterval = setInterval(() => {
-        if (appState.currentUser) {
-            fetchNotifications();
-        } else {
-            stopNotificationPolling();
-        }
-    }, 15000); // Reduced from 30 seconds to 15 seconds
-    console.log('🔔 Notification polling started (15 second intervals)');
-}
-
-function stopNotificationPolling() {
-    if (notificationState.pollingInterval) {
-        clearInterval(notificationState.pollingInterval);
-        notificationState.pollingInterval = null;
-        console.log('Notification polling stopped');
-    }
-}
-
-// Enhanced notification panel toggle with loading state
-async function toggleNotificationPanel(event) {
-    event.stopPropagation();
-    const panel = document.getElementById('notification-panel');
-    if (panel) {
-        const isActive = panel.classList.toggle('active');
-        if (isActive) {
-            // Show loading state
-            const panelList = document.getElementById('notification-panel-list');
-            if (panelList && appState.notifications.length === 0) {
-                panelList.innerHTML = `
-                    <div class="notification-loading-state">
-                        <div class="spinner"></div>
-                        <p>Loading notifications...</p>
-                    </div>`;
-            }
-            // Fetch fresh notifications
-            await fetchNotifications();
-        }
-    }
-}
-
-// Clear old notifications (optional maintenance function)
-function clearOldNotifications(daysToKeep = 30) {
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
-    const originalCount = notificationState.notifications.length;
-    notificationState.notifications = notificationState.notifications.filter(n => {
-        const notificationDate = new Date(n.createdAt);
-        return notificationDate > cutoffDate;
-    });
-    appState.notifications = appState.notifications.filter(n => {
-        const notificationDate = new Date(n.createdAt);
-        return notificationDate > cutoffDate;
-    });
-    if (originalCount !== notificationState.notifications.length) {
-        saveNotificationsToStorage();
-        renderNotificationPanel();
-        updateNotificationBadge();
-        console.log(`Cleared ${originalCount - notificationState.notifications.length} old notifications`);
-    }
-}
-
-// Initialize the enhanced notification system
-function initializeEnhancedNotifications() {
-    // Load stored notifications first
-    loadStoredNotifications();
-    // If we have stored notifications, show them immediately
-    if (notificationState.notifications.length > 0) {
-        appState.notifications = notificationState.notifications;
-        renderNotificationPanel();
-        updateNotificationBadge();
-    }
-    // Start polling for new notifications
-    if (appState.currentUser) {
-        startNotificationPolling();
-    }
-    // Clean up old notifications on startup
-    clearOldNotifications(30);
-}
-
-// Enhanced logout to stop polling and save state
-function enhancedLogout() {
-    stopNotificationPolling();
-    // Save final state before logout
-    if (notificationState.notifications.length > 0) {
-        saveNotificationsToStorage();
-    }
-    console.log('Enhanced notification system cleaned up for logout');
-}
-
 
 // --- ENHANCED ESTIMATION SYSTEM ---
 async function loadUserEstimations() {
@@ -955,7 +1214,7 @@ function getEstimationStatusConfig(status) {
 
 async function viewEstimationFiles(estimationId) {
     try {
-        addNotification('Loading estimation files...', 'info');
+        addLocalNotification('Loading Files', 'Loading estimation files...', 'info');
         const response = await apiCall(`/estimation/${estimationId}/files`, 'GET');
         const files = response.files || [];
         const content = `
@@ -969,21 +1228,21 @@ async function viewEstimationFiles(estimationId) {
             </div>`;
         showGenericModal(content, 'max-width: 600px;');
     } catch (error) {
-        addNotification('Failed to load estimation files.', 'error');
+        addLocalNotification('Error', 'Failed to load estimation files.', 'error');
     }
 }
 
 async function downloadEstimationResult(estimationId) {
     try {
-        addNotification('Preparing download...', 'info');
+        addLocalNotification('Download', 'Preparing download...', 'info');
         const response = await apiCall(`/estimation/${estimationId}/result`, 'GET');
         if (response.success && response.resultFile) {
-            addNotification('Your estimation result is ready for download.', 'success');
+            addLocalNotification('Success', 'Your estimation result is ready for download.', 'success');
             window.open(response.resultFile.url, '_blank');
             setTimeout(() => fetchNotifications(), 1000);
         }
     } catch (error) {
-        addNotification('Failed to download estimation result.', 'error');
+        addLocalNotification('Error', 'Failed to download estimation result.', 'error');
     }
 }
 
@@ -991,10 +1250,10 @@ async function deleteEstimation(estimationId) {
     if (confirm('Are you sure you want to delete this estimation request? This action cannot be undone.')) {
         try {
             await apiCall(`/estimation/${estimationId}`, 'DELETE', null, 'Estimation deleted successfully');
-            addNotification('Estimation request has been deleted successfully.', 'info');
+            addLocalNotification('Deleted', 'Estimation request has been deleted successfully.', 'info');
             fetchAndRenderMyEstimations();
         } catch (error) {
-            addNotification('Failed to delete estimation request. Please try again.', 'error');
+            addLocalNotification('Error', 'Failed to delete estimation request. Please try again.', 'error');
         }
     }
 }
@@ -1144,10 +1403,10 @@ async function markJobCompleted(jobId) {
     if (confirm('Are you sure you want to mark this job as completed? This action cannot be undone and will notify the designer.')) {
         try {
             await apiCall(`/jobs/${jobId}`, 'PUT', { status: 'completed' }, 'Project marked as completed successfully!');
-            addNotification('A project has been marked as completed! The designer has been notified.', 'job');
+            addLocalNotification('Completed', 'A project has been marked as completed! The designer has been notified.', 'job');
             fetchAndRenderApprovedJobs();
         } catch (error) {
-            addNotification('Failed to mark job as completed. Please try again.', 'error');
+            addLocalNotification('Error', 'Failed to mark job as completed. Please try again.', 'error');
         }
     }
 }
@@ -1228,7 +1487,7 @@ async function editQuote(quoteId) {
         showGenericModal(content, 'max-width: 600px;');
         document.getElementById('edit-quote-form').addEventListener('submit', handleQuoteEdit);
     } catch (error) {
-        addNotification('Failed to load quote details for editing.', 'error');
+        addLocalNotification('Error', 'Failed to load quote details for editing.', 'error');
     }
 }
 
@@ -1250,11 +1509,11 @@ async function handleQuoteEdit(event) {
             }
         }
         await apiCall(`/quotes/${form['quoteId'].value}`, 'PUT', formData, 'Quote updated successfully!');
-        addNotification('Your quote has been updated successfully. The client will be notified of the changes.', 'quote');
+        addLocalNotification('Updated', 'Your quote has been updated successfully. The client will be notified of the changes.', 'quote');
         closeModal();
         fetchAndRenderMyQuotes();
     } catch (error) {
-        addNotification('Failed to update quote. Please try again.', 'error');
+        addLocalNotification('Error', 'Failed to update quote. Please try again.', 'error');
     } finally {
         if (submitBtn) {
             submitBtn.innerHTML = originalText;
@@ -1280,11 +1539,11 @@ async function handlePostJob(event) {
             formData.append('attachment', form.attachment.files[0]);
         }
         await apiCall('/jobs', 'POST', formData, 'Project posted successfully!');
-        addNotification(`Your project "${form.title.value}" has been posted successfully.`, 'job');
+        addLocalNotification('Posted', `Your project "${form.title.value}" has been posted successfully.`, 'job');
         form.reset();
         renderAppSection('jobs');
     } catch (error) {
-        addNotification('Failed to post project. Please try again.', 'error');
+        addLocalNotification('Error', 'Failed to post project. Please try again.', 'error');
     } finally {
         submitBtn.innerHTML = originalText;
         submitBtn.disabled = false;
@@ -1296,10 +1555,10 @@ async function deleteJob(jobId) {
     if (confirm('Are you sure you want to delete this project? This will also delete all associated quotes and cannot be undone.')) {
         try {
             await apiCall(`/jobs/${jobId}`, 'DELETE', null, 'Project deleted successfully.');
-            addNotification('Project has been deleted successfully.', 'info');
+            addLocalNotification('Deleted', 'Project has been deleted successfully.', 'info');
             fetchAndRenderJobs();
         } catch (error) {
-            addNotification('Failed to delete project. Please try again.', 'error');
+            addLocalNotification('Error', 'Failed to delete project. Please try again.', 'error');
         }
     }
 }
@@ -1309,11 +1568,11 @@ async function deleteQuote(quoteId) {
     if (confirm('Are you sure you want to delete this quote? This action cannot be undone.')) {
         try {
             await apiCall(`/quotes/${quoteId}`, 'DELETE', null, 'Quote deleted successfully.');
-            addNotification('Quote has been deleted successfully.', 'info');
+            addLocalNotification('Deleted', 'Quote has been deleted successfully.', 'info');
             fetchAndRenderMyQuotes();
             loadUserQuotes();
         } catch (error) {
-            addNotification('Failed to delete quote. Please try again.', 'error');
+            addLocalNotification('Error', 'Failed to delete quote. Please try again.', 'error');
         }
     }
 }
@@ -1370,11 +1629,11 @@ async function approveQuote(quoteId, jobId) {
     if (confirm('Are you sure you want to approve this quote? This will assign the job to the designer and notify all participants.')) {
         try {
             await apiCall(`/quotes/${quoteId}/approve`, 'PUT', { jobId }, 'Quote approved successfully!');
-            addNotification('You have approved a quote and assigned the project!', 'quote');
+            addLocalNotification('Approved', 'You have approved a quote and assigned the project!', 'quote');
             closeModal();
             fetchAndRenderJobs();
         } catch (error) {
-            addNotification('Failed to approve quote. Please try again.', 'error');
+            addLocalNotification('Error', 'Failed to approve quote. Please try again.', 'error');
         }
     }
 }
@@ -1415,12 +1674,12 @@ async function handleQuoteSubmit(event) {
             }
         }
         await apiCall('/quotes', 'POST', formData, 'Quote submitted successfully!');
-        addNotification('Your quote has been submitted successfully.', 'quote');
+        addLocalNotification('Submitted', 'Your quote has been submitted successfully.', 'quote');
         appState.userSubmittedQuotes.add(form['jobId'].value);
         closeModal();
         fetchAndRenderJobs();
     } catch (error) {
-        addNotification('Failed to submit quote. Please try again.', 'error');
+        addLocalNotification('Error', 'Failed to submit quote. Please try again.', 'error');
     } finally {
         if (submitBtn) {
             submitBtn.innerHTML = originalText;
@@ -1439,7 +1698,7 @@ async function openConversation(jobId, recipientId) {
             renderConversationView(response.data);
         }
     } catch (error) {
-        addNotification('Failed to open conversation. Please try again.', 'error');
+        addLocalNotification('Error', 'Failed to open conversation. Please try again.', 'error');
     }
 }
 
@@ -2001,24 +2260,47 @@ function closeModal() {
     if (modalContainer) modalContainer.innerHTML = '';
 }
 
+// ========================================
+// INTEGRATION WITH EXISTING APP (UPDATED FUNCTIONS)
+// ========================================
+
+// Update the existing showAppView function to initialize notifications
 function showAppView() {
     document.getElementById('landing-page-content').style.display = 'none';
     document.getElementById('app-content').style.display = 'flex';
     document.getElementById('auth-buttons-container').style.display = 'none';
     document.getElementById('user-info-container').style.display = 'flex';
-
-    const navMenu = document.getElementById('main-nav-menu');
-    if (navMenu) navMenu.innerHTML = '';
-
     const user = appState.currentUser;
     document.getElementById('user-info-name').textContent = user.name;
     document.getElementById('user-info-avatar').textContent = (user.name || "A").charAt(0).toUpperCase();
-
-    // **FIX:** All event listeners for the user menu and notification bell 
-    // have been moved to initializeApp to prevent re-binding. This function
-    // is now only responsible for updating UI visibility and content.
-
+    
+    // Initialize notification system
+    initializeNotificationSystem();
+    
     checkProfileAndRoute();
+}
+
+// Update the existing logout function to cleanup notifications
+function logout() {
+    console.log('Logging out user...');
+    
+    // Clean up notification system
+    cleanupNotificationSystem();
+    
+    appState.currentUser = null;
+    appState.jwtToken = null;
+    appState.userSubmittedQuotes.clear();
+    appState.myEstimations = [];
+    appState.notifications = [];
+    appState.profileFiles = {};
+    localStorage.clear();
+    
+    clearTimeout(inactivityTimer);
+    clearTimeout(warningTimer);
+    dismissInactivityWarning();
+    
+    showLandingPageView();
+    showNotification('You have been logged out successfully.', 'info');
 }
 
 
@@ -2098,8 +2380,7 @@ async function checkProfileAndRoute() {
         if (appState.currentUser.type === 'designer') loadUserQuotes();
         if (appState.currentUser.type === 'contractor') loadUserEstimations();
 
-        // Initialize notifications and activity timer
-        initializeEnhancedNotifications();
+        // Initialize activity timer
         resetInactivityTimer();
 
         // Show profile status notification if needed
@@ -2648,13 +2929,13 @@ async function handleEstimationSubmit() {
             formData.append('files', appState.uploadedFile[i]);
         }
         await apiCall('/estimation/contractor/submit', 'POST', formData, 'Estimation request submitted successfully!');
-        addNotification(`Your AI estimation request for "${projectTitle}" has been submitted.`, 'estimation');
+        addLocalNotification('Submitted', `Your AI estimation request for "${projectTitle}" has been submitted.`, 'estimation');
         form.reset();
         appState.uploadedFile = null;
         document.getElementById('file-info-container').style.display = 'none';
         renderAppSection('my-estimations');
     } catch (error) {
-        addNotification('Failed to submit estimation request. Please try again.', 'error');
+        addLocalNotification('Error', 'Failed to submit estimation request. Please try again.', 'error');
     } finally {
         submitBtn.disabled = false;
         submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Estimation Request';
