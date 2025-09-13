@@ -9,9 +9,239 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    
+    <style>
+        /* Header User Area Styles */
+        .header-user-area {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .user-info-container {
+            display: flex;
+            align-items: center;
+            position: relative;
+        }
+        .notification-bell-container {
+            position: relative;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            margin-right: 1rem;
+        }
+        .notification-bell-container:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+        }
+        .notification-bell-container i.fa-bell {
+            font-size: 1.2rem;
+            color: white;
+        }
+        .notification-badge {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            background: #ef4444;
+            color: white;
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 10px;
+            min-width: 18px;
+            height: 18px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.5); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .notification-badge.pulse {
+            animation: notificationPulse 2s ease-in-out infinite;
+        }
+        @keyframes notificationPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+        }
+        
+        /* Notification Panel */
+        .notification-panel {
+            position: absolute;
+            top: 120%;
+            right: 0;
+            width: 360px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            border: 1px solid #e5e7eb;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+        .notification-panel.active {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+        .notification-panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .notification-panel-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #1f2937;
+            margin: 0;
+        }
+        .clear-notifications-btn {
+            background: none;
+            border: none;
+            color: #6b7280;
+            cursor: pointer;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            transition: color 0.2s ease;
+        }
+        .clear-notifications-btn:hover {
+            color: #3b82f6;
+        }
+        .notification-panel-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .notification-empty-state {
+            padding: 2rem 1rem;
+            text-align: center;
+            color: #9ca3af;
+        }
+        .notification-empty-state i {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        /* User Info Styles */
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            transition: background 0.2s ease;
+            color: white;
+            position: relative;
+        }
+        .user-info:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #3b82f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: white;
+        }
+        .user-name {
+            font-weight: 500;
+        }
+        .user-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            border: 1px solid #e5e7eb;
+            min-width: 180px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+            z-index: 1000;
+            margin-top: 0.5rem;
+        }
+        .user-dropdown.active {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            color: #374151;
+            text-decoration: none;
+            transition: background 0.2s ease;
+            font-size: 0.9rem;
+        }
+        .dropdown-item:hover {
+            background: #f3f4f6;
+            color: #1f2937;
+        }
+        .dropdown-item i {
+            font-size: 0.85rem;
+            width: 16px;
+        }
+        .dropdown-divider {
+            margin: 0.5rem 0;
+            border: none;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        /* NOTIFICATION TOAST CONTAINER */
+        .notification-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .header-user-area {
+                gap: 0.5rem;
+            }
+            .notification-bell-container {
+                width: 36px;
+                height: 36px;
+                margin-right: 0.5rem;
+            }
+            .user-info {
+                padding: 0.25rem 0.5rem;
+            }
+            .user-name {
+                display: none; /* Hide name on mobile */
+            }
+        }
+    </style>
 </head>
 <body>
-    <div id="notification-container"></div>
+    <div id="notification-container" class="notification-container"></div>
     <div id="modal-container"></div>
 
     <header class="header">
@@ -20,43 +250,57 @@
                 <div class="logo-icon">SC</div>
                 SteelConnect
             </a>
+            
             <nav id="main-nav-menu" class="nav-menu">
                 <a href="#ai-estimation" class="nav-link">AI Estimation</a>
                 <a href="#how-it-works" class="nav-link">How It Works</a>
                 <a href="#why-steelconnect" class="nav-link">Why Choose Us</a>
                 <a href="#showcase" class="nav-link">Showcase</a>
             </nav>
-            <div class="header-actions">
+
+            <div class="header-user-area">
                 <div id="auth-buttons-container" class="auth-buttons">
                     <button id="signin-btn" class="btn btn-outline">Sign In</button>
                     <button id="join-btn" class="btn btn-primary">Join Now</button>
                 </div>
-                <div id="user-info-container" style="display: none;">
+                
+                <div id="user-info-container" class="user-info-container" style="display: none;">
                     <div id="notification-bell-container" class="notification-bell-container">
-                        <i class="fas fa-bell notification-bell"></i>
-                        <div id="notification-badge" class="notification-badge" style="display: none;"></div>
+                        <i class="fas fa-bell"></i>
+                        <div id="notification-badge" class="notification-badge" style="display: none;">0</div>
+                        
                         <div id="notification-panel" class="notification-panel">
                             <div class="notification-panel-header">
-                                <h3>Notifications</h3>
-                                <button id="clear-notifications-btn" class="clear-notifications-btn">Clear All</button>
+                                <h3 class="notification-panel-title">Notifications</h3>
+                                <button id="clear-notifications-btn" class="clear-notifications-btn">
+                                    <i class="fas fa-check-double"></i> Mark all read
+                                </button>
                             </div>
                             <div id="notification-panel-list" class="notification-panel-list">
                                 <div class="notification-empty-state">
                                     <i class="fas fa-bell-slash"></i>
-                                    <p>No new notifications</p>
+                                    <p>No notifications</p>
+                                    <small>You'll see updates here when things happen</small>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div id="user-info" class="user-info-widget">
-                        <div id="user-info-avatar" class="user-avatar-small"></div>
-                        <span id="user-info-name"></span>
+                    
+                    <div id="user-info" class="user-info">
+                        <div id="user-info-avatar" class="user-avatar">A</div>
+                        <span id="user-info-name" class="user-name">User</span>
                         <i class="fas fa-chevron-down"></i>
-                    </div>
-                    <div id="user-info-dropdown" class="user-dropdown">
-                        <a href="#" id="user-profile-link" class="dropdown-item"><i class="fas fa-user-circle"></i> Profile</a>
-                        <a href="#" id="user-settings-link" class="dropdown-item"><i class="fas fa-cog"></i> Settings</a>
-                        <a href="#" id="user-logout-link" class="dropdown-item"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                        
+                        <div id="user-info-dropdown" class="user-dropdown">
+                             <a href="#" id="user-profile-link" class="dropdown-item"><i class="fas fa-user-circle"></i> Profile</a>
+                            <a href="#" id="user-settings-link" class="dropdown-item">
+                                <i class="fas fa-cog"></i> Settings
+                            </a>
+                            <hr class="dropdown-divider">
+                            <a href="#" id="user-logout-link" class="dropdown-item">
+                                <i class="fas fa-sign-out-alt"></i> Logout
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -233,21 +477,409 @@
         </main>
     </div>
 
-    <div id="app-content" class="main-layout" style="display: none;">
+    <div id="app-content" class="app-content" style="display: none;">
         <aside class="sidebar">
-            <div class="sidebar-user-profile">
-                <div id="sidebarUserAvatar" class="sidebar-avatar"></div>
-                <h3 id="sidebarUserName"></h3>
-                <p id="sidebarUserType"></p>
+            <div class="sidebar-header">
+                <div class="sidebar-user">
+                    <div id="sidebarUserAvatar" class="sidebar-user-avatar">A</div>
+                    <div class="sidebar-user-info">
+                        <div id="sidebarUserName" class="sidebar-user-name">User Name</div>
+                        <div id="sidebarUserType" class="sidebar-user-type">contractor</div>
+                    </div>
+                </div>
             </div>
-            <nav id="sidebar-nav-menu" class="sidebar-nav"></nav>
+            
+            <nav id="sidebar-nav-menu" class="sidebar-nav">
+                </nav>
         </aside>
-        <main class="main-content">
-            <div id="app-container" class="main-container"></div>
-        </main>
+        
+        <main id="app-container" class="main-content">
+            </main>
     </div>
+    
+    <script>
+    // Mock global state and functions for demonstration. Replace with your actual implementation.
+    const appState = { currentUser: null, jwtToken: null, notifications: [], userSubmittedQuotes: new Set(), myEstimations: [], profileFiles: {} };
+    const BACKEND_URL = 'http://localhost:3000/api'; // Example URL
+    let inactivityTimer;
+    let warningTimer;
 
-    <script src="script.js" defer></script>
+    function showNotification(message, type = 'info') { console.log(`Notification: ${message} (${type})`); }
+    function showAuthModal(type) { console.log(`Showing auth modal: ${type}`); }
+    function renderAppSection(section) { console.log(`Rendering app section: ${section}`); }
+    function showLandingPageView() {
+        document.getElementById('landing-page-content').style.display = 'block';
+        document.getElementById('app-content').style.display = 'none';
+        document.getElementById('auth-buttons-container').style.display = 'flex';
+        document.getElementById('user-info-container').style.display = 'none';
+        const navMenu = document.getElementById('main-nav-menu');
+        if (navMenu) {
+            navMenu.innerHTML = `
+                <a href="#ai-estimation" class="nav-link">AI Estimation</a>
+                <a href="#how-it-works" class="nav-link">How It Works</a>
+                <a href="#why-steelconnect" class="nav-link">Why Choose Us</a>
+                <a href="#showcase" class="nav-link">Showcase</a>
+            `;
+        }
+    }
+    async function apiCall(endpoint, method, body, successMessage) { console.log(`API Call: ${method} ${endpoint}`); return Promise.resolve(); }
+    function closeModal() { console.log('Closing modal'); }
+    async function fetchAndRenderJobs() { console.log('Fetching and rendering jobs'); }
+    function checkProfileAndRoute() { console.log('Checking profile and routing'); renderAppSection('dashboard'); }
+    function resetInactivityTimer() { console.log('Activity detected, resetting inactivity timer.'); }
+    function dismissInactivityWarning() { console.log('Dismissing inactivity warning.'); }
+    function initializeHeaderRotation() { console.log('Initializing header rotation effect.'); }
+    function setupNotificationEventListeners() {
+        const bellContainer = document.getElementById('notification-bell-container');
+        const panel = document.getElementById('notification-panel');
+        const clearBtn = document.getElementById('clear-notifications-btn');
+
+        if (bellContainer) {
+            bellContainer.addEventListener('click', (e) => {
+                e.stopPropagation();
+                panel.classList.toggle('active');
+                if (panel.classList.contains('active')) {
+                    // Mark notifications as read when panel is opened
+                    console.log('Notification panel opened.');
+                }
+            });
+        }
+        if (clearBtn) {
+            clearBtn.addEventListener('click', () => {
+                console.log('Clearing all notifications.');
+            });
+        }
+    }
+    function initializeNotificationSystem() { console.log('Notification system initialized.'); }
+    function cleanupNotificationSystem() { console.log('Notification system cleaned up.'); }
+    function fetchNotifications() { console.log('Fetching notifications...'); }
+    function addLocalNotification(title, message, type, data) { console.log(`Local Notification: ${title} - ${message}`); }
+    function formatDetailedTimestamp(date) { return new Date(date).toLocaleString(); }
+
+    // Complete integration - Add to your existing script.js
+    // Update the initializeApp function to include notification setup
+    function initializeApp() {
+        console.log("SteelConnect App Initializing...");
+        
+        // Global click listener to close pop-ups
+        window.addEventListener('click', (event) => {
+            // Close user dropdown if click is outside
+            const userInfoContainer = document.getElementById('user-info-container');
+            const userInfoDropdown = document.getElementById('user-info-dropdown');
+            if (userInfoDropdown && userInfoContainer && !userInfoContainer.contains(event.target)) {
+                userInfoDropdown.classList.remove('active');
+            }
+            // Close notification panel if click is outside
+            const notificationPanel = document.getElementById('notification-panel');
+            const notificationBellContainer = document.getElementById('notification-bell-container');
+            if (notificationPanel && notificationBellContainer && !notificationBellContainer.contains(event.target)) {
+                notificationPanel.classList.remove('active');
+            }
+        });
+
+        // Setup user menu events
+        const userInfo = document.getElementById('user-info');
+        if (userInfo) {
+            userInfo.addEventListener('click', (e) => {
+                e.stopPropagation();
+                document.getElementById('user-info-dropdown').classList.toggle('active');
+            });
+        }
+
+        const settingsLink = document.getElementById('user-settings-link');
+        if (settingsLink) {
+            settingsLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                renderAppSection('settings');
+                document.getElementById('user-info-dropdown').classList.remove('active');
+            });
+        }
+            
+        const logoutLink = document.getElementById('user-logout-link');
+        if (logoutLink) {
+            logoutLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                logout();
+            });
+        }
+
+        // Setup notification events
+        setupNotificationEventListeners();
+            
+        // Activity listeners for auto-logout
+        const activityEvents = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart', 'touchmove', 'wheel'];
+        activityEvents.forEach(event => {
+            window.addEventListener(event, resetInactivityTimer, { passive: true });
+        });
+
+        // Auth button listeners
+        const signInBtn = document.getElementById('signin-btn');
+        if (signInBtn) signInBtn.addEventListener('click', () => showAuthModal('login'));
+        
+        const joinBtn = document.getElementById('join-btn');
+        if (joinBtn) joinBtn.addEventListener('click', () => showAuthModal('register'));
+        
+        const getStartedBtn = document.getElementById('get-started-btn');
+        if (getStartedBtn) getStartedBtn.addEventListener('click', () => showAuthModal('register'));
+
+        // Logo navigation
+        const logo = document.querySelector('.logo');
+        if (logo) {
+            logo.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (appState.currentUser && appState.currentUser.profileStatus === 'approved') {
+                    renderAppSection('dashboard');
+                } else if (appState.currentUser) {
+                    renderAppSection('dashboard');
+                } else {
+                    showLandingPageView();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            });
+        }
+
+        // Check for existing session
+        const token = localStorage.getItem('jwtToken');
+        const user = localStorage.getItem('currentUser');
+        if (token && user) {
+            try {
+                appState.jwtToken = token;
+                appState.currentUser = JSON.parse(user);
+                showAppView();
+                console.log('Restored user session');
+            } catch (error) {
+                console.error("Error parsing user data from localStorage:", error);
+                logout();
+            }
+        } else {
+            showLandingPageView();
+        }
+
+        initializeHeaderRotation();
+    }
+
+    // Enhanced showAppView with notification initialization
+    function showAppView() {
+        document.getElementById('landing-page-content').style.display = 'none';
+        document.getElementById('app-content').style.display = 'flex';
+        document.getElementById('auth-buttons-container').style.display = 'none';
+        document.getElementById('user-info-container').style.display = 'flex';
+        const navMenu = document.getElementById('main-nav-menu');
+        if (navMenu) navMenu.innerHTML = '';
+        const user = appState.currentUser;
+        document.getElementById('user-info-name').textContent = user.name;
+        document.getElementById('user-info-avatar').textContent = (user.name || "A").charAt(0).toUpperCase();
+        // Initialize notification system
+        initializeNotificationSystem();
+        checkProfileAndRoute();
+    }
+
+    // Enhanced logout with notification cleanup
+    function logout() {
+        console.log('Logging out user...');
+            
+        // Clean up notification system
+        cleanupNotificationSystem();
+        appState.currentUser = null;
+        appState.jwtToken = null;
+        appState.userSubmittedQuotes.clear();
+        appState.myEstimations = [];
+        appState.notifications = [];
+        appState.profileFiles = {};
+        localStorage.clear();
+            
+        clearTimeout(inactivityTimer);
+        clearTimeout(warningTimer);
+        dismissInactivityWarning();
+        showLandingPageView();
+        showNotification('You have been logged out successfully.', 'info');
+    }
+
+    // Enhanced message sending with notification refresh
+    async function handleSendMessage(conversationId) {
+        const input = document.getElementById('message-text-input');
+        const sendBtn = document.querySelector('.send-button');
+        const text = input.value.trim();
+            
+        if (!text) {
+            showNotification('Please enter a message', 'warning');
+            return;
+        }
+            
+        if (!conversationId) {
+            showNotification('Conversation not found', 'error');
+            return;
+        }
+            
+        const originalBtnContent = sendBtn.innerHTML;
+        input.disabled = true;
+        sendBtn.disabled = true;
+        sendBtn.innerHTML = '<div class="btn-spinner"></div>';
+            
+        try {
+            console.log(`Sending message to conversation ${conversationId}...`);
+                    
+            const response = await fetch(`${BACKEND_URL}/messages/${conversationId}/messages`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${appState.jwtToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ text })
+            });
+                    
+            const data = await response.json();
+                    
+            if (!response.ok) {
+                throw new Error(data.error || data.message || `Failed to send message: ${response.status}`);
+            }
+                    
+            if (data.success) {
+                console.log(`Message sent successfully:`, data.data);
+                input.value = '';
+                            
+                const messagesContainer = document.getElementById('chat-messages-container');
+                            
+                // Remove empty state if it exists
+                const emptyState = messagesContainer.querySelector('.empty-messages');
+                if (emptyState) {
+                    emptyState.remove();
+                }
+                            
+                // Add message to UI immediately
+                const newMessage = data.data;
+                const timestamp = formatDetailedTimestamp(newMessage.createdAt);
+                const messageBubble = document.createElement('div');
+                messageBubble.className = 'message-wrapper premium-message me';
+                messageBubble.innerHTML = `
+                    <div class="message-avatar-spacer" style="width: 40px; flex-shrink: 0;"></div>
+                    <div class="message-content">
+                        <div class="message-bubble premium-bubble me">${newMessage.text}</div>
+                        <div class="message-meta">${timestamp}</div>
+                    </div>`;
+                messagesContainer.appendChild(messageBubble);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                            
+                // Refresh notifications immediately after sending
+                setTimeout(() => {
+                    fetchNotifications();
+                }, 1000);
+                            
+                // Add local delivery notification
+                addLocalNotification(
+                    'Message Sent',
+                    'Your message has been delivered successfully',
+                    'success',
+                    { action: 'message_sent', conversationId }
+                );
+            } else {
+                throw new Error(data.error || 'Failed to send message');
+            }
+        } catch(error) {
+            console.error('Message send failed:', error);
+            showNotification(error.message || 'Failed to send message. Please try again.', 'error');
+        } finally {
+            input.disabled = false;
+            sendBtn.disabled = false;
+            sendBtn.innerHTML = originalBtnContent;
+            if (input) {
+                input.focus();
+            }
+        }
+    }
+
+    // Add notification integration to existing functions
+    async function handleQuoteSubmit(event) {
+        event.preventDefault();
+        const form = event.target;
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<div class="btn-spinner"></div> Submitting...';
+        submitBtn.disabled = true;
+            
+        try {
+            const formData = new FormData();
+            formData.append('jobId', form['jobId'].value);
+            formData.append('quoteAmount', form['amount'].value);
+            formData.append('timeline', form['timeline'].value);
+            formData.append('description', form['description'].value);
+                    
+            if (form.attachments.files.length > 0) {
+                for (let i = 0; i < form.attachments.files.length; i++) {
+                    formData.append('attachments', form.attachments.files[i]);
+                }
+            }
+                    
+            await apiCall('/quotes', 'POST', formData, 'Quote submitted successfully!');
+                    
+            // Add local notification
+            addLocalNotification(
+                'Quote Submitted',
+                'Your quote has been submitted and the client will be notified',
+                'quote',
+                { action: 'quote_submitted', jobId: form['jobId'].value }
+            );
+                    
+            appState.userSubmittedQuotes.add(form['jobId'].value);
+            closeModal();
+            fetchAndRenderJobs();
+                    
+            // Refresh notifications to see confirmation
+            setTimeout(() => fetchNotifications(), 2000);
+                
+        } catch (error) {
+            showNotification('Failed to submit quote. Please try again.', 'error');
+        } finally {
+            if (submitBtn) {
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }
+        }
+    }
+
+    // Integration with job posting
+    async function handlePostJob(event) {
+        event.preventDefault();
+        const form = event.target;
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<div class="btn-spinner"></div> Posting...';
+        submitBtn.disabled = true;
+        try {
+            const formData = new FormData();
+            ['title', 'description', 'budget', 'deadline', 'skills', 'link'].forEach(field => {
+                if (form[field] && form[field].value) formData.append(field, form[field].value);
+            });
+            if (form.attachment.files.length > 0) {
+                formData.append('attachment', form.attachment.files[0]);
+            }
+                    
+            await apiCall('/jobs', 'POST', formData, 'Project posted successfully!');
+                    
+            // Add local notification
+            addLocalNotification(
+                'Project Posted',
+                `Your project "${form.title.value}" is now live and visible to designers`,
+                'job',
+                { action: 'job_posted', title: form.title.value }
+            );
+                    
+            form.reset();
+            renderAppSection('jobs');
+                    
+            // Refresh notifications
+            setTimeout(() => fetchNotifications(), 2000);
+                
+        } catch (error) {
+            showNotification('Failed to post project. Please try again.', 'error');
+        } finally {
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        }
+    }
+
+    // Initialize everything when DOM is ready
+    document.addEventListener('DOMContentLoaded', initializeApp);
+    </script>
 </body>
-
 </html>
