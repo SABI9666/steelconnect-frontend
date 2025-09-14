@@ -1114,91 +1114,157 @@ async function fetchAndRenderMyEstimations() {
     const container = document.getElementById('app-container');
     container.innerHTML = `
         <div id="dynamic-feature-header" class="dynamic-feature-header"></div>
-        <div class="section-header modern-header">
+        <div class="section-header modern-header estimates-header">
             <div class="header-content">
-                <h2><i class="fas fa-file-invoice-dollar"></i> My Estimation Requests</h2>
-                <p class="header-subtitle">Track your cost estimation submissions and results</p>
+                <div class="header-main">
+                    <h2><i class="fas fa-chart-line"></i> My AI Estimation Requests</h2>
+                    <p class="header-subtitle">Track your cost estimation submissions, view AI analysis results, and manage project estimates</p>
+                </div>
             </div>
             <div class="header-actions">
-                <button class="btn btn-primary" onclick="renderAppSection('estimation-tool')">
+                <button class="btn btn-primary btn-new-estimate" onclick="renderAppSection('estimation-tool')">
                     <i class="fas fa-plus"></i> New Estimation Request
                 </button>
             </div>
         </div>
-        <div id="estimations-list" class="estimations-grid"></div>`;
-
+        <div class="estimates-dashboard">
+            <div id="estimations-list" class="estimations-grid-professional"></div>
+            <div id="estimates-loading" class="estimates-loading" style="display: none;">
+                <div class="loading-animation">
+                    <div class="spinner-professional"></div>
+                    <p>Loading your estimation requests...</p>
+                </div>
+            </div>
+        </div>`;
     updateDynamicHeader();
-
-    const listContainer = document.getElementById('estimations-list');
-    listContainer.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Loading your estimation requests...</p></div>';
-
+    showEstimatesLoading(true);
     try {
         await loadUserEstimations();
-
+        renderEstimatesGrid();
         if (appState.myEstimations.length === 0) {
-            listContainer.innerHTML = `
-                <div class="empty-state premium-empty">
-                    <div class="empty-icon">
-                        <i class="fas fa-calculator"></i>
-                    </div>
-                    <h3>No Estimation Requests Yet</h3>
-                    <p>Start by uploading your project drawings to get accurate cost estimates from our AI-powered system.</p>
-                    <button class="btn btn-primary btn-large" onclick="renderAppSection('estimation-tool')">
-                        <i class="fas fa-upload"></i> Upload First Project
-                    </button>
-                </div>`;
-            return;
+            showEmptyEstimatesState();
         }
-
-        listContainer.innerHTML = appState.myEstimations.map(estimation => {
-            const statusConfig = getEstimationStatusConfig(estimation.status);
-            const createdDate = new Date(estimation.createdAt).toLocaleDateString();
-            const updatedDate = new Date(estimation.updatedAt).toLocaleDateString();
-
-            const hasFiles = estimation.uploadedFiles && estimation.uploadedFiles.length > 0;
-            const hasResult = estimation.resultFile;
-
-            return `
-                <div class="estimation-card premium-card">
-                    <div class="estimation-header">
-                        <div class="estimation-title-section">
-                            <h3 class="estimation-title">${estimation.projectTitle}</h3>
-                            <span class="estimation-status-badge ${estimation.status}">
-                                <i class="fas ${statusConfig.icon}"></i> ${statusConfig.label}
-                            </span>
-                        </div>
-                        ${estimation.estimatedAmount ? `
-                            <div class="estimation-amount">
-                                <span class="amount-label">Estimated Cost</span>
-                                <span class="amount-value">$${estimation.estimatedAmount.toLocaleString()}</span>
-                            </div>
-                        ` : ''}
-                    </div>
-                    <div class="estimation-description"><p>${estimation.description}</p></div>
-                    <div class="estimation-meta">
-                        <div class="meta-item"><i class="fas fa-calendar-plus"></i><span>Submitted: ${createdDate}</span></div>
-                        <div class="meta-item"><i class="fas fa-clock"></i><span>Updated: ${updatedDate}</span></div>
-                        ${hasFiles ? `<div class="meta-item"><i class="fas fa-paperclip"></i><span>${estimation.uploadedFiles.length} file(s) uploaded</span></div>` : ''}
-                    </div>
-                    <div class="estimation-actions">
-                        <div class="action-buttons">
-                            ${hasFiles ? `<button class="btn btn-outline btn-sm" onclick="viewEstimationFiles('${estimation._id}')"><i class="fas fa-eye"></i> View Files</button>` : ''}
-                            ${hasResult ? `<button class="btn btn-success btn-sm" onclick="downloadEstimationResult('${estimation._id}')"><i class="fas fa-download"></i> Download Result</button>` : ''}
-                            ${estimation.status === 'pending' ? `<button class="btn btn-danger btn-sm" onclick="deleteEstimation('${estimation._id}')"><i class="fas fa-trash"></i> Delete</button>` : ''}
-                        </div>
-                    </div>
-                </div>`;
-        }).join('');
-
     } catch (error) {
-        listContainer.innerHTML = `
-            <div class="error-state premium-error">
-                <div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div>
-                <h3>Error Loading Estimations</h3>
-                <p>We couldn't load your estimation requests. Please try again.</p>
-                <button class="btn btn-primary" onclick="fetchAndRenderMyEstimations()">Retry</button>
-            </div>`;
+        showEstimatesError();
+    } finally {
+        showEstimatesLoading(false);
     }
+}
+
+function renderEstimatesGrid(filteredEstimates = null) {
+    const listContainer = document.getElementById('estimations-list');
+    const estimates = filteredEstimates || appState.myEstimations;
+
+    if (estimates.length === 0) {
+        if (filteredEstimates !== null) {
+            listContainer.innerHTML = `
+                <div class="no-results-state">
+                    <i class="fas fa-search"></i>
+                    <h3>No estimates found</h3>
+                    <p>Try adjusting your search or filter criteria</p>
+                </div>`;
+        }
+        return;
+    }
+
+    listContainer.innerHTML = estimates.map(estimation => {
+        const statusConfig = getEstimationStatusConfig(estimation.status);
+        const createdDate = formatEstimationDate(estimation.createdAt);
+        const hasFiles = estimation.uploadedFiles && estimation.uploadedFiles.length > 0;
+        const hasResult = estimation.resultFile;
+        const progress = getEstimationProgress(estimation.status);
+        return `
+            <div class="estimation-card-professional" data-status="${estimation.status}" data-title="${estimation.projectTitle.toLowerCase()}">
+                <div class="estimation-card-header">
+                    <div class="estimation-title-section">
+                        <h3 class="estimation-title">${estimation.projectTitle}</h3>
+                        <p class="estimation-meta">Submitted: ${createdDate}</p>
+                    </div>
+                    <span class="estimation-status-badge ${estimation.status}">
+                        <i class="fas ${statusConfig.icon}"></i> ${statusConfig.label}
+                    </span>
+                </div>
+                <div class="estimation-progress-bar">
+                    <div class="progress-bar-fill ${estimation.status}" style="width: ${progress}%"></div>
+                </div>
+                <div class="estimation-description">
+                    <p>${estimation.description.length > 150 ? estimation.description.substring(0, 150) + '...' : estimation.description}</p>
+                </div>
+                ${estimation.estimatedAmount ? `
+                    <div class="estimation-amount-section">
+                        <span class="amount-label">Estimated Cost</span>
+                        <span class="amount-value">$${Number(estimation.estimatedAmount).toLocaleString()}</span>
+                    </div>
+                ` : ''}
+                <div class="estimation-actions">
+                    ${hasFiles ? `<button class="btn btn-outline btn-sm" onclick="viewEstimationFiles('${estimation._id}')"><i class="fas fa-folder-open"></i> View Files</button>` : ''}
+                    ${hasResult ? `<button class="btn btn-success btn-sm" onclick="downloadEstimationResult('${estimation._id}')"><i class="fas fa-download"></i> Download Result</button>` : ''}
+                    <button class="btn btn-outline btn-sm" onclick="viewEstimationDetails('${estimation._id}')"><i class="fas fa-eye"></i> View Details</button>
+                </div>
+            </div>`;
+    }).join('');
+}
+
+function getEstimationProgress(status) {
+    const progressMap = { 'pending': 25, 'in-progress': 65, 'completed': 100, 'rejected': 0, 'cancelled': 0 };
+    return progressMap[status] || 0;
+}
+
+function formatEstimationDate(date) {
+    return new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+function showEstimatesLoading(show) {
+    const loading = document.getElementById('estimates-loading');
+    const list = document.getElementById('estimations-list');
+    if (loading && list) {
+        loading.style.display = show ? 'flex' : 'none';
+        list.style.display = show ? 'none' : 'grid';
+    }
+}
+
+function showEmptyEstimatesState() {
+    const listContainer = document.getElementById('estimations-list');
+    listContainer.innerHTML = `
+        <div class="empty-state premium-empty">
+            <div class="empty-icon"><i class="fas fa-calculator"></i></div>
+            <h3>Start Your First AI Estimation</h3>
+            <p>Upload your project drawings to get accurate cost estimates from our AI-powered system.</p>
+            <button class="btn btn-primary btn-large" onclick="renderAppSection('estimation-tool')">
+                <i class="fas fa-rocket"></i> Create First Estimation
+            </button>
+        </div>`;
+}
+
+function showEstimatesError() {
+    const listContainer = document.getElementById('estimations-list');
+    listContainer.innerHTML = `
+        <div class="error-state premium-error">
+            <div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div>
+            <h3>Unable to Load Estimations</h3>
+            <p>We're having trouble loading your requests. Please try again.</p>
+            <button class="btn btn-primary" onclick="fetchAndRenderMyEstimations()"><i class="fas fa-redo"></i> Try Again</button>
+        </div>`;
+}
+
+function viewEstimationDetails(estimationId) {
+    const estimation = appState.myEstimations.find(e => e._id === estimationId);
+    if (!estimation) return;
+    const statusConfig = getEstimationStatusConfig(estimation.status);
+    const content = `
+        <div class="modal-header estimation-modal-header">
+            <h3>${estimation.projectTitle}</h3>
+            <p class="modal-subtitle">Estimation Request Details</p>
+        </div>
+        <div class="estimation-details-content">
+            <p><strong>Status:</strong> <span class="status-${estimation.status}">${statusConfig.label}</span></p>
+            <p><strong>Description:</strong> ${estimation.description}</p>
+            ${estimation.estimatedAmount ? `<p><strong>Estimated Cost:</strong> $${Number(estimation.estimatedAmount).toLocaleString()}</p>` : ''}
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+            </div>
+        </div>`;
+    showGenericModal(content, 'max-width: 800px;');
 }
 
 function getEstimationStatusConfig(status) {
@@ -2270,13 +2336,20 @@ function showAppView() {
     document.getElementById('app-content').style.display = 'flex';
     document.getElementById('auth-buttons-container').style.display = 'none';
     document.getElementById('user-info-container').style.display = 'flex';
+
     const user = appState.currentUser;
     document.getElementById('user-info-name').textContent = user.name;
     document.getElementById('user-info-avatar').textContent = (user.name || "A").charAt(0).toUpperCase();
-    
+
+    // REMOVE LANDING PAGE NAVIGATION ITEMS
+    const navMenu = document.getElementById('main-nav-menu');
+    if (navMenu) {
+        navMenu.innerHTML = ''; // Clear all navigation items for authenticated users
+    }
+
     // Initialize notification system
     initializeNotificationSystem();
-    
+
     checkProfileAndRoute();
 }
 
@@ -2874,17 +2947,53 @@ function handleFileSelect(files) {
     for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const fileSize = (file.size / 1024 / 1024).toFixed(2);
-        const fileType = file.type === 'application/pdf' ? 'fa-file-pdf' : 'fa-file';
+        const fileType = getFileTypeIcon(file.type, file.name);
         filesHTML += `
             <div class="selected-file-item">
-                <div class="file-info"><i class="fas ${fileType}"></i><div class="file-details"><span class="file-name">${file.name}</span><span class="file-size">${fileSize} MB</span></div></div>
+                <div class="file-info">
+                    <i class="fas ${fileType.icon}"></i>
+                    <div class="file-details">
+                        <span class="file-name">${file.name}</span>
+                        <span class="file-size">${fileSize} MB</span>
+                    </div>
+                </div>
                 <button type="button" class="remove-file-btn" onclick="removeFile(${i})"><i class="fas fa-times"></i></button>
             </div>`;
     }
     fileList.innerHTML = filesHTML;
     document.getElementById('file-info-container').style.display = 'block';
     submitBtn.disabled = false;
+    updateEstimationStep(2); // Update progress
     showNotification(`${files.length} file(s) selected for estimation`, 'success');
+}
+
+function getFileTypeIcon(mimeType, fileName) {
+    const extension = fileName.split('.').pop().toLowerCase();
+    const types = {
+        'pdf': { icon: 'fa-file-pdf', class: 'pdf-file', label: 'PDF Document' },
+        'dwg': { icon: 'fa-drafting-compass', class: 'dwg-file', label: 'CAD Drawing' },
+        'doc': { icon: 'fa-file-word', class: 'doc-file', label: 'Word Document' },
+        'docx': { icon: 'fa-file-word', class: 'doc-file', label: 'Word Document' },
+        'jpg': { icon: 'fa-file-image', class: 'img-file', label: 'Image' },
+        'jpeg': { icon: 'fa-file-image', class: 'img-file', label: 'Image' },
+        'png': { icon: 'fa-file-image', class: 'img-file', label: 'Image' }
+    };
+    return types[extension] || { icon: 'fa-file', class: 'unknown-file', label: 'Document' };
+}
+
+function updateEstimationStep(activeStep) {
+    document.querySelectorAll('.estimation-steps .step').forEach((step, index) => {
+        const stepNumber = index + 1;
+        if (stepNumber < activeStep) {
+            step.classList.add('completed');
+            step.classList.remove('active');
+        } else if (stepNumber === activeStep) {
+            step.classList.add('active');
+            step.classList.remove('completed');
+        } else {
+            step.classList.remove('active', 'completed');
+        }
+    });
 }
 
 function removeFile(index) {
@@ -2895,6 +3004,7 @@ function removeFile(index) {
         appState.uploadedFile = null;
         document.getElementById('file-info-container').style.display = 'none';
         document.getElementById('submit-estimation-btn').disabled = true;
+        updateEstimationStep(1); // Revert progress
     } else {
         const dt = new DataTransfer();
         filesArray.forEach(file => dt.items.add(file));
@@ -2906,7 +3016,7 @@ function removeFile(index) {
 async function handleEstimationSubmit() {
     const form = document.getElementById('estimation-form');
     const submitBtn = document.getElementById('submit-estimation-btn');
-
+    
     if (!appState.uploadedFile || appState.uploadedFile.length === 0) {
         showNotification('Please select files for estimation', 'warning');
         return;
@@ -2917,8 +3027,11 @@ async function handleEstimationSubmit() {
         showNotification('Please fill in all required fields', 'warning');
         return;
     }
+
+    updateEstimationStep(3); // Update progress
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<div class="btn-spinner"></div> Submitting Request...';
+    
     try {
         const formData = new FormData();
         formData.append('projectTitle', projectTitle);
@@ -2933,9 +3046,11 @@ async function handleEstimationSubmit() {
         form.reset();
         appState.uploadedFile = null;
         document.getElementById('file-info-container').style.display = 'none';
+        updateEstimationStep(1); // Reset progress
         renderAppSection('my-estimations');
     } catch (error) {
         addLocalNotification('Error', 'Failed to submit estimation request. Please try again.', 'error');
+        updateEstimationStep(2); // Revert progress
     } finally {
         submitBtn.disabled = false;
         submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Estimation Request';
@@ -3054,13 +3169,34 @@ function getEstimationToolTemplate() {
     return `
         <div id="dynamic-feature-header" class="dynamic-feature-header"></div>
         <div class="section-header modern-header">
-            <div class="header-content"><h2><i class="fas fa-calculator"></i> AI-Powered Cost Estimation</h2><p class="header-subtitle">Upload your structural drawings to get instant, accurate cost estimates</p></div>
+            <div class="header-content">
+                <h2><i class="fas fa-robot"></i> AI-Powered Cost Estimation</h2>
+                <p class="header-subtitle">Upload your structural drawings and get precise, instant cost estimates powered by advanced machine learning algorithms</p>
+            </div>
         </div>
         <div class="estimation-tool-container premium-estimation-container">
             <div class="estimation-steps">
-                <div class="step active"><div class="step-number">1</div><div class="step-content"><h4>Upload Files</h4><p>Add your project drawings</p></div></div>
-                <div class="step"><div class="step-number">2</div><div class="step-content"><h4>Project Details</h4><p>Describe your requirements</p></div></div>
-                <div class="step"><div class="step-number">3</div><div class="step-content"><h4>Get Estimate</h4><p>Receive detailed cost breakdown</p></div></div>
+                <div class="step active" data-step="1">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h4>Upload Files</h4>
+                        <p>Add your drawings & specs</p>
+                    </div>
+                </div>
+                <div class="step" data-step="2">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h4>Project Details</h4>
+                        <p>Describe your requirements</p>
+                    </div>
+                </div>
+                <div class="step" data-step="3">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h4>Get Estimate</h4>
+                        <p>Receive detailed cost breakdown</p>
+                    </div>
+                </div>
             </div>
             <form id="estimation-form" class="premium-estimation-form">
                 <div class="form-section premium-section">
@@ -3070,26 +3206,61 @@ function getEstimationToolTemplate() {
                             <input type="file" id="file-upload-input" accept=".pdf,.dwg,.doc,.docx,.jpg,.jpeg,.png" multiple />
                             <div class="upload-content">
                                 <div class="file-upload-icon"><i class="fas fa-cloud-upload-alt"></i></div>
-                                <h3>Drag & Drop Your Files Here</h3><p>or click to browse</p>
-                                <div class="supported-formats"><span class="format-badge">PDF</span><span class="format-badge">DWG</span><span class="format-badge">DOC</span><span class="format-badge">Images</span></div>
+                                <h3>Drag & Drop Your Files Here</h3>
+                                <p>or click to browse</p>
+                                <div class="supported-formats">
+                                    <span class="format-badge">PDF</span>
+                                    <span class="format-badge">DWG</span>
+                                    <span class="format-badge">DOC</span>
+                                    <span class="format-badge">Images</span>
+                                </div>
                                 <small class="upload-limit">Maximum 10 files, 15MB each</small>
                             </div>
                         </div>
-                        <div id="file-info-container" class="selected-files-container" style="display: none;"><h4><i class="fas fa-files"></i> Selected Files</h4><div id="selected-files-list" class="selected-files-list"></div></div>
+                        <div id="file-info-container" class="selected-files-container" style="display: none;">
+                            <h4><i class="fas fa-files"></i> Selected Files</h4>
+                            <div id="selected-files-list" class="selected-files-list"></div>
+                        </div>
                     </div>
                 </div>
                 <div class="form-section premium-section">
                     <h3><i class="fas fa-info-circle"></i> Project Information</h3>
-                    <div class="form-group"><label class="form-label"><i class="fas fa-heading"></i> Project Title</label><input type="text" class="form-input premium-input" name="projectTitle" required placeholder="e.g., Commercial Building Steel Framework"></div>
-                    <div class="form-group"><label class="form-label"><i class="fas fa-file-alt"></i> Project Description</label><textarea class="form-textarea premium-textarea" name="description" required placeholder="Describe your project in detail..."></textarea></div>
+                    <div class="form-group">
+                        <label class="form-label"><i class="fas fa-heading"></i> Project Title</label>
+                        <input type="text" class="form-input premium-input" name="projectTitle" required placeholder="e.g., Commercial Building Steel Framework">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label"><i class="fas fa-file-alt"></i> Project Description</label>
+                        <textarea class="form-textarea premium-textarea" name="description" required placeholder="Describe your project in detail..."></textarea>
+                    </div>
                 </div>
                 <div class="estimation-features">
-                    <div class="feature-item"><i class="fas fa-robot"></i><div><h4>AI-Powered Analysis</h4><p>Advanced algorithms analyze your drawings</p></div></div>
-                    <div class="feature-item"><i class="fas fa-chart-line"></i><div><h4>Detailed Breakdown</h4><p>Get itemized costs for materials, labor, and logistics</p></div></div>
-                    <div class="feature-item"><i class="fas fa-clock"></i><div><h4>Instant Results</h4><p>Receive your estimation within minutes</p></div></div>
+                    <div class="feature-item">
+                        <i class="fas fa-robot"></i>
+                        <div>
+                            <h4>AI-Powered Analysis</h4>
+                            <p>Advanced algorithms analyze your drawings</p>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-chart-line"></i>
+                        <div>
+                            <h4>Detailed Breakdown</h4>
+                            <p>Get itemized costs for materials, labor, and logistics</p>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-clock"></i>
+                        <div>
+                            <h4>Instant Results</h4>
+                            <p>Receive your estimation within minutes</p>
+                        </div>
+                    </div>
                 </div>
                 <div class="form-actions estimation-actions">
-                    <button type="button" id="submit-estimation-btn" class="btn btn-primary btn-large premium-btn" disabled><i class="fas fa-paper-plane"></i> Submit Estimation Request</button>
+                    <button type="button" id="submit-estimation-btn" class="btn btn-primary btn-large premium-btn" disabled>
+                        <i class="fas fa-paper-plane"></i> Submit Estimation Request
+                    </button>
                     <p class="estimation-note"><i class="fas fa-info-circle"></i> Our expert team will review your submission and provide a detailed cost analysis.</p>
                 </div>
             </form>
@@ -3472,3 +3643,22 @@ async function debugNotificationFlow() {
 
 window.debugNotificationFlow = debugNotificationFlow;
 // (Other debug functions can be kept as they are)
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('input', function(e) {
+        if (e.target.name === 'description' && e.target.closest('#estimation-form')) {
+            const counter = document.getElementById('desc-counter');
+            if (counter) {
+                counter.textContent = e.target.value.length;
+                counter.style.color = e.target.value.length > 2000 ? '#ef4444' : '#64748b';
+            }
+        }
+    });
+});
+
+function previewFile(index) {
+    if (appState.uploadedFile && appState.uploadedFile[index]) {
+        const file = appState.uploadedFile[index];
+        showNotification(`Preview for ${file.name} - Feature coming soon!`, 'info');
+    }
+}
