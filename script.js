@@ -3662,3 +3662,13 @@ function previewFile(index) {
         showNotification(`Preview for ${file.name} - Feature coming soon!`, 'info');
     }
 }
+
+
+
+
+
+
+
+
+
+
