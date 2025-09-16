@@ -939,19 +939,63 @@ function getEstimationStatusConfig(status) {
     return configs[status] || { icon: 'fa-question-circle', label: status };
 }
 
+// --- CORRECTED FILE DOWNLOAD FUNCTIONS ---
+
+async function downloadEstimationResult(estimationId) {
+    try {
+        addLocalNotification('Download', 'Preparing download...', 'info');
+        // Add authorization header by fetching the download info first
+        const response = await apiCall(`/estimation/${estimationId}/result-info`, 'GET');
+        if (response.success && response.downloadInfo) {
+            // Create a temporary link to trigger download
+            const link = document.createElement('a');
+            // Use the direct URL from Firebase
+            link.href = response.downloadInfo.url;
+            link.download = response.downloadInfo.filename;
+            link.target = '_blank';
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            addLocalNotification('Success', 'Download started successfully.', 'success');
+            setTimeout(() => fetchNotifications(), 1000);
+        } else {
+            throw new Error('Download info not available');
+        }
+    } catch (error) {
+        console.error('Download error:', error);
+        addLocalNotification('Error', 'Failed to download estimation result.', 'error');
+    }
+}
+
 async function viewEstimationFiles(estimationId) {
     try {
         addLocalNotification('Loading Files', 'Loading estimation files...', 'info');
         const response = await apiCall(`/estimation/${estimationId}/files`, 'GET');
         const files = response.files || [];
         const content = `
-            <div class="modal-header"><h3><i class="fas fa-folder-open"></i> Uploaded Project Files</h3><p class="modal-subtitle">Files submitted with your estimation request</p></div>
+            <div class="modal-header">
+                <h3><i class="fas fa-folder-open"></i> Uploaded Project Files</h3>
+                <p class="modal-subtitle">Files submitted with your estimation request</p>
+            </div>
             <div class="files-list premium-files">
-                ${files.length === 0 ? `<div class="empty-state"><i class="fas fa-file"></i><p>No files found.</p></div>` : files.map(file => `
-                    <div class="file-item">
-                        <div class="file-info"><i class="fas fa-file-pdf"></i><div class="file-details"><h4>${file.name}</h4><span class="file-date">Uploaded: ${new Date(file.uploadedAt).toLocaleDateString()}</span></div></div>
-                        <a href="${file.url}" target="_blank" class="btn btn-outline btn-sm"><i class="fas fa-external-link-alt"></i> View</a>
-                    </div>`).join('')}
+                ${files.length === 0 ?
+                    `<div class="empty-state"><i class="fas fa-file"></i><p>No files found.</p></div>` :
+                    files.map(file => `
+                        <div class="file-item">
+                            <div class="file-info">
+                                <i class="fas fa-file-pdf"></i>
+                                <div class="file-details">
+                                    <h4>${file.name}</h4>
+                                    <span class="file-date">Uploaded: ${new Date(file.uploadedAt).toLocaleDateString()}</span>
+                                </div>
+                            </div>
+                            <button class="btn btn-outline btn-sm" onclick="downloadFileDirectly('${file.url}', '${file.name}')">
+                                <i class="fas fa-download"></i> Download
+                            </button>
+                        </div>
+                    `).join('')
+                }
             </div>`;
         showGenericModal(content, 'max-width: 600px;');
     } catch (error) {
@@ -959,19 +1003,25 @@ async function viewEstimationFiles(estimationId) {
     }
 }
 
-async function downloadEstimationResult(estimationId) {
+function downloadFileDirectly(fileUrl, fileName) {
     try {
-        addLocalNotification('Download', 'Preparing download...', 'info');
-        const response = await apiCall(`/estimation/${estimationId}/result`, 'GET');
-        if (response.success && response.resultFile) {
-            addLocalNotification('Success', 'Your estimation result is ready.', 'success');
-            window.open(response.resultFile.url, '_blank');
-            setTimeout(() => fetchNotifications(), 1000);
-        }
+        const link = document.createElement('a');
+        link.href = fileUrl;
+        link.download = fileName || 'download';
+        link.target = '_blank';
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        addLocalNotification('Success', 'Download started.', 'success');
     } catch (error) {
-        addLocalNotification('Error', 'Failed to download estimation result.', 'error');
+        console.error('Direct download error:', error);
+        addLocalNotification('Error', 'Download failed.', 'error');
     }
 }
+
+// --- END CORRECTED FILE DOWNLOAD FUNCTIONS ---
+
 
 async function deleteEstimation(estimationId) {
     if (confirm('Are you sure you want to delete this estimation request? This cannot be undone.')) {
