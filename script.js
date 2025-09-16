@@ -1227,29 +1227,275 @@ async function fetchAndRenderMyQuotes() {
     }
 }
 
+// --- QUOTE FILE HANDLING FUNCTIONS (NEW) ---
+let quoteFiles = []; // Global array to store quote files
+function handleQuoteFileChange(event) {
+    const input = event.target;
+    const files = Array.from(input.files);
+    if (quoteFiles.length + files.length > 5) {
+        showNotification('Maximum 5 files allowed for quotes', 'warning');
+        return;
+    }
+    const maxSize = 15 * 1024 * 1024; // 15MB
+    const invalidFiles = files.filter(file => file.size > maxSize);
+    if (invalidFiles.length > 0) {
+        showNotification(`Some files exceed 15MB limit: ${invalidFiles.map(f => f.name).join(', ')}`, 'error');
+        return;
+    }
+    // Validate file types for quotes
+    const allowedTypes = ['application/pdf', 'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'image/jpeg', 'image/jpg', 'image/png', 'application/dwg',
+        'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'text/plain'
+    ];
+    const allowedExtensions = ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png', 'dwg', 'xls', 'xlsx', 'txt'];
+    const invalidTypeFiles = files.filter(file => {
+        const ext = file.name.toLowerCase().split('.').pop();
+        return !allowedTypes.includes(file.type) && !allowedExtensions.includes(ext);
+    });
+    if (invalidTypeFiles.length > 0) {
+        showNotification(`Unsupported file types: ${invalidTypeFiles.map(f => f.name).join(', ')}. Supported: PDF, DOC, DOCX, JPG, PNG, DWG, XLS, XLSX, TXT`, 'error');
+        return;
+    }
+    quoteFiles.push(...files);
+    renderQuoteFileList();
+}
+
+function removeQuoteFile(index) {
+    quoteFiles.splice(index, 1);
+    renderQuoteFileList();
+}
+
+function renderQuoteFileList() {
+    const container = document.getElementById('quote-attachments-list');
+    const label = document.getElementById('quote-attachments-label');
+    if (!container || !label) return;
+    if (quoteFiles.length === 0) {
+        container.innerHTML = '';
+        label.textContent = 'Click to upload or drag & drop';
+        return;
+    }
+    container.innerHTML = quoteFiles.map((file, index) => `
+        <div class="file-list-item">
+            <div class="file-list-item-info">
+                <i class="fas ${getQuoteFileIcon(file)}"></i>
+                <span>${file.name}</span>
+                <span class="file-size">(${(file.size / (1024 * 1024)).toFixed(2)}MB)</span>
+            </div>
+            <button type="button" class="remove-file-button" onclick="removeQuoteFile(${index})">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `).join('');
+    label.textContent = `${quoteFiles.length} file(s) selected`;
+}
+
+function getQuoteFileIcon(file) {
+    const ext = file.name.toLowerCase().split('.').pop();
+    const iconMap = {
+        'pdf': 'fa-file-pdf',
+        'doc': 'fa-file-word',
+        'docx': 'fa-file-word',
+        'xls': 'fa-file-excel',
+        'xlsx': 'fa-file-excel',
+        'txt': 'fa-file-alt',
+        'jpg': 'fa-file-image',
+        'jpeg': 'fa-file-image',
+        'png': 'fa-file-image',
+        'dwg': 'fa-drafting-compass'
+    };
+    return iconMap[ext] || 'fa-file';
+}
+
+// UPDATED: Enhanced Quote Modal with File Upload
+function showQuoteModal(jobId) {
+    quoteFiles = []; // Reset files for new quote
+    const content = `
+        <div class="modal-header premium-modal-header">
+            <h3><i class="fas fa-file-invoice-dollar"></i> Submit Your Quote</h3>
+            <p class="modal-subtitle">Provide your proposal with supporting documents</p>
+        </div>
+        <form id="quote-form" class="premium-form">
+            <input type="hidden" name="jobId" value="${jobId}">
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label"><i class="fas fa-dollar-sign"></i> Amount ($)</label>
+                    <input type="number" class="form-input" name="amount" required min="1" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label class="form-label"><i class="fas fa-calendar-alt"></i> Timeline (days)</label>
+                    <input type="number" class="form-input" name="timeline" required min="1">
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label"><i class="fas fa-file-alt"></i> Description</label>
+                <textarea class="form-textarea" name="description" required placeholder="Describe your approach, methodology, and deliverables..."></textarea>
+            </div>
+            <div class="form-group">
+                <label class="form-label"><i class="fas fa-paperclip"></i> Supporting Documents</label>
+                <div class="custom-file-input-wrapper">
+                    <input type="file" name="attachments" id="quote-attachments-input"
+                            onchange="handleQuoteFileChange(event)"
+                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.dwg,.xls,.xlsx,.txt" multiple>
+                    <div class="custom-file-input">
+                        <span class="custom-file-input-label">
+                            <i class="fas fa-upload"></i>
+                            <span id="quote-attachments-label">Click to upload or drag & drop</span>
+                        </span>
+                    </div>
+                </div>
+                <div id="quote-attachments-list" class="file-list-container"></div>
+                <small class="form-help">Optional. Up to 5 files, 15MB each. Supported: PDF, DOC, DOCX, JPG, PNG, DWG, XLS, XLSX, TXT</small>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane"></i> Submit Quote</button>
+            </div>
+        </form>
+    `;
+    showGenericModal(content, 'max-width: 700px;');
+    // Setup drag and drop for quote files
+    setupQuoteFileDragDrop();
+    document.getElementById('quote-form').addEventListener('submit', handleQuoteSubmit);
+}
+
+function setupQuoteFileDragDrop() {
+    const wrapper = document.querySelector('.custom-file-input-wrapper');
+    const customInput = wrapper.querySelector('.custom-file-input');
+    const realInput = wrapper.querySelector('input[type="file"]');
+    if (customInput && realInput) {
+        customInput.addEventListener('click', () => realInput.click());
+        customInput.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            customInput.classList.add('drag-over');
+        });
+        customInput.addEventListener('dragleave', () => {
+            customInput.classList.remove('drag-over');
+        });
+        customInput.addEventListener('drop', (e) => {
+            e.preventDefault();
+            customInput.classList.remove('drag-over');
+            if (e.dataTransfer.files.length > 0) {
+                const event = {
+                    target: {
+                        files: e.dataTransfer.files
+                    }
+                };
+                handleQuoteFileChange(event);
+            }
+        });
+    }
+}
+
+// UPDATED: Quote submission with file upload
+async function handleQuoteSubmit(event) {
+    event.preventDefault();
+    const form = event.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<div class="btn-spinner"></div> Submitting...';
+    submitBtn.disabled = true;
+    try {
+        const formData = new FormData();
+        formData.append('jobId', form['jobId'].value);
+        formData.append('quoteAmount', form['amount'].value);
+        formData.append('timeline', form['timeline'].value);
+        formData.append('description', form['description'].value);
+        // Add multiple files
+        if (quoteFiles && quoteFiles.length > 0) {
+            for (let i = 0; i < quoteFiles.length; i++) {
+                formData.append('attachments', quoteFiles[i]);
+            }
+        }
+        await apiCall('/quotes', 'POST', formData, 'Quote submitted successfully!');
+        addLocalNotification('Submitted', 'Your quote has been submitted with supporting documents.', 'quote');
+        appState.userSubmittedQuotes.add(form['jobId'].value);
+        closeModal();
+        fetchAndRenderJobs();
+    } catch (error) {
+        addLocalNotification('Error', 'Failed to submit quote.', 'error');
+    } finally {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    }
+}
+
+// UPDATED: Edit quote modal with file support
 async function editQuote(quoteId) {
     try {
         const response = await apiCall(`/quotes/${quoteId}`, 'GET');
         const quote = response.data;
+        // Reset quote files for editing
+        quoteFiles = [];
         const content = `
-            <div class="modal-header premium-modal-header"><h3><i class="fas fa-edit"></i> Edit Your Quote</h3><p class="modal-subtitle">Update quote for: <strong>${quote.jobTitle}</strong></p></div>
+            <div class="modal-header premium-modal-header">
+                <h3><i class="fas fa-edit"></i> Edit Your Quote</h3>
+                <p class="modal-subtitle">Update quote for: <strong>${quote.jobTitle}</strong></p>
+            </div>
             <form id="edit-quote-form" class="premium-form">
                 <input type="hidden" name="quoteId" value="${quote.id}">
                 <div class="form-row">
-                    <div class="form-group"><label class="form-label"><i class="fas fa-dollar-sign"></i> Amount ($)</label><input type="number" class="form-input" name="amount" value="${quote.quoteAmount}" required></div>
-                    <div class="form-group"><label class="form-label"><i class="fas fa-calendar-alt"></i> Timeline (days)</label><input type="number" class="form-input" name="timeline" value="${quote.timeline || ''}" required></div>
+                    <div class="form-group">
+                        <label class="form-label"><i class="fas fa-dollar-sign"></i> Amount ($)</label>
+                        <input type="number" class="form-input" name="amount" value="${quote.quoteAmount}" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label"><i class="fas fa-calendar-alt"></i> Timeline (days)</label>
+                        <input type="number" class="form-input" name="timeline" value="${quote.timeline || ''}" required>
+                    </div>
                 </div>
-                <div class="form-group"><label class="form-label"><i class="fas fa-file-alt"></i> Description</label><textarea class="form-textarea" name="description" required>${quote.description}</textarea></div>
-                <div class="form-group"><label class="form-label"><i class="fas fa-paperclip"></i> Attachments</label><input type="file" class="form-input file-input" name="attachments" multiple><small class="form-help">Optional, max 5</small></div>
-                <div class="form-actions"><button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button><button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Update Quote</button></div>
-            </form>`;
-        showGenericModal(content, 'max-width: 600px;');
+                <div class="form-group">
+                    <label class="form-label"><i class="fas fa-file-alt"></i> Description</label>
+                    <textarea class="form-textarea" name="description" required>${quote.description}</textarea>
+                </div>
+                ${quote.attachments && quote.attachments.length > 0 ? `
+                    <div class="form-group">
+                        <label class="form-label"><i class="fas fa-folder"></i> Current Attachments</label>
+                        <div class="existing-attachments">
+                            ${quote.attachments.map((attachment, index) => `
+                                <div class="existing-attachment-item">
+                                    <i class="fas ${getQuoteFileIcon({name: attachment.name})}"></i>
+                                    <span>${attachment.name}</span>
+                                    <a href="${attachment.url}" target="_blank" class="btn btn-xs">
+                                        <i class="fas fa-external-link-alt"></i> View
+                                    </a>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+                <div class="form-group">
+                    <label class="form-label"><i class="fas fa-paperclip"></i> Add More Documents</label>
+                    <div class="custom-file-input-wrapper">
+                        <input type="file" name="attachments" id="quote-attachments-input"
+                                onchange="handleQuoteFileChange(event)"
+                                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.dwg,.xls,.xlsx,.txt" multiple>
+                        <div class="custom-file-input">
+                            <span class="custom-file-input-label">
+                                <i class="fas fa-upload"></i>
+                                <span id="quote-attachments-label">Click to upload additional files</span>
+                            </span>
+                        </div>
+                    </div>
+                    <div id="quote-attachments-list" class="file-list-container"></div>
+                    <small class="form-help">Optional. Add up to 5 additional files, 15MB each.</small>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Update Quote</button>
+                </div>
+            </form>
+        `;
+        showGenericModal(content, 'max-width: 700px;');
+        setupQuoteFileDragDrop();
         document.getElementById('edit-quote-form').addEventListener('submit', handleQuoteEdit);
     } catch (error) {
         addLocalNotification('Error', 'Failed to load quote details for editing.', 'error');
     }
 }
 
+// UPDATED: Handle quote edit with files
 async function handleQuoteEdit(event) {
     event.preventDefault();
     const form = event.target;
@@ -1262,9 +1508,10 @@ async function handleQuoteEdit(event) {
         formData.append('quoteAmount', form['amount'].value);
         formData.append('timeline', form['timeline'].value);
         formData.append('description', form['description'].value);
-        if (form.attachments.files.length > 0) {
-            for (let i = 0; i < form.attachments.files.length; i++) {
-                formData.append('attachments', form.attachments.files[i]);
+        // Add new files if any
+        if (quoteFiles && quoteFiles.length > 0) {
+            for (let i = 0; i < quoteFiles.length; i++) {
+                formData.append('attachments', quoteFiles[i]);
             }
         }
         await apiCall(`/quotes/${form['quoteId'].value}`, 'PUT', formData, 'Quote updated successfully!');
@@ -1431,56 +1678,6 @@ async function approveQuote(quoteId, jobId) {
             fetchAndRenderJobs();
         } catch (error) {
             addLocalNotification('Error', 'Failed to approve quote.', 'error');
-        }
-    }
-}
-
-function showQuoteModal(jobId) {
-    const content = `
-        <div class="modal-header premium-modal-header"><h3><i class="fas fa-file-invoice-dollar"></i> Submit Your Quote</h3><p class="modal-subtitle">Provide your proposal</p></div>
-        <form id="quote-form" class="premium-form">
-            <input type="hidden" name="jobId" value="${jobId}">
-            <div class="form-row">
-                <div class="form-group"><label class="form-label"><i class="fas fa-dollar-sign"></i> Amount ($)</label><input type="number" class="form-input" name="amount" required min="1" step="0.01"></div>
-                <div class="form-group"><label class="form-label"><i class="fas fa-calendar-alt"></i> Timeline (days)</label><input type="number" class="form-input" name="timeline" required min="1"></div>
-            </div>
-            <div class="form-group"><label class="form-label"><i class="fas fa-file-alt"></i> Description</label><textarea class="form-textarea" name="description" required></textarea></div>
-            <div class="form-group"><label class="form-label"><i class="fas fa-paperclip"></i> Attachments</label><input type="file" class="form-input file-input" name="attachments" multiple><small class="form-help">Optional, max 5</small></div>
-            <div class="form-actions"><button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button><button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane"></i> Submit</button></div>
-        </form>`;
-    showGenericModal(content, 'max-width: 600px;');
-    document.getElementById('quote-form').addEventListener('submit', handleQuoteSubmit);
-}
-
-async function handleQuoteSubmit(event) {
-    event.preventDefault();
-    const form = event.target;
-    const submitBtn = form.querySelector('button[type="submit"]');
-    const originalText = submitBtn.innerHTML;
-    submitBtn.innerHTML = '<div class="btn-spinner"></div> Submitting...';
-    submitBtn.disabled = true;
-    try {
-        const formData = new FormData();
-        formData.append('jobId', form['jobId'].value);
-        formData.append('quoteAmount', form['amount'].value);
-        formData.append('timeline', form['timeline'].value);
-        formData.append('description', form['description'].value);
-        if (form.attachments.files.length > 0) {
-            for (let i = 0; i < form.attachments.files.length; i++) {
-                formData.append('attachments', form.attachments.files[i]);
-            }
-        }
-        await apiCall('/quotes', 'POST', formData, 'Quote submitted successfully!');
-        addLocalNotification('Submitted', 'Your quote has been submitted.', 'quote');
-        appState.userSubmittedQuotes.add(form['jobId'].value);
-        closeModal();
-        fetchAndRenderJobs();
-    } catch (error) {
-        addLocalNotification('Error', 'Failed to submit quote.', 'error');
-    } finally {
-        if (submitBtn) {
-            submitBtn.innerHTML = originalText;
-            submitBtn.disabled = false;
         }
     }
 }
