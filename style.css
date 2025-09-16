@@ -229,6 +229,24 @@ body {
     background-color: #dc2626;
     border-color: #dc2626;
 }
+.btn-danger-outline {
+    background: transparent;
+    color: #ef4444;
+    border-color: #ef4444;
+}
+.btn-danger-outline:hover {
+    background: #ef4444;
+    color: white;
+}
+.btn-edit {
+    background: transparent;
+    color: var(--secondary-color);
+    border-color: var(--secondary-color);
+}
+.btn-edit:hover {
+    background: var(--secondary-color);
+    color: white;
+}
 .btn-ai {
     background: var(--ai-gradient);
     color: white;
@@ -901,6 +919,84 @@ body {
 .quote-status-pending { border-left: 4px solid #f59e0b; }
 .quote-status-approved { border-left: 4px solid #10b981; }
 .quote-status-rejected { border-left: 4px solid #ef4444; }
+
+/* --- FILE MANAGEMENT STYLES (User Added) --- */
+.custom-file-input-wrapper {
+    position: relative;
+    margin-bottom: 1rem;
+}
+.custom-file-input-wrapper input[type="file"] {
+    position: absolute;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+}
+.custom-file-input {
+    border: 2px dashed #d1d5db;
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+    background: #f9fafb;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+.custom-file-input:hover,
+.custom-file-input.drag-over {
+    border-color: #3b82f6;
+    background: #eff6ff;
+}
+.file-list-container {
+    margin-top: 1rem;
+}
+.file-list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    margin-bottom: 0.5rem;
+    background: #f9fafb;
+}
+.file-list-item-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.file-size {
+    color: #6b7280;
+    font-size: 0.875rem;
+}
+.remove-file-button {
+    background: #ef4444;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 0.25rem 0.5rem;
+    cursor: pointer;
+    font-size: 0.75rem;
+}
+.attachment-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+.attachment-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    background: #f3f4f6;
+    border-radius: 4px;
+    text-decoration: none;
+    color: #374151;
+    font-size: 0.875rem;
+}
+.attachment-link:hover {
+    background: #e5e7eb;
+}
 
 /* --- JOB STATUS & MESSAGING STYLES --- */
 .job-status {
@@ -4133,3 +4229,14 @@ body {
         flex-direction: column;
     }
 }
+
+
+
+
+
+
+
+
+
+
+
