@@ -53,15 +53,13 @@ const appState = {
     jobsPage: 1,
     hasMoreJobs: true,
     userSubmittedQuotes: new Set(),
-    uploadedFile: null,
+    uploadedFile: null, // For AI estimation tool
+    jobFiles: [],      // For posting a new job
     myEstimations: [],
     currentHeaderSlide: 0,
     notifications: [],
     profileFiles: {}, // For profile completion uploads
 };
-
-// --- ENHANCED NOTIFICATION SYSTEM STATE ---
-// This section will be replaced by the new code.
 
 
 // Professional Features Header Data
@@ -175,11 +173,9 @@ function initializeApp() {
         if (userInfoDropdown && userInfoContainer && !userInfoContainer.contains(event.target)) {
             userInfoDropdown.classList.remove('active');
         }
-
-        // Notification panel closing is handled by the new notification system
     });
 
-    // **FIX: Move one-time listener setup here to prevent re-binding**
+    // One-time listener setup to prevent re-binding
     const userInfo = document.getElementById('user-info');
     if (userInfo) {
         userInfo.addEventListener('click', (e) => {
@@ -205,8 +201,6 @@ function initializeApp() {
         });
     }
 
-    // Notification listeners are now handled by initializeNotificationSystem()
-
     // Comprehensive activity listeners for 5-minute auto-logout
     const activityEvents = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart', 'touchmove', 'wheel'];
     activityEvents.forEach(event => {
@@ -226,9 +220,7 @@ function initializeApp() {
     if (logo) {
         logo.addEventListener('click', (e) => {
             e.preventDefault();
-            if (appState.currentUser && appState.currentUser.profileStatus === 'approved') {
-                renderAppSection('dashboard');
-            } else if (appState.currentUser) {
+            if (appState.currentUser) {
                 renderAppSection('dashboard');
             }
             else {
@@ -247,7 +239,6 @@ function initializeApp() {
             appState.jwtToken = token;
             appState.currentUser = JSON.parse(user);
             showAppView();
-            // Timer and notifications are started inside showAppView -> checkProfileAndRoute
             console.log('Restored user session');
         } catch (error) {
             console.error("Error parsing user data from localStorage:", error);
@@ -374,9 +365,6 @@ async function handleLogin(event) {
 // START: NEW NOTIFICATION SYSTEM
 // ========================================
 
-// ========================================
-// NOTIFICATION STATE MANAGEMENT
-// ========================================
 const notificationState = {
     notifications: [],
     maxStoredNotifications: 100,
@@ -387,62 +375,32 @@ const notificationState = {
     unseenCount: 0,
 };
 
-// ========================================
-// NOTIFICATION FETCHING & MANAGEMENT
-// ========================================
-
-// Enhanced notification fetching with better error handling
 async function fetchNotifications() {
     if (!appState.currentUser) return;
-
     try {
-        console.log('🔄 [FETCH] Fetching notifications from server...');
-
         const response = await apiCall('/notifications?markSeen=true', 'GET');
-
         if (response.success) {
             const serverNotifications = response.notifications || [];
-            console.log(`📥 [FETCH] Received ${serverNotifications.length} notifications from server`);
-
-            // Update state
             notificationState.notifications = serverNotifications;
             appState.notifications = serverNotifications;
             notificationState.unreadCount = response.unreadCount || 0;
             notificationState.unseenCount = response.unseenCount || 0;
             notificationState.lastFetchTime = new Date();
-
-            // Save to localStorage
             saveNotificationsToStorage();
-
-            // Update UI
             renderNotificationPanel();
             updateNotificationBadge();
-
-            console.log(`✅ [FETCH] Successfully processed ${serverNotifications.length} notifications`);
-
-            // Log notification breakdown
-            const notificationTypes = {};
-            serverNotifications.forEach(n => {
-                notificationTypes[n.type] = (notificationTypes[n.type] || 0) + 1;
-            });
-            console.log(`📊 [FETCH] Notification breakdown:`, notificationTypes);
         }
     } catch (error) {
-        console.error('❌ [FETCH] Error fetching notifications:', error);
-
-        // Use stored notifications if available
+        console.error('Error fetching notifications:', error);
         loadStoredNotifications();
         if (notificationState.notifications.length > 0) {
             appState.notifications = notificationState.notifications;
             renderNotificationPanel();
             updateNotificationBadge();
-            console.log('📱 [FETCH] Using stored notifications due to fetch error');
         }
     }
 }
 
-
-// Load notifications from localStorage
 function loadStoredNotifications() {
     try {
         const stored = localStorage.getItem(notificationState.storageKey);
@@ -453,8 +411,6 @@ function loadStoredNotifications() {
                 notificationState.lastFetchTime = parsed.lastFetchTime ? new Date(parsed.lastFetchTime) : null;
                 notificationState.unreadCount = parsed.unreadCount || 0;
                 notificationState.unseenCount = parsed.unseenCount || 0;
-
-                console.log(`📱 Loaded ${notificationState.notifications.length} stored notifications`);
             }
         }
     } catch (error) {
@@ -463,7 +419,6 @@ function loadStoredNotifications() {
     }
 }
 
-// Save notifications to localStorage
 function saveNotificationsToStorage() {
     try {
         const dataToStore = {
@@ -479,68 +434,36 @@ function saveNotificationsToStorage() {
     }
 }
 
-
-// ========================================
-// NOTIFICATION UI RENDERING
-// ========================================
-
 function getNotificationIcon(type) {
     const iconMap = {
-        info: 'fa-info-circle',
-        success: 'fa-check-circle',
-        warning: 'fa-exclamation-triangle',
-        error: 'fa-times-circle',
-        message: 'fa-comment-alt',
-        job: 'fa-briefcase',
-        quote: 'fa-file-invoice-dollar',
-        estimation: 'fa-calculator',
-        profile: 'fa-user-circle',
-        user: 'fa-user',
-        file: 'fa-paperclip'
+        info: 'fa-info-circle', success: 'fa-check-circle', warning: 'fa-exclamation-triangle',
+        error: 'fa-times-circle', message: 'fa-comment-alt', job: 'fa-briefcase',
+        quote: 'fa-file-invoice-dollar', estimation: 'fa-calculator', profile: 'fa-user-circle',
+        user: 'fa-user', file: 'fa-paperclip'
     };
     return iconMap[type] || 'fa-info-circle';
 }
 
 function getNotificationColor(type) {
     const colorMap = {
-        info: '#3b82f6',
-        success: '#10b981',
-        warning: '#f59e0b',
-        error: '#ef4444',
-        message: '#8b5cf6',
-        job: '#06b6d4',
-        quote: '#f97316',
-        estimation: '#84cc16',
-        profile: '#6366f1',
-        user: '#64748b',
-        file: '#94a3b8'
+        info: '#3b82f6', success: '#10b981', warning: '#f59e0b', error: '#ef4444',
+        message: '#8b5cf6', job: '#06b6d4', quote: '#f97316', estimation: '#84cc16',
+        profile: '#6366f1', user: '#64748b', file: '#94a3b8'
     };
     return colorMap[type] || '#6b7280';
 }
 
-// Enhanced notification panel rendering
 function renderNotificationPanel() {
     const panelList = document.getElementById('notification-panel-list');
     if (!panelList) return;
-
     const notifications = notificationState.notifications || [];
-
     if (notifications.length === 0) {
-        panelList.innerHTML = `
-            <div class="notification-empty-state">
-                <i class="fas fa-bell-slash"></i>
-                <p>No notifications</p>
-                <small>You'll see updates here when things happen</small>
-            </div>`;
+        panelList.innerHTML = `<div class="notification-empty-state"><i class="fas fa-bell-slash"></i><p>No notifications</p><small>You'll see updates here when things happen</small></div>`;
         return;
     }
-
     try {
-        // Group notifications by date
         const groupedNotifications = groupNotificationsByDate(notifications);
-
         let notificationsHTML = '';
-
         Object.keys(groupedNotifications).forEach(dateGroup => {
             notificationsHTML += `
                 <div class="notification-date-group">
@@ -550,14 +473,9 @@ function renderNotificationPanel() {
                         const color = getNotificationColor(n.type);
                         const timeAgo = formatMessageTimestamp(n.createdAt);
                         const metadataString = JSON.stringify(n.metadata || {}).replace(/"/g, '&quot;');
-
                         return `
-                            <div class="notification-item ${n.isRead || n.read ? 'read' : 'unread'}"
-                                  data-id="${n.id}"
-                                 onclick="handleNotificationClick('${n.id}', '${n.type}', ${metadataString})">
-                                <div class="notification-item-icon" style="background-color: ${color}20; color: ${color}">
-                                    <i class="fas ${icon}"></i>
-                                </div>
+                            <div class="notification-item ${n.isRead || n.read ? 'read' : 'unread'}" data-id="${n.id}" onclick="handleNotificationClick('${n.id}', '${n.type}', ${metadataString})">
+                                <div class="notification-item-icon" style="background-color: ${color}20; color: ${color}"><i class="fas ${icon}"></i></div>
                                 <div class="notification-item-content">
                                     <div class="notification-item-header">
                                         <span class="notification-title">${n.title || 'Notification'}</span>
@@ -571,59 +489,32 @@ function renderNotificationPanel() {
                     }).join('')}
                 </div>`;
         });
-
         panelList.innerHTML = notificationsHTML;
     } catch (error) {
         console.error('Error rendering notifications:', error);
-        panelList.innerHTML = `
-            <div class="notification-error-state">
-                <i class="fas fa-exclamation-triangle"></i>
-                <p>Error loading notifications</p>
-                <button onclick="fetchNotifications()" class="btn btn-sm btn-outline">Retry</button>
-            </div>`;
+        panelList.innerHTML = `<div class="notification-error-state"><i class="fas fa-exclamation-triangle"></i><p>Error loading notifications</p><button onclick="fetchNotifications()" class="btn btn-sm btn-outline">Retry</button></div>`;
     }
 }
 
-
-// Group notifications by date for better organization
 function groupNotificationsByDate(notifications) {
     const groups = {};
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
-
     notifications.forEach(notification => {
         const notificationDate = new Date(notification.createdAt);
         let groupKey;
-
-        if (isSameDay(notificationDate, today)) {
-            groupKey = 'Today';
-        } else if (isSameDay(notificationDate, yesterday)) {
-            groupKey = 'Yesterday';
-        } else if (isWithinDays(notificationDate, 7)) {
-            groupKey = notificationDate.toLocaleDateString([], { weekday: 'long' });
-        } else {
-            groupKey = notificationDate.toLocaleDateString([], {
-                month: 'short',
-                day: 'numeric',
-                year: notificationDate.getFullYear() !== today.getFullYear() ? 'numeric' : undefined
-            });
-        }
-
-        if (!groups[groupKey]) {
-            groups[groupKey] = [];
-        }
+        if (isSameDay(notificationDate, today)) groupKey = 'Today';
+        else if (isSameDay(notificationDate, yesterday)) groupKey = 'Yesterday';
+        else if (isWithinDays(notificationDate, 7)) groupKey = notificationDate.toLocaleDateString([], { weekday: 'long' });
+        else groupKey = notificationDate.toLocaleDateString([], { month: 'short', day: 'numeric', year: notificationDate.getFullYear() !== today.getFullYear() ? 'numeric' : undefined });
+        if (!groups[groupKey]) groups[groupKey] = [];
         groups[groupKey].push(notification);
     });
-
     return groups;
 }
 
-// Helper functions for date comparisons
-function isSameDay(date1, date2) {
-    return date1.toDateString() === date2.toDateString();
-}
-
+function isSameDay(date1, date2) { return date1.toDateString() === date2.toDateString(); }
 function isWithinDays(date, days) {
     const now = new Date();
     const diffTime = Math.abs(now - date);
@@ -631,193 +522,104 @@ function isWithinDays(date, days) {
     return diffDays <= days;
 }
 
-
-// Get action buttons for different notification types
 function getNotificationActionButtons(notification) {
     const { type, metadata } = notification;
     let buttons = '';
-
     switch (type) {
         case 'message':
-            buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); openConversation('${metadata?.jobId}', '${metadata?.senderId}')">
-                <i class="fas fa-reply"></i> Reply
-            </button>`;
+            buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); openConversation('${metadata?.jobId}', '${metadata?.senderId}')"><i class="fas fa-reply"></i> Reply</button>`;
             break;
-
         case 'quote':
             if (metadata?.action === 'quote_submitted' && appState.currentUser?.type === 'contractor') {
-                buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); viewQuotes('${metadata?.jobId}')">
-                    <i class="fas fa-eye"></i> View Quote
-                </button>`;
+                buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); viewQuotes('${metadata?.jobId}')"><i class="fas fa-eye"></i> View Quote</button>`;
             } else if (metadata?.action === 'quote_approved' && appState.currentUser?.type === 'designer') {
-                buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); openConversation('${metadata?.jobId}', '${metadata?.contractorId}')">
-                    <i class="fas fa-comments"></i> Message Client
-                </button>`;
+                buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); openConversation('${metadata?.jobId}', '${metadata?.contractorId}')"><i class="fas fa-comments"></i> Message Client</button>`;
             }
             break;
-
         case 'job':
             if (metadata?.action === 'job_created' && appState.currentUser?.type === 'designer') {
-                buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); renderAppSection('jobs')">
-                    <i class="fas fa-search"></i> View Job
-                </button>`;
+                buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); renderAppSection('jobs')"><i class="fas fa-search"></i> View Job</button>`;
             }
             break;
-
         case 'estimation':
             if (metadata?.action === 'estimation_completed') {
-                buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); renderAppSection('my-estimations')">
-                    <i class="fas fa-download"></i> View Result
-                </button>`;
+                buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); renderAppSection('my-estimations')"><i class="fas fa-download"></i> View Result</button>`;
             }
             break;
-
         case 'profile':
             if (metadata?.action === 'profile_approved') {
-                buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); renderAppSection('dashboard')">
-                    <i class="fas fa-tachometer-alt"></i> Explore Features
-                </button>`;
+                buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); renderAppSection('dashboard')"><i class="fas fa-tachometer-alt"></i> Explore Features</button>`;
             } else if (metadata?.action === 'profile_rejected') {
-                buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); renderAppSection('profile-completion')">
-                    <i class="fas fa-edit"></i> Update Profile
-                </button>`;
+                buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); renderAppSection('profile-completion')"><i class="fas fa-edit"></i> Update Profile</button>`;
             }
             break;
     }
-
     return buttons ? `<div class="notification-actions">${buttons}</div>` : '';
 }
 
-
-// ========================================
-// NOTIFICATION INTERACTION HANDLERS
-// ========================================
-
-// Enhanced notification click handler with better routing
 function handleNotificationClick(notificationId, type, metadata) {
-    // Mark as read first
     markNotificationAsRead(notificationId);
-
-    // Handle navigation based on notification type
     switch (type) {
         case 'message':
-            if (metadata.conversationId) {
-                renderConversationView(metadata.conversationId);
-            } else if (metadata.jobId && metadata.senderId) {
-                openConversation(metadata.jobId, metadata.senderId);
-            } else {
-                renderAppSection('messages');
-            }
+            if (metadata.conversationId) renderConversationView(metadata.conversationId);
+            else if (metadata.jobId && metadata.senderId) openConversation(metadata.jobId, metadata.senderId);
+            else renderAppSection('messages');
             break;
-
         case 'quote':
             if (metadata.action === 'quote_submitted' && appState.currentUser.type === 'contractor') {
-                if (metadata.jobId) {
-                    renderAppSection('jobs');
-                    // Optionally show quote modal after navigation
-                    setTimeout(() => viewQuotes(metadata.jobId), 500);
-                } else {
-                    renderAppSection('jobs');
-                }
-            } else if (appState.currentUser.type === 'designer') {
-                renderAppSection('my-quotes');
-            }
+                renderAppSection('jobs');
+                if (metadata.jobId) setTimeout(() => viewQuotes(metadata.jobId), 500);
+            } else if (appState.currentUser.type === 'designer') renderAppSection('my-quotes');
             break;
-
         case 'job':
-            if (metadata.action === 'job_created') {
-                renderAppSection('jobs');
-            } else if (metadata.jobId) {
-                renderAppSection('jobs');
-            } else {
-                renderAppSection('dashboard');
-            }
+            renderAppSection('jobs');
             break;
-
         case 'estimation':
-            if (metadata.action === 'estimation_completed' || metadata.action === 'estimation_submitted_confirmation') {
-                renderAppSection('my-estimations');
-            } else {
-                renderAppSection('dashboard');
-            }
+            renderAppSection('my-estimations');
             break;
-
         case 'profile':
-            if (metadata.action === 'profile_approved') {
-                renderAppSection('dashboard');
-            } else if (metadata.action === 'profile_rejected') {
-                renderAppSection('profile-completion');
-            } else {
-                renderAppSection('settings');
-            }
+            if (metadata.action === 'profile_rejected') renderAppSection('profile-completion');
+            else renderAppSection('settings');
             break;
-
         default:
             renderAppSection('dashboard');
             break;
     }
-
-    // Close notification panel
     const panel = document.getElementById('notification-panel');
-    if (panel) {
-        panel.classList.remove('active');
-    }
+    if (panel) panel.classList.remove('active');
 }
 
-
-// Enhanced mark as read with server sync
 async function markNotificationAsRead(notificationId) {
     try {
-        // Update local state immediately for better UX
         const notification = notificationState.notifications.find(n => n.id === notificationId);
         if (notification && !notification.isRead && !notification.read) {
             notification.isRead = true;
             notification.read = true;
-            notification.readAt = new Date().toISOString();
-
-            // Update counts
-            if (notificationState.unreadCount > 0) {
-                notificationState.unreadCount--;
-            }
-
-            // Update UI immediately
+            if (notificationState.unreadCount > 0) notificationState.unreadCount--;
             updateNotificationBadge();
             renderNotificationPanel();
             saveNotificationsToStorage();
         }
-
-        // Sync with server (don't wait for it)
-        apiCall(`/notifications/${notificationId}/read`, 'PATCH').catch(error => {
-            console.warn('Failed to sync read status with server:', error);
-        });
+        apiCall(`/notifications/${notificationId}/read`, 'PATCH').catch(e => console.warn('Failed to sync read status:', e));
     } catch (error) {
         console.error('Error marking notification as read:', error);
     }
 }
 
-
-// Enhanced mark all as read
 async function markAllAsRead() {
     try {
-        // Update local state
         let hasUnread = false;
         notificationState.notifications.forEach(n => {
             if (!n.isRead && !n.read) {
-                n.isRead = true;
-                n.read = true;
-                n.readAt = new Date().toISOString();
-                hasUnread = true;
+                n.isRead = true; n.read = true; hasUnread = true;
             }
         });
-
         if (hasUnread) {
             notificationState.unreadCount = 0;
             updateNotificationBadge();
             renderNotificationPanel();
             saveNotificationsToStorage();
         }
-
-        // Sync with server
         await apiCall('/notifications/mark-all-read', 'POST');
         showNotification('All notifications marked as read.', 'success');
     } catch (error) {
@@ -826,18 +628,13 @@ async function markAllAsRead() {
     }
 }
 
-
-// Enhanced notification badge with animations
 function updateNotificationBadge() {
     const badge = document.getElementById('notification-badge');
     if (badge) {
         const unreadCount = notificationState.unreadCount;
-
         if (unreadCount > 0) {
             badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
             badge.style.display = 'flex';
-
-            // Add pulse animation for new notifications
             if (!badge.classList.contains('pulse')) {
                 badge.classList.add('pulse');
                 setTimeout(() => badge.classList.remove('pulse'), 2000);
@@ -849,31 +646,14 @@ function updateNotificationBadge() {
     }
 }
 
-
-// ========================================
-// NOTIFICATION POLLING & LIFECYCLE
-// ========================================
-
-// Enhanced notification polling with better error handling
 function startNotificationPolling() {
-    // Clear any existing interval
-    if (notificationState.pollingInterval) {
-        clearInterval(notificationState.pollingInterval);
-    }
-
-    // Initial fetch
+    if (notificationState.pollingInterval) clearInterval(notificationState.pollingInterval);
     fetchNotifications();
-
-    // Set up polling every 20 seconds
     notificationState.pollingInterval = setInterval(() => {
-        if (appState.currentUser) {
-            fetchNotifications();
-        } else {
-            stopNotificationPolling();
-        }
-    }, 20000); // 20 seconds
-
-    console.log('🔔 Notification polling started (20 second intervals)');
+        if (appState.currentUser) fetchNotifications();
+        else stopNotificationPolling();
+    }, 20000);
+    console.log('🔔 Notification polling started');
 }
 
 function stopNotificationPolling() {
@@ -884,31 +664,17 @@ function stopNotificationPolling() {
     }
 }
 
-
-// Enhanced notification panel toggle
 async function toggleNotificationPanel(event) {
     event.stopPropagation();
-
     const panel = document.getElementById('notification-panel');
     if (!panel) return;
-
     const isActive = panel.classList.toggle('active');
-
     if (isActive) {
-        // Show loading state if no notifications
         const panelList = document.getElementById('notification-panel-list');
         if (panelList && notificationState.notifications.length === 0) {
-            panelList.innerHTML = `
-                <div class="notification-loading-state">
-                    <div class="spinner"></div>
-                    <p>Loading notifications...</p>
-                </div>`;
+            panelList.innerHTML = `<div class="notification-loading-state"><div class="spinner"></div><p>Loading notifications...</p></div>`;
         }
-
-        // Fetch fresh notifications
         await fetchNotifications();
-
-        // Mark unseen notifications as seen
         if (notificationState.unseenCount > 0) {
             notificationState.unseenCount = 0;
             saveNotificationsToStorage();
@@ -916,170 +682,66 @@ async function toggleNotificationPanel(event) {
     }
 }
 
-
-// ========================================
-// NOTIFICATION SYSTEM INITIALIZATION
-// ========================================
-
-// Initialize the complete notification system
 function initializeNotificationSystem() {
     console.log('🚀 Initializing notification system...');
-
-    // Load stored notifications first
     loadStoredNotifications();
-
-    // If we have stored notifications, show them immediately
     if (notificationState.notifications.length > 0) {
         appState.notifications = notificationState.notifications;
         renderNotificationPanel();
         updateNotificationBadge();
-        console.log(`📱 Loaded ${notificationState.notifications.length} stored notifications`);
     }
-
-    // Start polling for new notifications if user is logged in
-    if (appState.currentUser) {
-        startNotificationPolling();
-    }
-
-    // Set up event listeners
+    if (appState.currentUser) startNotificationPolling();
     setupNotificationEventListeners();
-
     console.log('✅ Notification system initialized');
 }
 
-// Set up event listeners for notification system
 function setupNotificationEventListeners() {
-    // Notification bell click handler
-    const notificationBell = document.getElementById('notification-bell-container');
-    if (notificationBell) {
-        notificationBell.addEventListener('click', toggleNotificationPanel);
-    }
-
-    // Clear all notifications button
+    const bell = document.getElementById('notification-bell-container');
+    if (bell) bell.addEventListener('click', toggleNotificationPanel);
     const clearBtn = document.getElementById('clear-notifications-btn');
-    if (clearBtn) {
-        clearBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            markAllAsRead();
-        });
-    }
-
-    // Close panel when clicking outside
+    if (clearBtn) clearBtn.addEventListener('click', (e) => { e.stopPropagation(); markAllAsRead(); });
     document.addEventListener('click', (event) => {
         const panel = document.getElementById('notification-panel');
         const bellContainer = document.getElementById('notification-bell-container');
-
-        if (panel && bellContainer &&
-            !bellContainer.contains(event.target) &&
-            !panel.contains(event.target)) {
+        if (panel && bellContainer && !bellContainer.contains(event.target) && !panel.contains(event.target)) {
             panel.classList.remove('active');
         }
     });
 }
 
-// ========================================
-// NOTIFICATION SYSTEM CLEANUP
-// ========================================
-
-// Clean up notification system on logout
 function cleanupNotificationSystem() {
     stopNotificationPolling();
-
-    // Save final state before cleanup
-    if (notificationState.notifications.length > 0) {
-        saveNotificationsToStorage();
-    }
-
-    // Clear state
+    if (notificationState.notifications.length > 0) saveNotificationsToStorage();
     notificationState.notifications = [];
     notificationState.unreadCount = 0;
     notificationState.unseenCount = 0;
     appState.notifications = [];
-
-    // Update UI
     updateNotificationBadge();
-
     const panelList = document.getElementById('notification-panel-list');
-    if (panelList) {
-        panelList.innerHTML = `
-            <div class="notification-empty-state">
-                <i class="fas fa-bell-slash"></i>
-                <p>No notifications</p>
-                <small>Sign in to see your notifications</small>
-            </div>`;
-    }
-
+    if (panelList) panelList.innerHTML = `<div class="notification-empty-state"><i class="fas fa-bell-slash"></i><p>No notifications</p><small>Sign in to see your notifications</small></div>`;
     console.log('🧹 Notification system cleaned up');
 }
 
-// ========================================
-// UTILITY FUNCTIONS
-// ========================================
-
-// Add a local notification (for immediate feedback)
 function addLocalNotification(title, message, type = 'info', metadata = {}) {
     const newNotification = {
-        id: `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        title,
-        message,
-        type,
-        metadata,
-        createdAt: new Date().toISOString(),
-        isRead: false,
-        read: false,
-        seen: false,
-        isLocal: true
+        id: `local_${Date.now()}`, title, message, type, metadata,
+        createdAt: new Date().toISOString(), isRead: false, read: false,
     };
-
-    // Add to state
     notificationState.notifications.unshift(newNotification);
     appState.notifications.unshift(newNotification);
     notificationState.unreadCount++;
-
-    // Maintain size limits
     if (notificationState.notifications.length > notificationState.maxStoredNotifications) {
         notificationState.notifications = notificationState.notifications.slice(0, notificationState.maxStoredNotifications);
     }
-
-    // Save and update UI
     saveNotificationsToStorage();
     renderNotificationPanel();
     updateNotificationBadge();
-
-    // Also show toast
     showNotification(message, type);
-
-    console.log('📱 Added local notification:', newNotification);
-}
-
-// Clear old notifications (maintenance function)
-function clearOldNotifications(daysToKeep = 30) {
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
-
-    const originalCount = notificationState.notifications.length;
-
-    notificationState.notifications = notificationState.notifications.filter(n => {
-        const notificationDate = new Date(n.createdAt);
-        return notificationDate > cutoffDate;
-    });
-
-    appState.notifications = notificationState.notifications;
-
-    if (originalCount !== notificationState.notifications.length) {
-        saveNotificationsToStorage();
-        renderNotificationPanel();
-        updateNotificationBadge();
-
-        const clearedCount = originalCount - notificationState.notifications.length;
-        console.log(`🗑️ Cleared ${clearedCount} old notifications`);
-    }
 }
 
 // ========================================
 // END: NEW NOTIFICATION SYSTEM
 // ========================================
-
 
 async function loadUserQuotes() {
     if (appState.currentUser.type !== 'designer') return;
@@ -1100,7 +762,6 @@ async function loadUserQuotes() {
 // --- ENHANCED ESTIMATION SYSTEM ---
 async function loadUserEstimations() {
     if (!appState.currentUser) return;
-
     try {
         const response = await apiCall(`/estimation/contractor/${appState.currentUser.email}`, 'GET');
         appState.myEstimations = response.estimations || [];
@@ -1116,10 +777,8 @@ async function fetchAndRenderMyEstimations() {
         <div id="dynamic-feature-header" class="dynamic-feature-header"></div>
         <div class="section-header modern-header estimates-header">
             <div class="header-content">
-                <div class="header-main">
-                    <h2><i class="fas fa-chart-line"></i> My AI Estimation Requests</h2>
-                    <p class="header-subtitle">Track your cost estimation submissions, view AI analysis results, and manage project estimates</p>
-                </div>
+                <h2><i class="fas fa-chart-line"></i> My AI Estimation Requests</h2>
+                <p class="header-subtitle">Track your cost estimation submissions, view AI analysis results, and manage project estimates</p>
             </div>
             <div class="header-actions">
                 <button class="btn btn-primary btn-new-estimate" onclick="renderAppSection('estimation-tool')">
@@ -1130,10 +789,7 @@ async function fetchAndRenderMyEstimations() {
         <div class="estimates-dashboard">
             <div id="estimations-list" class="estimations-grid-professional"></div>
             <div id="estimates-loading" class="estimates-loading" style="display: none;">
-                <div class="loading-animation">
-                    <div class="spinner-professional"></div>
-                    <p>Loading your estimation requests...</p>
-                </div>
+                <div class="loading-animation"><div class="spinner-professional"></div><p>Loading your estimation requests...</p></div>
             </div>
         </div>`;
     updateDynamicHeader();
@@ -1141,9 +797,7 @@ async function fetchAndRenderMyEstimations() {
     try {
         await loadUserEstimations();
         renderEstimatesGrid();
-        if (appState.myEstimations.length === 0) {
-            showEmptyEstimatesState();
-        }
+        if (appState.myEstimations.length === 0) showEmptyEstimatesState();
     } catch (error) {
         showEstimatesError();
     } finally {
@@ -1154,52 +808,35 @@ async function fetchAndRenderMyEstimations() {
 function renderEstimatesGrid(filteredEstimates = null) {
     const listContainer = document.getElementById('estimations-list');
     const estimates = filteredEstimates || appState.myEstimations;
-
     if (estimates.length === 0) {
-        if (filteredEstimates !== null) {
-            listContainer.innerHTML = `
-                <div class="no-results-state">
-                    <i class="fas fa-search"></i>
-                    <h3>No estimates found</h3>
-                    <p>Try adjusting your search or filter criteria</p>
-                </div>`;
-        }
+        if (filteredEstimates !== null) listContainer.innerHTML = `<div class="no-results-state"><i class="fas fa-search"></i><h3>No estimates found</h3><p>Try adjusting your search or filter criteria</p></div>`;
         return;
     }
-
-    listContainer.innerHTML = estimates.map(estimation => {
-        const statusConfig = getEstimationStatusConfig(estimation.status);
-        const createdDate = formatEstimationDate(estimation.createdAt);
-        const hasFiles = estimation.uploadedFiles && estimation.uploadedFiles.length > 0;
-        const hasResult = estimation.resultFile;
-        const progress = getEstimationProgress(estimation.status);
+    listContainer.innerHTML = estimates.map(est => {
+        const statusConfig = getEstimationStatusConfig(est.status);
+        const createdDate = formatEstimationDate(est.createdAt);
+        const hasFiles = est.uploadedFiles && est.uploadedFiles.length > 0;
+        const hasResult = est.resultFile;
+        const progress = getEstimationProgress(est.status);
+        const canEdit = est.status === 'pending';
         return `
-            <div class="estimation-card-professional" data-status="${estimation.status}" data-title="${estimation.projectTitle.toLowerCase()}">
+            <div class="estimation-card-professional" data-status="${est.status}" data-title="${est.projectTitle.toLowerCase()}">
                 <div class="estimation-card-header">
                     <div class="estimation-title-section">
-                        <h3 class="estimation-title">${estimation.projectTitle}</h3>
+                        <h3 class="estimation-title">${est.projectTitle}</h3>
                         <p class="estimation-meta">Submitted: ${createdDate}</p>
                     </div>
-                    <span class="estimation-status-badge ${estimation.status}">
-                        <i class="fas ${statusConfig.icon}"></i> ${statusConfig.label}
-                    </span>
+                    <span class="estimation-status-badge ${est.status}"><i class="fas ${statusConfig.icon}"></i> ${statusConfig.label}</span>
                 </div>
-                <div class="estimation-progress-bar">
-                    <div class="progress-bar-fill ${estimation.status}" style="width: ${progress}%"></div>
-                </div>
-                <div class="estimation-description">
-                    <p>${estimation.description.length > 150 ? estimation.description.substring(0, 150) + '...' : estimation.description}</p>
-                </div>
-                ${estimation.estimatedAmount ? `
-                    <div class="estimation-amount-section">
-                        <span class="amount-label">Estimated Cost</span>
-                        <span class="amount-value">$${Number(estimation.estimatedAmount).toLocaleString()}</span>
-                    </div>
-                ` : ''}
+                <div class="estimation-progress-bar"><div class="progress-bar-fill ${est.status}" style="width: ${progress}%"></div></div>
+                <div class="estimation-description"><p>${est.description.length > 150 ? est.description.substring(0, 150) + '...' : est.description}</p></div>
+                ${est.estimatedAmount ? `<div class="estimation-amount-section"><span class="amount-label">Estimated Cost</span><span class="amount-value">$${Number(est.estimatedAmount).toLocaleString()}</span></div>` : ''}
                 <div class="estimation-actions">
-                    ${hasFiles ? `<button class="btn btn-outline btn-sm" onclick="viewEstimationFiles('${estimation._id}')"><i class="fas fa-folder-open"></i> View Files</button>` : ''}
-                    ${hasResult ? `<button class="btn btn-success btn-sm" onclick="downloadEstimationResult('${estimation._id}')"><i class="fas fa-download"></i> Download Result</button>` : ''}
-                    <button class="btn btn-outline btn-sm" onclick="viewEstimationDetails('${estimation._id}')"><i class="fas fa-eye"></i> View Details</button>
+                    ${hasFiles ? `<button class="btn btn-outline btn-sm" onclick="viewEstimationFiles('${est._id}')"><i class="fas fa-folder-open"></i> View Files</button>` : ''}
+                    ${hasResult ? `<button class="btn btn-success btn-sm" onclick="downloadEstimationResult('${est._id}')"><i class="fas fa-download"></i> Download Result</button>` : ''}
+                    <button class="btn btn-outline btn-sm" onclick="viewEstimationDetails('${est._id}')"><i class="fas fa-eye"></i> Details</button>
+                    ${canEdit ? `<button class="btn btn-outline btn-sm" onclick="editEstimation('${est._id}')"><i class="fas fa-edit"></i> Edit</button>` : ''}
+                    <button class="btn btn-danger btn-sm" onclick="deleteEstimation('${est._id}')"><i class="fas fa-trash"></i> Delete</button>
                 </div>
             </div>`;
     }).join('');
@@ -1224,27 +861,11 @@ function showEstimatesLoading(show) {
 }
 
 function showEmptyEstimatesState() {
-    const listContainer = document.getElementById('estimations-list');
-    listContainer.innerHTML = `
-        <div class="empty-state premium-empty">
-            <div class="empty-icon"><i class="fas fa-calculator"></i></div>
-            <h3>Start Your First AI Estimation</h3>
-            <p>Upload your project drawings to get accurate cost estimates from our AI-powered system.</p>
-            <button class="btn btn-primary btn-large" onclick="renderAppSection('estimation-tool')">
-                <i class="fas fa-rocket"></i> Create First Estimation
-            </button>
-        </div>`;
+    document.getElementById('estimations-list').innerHTML = `<div class="empty-state premium-empty"><div class="empty-icon"><i class="fas fa-calculator"></i></div><h3>Start Your First AI Estimation</h3><p>Upload your project drawings to get accurate cost estimates from our AI-powered system.</p><button class="btn btn-primary btn-large" onclick="renderAppSection('estimation-tool')"><i class="fas fa-rocket"></i> Create First Estimation</button></div>`;
 }
 
 function showEstimatesError() {
-    const listContainer = document.getElementById('estimations-list');
-    listContainer.innerHTML = `
-        <div class="error-state premium-error">
-            <div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div>
-            <h3>Unable to Load Estimations</h3>
-            <p>We're having trouble loading your requests. Please try again.</p>
-            <button class="btn btn-primary" onclick="fetchAndRenderMyEstimations()"><i class="fas fa-redo"></i> Try Again</button>
-        </div>`;
+    document.getElementById('estimations-list').innerHTML = `<div class="error-state premium-error"><div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div><h3>Unable to Load Estimations</h3><p>We're having trouble loading your requests. Please try again.</p><button class="btn btn-primary" onclick="fetchAndRenderMyEstimations()"><i class="fas fa-redo"></i> Try Again</button></div>`;
 }
 
 function viewEstimationDetails(estimationId) {
@@ -1252,27 +873,67 @@ function viewEstimationDetails(estimationId) {
     if (!estimation) return;
     const statusConfig = getEstimationStatusConfig(estimation.status);
     const content = `
-        <div class="modal-header estimation-modal-header">
-            <h3>${estimation.projectTitle}</h3>
-            <p class="modal-subtitle">Estimation Request Details</p>
-        </div>
+        <div class="modal-header estimation-modal-header"><h3>${estimation.projectTitle}</h3><p class="modal-subtitle">Estimation Request Details</p></div>
         <div class="estimation-details-content">
             <p><strong>Status:</strong> <span class="status-${estimation.status}">${statusConfig.label}</span></p>
             <p><strong>Description:</strong> ${estimation.description}</p>
             ${estimation.estimatedAmount ? `<p><strong>Estimated Cost:</strong> $${Number(estimation.estimatedAmount).toLocaleString()}</p>` : ''}
-            <div class="modal-actions">
-                <button class="btn btn-secondary" onclick="closeModal()">Close</button>
-            </div>
+            <div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Close</button></div>
         </div>`;
     showGenericModal(content, 'max-width: 800px;');
 }
 
+async function editEstimation(estimationId) {
+    try {
+        const est = appState.myEstimations.find(e => e._id === estimationId);
+        if (!est) throw new Error('Estimation not found.');
+
+        const content = `
+            <div class="modal-header premium-modal-header"><h3><i class="fas fa-edit"></i> Edit Estimation Request</h3></div>
+            <form id="edit-estimation-form" class="premium-form">
+                <input type="hidden" name="estimationId" value="${est._id}">
+                <div class="form-group"><label class="form-label"><i class="fas fa-heading"></i> Project Title</label><input type="text" class="form-input" name="projectTitle" value="${est.projectTitle}" required></div>
+                <div class="form-group"><label class="form-label"><i class="fas fa-file-alt"></i> Description</label><textarea class="form-textarea" name="description" required>${est.description}</textarea></div>
+                <div class="form-actions"><button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button><button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Update Request</button></div>
+            </form>`;
+        showGenericModal(content, 'max-width: 600px;');
+        document.getElementById('edit-estimation-form').addEventListener('submit', handleEstimationEdit);
+    } catch (error) {
+        addLocalNotification('Error', 'Failed to load estimation details for editing.', 'error');
+    }
+}
+
+async function handleEstimationEdit(event) {
+    event.preventDefault();
+    const form = event.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<div class="btn-spinner"></div> Updating...';
+    submitBtn.disabled = true;
+    try {
+        const estimationId = form.estimationId.value;
+        const updatedData = {
+            projectTitle: form.projectTitle.value,
+            description: form.description.value,
+        };
+        await apiCall(`/estimation/${estimationId}`, 'PUT', updatedData, 'Estimation request updated successfully!');
+        addLocalNotification('Updated', 'Your estimation request has been updated.', 'success');
+        closeModal();
+        fetchAndRenderMyEstimations();
+    } catch (error) {
+        addLocalNotification('Error', 'Failed to update estimation request.', 'error');
+    } finally {
+        if (submitBtn) {
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        }
+    }
+}
+
 function getEstimationStatusConfig(status) {
     const configs = {
-        'pending': { icon: 'fa-clock', label: 'Under Review' },
-        'in-progress': { icon: 'fa-cogs', label: 'Processing' },
-        'completed': { icon: 'fa-check-circle', label: 'Complete' },
-        'rejected': { icon: 'fa-times-circle', label: 'Rejected' },
+        'pending': { icon: 'fa-clock', label: 'Under Review' }, 'in-progress': { icon: 'fa-cogs', label: 'Processing' },
+        'completed': { icon: 'fa-check-circle', label: 'Complete' }, 'rejected': { icon: 'fa-times-circle', label: 'Rejected' },
         'cancelled': { icon: 'fa-ban', label: 'Cancelled' }
     };
     return configs[status] || { icon: 'fa-question-circle', label: status };
@@ -1286,7 +947,7 @@ async function viewEstimationFiles(estimationId) {
         const content = `
             <div class="modal-header"><h3><i class="fas fa-folder-open"></i> Uploaded Project Files</h3><p class="modal-subtitle">Files submitted with your estimation request</p></div>
             <div class="files-list premium-files">
-                ${files.length === 0 ? `<div class="empty-state"><i class="fas fa-file"></i><p>No files found for this estimation.</p></div>` : files.map(file => `
+                ${files.length === 0 ? `<div class="empty-state"><i class="fas fa-file"></i><p>No files found.</p></div>` : files.map(file => `
                     <div class="file-item">
                         <div class="file-info"><i class="fas fa-file-pdf"></i><div class="file-details"><h4>${file.name}</h4><span class="file-date">Uploaded: ${new Date(file.uploadedAt).toLocaleDateString()}</span></div></div>
                         <a href="${file.url}" target="_blank" class="btn btn-outline btn-sm"><i class="fas fa-external-link-alt"></i> View</a>
@@ -1303,7 +964,7 @@ async function downloadEstimationResult(estimationId) {
         addLocalNotification('Download', 'Preparing download...', 'info');
         const response = await apiCall(`/estimation/${estimationId}/result`, 'GET');
         if (response.success && response.resultFile) {
-            addLocalNotification('Success', 'Your estimation result is ready for download.', 'success');
+            addLocalNotification('Success', 'Your estimation result is ready.', 'success');
             window.open(response.resultFile.url, '_blank');
             setTimeout(() => fetchNotifications(), 1000);
         }
@@ -1313,13 +974,13 @@ async function downloadEstimationResult(estimationId) {
 }
 
 async function deleteEstimation(estimationId) {
-    if (confirm('Are you sure you want to delete this estimation request? This action cannot be undone.')) {
+    if (confirm('Are you sure you want to delete this estimation request? This cannot be undone.')) {
         try {
             await apiCall(`/estimation/${estimationId}`, 'DELETE', null, 'Estimation deleted successfully');
-            addLocalNotification('Deleted', 'Estimation request has been deleted successfully.', 'info');
+            addLocalNotification('Deleted', 'Estimation request has been deleted.', 'info');
             fetchAndRenderMyEstimations();
         } catch (error) {
-            addLocalNotification('Error', 'Failed to delete estimation request. Please try again.', 'error');
+            addLocalNotification('Error', 'Failed to delete estimation request.', 'error');
         }
     }
 }
@@ -1328,46 +989,38 @@ async function deleteEstimation(estimationId) {
 async function fetchAndRenderJobs(loadMore = false) {
     const jobsListContainer = document.getElementById('jobs-list');
     const loadMoreContainer = document.getElementById('load-more-container');
-
     if (!loadMore) {
         appState.jobs = [];
         appState.jobsPage = 1;
         appState.hasMoreJobs = true;
         if (jobsListContainer) jobsListContainer.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Loading projects...</p></div>';
     }
-
     if (!jobsListContainer || !appState.hasMoreJobs) {
-        if(loadMoreContainer) loadMoreContainer.innerHTML = '';
+        if (loadMoreContainer) loadMoreContainer.innerHTML = '';
         return;
     }
-
     const user = appState.currentUser;
     const endpoint = user.type === 'designer'
         ? `/jobs?page=${appState.jobsPage}&limit=6`
         : `/jobs/user/${user.id}`;
-
-    if(loadMoreContainer) loadMoreContainer.innerHTML = `<button class="btn btn-loading" disabled><div class="btn-spinner"></div>Loading...</button>`;
-
+    if (loadMoreContainer) loadMoreContainer.innerHTML = `<button class="btn btn-loading" disabled><div class="btn-spinner"></div>Loading...</button>`;
     try {
         const response = await apiCall(endpoint, 'GET');
         const newJobs = response.data || [];
         appState.jobs.push(...newJobs);
-
         if (user.type === 'designer') {
             appState.hasMoreJobs = response.pagination.hasNext;
             appState.jobsPage += 1;
         } else {
             appState.hasMoreJobs = false;
         }
-
         if (appState.jobs.length === 0) {
             jobsListContainer.innerHTML = user.type === 'designer'
-                ? `<div class="empty-state premium-empty"><div class="empty-icon"><i class="fas fa-briefcase"></i></div><h3>No Projects Available</h3><p>Check back later for new opportunities or try adjusting your search criteria.</p></div>`
-                : `<div class="empty-state premium-empty"><div class="empty-icon"><i class="fas fa-plus-circle"></i></div><h3>You haven't posted any projects yet</h3><p>Ready to get started? Post your first project and connect with talented professionals.</p><button class="btn btn-primary" onclick="renderAppSection('post-job')">Post Your First Project</button></div>`;
+                ? `<div class="empty-state premium-empty"><div class="empty-icon"><i class="fas fa-briefcase"></i></div><h3>No Projects Available</h3><p>Check back later for new opportunities.</p></div>`
+                : `<div class="empty-state premium-empty"><div class="empty-icon"><i class="fas fa-plus-circle"></i></div><h3>You haven't posted any projects yet</h3><p>Post your first project and connect with talented professionals.</p><button class="btn btn-primary" onclick="renderAppSection('post-job')">Post Your First Project</button></div>`;
             if (loadMoreContainer) loadMoreContainer.innerHTML = '';
             return;
         }
-
         const jobsHTML = appState.jobs.map(job => {
             const hasUserQuoted = appState.userSubmittedQuotes.has(job.id);
             const canQuote = user.type === 'designer' && job.status === 'open' && !hasUserQuoted;
@@ -1376,21 +1029,21 @@ async function fetchAndRenderJobs(loadMore = false) {
                 : user.type === 'designer' && hasUserQuoted
                 ? `<button class="btn btn-outline btn-submitted" disabled><i class="fas fa-check-circle"></i> Quote Submitted</button>`
                 : user.type === 'designer' && job.status === 'assigned'
-                ? `<span class="job-status-badge assigned"><i class="fas fa-user-check"></i> Job Assigned</span>`
-                : '';
-            const actions = user.type === 'designer' ? quoteButton : `<div class="job-actions-group"><button class="btn btn-outline" onclick="viewQuotes('${job.id}')"><i class="fas fa-eye"></i> View Quotes (${job.quotesCount || 0})</button><button class="btn btn-danger" onclick="deleteJob('${job.id}')"><i class="fas fa-trash"></i> Delete</button></div>`;
-            const statusBadge = job.status !== 'open'
-                ? `<span class="job-status-badge ${job.status}"><i class="fas ${job.status === 'assigned' ? 'fa-user-check' : 'fa-check-circle'}"></i> ${job.status.charAt(0).toUpperCase() + job.status.slice(1)}</span>`
-                : `<span class="job-status-badge open"><i class="fas fa-clock"></i> Open</span>`;
-            const attachmentLink = job.attachment ? `<div class="job-attachment"><i class="fas fa-paperclip"></i><a href="${job.attachment}" target="_blank" rel="noopener noreferrer">View Attachment</a></div>` : '';
+                ? `<span class="job-status-badge assigned"><i class="fas fa-user-check"></i> Job Assigned</span>` : '';
+            const actions = user.type === 'designer' ? quoteButton : `<div class="job-actions-group"><button class="btn btn-outline" onclick="viewQuotes('${job.id}')"><i class="fas fa-eye"></i> View Quotes (${job.quotesCount || 0})</button><button class="btn btn-outline" onclick="editJob('${job.id}')"><i class="fas fa-edit"></i> Edit</button><button class="btn btn-danger" onclick="deleteJob('${job.id}')"><i class="fas fa-trash"></i> Delete</button></div>`;
+            const statusBadge = `<span class="job-status-badge ${job.status}"><i class="fas ${job.status === 'assigned' ? 'fa-user-check' : 'fa-check-circle'}"></i> ${job.status.charAt(0).toUpperCase() + job.status.slice(1)}</span>`;
+            const attachmentLinks = job.attachments && job.attachments.length > 0 ? `
+                <div class="job-attachments">
+                    <i class="fas fa-paperclip"></i>
+                    <span>Attachments (${job.attachments.length}):</span>
+                    <div class="attachment-links">
+                        ${job.attachments.map((attachment, index) => `<a href="${attachment.url}" target="_blank" rel="noopener noreferrer" class="attachment-link"><i class="fas fa-file"></i> ${attachment.name || `File ${index + 1}`}</a>`).join('')}
+                    </div>
+                </div>` : '';
             const skillsDisplay = job.skills?.length > 0 ? `<div class="job-skills"><i class="fas fa-tools"></i><span>Skills:</span><div class="skills-tags">${job.skills.map(skill => `<span class="skill-tag">${skill}</span>`).join('')}</div></div>` : '';
-
             return `
                 <div class="job-card premium-card" data-job-id="${job.id}">
-                    <div class="job-header">
-                        <div class="job-title-section"><h3 class="job-title">${job.title}</h3>${statusBadge}</div>
-                        <div class="job-budget-section"><span class="budget-label">Budget</span><span class="budget-amount">${job.budget}</span></div>
-                    </div>
+                    <div class="job-header"><div class="job-title-section"><h3 class="job-title">${job.title}</h3>${statusBadge}</div><div class="job-budget-section"><span class="budget-label">Budget</span><span class="budget-amount">${job.budget}</span></div></div>
                     <div class="job-meta">
                         <div class="job-meta-item"><i class="fas fa-user"></i><span>Posted by: <strong>${job.posterName || 'N/A'}</strong></span></div>
                         ${job.assignedToName ? `<div class="job-meta-item"><i class="fas fa-user-check"></i><span>Assigned to: <strong>${job.assignedToName}</strong></span></div>` : ''}
@@ -1398,81 +1051,133 @@ async function fetchAndRenderJobs(loadMore = false) {
                     </div>
                     <div class="job-description"><p>${job.description}</p></div>
                     ${skillsDisplay}
-                    ${job.link ? `<div class="job-link"><i class="fas fa-external-link-alt"></i><a href="${job.link}" target="_blank" rel="noopener noreferrer">View Project Link</a></div>` : ''}
-                    ${attachmentLink}
+                    ${job.link ? `<div class="job-link"><i class="fas fa-external-link-alt"></i><a href="${job.link}" target="_blank">Project Link</a></div>` : ''}
+                    ${attachmentLinks}
                     <div class="job-actions">${actions}</div>
                 </div>`;
         }).join('');
-
-        if(jobsListContainer) jobsListContainer.innerHTML = jobsHTML;
-
+        if (jobsListContainer) jobsListContainer.innerHTML = jobsHTML;
         if (loadMoreContainer) {
             if (user.type === 'designer' && appState.hasMoreJobs) {
-                loadMoreContainer.innerHTML = `<button class="btn btn-outline btn-load-more" id="load-more-btn"><i class="fas fa-chevron-down"></i> Load More Projects</button>`;
+                loadMoreContainer.innerHTML = `<button class="btn btn-outline btn-load-more" id="load-more-btn"><i class="fas fa-chevron-down"></i> Load More</button>`;
                 document.getElementById('load-more-btn').addEventListener('click', () => fetchAndRenderJobs(true));
             } else {
                 loadMoreContainer.innerHTML = '';
             }
         }
+    } catch (error) {
+        if (jobsListContainer) jobsListContainer.innerHTML = `<div class="error-state premium-error"><div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div><h3>Error Loading Projects</h3><p>Please try again.</p><button class="btn btn-primary" onclick="fetchAndRenderJobs()">Retry</button></div>`;
+    }
+}
 
-    } catch(error) {
-        if(jobsListContainer) {
-            jobsListContainer.innerHTML = `<div class="error-state premium-error"><div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div><h3>Error Loading Projects</h3><p>We encountered an issue loading the projects. Please try again.</p><button class="btn btn-primary" onclick="fetchAndRenderJobs()">Retry</button></div>`;
+async function editJob(jobId) {
+    try {
+        const response = await apiCall(`/jobs/${jobId}`, 'GET');
+        const job = response.data;
+        const deadline = job.deadline ? new Date(job.deadline).toISOString().split('T')[0] : '';
+        const skills = job.skills ? job.skills.join(', ') : '';
+        const content = `
+            <div class="modal-header premium-modal-header"><h3><i class="fas fa-edit"></i> Edit Your Project</h3></div>
+            <form id="edit-job-form" class="premium-form">
+                <input type="hidden" name="jobId" value="${job.id}">
+                <div class="form-group"><label class="form-label"><i class="fas fa-heading"></i> Project Title</label><input type="text" class="form-input" name="title" value="${job.title}" required></div>
+                <div class="form-row">
+                    <div class="form-group"><label class="form-label"><i class="fas fa-dollar-sign"></i> Budget Range</label><input type="text" class="form-input" name="budget" value="${job.budget}" required></div>
+                    <div class="form-group"><label class="form-label"><i class="fas fa-calendar-alt"></i> Deadline</label><input type="date" class="form-input" name="deadline" value="${deadline}" required></div>
+                </div>
+                <div class="form-group"><label class="form-label"><i class="fas fa-tools"></i> Skills</label><input type="text" class="form-input" name="skills" value="${skills}"></div>
+                <div class="form-group"><label class="form-label"><i class="fas fa-file-alt"></i> Description</label><textarea class="form-textarea" name="description" required>${job.description}</textarea></div>
+                <div class="form-actions"><button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button><button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Update Project</button></div>
+            </form>`;
+        showGenericModal(content, 'max-width: 600px;');
+        document.getElementById('edit-job-form').addEventListener('submit', handleJobEdit);
+    } catch (error) {
+        addLocalNotification('Error', 'Failed to load project details for editing.', 'error');
+    }
+}
+
+async function handleJobEdit(event) {
+    event.preventDefault();
+    const form = event.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<div class="btn-spinner"></div> Updating...';
+    submitBtn.disabled = true;
+    try {
+        const jobId = form.jobId.value;
+        const updatedData = {
+            title: form.title.value,
+            description: form.description.value,
+            budget: form.budget.value,
+            deadline: form.deadline.value,
+            skills: form.skills.value,
+        };
+        await apiCall(`/jobs/${jobId}`, 'PUT', updatedData, 'Project updated successfully!');
+        addLocalNotification('Updated', 'Your project has been updated successfully.', 'success');
+        closeModal();
+        fetchAndRenderJobs();
+    } catch (error) {
+        addLocalNotification('Error', 'Failed to update project. Please try again.', 'error');
+    } finally {
+        if (submitBtn) {
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
         }
     }
 }
+
 
 async function fetchAndRenderApprovedJobs() {
     const container = document.getElementById('app-container');
     container.innerHTML = `
         <div id="dynamic-feature-header" class="dynamic-feature-header"></div>
-        <div class="section-header modern-header"><div class="header-content"><h2><i class="fas fa-check-circle"></i> Approved Projects</h2><p class="header-subtitle">Manage your approved projects and communicate with designers</p></div></div>
+        <div class="section-header modern-header"><div class="header-content"><h2><i class="fas fa-check-circle"></i> Approved Projects</h2><p class="header-subtitle">Manage your approved projects and communicate</p></div></div>
         <div id="approved-jobs-list" class="jobs-grid"></div>`;
     updateDynamicHeader();
     const listContainer = document.getElementById('approved-jobs-list');
     listContainer.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Loading approved projects...</p></div>';
-
     try {
         const response = await apiCall(`/jobs/user/${appState.currentUser.id}`, 'GET');
-        const allJobs = response.data || [];
-        const approvedJobs = allJobs.filter(job => job.status === 'assigned');
+        const approvedJobs = (response.data || []).filter(job => job.status === 'assigned');
         appState.approvedJobs = approvedJobs;
-
         if (approvedJobs.length === 0) {
-            listContainer.innerHTML = `<div class="empty-state premium-empty"><div class="empty-icon"><i class="fas fa-clipboard-check"></i></div><h3>No Approved Projects</h3><p>Your approved projects will appear here once you accept quotes from designers.</p><button class="btn btn-primary" onclick="renderAppSection('jobs')">View My Projects</button></div>`;
+            listContainer.innerHTML = `<div class="empty-state premium-empty"><div class="empty-icon"><i class="fas fa-clipboard-check"></i></div><h3>No Approved Projects</h3><p>Your approved projects will appear here.</p><button class="btn btn-primary" onclick="renderAppSection('jobs')">View My Projects</button></div>`;
             return;
         }
-
         listContainer.innerHTML = approvedJobs.map(job => {
-            const attachmentLink = job.attachment ? `<div class="job-attachment"><i class="fas fa-paperclip"></i><a href="${job.attachment}" target="_blank" rel="noopener noreferrer">View Attachment</a></div>` : '';
+             const attachmentLinks = job.attachments && job.attachments.length > 0 ? `
+                <div class="job-attachments">
+                    <i class="fas fa-paperclip"></i>
+                    <span>Attachments (${job.attachments.length}):</span>
+                    <div class="attachment-links">
+                        ${job.attachments.map((attachment, index) => `<a href="${attachment.url}" target="_blank" rel="noopener noreferrer" class="attachment-link"><i class="fas fa-file"></i> ${attachment.name || `File ${index + 1}`}</a>`).join('')}
+                    </div>
+                </div>` : '';
             const skillsDisplay = job.skills?.length > 0 ? `<div class="job-skills"><i class="fas fa-tools"></i><span>Skills:</span><div class="skills-tags">${job.skills.map(skill => `<span class="skill-tag">${skill}</span>`).join('')}</div></div>` : '';
             return `
                 <div class="job-card premium-card approved-job">
-                    <div class="job-header">
-                        <div class="job-title-section"><h3 class="job-title">${job.title}</h3><span class="job-status-badge assigned"><i class="fas fa-user-check"></i> Assigned</span></div>
-                        <div class="approved-amount"><span class="amount-label">Approved Amount</span><span class="amount-value">${job.approvedAmount}</span></div>
-                    </div>
+                    <div class="job-header"><div class="job-title-section"><h3 class="job-title">${job.title}</h3><span class="job-status-badge assigned"><i class="fas fa-user-check"></i> Assigned</span></div><div class="approved-amount"><span class="amount-label">Amount</span><span class="amount-value">${job.approvedAmount}</span></div></div>
                     <div class="job-meta"><div class="job-meta-item"><i class="fas fa-user-cog"></i><span>Assigned to: <strong>${job.assignedToName}</strong></span></div></div>
                     <div class="job-description"><p>${job.description}</p></div>
                     ${skillsDisplay}
-                    ${job.link ? `<div class="job-link"><i class="fas fa-external-link-alt"></i><a href="${job.link}" target="_blank" rel="noopener noreferrer">View Project Link</a></div>` : ''}
-                    ${attachmentLink}
+                    ${job.link ? `<div class="job-link"><i class="fas fa-external-link-alt"></i><a href="${job.link}" target="_blank">Project Link</a></div>` : ''}
+                    ${attachmentLinks}
                     <div class="job-actions"><div class="job-actions-group"><button class="btn btn-primary" onclick="openConversation('${job.id}', '${job.assignedTo}')"><i class="fas fa-comments"></i> Message Designer</button><button class="btn btn-success" onclick="markJobCompleted('${job.id}')"><i class="fas fa-check-double"></i> Mark Completed</button></div></div>
                 </div>`;
         }).join('');
-    } catch(error) {
-        listContainer.innerHTML = `<div class="error-state premium-error"><div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div><h3>Error Loading Approved Projects</h3><p>Please try again later.</p><button class="btn btn-primary" onclick="fetchAndRenderApprovedJobs()">Retry</button></div>`;
+    } catch (error) {
+        listContainer.innerHTML = `<div class="error-state premium-error"><div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div><h3>Error Loading Approved Projects</h3><p>Please try again.</p><button class="btn btn-primary" onclick="fetchAndRenderApprovedJobs()">Retry</button></div>`;
     }
 }
 
 async function markJobCompleted(jobId) {
-    if (confirm('Are you sure you want to mark this job as completed? This action cannot be undone and will notify the designer.')) {
+    if (confirm('Are you sure you want to mark this job as completed?')) {
         try {
-            await apiCall(`/jobs/${jobId}`, 'PUT', { status: 'completed' }, 'Project marked as completed successfully!');
-            addLocalNotification('Completed', 'A project has been marked as completed! The designer has been notified.', 'job');
+            await apiCall(`/jobs/${jobId}`, 'PUT', { status: 'completed' }, 'Project marked as completed!');
+            addLocalNotification('Completed', 'Project marked as completed!', 'job');
             fetchAndRenderApprovedJobs();
         } catch (error) {
-            addLocalNotification('Error', 'Failed to mark job as completed. Please try again.', 'error');
+            addLocalNotification('Error', 'Failed to mark job as completed.', 'error');
         }
     }
 }
@@ -1481,45 +1186,33 @@ async function fetchAndRenderMyQuotes() {
     const container = document.getElementById('app-container');
     container.innerHTML = `
         <div id="dynamic-feature-header" class="dynamic-feature-header"></div>
-        <div class="section-header modern-header"><div class="header-content"><h2><i class="fas fa-file-invoice-dollar"></i> My Submitted Quotes</h2><p class="header-subtitle">Track your quote submissions and manage communications</p></div></div>
+        <div class="section-header modern-header"><div class="header-content"><h2><i class="fas fa-file-invoice-dollar"></i> My Submitted Quotes</h2><p class="header-subtitle">Track your quote submissions</p></div></div>
         <div id="my-quotes-list" class="jobs-grid"></div>`;
     updateDynamicHeader();
     const listContainer = document.getElementById('my-quotes-list');
     listContainer.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Loading your quotes...</p></div>';
-
     try {
         const response = await apiCall(`/quotes/user/${appState.currentUser.id}`, 'GET');
         const quotes = response.data || [];
         appState.myQuotes = quotes;
-
         if (quotes.length === 0) {
-            listContainer.innerHTML = `<div class="empty-state premium-empty"><div class="empty-icon"><i class="fas fa-file-invoice"></i></div><h3>No Quotes Submitted</h3><p>You haven't submitted any quotes yet. Browse available projects to get started.</p><button class="btn btn-primary" onclick="renderAppSection('jobs')">Find Projects</button></div>`;
+            listContainer.innerHTML = `<div class="empty-state premium-empty"><div class="empty-icon"><i class="fas fa-file-invoice"></i></div><h3>No Quotes Submitted</h3><p>You haven't submitted any quotes yet. Find projects to get started.</p><button class="btn btn-primary" onclick="renderAppSection('jobs')">Find Projects</button></div>`;
             return;
         }
-
         listContainer.innerHTML = quotes.map(quote => {
             const attachments = quote.attachments || [];
-            let attachmentLink = attachments.length > 0 ? `<div class="quote-attachment"><i class="fas fa-paperclip"></i><a href="${attachments[0]}" target="_blank" rel="noopener noreferrer">View Attachment</a></div>` : '';
+            let attachmentLink = attachments.length > 0 ? `<div class="quote-attachment"><i class="fas fa-paperclip"></i><a href="${attachments[0]}" target="_blank">View Attachment</a></div>` : '';
             const canDelete = quote.status === 'submitted';
             const canEdit = quote.status === 'submitted';
             const statusIcon = {'submitted': 'fa-clock', 'approved': 'fa-check-circle', 'rejected': 'fa-times-circle'}[quote.status] || 'fa-question-circle';
             const statusClass = quote.status;
             const actionButtons = [];
-            if (quote.status === 'approved') {
-                actionButtons.push(`<button class="btn btn-primary" onclick="openConversation('${quote.jobId}', '${quote.contractorId}')"><i class="fas fa-comments"></i> Message Client</button>`);
-            }
-            if (canEdit) {
-                actionButtons.push(`<button class="btn btn-outline" onclick="editQuote('${quote.id}')"><i class="fas fa-edit"></i> Edit Quote</button>`);
-            }
-            if (canDelete) {
-                actionButtons.push(`<button class="btn btn-danger" onclick="deleteQuote('${quote.id}')"><i class="fas fa-trash"></i> Delete</button>`);
-            }
+            if (quote.status === 'approved') actionButtons.push(`<button class="btn btn-primary" onclick="openConversation('${quote.jobId}', '${quote.contractorId}')"><i class="fas fa-comments"></i> Message Client</button>`);
+            if (canEdit) actionButtons.push(`<button class="btn btn-outline" onclick="editQuote('${quote.id}')"><i class="fas fa-edit"></i> Edit</button>`);
+            if (canDelete) actionButtons.push(`<button class="btn btn-danger" onclick="deleteQuote('${quote.id}')"><i class="fas fa-trash"></i> Delete</button>`);
             return `
                 <div class="quote-card premium-card quote-status-${statusClass}">
-                    <div class="quote-header">
-                        <div class="quote-title-section"><h3 class="quote-title">Quote for: ${quote.jobTitle || 'Unknown Job'}</h3><span class="quote-status-badge ${statusClass}"><i class="fas ${statusIcon}"></i> ${quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}</span></div>
-                        <div class="quote-amount-section"><span class="amount-label">Quote Amount</span><span class="amount-value">${quote.quoteAmount}</span></div>
-                    </div>
+                    <div class="quote-header"><div class="quote-title-section"><h3 class="quote-title">Quote for: ${quote.jobTitle || 'N/A'}</h3><span class="quote-status-badge ${statusClass}"><i class="fas ${statusIcon}"></i> ${quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}</span></div><div class="quote-amount-section"><span class="amount-label">Amount</span><span class="amount-value">${quote.quoteAmount}</span></div></div>
                     <div class="quote-meta">
                         ${quote.timeline ? `<div class="quote-meta-item"><i class="fas fa-calendar-alt"></i><span>Timeline: <strong>${quote.timeline} days</strong></span></div>` : ''}
                         <div class="quote-meta-item"><i class="fas fa-clock"></i><span>Submitted: <strong>${new Date(quote.createdAt?.toDate ? quote.createdAt.toDate() : quote.createdAt).toLocaleDateString()}</strong></span></div>
@@ -1529,8 +1222,8 @@ async function fetchAndRenderMyQuotes() {
                     <div class="quote-actions"><div class="quote-actions-group">${actionButtons.join('')}</div></div>
                 </div>`;
         }).join('');
-    } catch(error) {
-        listContainer.innerHTML = `<div class="error-state premium-error"><div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div><h3>Error Loading Quotes</h3><p>Please try again later.</p><button class="btn btn-primary" onclick="fetchAndRenderMyQuotes()">Retry</button></div>`;
+    } catch (error) {
+        listContainer.innerHTML = `<div class="error-state premium-error"><div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div><h3>Error Loading Quotes</h3><p>Please try again.</p><button class="btn btn-primary" onclick="fetchAndRenderMyQuotes()">Retry</button></div>`;
     }
 }
 
@@ -1539,15 +1232,15 @@ async function editQuote(quoteId) {
         const response = await apiCall(`/quotes/${quoteId}`, 'GET');
         const quote = response.data;
         const content = `
-            <div class="modal-header premium-modal-header"><h3><i class="fas fa-edit"></i> Edit Your Quote</h3><p class="modal-subtitle">Update your quote details for: <strong>${quote.jobTitle}</strong></p></div>
+            <div class="modal-header premium-modal-header"><h3><i class="fas fa-edit"></i> Edit Your Quote</h3><p class="modal-subtitle">Update quote for: <strong>${quote.jobTitle}</strong></p></div>
             <form id="edit-quote-form" class="premium-form">
                 <input type="hidden" name="quoteId" value="${quote.id}">
                 <div class="form-row">
-                    <div class="form-group"><label class="form-label"><i class="fas fa-dollar-sign"></i> Quote Amount ($)</label><input type="number" class="form-input" name="amount" value="${quote.quoteAmount}" required min="1" step="0.01"></div>
-                    <div class="form-group"><label class="form-label"><i class="fas fa-calendar-alt"></i> Timeline (days)</label><input type="number" class="form-input" name="timeline" value="${quote.timeline || ''}" required min="1"></div>
+                    <div class="form-group"><label class="form-label"><i class="fas fa-dollar-sign"></i> Amount ($)</label><input type="number" class="form-input" name="amount" value="${quote.quoteAmount}" required></div>
+                    <div class="form-group"><label class="form-label"><i class="fas fa-calendar-alt"></i> Timeline (days)</label><input type="number" class="form-input" name="timeline" value="${quote.timeline || ''}" required></div>
                 </div>
-                <div class="form-group"><label class="form-label"><i class="fas fa-file-alt"></i> Proposal Description</label><textarea class="form-textarea" name="description" required placeholder="Describe your approach...">${quote.description}</textarea></div>
-                <div class="form-group"><label class="form-label"><i class="fas fa-paperclip"></i> Attachments (Optional, max 5)</label><input type="file" class="form-input file-input" name="attachments" multiple accept=".pdf,.doc,.docx,.dwg,.jpg,.jpeg,.png"><small class="form-help">Supported formats: PDF, DOC, DWG, Images</small></div>
+                <div class="form-group"><label class="form-label"><i class="fas fa-file-alt"></i> Description</label><textarea class="form-textarea" name="description" required>${quote.description}</textarea></div>
+                <div class="form-group"><label class="form-label"><i class="fas fa-paperclip"></i> Attachments</label><input type="file" class="form-input file-input" name="attachments" multiple><small class="form-help">Optional, max 5</small></div>
                 <div class="form-actions"><button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button><button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Update Quote</button></div>
             </form>`;
         showGenericModal(content, 'max-width: 600px;');
@@ -1575,17 +1268,62 @@ async function handleQuoteEdit(event) {
             }
         }
         await apiCall(`/quotes/${form['quoteId'].value}`, 'PUT', formData, 'Quote updated successfully!');
-        addLocalNotification('Updated', 'Your quote has been updated successfully. The client will be notified of the changes.', 'quote');
+        addLocalNotification('Updated', 'Your quote has been updated.', 'quote');
         closeModal();
         fetchAndRenderMyQuotes();
     } catch (error) {
-        addLocalNotification('Error', 'Failed to update quote. Please try again.', 'error');
+        addLocalNotification('Error', 'Failed to update quote.', 'error');
     } finally {
         if (submitBtn) {
             submitBtn.innerHTML = originalText;
             submitBtn.disabled = false;
         }
     }
+}
+
+// --- JOB FILE HANDLING FUNCTIONS (NEW) ---
+function handleJobFileChange(event) {
+    const input = event.target;
+    const files = Array.from(input.files);
+    if (appState.jobFiles.length + files.length > 10) {
+        showNotification('Maximum 10 files allowed', 'warning');
+        return;
+    }
+    const maxSize = 15 * 1024 * 1024; // 15MB
+    const invalidFiles = files.filter(file => file.size > maxSize);
+    if (invalidFiles.length > 0) {
+        showNotification(`Some files exceed 15MB limit: ${invalidFiles.map(f => f.name).join(', ')}`, 'error');
+        return;
+    }
+    appState.jobFiles.push(...files);
+    renderJobFileList();
+}
+
+function removeJobFile(index) {
+    appState.jobFiles.splice(index, 1);
+    renderJobFileList();
+}
+
+function renderJobFileList() {
+    const container = document.getElementById('job-attachments-list');
+    const label = document.getElementById('job-attachments-label');
+    if (!container || !label) return;
+
+    if (appState.jobFiles.length === 0) {
+        container.innerHTML = '';
+        label.textContent = 'Click to upload or drag & drop';
+        return;
+    }
+    container.innerHTML = appState.jobFiles.map((file, index) => `
+        <div class="file-list-item">
+            <div class="file-list-item-info">
+                <i class="fas fa-file-alt"></i>
+                <span>${file.name}</span>
+                <span class="file-size">(${(file.size / (1024 * 1024)).toFixed(2)}MB)</span>
+            </div>
+            <button type="button" class="remove-file-button" onclick="removeJobFile(${index})"><i class="fas fa-times"></i></button>
+        </div>`).join('');
+    label.textContent = `${appState.jobFiles.length} file(s) selected`;
 }
 
 async function handlePostJob(event) {
@@ -1595,21 +1333,24 @@ async function handlePostJob(event) {
     const originalText = submitBtn.innerHTML;
     submitBtn.innerHTML = '<div class="btn-spinner"></div> Posting...';
     submitBtn.disabled = true;
-
     try {
         const formData = new FormData();
         ['title', 'description', 'budget', 'deadline', 'skills', 'link'].forEach(field => {
             if (form[field] && form[field].value) formData.append(field, form[field].value);
         });
-        if (form.attachment.files.length > 0) {
-            formData.append('attachment', form.attachment.files[0]);
+        if (appState.jobFiles && appState.jobFiles.length > 0) {
+            appState.jobFiles.forEach(file => {
+                formData.append('attachments', file);
+            });
         }
         await apiCall('/jobs', 'POST', formData, 'Project posted successfully!');
-        addLocalNotification('Posted', `Your project "${form.title.value}" has been posted successfully.`, 'job');
+        addLocalNotification('Posted', `Your project "${form.title.value}" has been posted.`, 'job');
         form.reset();
+        appState.jobFiles = [];
+        renderJobFileList();
         renderAppSection('jobs');
     } catch (error) {
-        addLocalNotification('Error', 'Failed to post project. Please try again.', 'error');
+        addLocalNotification('Error', 'Failed to post project.', 'error');
     } finally {
         submitBtn.innerHTML = originalText;
         submitBtn.disabled = false;
@@ -1618,27 +1359,27 @@ async function handlePostJob(event) {
 
 
 async function deleteJob(jobId) {
-    if (confirm('Are you sure you want to delete this project? This will also delete all associated quotes and cannot be undone.')) {
+    if (confirm('Are you sure you want to delete this project? This will delete all associated quotes and cannot be undone.')) {
         try {
             await apiCall(`/jobs/${jobId}`, 'DELETE', null, 'Project deleted successfully.');
-            addLocalNotification('Deleted', 'Project has been deleted successfully.', 'info');
+            addLocalNotification('Deleted', 'Project has been deleted.', 'info');
             fetchAndRenderJobs();
         } catch (error) {
-            addLocalNotification('Error', 'Failed to delete project. Please try again.', 'error');
+            addLocalNotification('Error', 'Failed to delete project.', 'error');
         }
     }
 }
 
 
 async function deleteQuote(quoteId) {
-    if (confirm('Are you sure you want to delete this quote? This action cannot be undone.')) {
+    if (confirm('Are you sure you want to delete this quote?')) {
         try {
             await apiCall(`/quotes/${quoteId}`, 'DELETE', null, 'Quote deleted successfully.');
-            addLocalNotification('Deleted', 'Quote has been deleted successfully.', 'info');
+            addLocalNotification('Deleted', 'Quote has been deleted.', 'info');
             fetchAndRenderMyQuotes();
             loadUserQuotes();
         } catch (error) {
-            addLocalNotification('Error', 'Failed to delete quote. Please try again.', 'error');
+            addLocalNotification('Error', 'Failed to delete quote.', 'error');
         }
     }
 }
@@ -1647,34 +1388,25 @@ async function viewQuotes(jobId) {
     try {
         const response = await apiCall(`/quotes/job/${jobId}`, 'GET');
         const quotes = response.data || [];
-
-        let quotesHTML = `<div class="modal-header premium-modal-header"><h3><i class="fas fa-file-invoice-dollar"></i> Received Quotes</h3><p class="modal-subtitle">Review and manage quotes for this project</p></div>`;
+        let quotesHTML = `<div class="modal-header premium-modal-header"><h3><i class="fas fa-file-invoice-dollar"></i> Received Quotes</h3><p class="modal-subtitle">Review quotes for this project</p></div>`;
         if (quotes.length === 0) {
-            quotesHTML += `<div class="empty-state premium-empty"><div class="empty-icon"><i class="fas fa-file-invoice"></i></div><h3>No Quotes Received</h3><p>No quotes have been submitted for this project yet. Check back later.</p></div>`;
+            quotesHTML += `<div class="empty-state premium-empty"><div class="empty-icon"><i class="fas fa-file-invoice"></i></div><h3>No Quotes Received</h3><p>No quotes have been submitted yet.</p></div>`;
         } else {
             const job = appState.jobs.find(j => j.id === jobId);
-            quotesHTML += `<div class="quotes-list premium-quotes">`;
-            quotesHTML += quotes.map(quote => {
+            quotesHTML += `<div class="quotes-list premium-quotes">${quotes.map(quote => {
                 const attachments = quote.attachments || [];
-                let attachmentLink = attachments.length > 0 ? `<div class="quote-attachment"><i class="fas fa-paperclip"></i><a href="${attachments[0]}" target="_blank" rel="noopener noreferrer">View Attachment</a></div>` : '';
+                let attachmentLink = attachments.length > 0 ? `<div class="quote-attachment"><i class="fas fa-paperclip"></i><a href="${attachments[0]}" target="_blank">View Attachment</a></div>` : '';
                 const canApprove = job && job.status === 'open' && quote.status === 'submitted';
                 let actionButtons = '';
                 const messageButton = `<button class="btn btn-outline btn-sm" onclick="openConversation('${quote.jobId}', '${quote.designerId}')"><i class="fas fa-comments"></i> Message</button>`;
-                if(canApprove) {
-                    actionButtons = `<button class="btn btn-success btn-sm" onclick="approveQuote('${quote.id}', '${jobId}')"><i class="fas fa-check"></i> Approve Quote</button>${messageButton}`;
-                } else if (quote.status === 'approved') {
-                    actionButtons = `<span class="status-approved"><i class="fas fa-check-circle"></i> Approved</span>${messageButton}`;
-                } else {
-                    actionButtons = messageButton;
-                }
+                if (canApprove) actionButtons = `<button class="btn btn-success btn-sm" onclick="approveQuote('${quote.id}', '${jobId}')"><i class="fas fa-check"></i> Approve</button>${messageButton}`;
+                else if (quote.status === 'approved') actionButtons = `<span class="status-approved"><i class="fas fa-check-circle"></i> Approved</span>${messageButton}`;
+                else actionButtons = messageButton;
                 const statusClass = quote.status;
                 const statusIcon = {'submitted': 'fa-clock', 'approved': 'fa-check-circle', 'rejected': 'fa-times-circle'}[quote.status] || 'fa-question-circle';
                 return `
                     <div class="quote-item premium-quote-item quote-status-${statusClass}">
-                        <div class="quote-item-header">
-                            <div class="designer-info"><div class="designer-avatar">${quote.designerName.charAt(0).toUpperCase()}</div><div class="designer-details"><h4>${quote.designerName}</h4><span class="quote-status-badge ${statusClass}"><i class="fas ${statusIcon}"></i> ${quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}</span></div></div>
-                            <div class="quote-amount"><span class="amount-label">Quote</span><span class="amount-value">${quote.quoteAmount}</span></div>
-                        </div>
+                        <div class="quote-item-header"><div class="designer-info"><div class="designer-avatar">${quote.designerName.charAt(0).toUpperCase()}</div><div class="designer-details"><h4>${quote.designerName}</h4><span class="quote-status-badge ${statusClass}"><i class="fas ${statusIcon}"></i> ${quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}</span></div></div><div class="quote-amount"><span class="amount-label">Quote</span><span class="amount-value">${quote.quoteAmount}</span></div></div>
                         <div class="quote-details">
                             ${quote.timeline ? `<div class="quote-meta-item"><i class="fas fa-calendar-alt"></i><span>Timeline: <strong>${quote.timeline} days</strong></span></div>` : ''}
                             <div class="quote-description"><p>${quote.description}</p></div>
@@ -1682,40 +1414,39 @@ async function viewQuotes(jobId) {
                         </div>
                         <div class="quote-actions">${actionButtons}</div>
                     </div>`;
-            }).join('');
-            quotesHTML += `</div>`;
+            }).join('')}</div>`;
         }
         showGenericModal(quotesHTML, 'max-width: 900px;');
     } catch (error) {
-        showGenericModal(`<div class="modal-header premium-modal-header"><h3><i class="fas fa-exclamation-triangle"></i> Error</h3></div><div class="error-state premium-error"><p>Could not load quotes for this project. Please try again later.</p></div>`);
+        showGenericModal(`<div class="modal-header premium-modal-header"><h3><i class="fas fa-exclamation-triangle"></i> Error</h3></div><div class="error-state premium-error"><p>Could not load quotes.</p></div>`);
     }
 }
 
 async function approveQuote(quoteId, jobId) {
-    if (confirm('Are you sure you want to approve this quote? This will assign the job to the designer and notify all participants.')) {
+    if (confirm('Are you sure you want to approve this quote? This will assign the job to the designer.')) {
         try {
             await apiCall(`/quotes/${quoteId}/approve`, 'PUT', { jobId }, 'Quote approved successfully!');
-            addLocalNotification('Approved', 'You have approved a quote and assigned the project!', 'quote');
+            addLocalNotification('Approved', 'You have approved a quote!', 'quote');
             closeModal();
             fetchAndRenderJobs();
         } catch (error) {
-            addLocalNotification('Error', 'Failed to approve quote. Please try again.', 'error');
+            addLocalNotification('Error', 'Failed to approve quote.', 'error');
         }
     }
 }
 
 function showQuoteModal(jobId) {
     const content = `
-        <div class="modal-header premium-modal-header"><h3><i class="fas fa-file-invoice-dollar"></i> Submit Your Quote</h3><p class="modal-subtitle">Provide your best proposal for this project</p></div>
+        <div class="modal-header premium-modal-header"><h3><i class="fas fa-file-invoice-dollar"></i> Submit Your Quote</h3><p class="modal-subtitle">Provide your proposal</p></div>
         <form id="quote-form" class="premium-form">
             <input type="hidden" name="jobId" value="${jobId}">
             <div class="form-row">
-                <div class="form-group"><label class="form-label"><i class="fas fa-dollar-sign"></i> Quote Amount ($)</label><input type="number" class="form-input" name="amount" required min="1" step="0.01" placeholder="Enter your quote amount"></div>
-                <div class="form-group"><label class="form-label"><i class="fas fa-calendar-alt"></i> Timeline (days)</label><input type="number" class="form-input" name="timeline" required min="1" placeholder="Project duration"></div>
+                <div class="form-group"><label class="form-label"><i class="fas fa-dollar-sign"></i> Amount ($)</label><input type="number" class="form-input" name="amount" required min="1" step="0.01"></div>
+                <div class="form-group"><label class="form-label"><i class="fas fa-calendar-alt"></i> Timeline (days)</label><input type="number" class="form-input" name="timeline" required min="1"></div>
             </div>
-            <div class="form-group"><label class="form-label"><i class="fas fa-file-alt"></i> Proposal Description</label><textarea class="form-textarea" name="description" required placeholder="Describe your approach..."></textarea></div>
-            <div class="form-group"><label class="form-label"><i class="fas fa-paperclip"></i> Attachments (Optional, max 5)</label><input type="file" class="form-input file-input" name="attachments" multiple accept=".pdf,.doc,.docx,.dwg,.jpg,.jpeg,.png"><small class="form-help">Upload portfolio samples or relevant documents</small></div>
-            <div class="form-actions"><button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button><button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane"></i> Submit Quote</button></div>
+            <div class="form-group"><label class="form-label"><i class="fas fa-file-alt"></i> Description</label><textarea class="form-textarea" name="description" required></textarea></div>
+            <div class="form-group"><label class="form-label"><i class="fas fa-paperclip"></i> Attachments</label><input type="file" class="form-input file-input" name="attachments" multiple><small class="form-help">Optional, max 5</small></div>
+            <div class="form-actions"><button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button><button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane"></i> Submit</button></div>
         </form>`;
     showGenericModal(content, 'max-width: 600px;');
     document.getElementById('quote-form').addEventListener('submit', handleQuoteSubmit);
@@ -1740,12 +1471,12 @@ async function handleQuoteSubmit(event) {
             }
         }
         await apiCall('/quotes', 'POST', formData, 'Quote submitted successfully!');
-        addLocalNotification('Submitted', 'Your quote has been submitted successfully.', 'quote');
+        addLocalNotification('Submitted', 'Your quote has been submitted.', 'quote');
         appState.userSubmittedQuotes.add(form['jobId'].value);
         closeModal();
         fetchAndRenderJobs();
     } catch (error) {
-        addLocalNotification('Error', 'Failed to submit quote. Please try again.', 'error');
+        addLocalNotification('Error', 'Failed to submit quote.', 'error');
     } finally {
         if (submitBtn) {
             submitBtn.innerHTML = originalText;
@@ -1764,7 +1495,7 @@ async function openConversation(jobId, recipientId) {
             renderConversationView(response.data);
         }
     } catch (error) {
-        addLocalNotification('Error', 'Failed to open conversation. Please try again.', 'error');
+        addLocalNotification('Error', 'Failed to open conversation.', 'error');
     }
 }
 
@@ -1772,9 +1503,7 @@ async function fetchAndRenderConversations() {
     const container = document.getElementById('app-container');
     container.innerHTML = `
         <div id="dynamic-feature-header" class="dynamic-feature-header"></div>
-        <div class="section-header modern-header">
-            <div class="header-content"><h2><i class="fas fa-comments"></i> Messages</h2><p class="header-subtitle">Communicate with clients and designers</p></div>
-        </div>
+        <div class="section-header modern-header"><div class="header-content"><h2><i class="fas fa-comments"></i> Messages</h2><p class="header-subtitle">Communicate with clients and designers</p></div></div>
         <div id="conversations-list" class="conversations-container premium-conversations"></div>`;
     updateDynamicHeader();
     const listContainer = document.getElementById('conversations-list');
@@ -1783,41 +1512,41 @@ async function fetchAndRenderConversations() {
         const response = await apiCall('/messages', 'GET');
         appState.conversations = response.data || [];
         if (appState.conversations.length === 0) {
-            listContainer.innerHTML = `<div class="empty-state premium-empty"><div class="empty-icon"><i class="fas fa-comments"></i></div><h3>No Conversations Yet</h3><p>Start collaborating with professionals by messaging them from job quotes.</p><button class="btn btn-primary" onclick="renderAppSection('jobs')">Browse Projects</button></div>`;
+            listContainer.innerHTML = `<div class="empty-state premium-empty"><div class="empty-icon"><i class="fas fa-comments"></i></div><h3>No Conversations Yet</h3><p>Start collaborating by messaging from job quotes.</p><button class="btn btn-primary" onclick="renderAppSection('jobs')">Browse Projects</button></div>`;
             return;
         }
         const conversationsHTML = appState.conversations.map(convo => {
-            const otherParticipant = convo.participants.find(p => p.id !== appState.currentUser.id);
-            const otherParticipantName = otherParticipant ? otherParticipant.name : 'Unknown User';
-            const lastMessage = convo.lastMessage ? (convo.lastMessage.length > 60 ? convo.lastMessage.substring(0, 60) + '...' : convo.lastMessage) : 'No messages yet.';
+            const other = convo.participants.find(p => p.id !== appState.currentUser.id);
+            const otherName = other ? other.name : 'Unknown User';
+            const lastMsg = convo.lastMessage ? (convo.lastMessage.length > 60 ? convo.lastMessage.substring(0, 60) + '...' : convo.lastMessage) : 'No messages yet.';
             const timeAgo = getTimeAgo(convo.updatedAt);
-            const avatarColor = getAvatarColor(otherParticipantName);
+            const avatarColor = getAvatarColor(otherName);
             const isUnread = convo.lastMessageBy && convo.lastMessageBy !== appState.currentUser.name;
             return `
                 <div class="conversation-card premium-card ${isUnread ? 'unread' : ''}" onclick="renderConversationView('${convo.id}')">
-                    <div class="convo-avatar" style="background-color: ${avatarColor}">${otherParticipantName.charAt(0).toUpperCase()}${isUnread ? '<div class="unread-indicator"></div>' : ''}</div>
+                    <div class="convo-avatar" style="background-color: ${avatarColor}">${otherName.charAt(0).toUpperCase()}${isUnread ? '<div class="unread-indicator"></div>' : ''}</div>
                     <div class="convo-details">
-                        <div class="convo-header"><h4>${otherParticipantName}</h4><div class="convo-meta"><span class="participant-type ${otherParticipant ? otherParticipant.type : ''}">${otherParticipant ? otherParticipant.type : ''}</span><span class="convo-time">${timeAgo}</span></div></div>
+                        <div class="convo-header"><h4>${otherName}</h4><div class="convo-meta"><span class="participant-type ${other ? other.type : ''}">${other ? other.type : ''}</span><span class="convo-time">${timeAgo}</span></div></div>
                         <p class="convo-project"><i class="fas fa-briefcase"></i><strong>${convo.jobTitle}</strong></p>
-                        <p class="convo-preview">${convo.lastMessageBy && convo.lastMessageBy !== appState.currentUser.name ? `<strong>${convo.lastMessageBy}:</strong> ` : ''}${lastMessage}</p>
+                        <p class="convo-preview">${convo.lastMessageBy && convo.lastMessageBy !== appState.currentUser.name ? `<strong>${convo.lastMessageBy}:</strong> ` : ''}${lastMsg}</p>
                     </div>
                     <div class="convo-arrow"><i class="fas fa-chevron-right"></i></div>
                 </div>`;
         }).join('');
         listContainer.innerHTML = conversationsHTML;
     } catch (error) {
-        listContainer.innerHTML = `<div class="error-state premium-error"><div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div><h3>Error Loading Conversations</h3><p>Please try again later.</p><button class="btn btn-primary" onclick="fetchAndRenderConversations()">Retry</button></div>`;
+        listContainer.innerHTML = `<div class="error-state premium-error"><div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div><h3>Error Loading Conversations</h3><p>Please try again.</p><button class="btn btn-primary" onclick="fetchAndRenderConversations()">Retry</button></div>`;
     }
 }
 
 function getTimeAgo(timestamp) {
     const now = new Date();
     const time = timestamp?.toDate ? timestamp.toDate() : new Date(timestamp);
-    const diffInMinutes = Math.floor((now - time) / (1000 * 60));
-    if (diffInMinutes < 1) return 'Just now';
-    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
-    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
-    if (diffInMinutes < 10080) return `${Math.floor(diffInMinutes / 1440)}d ago`;
+    const diff = Math.floor((now - time) / (1000 * 60));
+    if (diff < 1) return 'Just now';
+    if (diff < 60) return `${diff}m ago`;
+    if (diff < 1440) return `${Math.floor(diff / 60)}h ago`;
+    if (diff < 10080) return `${Math.floor(diff / 1440)}d ago`;
     return time.toLocaleDateString();
 }
 
@@ -1827,75 +1556,26 @@ function getAvatarColor(name) {
     return colors[index];
 }
 
-// ROBUST TIMESTAMP HANDLING - Replace in your script.js
 function formatDetailedTimestamp(date) {
     try {
-        if (!date) {
-            console.warn('formatDetailedTimestamp: No date provided');
-            return 'Unknown time';
-        }
-        let messageDate;
-        // Handle Firebase Timestamp objects
-        if (date && typeof date === 'object' && typeof date.toDate === 'function') {
-            messageDate = date.toDate();
-        }
-        // Handle Firebase server timestamp objects with seconds/nanoseconds
-        else if (date && typeof date === 'object' && date.seconds !== undefined) {
-            messageDate = new Date(date.seconds * 1000 + (date.nanoseconds || 0) / 1000000);
-        }
-        // Handle regular Date objects
-        else if (date instanceof Date) {
-            messageDate = date;
-        }
-        // Handle ISO date strings
-        else if (typeof date === 'string') {
-            messageDate = new Date(date);
-        }
-        // Handle Unix timestamps (numbers)
-        else if (typeof date === 'number') {
-            // If it's a large number, assume milliseconds; if small, assume seconds
-            messageDate = new Date(date > 1000000000000 ? date : date * 1000);
-        }
-        // Handle objects with _seconds property (some Firebase formats)
-        else if (date && typeof date === 'object' && date._seconds !== undefined) {
-            messageDate = new Date(date._seconds * 1000 + (date._nanoseconds || 0) / 1000000);
-        }
-        else {
-            console.warn('formatDetailedTimestamp: Unrecognized date format:', typeof date, date);
-            return 'Invalid time';
-        }
-        // Validate the resulting date
-        if (!messageDate || isNaN(messageDate.getTime()) || messageDate.getTime() === 0) {
-            console.warn('formatDetailedTimestamp: Invalid date created from:', date);
-            return 'Invalid date';
-        }
+        if (!date) return 'Unknown time';
+        let msgDate;
+        if (date && typeof date === 'object' && typeof date.toDate === 'function') msgDate = date.toDate();
+        else if (date && typeof date === 'object' && date.seconds !== undefined) msgDate = new Date(date.seconds * 1000);
+        else if (date instanceof Date) msgDate = date;
+        else if (typeof date === 'string') msgDate = new Date(date);
+        else if (typeof date === 'number') msgDate = new Date(date);
+        else return 'Invalid time';
+        if (!msgDate || isNaN(msgDate.getTime())) return 'Invalid date';
         const now = new Date();
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const messageDay = new Date(messageDate.getFullYear(), messageDate.getMonth(), messageDate.getDate());
-        const time = messageDate.toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true
-        });
-        // Check if it's today
-        if (today.getTime() === messageDay.getTime()) {
-            return time;
-        }
-        // Check if it's yesterday
+        const msgDay = new Date(msgDate.getFullYear(), msgDate.getMonth(), msgDate.getDate());
+        const time = msgDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+        if (today.getTime() === msgDay.getTime()) return time;
         const yesterday = new Date(today);
         yesterday.setDate(today.getDate() - 1);
-        if (yesterday.getTime() === messageDay.getTime()) {
-            return `Yesterday, ${time}`;
-        }
-        // Check if it's within the last week
-        const weekAgo = new Date(today);
-        weekAgo.setDate(today.getDate() - 7);
-        if (messageDay > weekAgo) {
-            const dayName = messageDate.toLocaleDateString([], { weekday: 'long' });
-            return `${dayName}, ${time}`;
-        }
-        // Older dates
-        return `${messageDate.toLocaleDateString()}, ${time}`;
+        if (yesterday.getTime() === msgDay.getTime()) return `Yesterday, ${time}`;
+        return `${msgDate.toLocaleDateString()}, ${time}`;
     } catch (error) {
         console.error('formatDetailedTimestamp error:', error, 'Input:', date);
         return 'Invalid date';
@@ -1904,60 +1584,26 @@ function formatDetailedTimestamp(date) {
 
 function formatMessageTimestamp(date) {
     try {
-        if (!date) {
-            return 'Unknown time';
-        }
-        let messageDate;
-        // Handle Firebase Timestamp objects
-        if (date && typeof date === 'object' && typeof date.toDate === 'function') {
-            messageDate = date.toDate();
-        }
-        // Handle Firebase server timestamp objects
-        else if (date && typeof date === 'object' && date.seconds !== undefined) {
-            messageDate = new Date(date.seconds * 1000 + (date.nanoseconds || 0) / 1000000);
-        }
-        // Handle regular Date objects
-        else if (date instanceof Date) {
-            messageDate = date;
-        }
-        // Handle ISO date strings
-        else if (typeof date === 'string') {
-            messageDate = new Date(date);
-        }
-        // Handle Unix timestamps
-        else if (typeof date === 'number') {
-            messageDate = new Date(date > 1000000000000 ? date : date * 1000);
-        }
-        // Handle objects with _seconds property
-        else if (date && typeof date === 'object' && date._seconds !== undefined) {
-            messageDate = new Date(date._seconds * 1000 + (date._nanoseconds || 0) / 1000000);
-        }
-        else {
-            console.warn('formatMessageTimestamp: Unrecognized date format:', typeof date, date);
-            return 'Invalid time';
-        }
-        if (!messageDate || isNaN(messageDate.getTime()) || messageDate.getTime() === 0) {
-            console.warn('formatMessageTimestamp: Invalid date created from:', date);
-            return 'Invalid date';
-        }
+        if (!date) return 'Unknown time';
+        let msgDate;
+        if (date && typeof date === 'object' && typeof date.toDate === 'function') msgDate = date.toDate();
+        else if (date && typeof date === 'object' && date.seconds !== undefined) msgDate = new Date(date.seconds * 1000);
+        else if (date instanceof Date) msgDate = date;
+        else if (typeof date === 'string') msgDate = new Date(date);
+        else if (typeof date === 'number') msgDate = new Date(date);
+        else return 'Invalid time';
+        if (!msgDate || isNaN(msgDate.getTime())) return 'Invalid date';
         const now = new Date();
-        const diffMs = now - messageDate;
-        // Handle future dates (should not happen but just in case)
-        if (diffMs < 0) {
-            return 'Just now';
-        }
-        const diffSeconds = Math.floor(diffMs / 1000);
-        const diffMinutes = Math.floor(diffSeconds / 60);
-        const diffHours = Math.floor(diffMinutes / 60);
-        const diffDays = Math.floor(diffHours / 24);
-        if (diffSeconds < 30) return 'Just now';
-        if (diffSeconds < 60) return `${diffSeconds}s ago`;
-        if (diffMinutes < 60) return `${diffMinutes}m ago`;
-        if (diffHours < 24) return `${diffHours}h ago`;
-        if (diffDays === 1) return 'Yesterday';
-        if (diffDays < 7) return `${diffDays}d ago`;
-        if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
-        return messageDate.toLocaleDateString();
+        const diffS = Math.floor((now - msgDate) / 1000);
+        const diffM = Math.floor(diffS / 60);
+        const diffH = Math.floor(diffM / 60);
+        const diffD = Math.floor(diffH / 24);
+        if (diffS < 30) return 'Just now';
+        if (diffM < 60) return `${diffM}m ago`;
+        if (diffH < 24) return `${diffH}h ago`;
+        if (diffD === 1) return 'Yesterday';
+        if (diffD < 7) return `${diffD}d ago`;
+        return msgDate.toLocaleDateString();
     } catch (error) {
         console.error('formatMessageTimestamp error:', error, 'Input:', date);
         return 'Invalid date';
@@ -1966,68 +1612,23 @@ function formatMessageTimestamp(date) {
 
 function formatMessageDate(date) {
     try {
-        if (!date) {
-            return 'Unknown Date';
-        }
-        let messageDate;
-        // Handle Firebase Timestamp objects
-        if (date && typeof date === 'object' && typeof date.toDate === 'function') {
-            messageDate = date.toDate();
-        }
-        // Handle Firebase server timestamp objects
-        else if (date && typeof date === 'object' && date.seconds !== undefined) {
-            messageDate = new Date(date.seconds * 1000 + (date.nanoseconds || 0) / 1000000);
-        }
-        // Handle regular Date objects
-        else if (date instanceof Date) {
-            messageDate = date;
-        }
-        // Handle ISO date strings
-        else if (typeof date === 'string') {
-            messageDate = new Date(date);
-        }
-        // Handle Unix timestamps
-        else if (typeof date === 'number') {
-            messageDate = new Date(date > 1000000000000 ? date : date * 1000);
-        }
-        // Handle objects with _seconds property
-        else if (date && typeof date === 'object' && date._seconds !== undefined) {
-            messageDate = new Date(date._seconds * 1000 + (date._nanoseconds || 0) / 1000000);
-        }
-        else {
-            console.warn('formatMessageDate: Unrecognized date format:', typeof date, date);
-            return 'Unknown Date';
-        }
-        if (!messageDate || isNaN(messageDate.getTime()) || messageDate.getTime() === 0) {
-            console.warn('formatMessageDate: Invalid date created from:', date);
-            return 'Invalid Date';
-        }
+        if (!date) return 'Unknown Date';
+        let msgDate;
+        if (date && typeof date === 'object' && typeof date.toDate === 'function') msgDate = date.toDate();
+        else if (date && typeof date === 'object' && date.seconds !== undefined) msgDate = new Date(date.seconds * 1000);
+        else if (date instanceof Date) msgDate = date;
+        else if (typeof date === 'string') msgDate = new Date(date);
+        else if (typeof date === 'number') msgDate = new Date(date);
+        else return 'Unknown Date';
+        if (!msgDate || isNaN(msgDate.getTime())) return 'Unknown Date';
         const now = new Date();
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const messageDay = new Date(messageDate.getFullYear(), messageDate.getMonth(), messageDate.getDate());
-        // Check if it's today
-        if (today.getTime() === messageDay.getTime()) {
-            return 'Today';
-        }
-        // Check if it's yesterday
+        const msgDay = new Date(msgDate.getFullYear(), msgDate.getMonth(), msgDate.getDate());
+        if (today.getTime() === msgDay.getTime()) return 'Today';
         const yesterday = new Date(today);
         yesterday.setDate(today.getDate() - 1);
-        if (yesterday.getTime() === messageDay.getTime()) {
-            return 'Yesterday';
-        }
-        // Check if it's this year
-        if (messageDate.getFullYear() === now.getFullYear()) {
-            return messageDate.toLocaleDateString([], {
-                month: 'long',
-                day: 'numeric'
-            });
-        }
-        // Different year
-        return messageDate.toLocaleDateString([], {
-            month: 'long',
-            day: 'numeric',
-            year: 'numeric'
-        });
+        if (yesterday.getTime() === msgDay.getTime()) return 'Yesterday';
+        return msgDate.toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' });
     } catch (error) {
         console.error('formatMessageDate error:', error, 'Input:', date);
         return 'Invalid Date';
@@ -2035,265 +1636,142 @@ function formatMessageDate(date) {
 }
 
 async function renderConversationView(conversationOrId) {
-    let conversation;
-    // Handle both conversation object and ID
-    if (typeof conversationOrId === 'string') {
-        conversation = appState.conversations.find(c => c.id === conversationOrId);
-        if (!conversation) {
-            // If not found in local state, create minimal object and fetch details
-            conversation = { id: conversationOrId };
-        }
-    } else {
-        conversation = conversationOrId;
-    }
-    // If conversation doesn't have full data, try to fetch it
-    if (!conversation.participants && conversation.id) {
+    let convo;
+    if (typeof conversationOrId === 'string') convo = appState.conversations.find(c => c.id === conversationOrId) || { id: conversationOrId };
+    else convo = conversationOrId;
+    if (!convo.participants && convo.id) {
         try {
-            showNotification('Loading conversation details...', 'info');
             const response = await apiCall('/messages', 'GET');
             appState.conversations = response.data || [];
-            conversation = appState.conversations.find(c => c.id === conversation.id);
-            if (!conversation) {
-                throw new Error('Conversation not found');
-            }
-        } catch(error) {
-            console.error('Failed to load conversation:', error);
-            showNotification('Failed to load conversation. Please try again.', 'error');
+            convo = appState.conversations.find(c => c.id === convo.id);
+            if (!convo) throw new Error('Conversation not found');
+        } catch (error) {
+            showNotification('Failed to load conversation.', 'error');
             renderAppSection('messages');
             return;
         }
     }
     const container = document.getElementById('app-container');
-    const otherParticipant = conversation.participants ?
-         conversation.participants.find(p => p.id !== appState.currentUser.id) :
-         { name: 'Unknown User', type: 'user' };
-    const avatarColor = getAvatarColor(otherParticipant.name || 'Unknown');
+    const other = convo.participants ? convo.participants.find(p => p.id !== appState.currentUser.id) : { name: 'N/A', type: 'user' };
+    const avatarColor = getAvatarColor(other.name || 'U');
     container.innerHTML = `
         <div class="chat-container premium-chat">
             <div class="chat-header premium-chat-header">
-                <button onclick="renderAppSection('messages')" class="back-btn premium-back-btn">
-                    <i class="fas fa-arrow-left"></i>
-                </button>
+                <button onclick="renderAppSection('messages')" class="back-btn premium-back-btn"><i class="fas fa-arrow-left"></i></button>
                 <div class="chat-header-info">
-                    <div class="chat-avatar premium-avatar" style="background-color: ${avatarColor}">
-                        ${(otherParticipant.name || 'U').charAt(0).toUpperCase()}
-                        <div class="online-indicator"></div>
-                    </div>
-                    <div class="chat-details">
-                        <h3>${otherParticipant.name || 'Conversation'}</h3>
-                        <p class="chat-project">
-                            <i class="fas fa-briefcase"></i> ${conversation.jobTitle || 'Project Discussion'}
-                        </p>
-                        <span class="chat-status">Active now</span>
-                    </div>
+                    <div class="chat-avatar premium-avatar" style="background-color: ${avatarColor}">${(other.name || 'U').charAt(0).toUpperCase()}<div class="online-indicator"></div></div>
+                    <div class="chat-details"><h3>${other.name || 'Conversation'}</h3><p class="chat-project"><i class="fas fa-briefcase"></i> ${convo.jobTitle || 'Project Discussion'}</p><span class="chat-status">Active now</span></div>
                 </div>
-                <div class="chat-actions">
-                    <span class="participant-type-badge premium-badge ${otherParticipant.type || ''}">
-                        <i class="fas ${otherParticipant.type === 'designer' ? 'fa-drafting-compass' : 'fa-building'}"></i>
-                         ${otherParticipant.type || 'User'}
-                    </span>
-                </div>
+                <div class="chat-actions"><span class="participant-type-badge premium-badge ${other.type || ''}"><i class="fas ${other.type === 'designer' ? 'fa-drafting-compass' : 'fa-building'}"></i> ${other.type || 'User'}</span></div>
             </div>
-            <div class="chat-messages premium-messages" id="chat-messages-container">
-                <div class="loading-messages">
-                    <div class="spinner"></div>
-                    <p>Loading messages...</p>
-                </div>
-            </div>
-            <div class="chat-input-area premium-input-area">
-                <form id="send-message-form" class="message-form premium-message-form">
-                    <div class="message-input-container">
-                        <input type="text" id="message-text-input"
-                                placeholder="Type your message..."
-                                required autocomplete="off">
-                        <button type="submit" class="send-button premium-send-btn" title="Send message">
-                            <i class="fas fa-paper-plane"></i>
-                        </button>
-                    </div>
-                </form>
-            </div>
+            <div class="chat-messages premium-messages" id="chat-messages-container"><div class="loading-messages"><div class="spinner"></div><p>Loading...</p></div></div>
+            <div class="chat-input-area premium-input-area"><form id="send-message-form" class="message-form premium-message-form"><div class="message-input-container"><input type="text" id="message-text-input" placeholder="Type your message..." required autocomplete="off"><button type="submit" class="send-button premium-send-btn" title="Send"><i class="fas fa-paper-plane"></i></button></div></form></div>
         </div>`;
-    // Add form submit handler
-    document.getElementById('send-message-form').addEventListener('submit', (e) => {
-        e.preventDefault();
-        handleSendMessage(conversation.id);
-    });
-    // Load messages with enhanced error handling
-    const messagesContainer = document.getElementById('chat-messages-container');
+    document.getElementById('send-message-form').addEventListener('submit', (e) => { e.preventDefault(); handleSendMessage(convo.id); });
+    const msgContainer = document.getElementById('chat-messages-container');
     try {
-        const response = await apiCall(`/messages/${conversation.id}/messages`, 'GET');
+        const response = await apiCall(`/messages/${convo.id}/messages`, 'GET');
         const messages = response.data || [];
         if (messages.length === 0) {
-            messagesContainer.innerHTML = `
-                <div class="empty-messages premium-empty-messages">
-                    <div class="empty-icon"><i class="fas fa-comment-dots"></i></div>
-                    <h4>Start the conversation</h4>
-                    <p>Send your first message to begin collaborating on this project.</p>
-                </div>`;
+            msgContainer.innerHTML = `<div class="empty-messages premium-empty-messages"><div class="empty-icon"><i class="fas fa-comment-dots"></i></div><h4>Start the conversation</h4><p>Send your first message.</p></div>`;
         } else {
             let messagesHTML = '';
             let lastDate = null;
             messages.forEach((msg, index) => {
-                try {
-                    // Use improved date handling with error recovery
-                    const messageDate = formatMessageDate(msg.createdAt);
-                    if(messageDate !== lastDate && messageDate !== 'Invalid Date') {
-                        messagesHTML += `<div class="chat-date-separator"><span>${messageDate}</span></div>`;
-                        lastDate = messageDate;
-                    }
-                    const isMine = msg.senderId === appState.currentUser.id;
-                    const timestamp = formatDetailedTimestamp(msg.createdAt);
-                    const prevMsg = messages[index - 1];
-                    const showAvatar = !prevMsg || prevMsg.senderId !== msg.senderId;
-                    const senderAvatarColor = getAvatarColor(msg.senderName || 'Unknown');
-                    messagesHTML += `
-                        <div class="message-wrapper premium-message ${isMine ? 'me' : 'them'}">
-                            ${!isMine && showAvatar ?
-                                 `<div class="message-avatar premium-msg-avatar" style="background-color: ${senderAvatarColor}">
-                                    ${(msg.senderName || 'U').charAt(0).toUpperCase()}
-                                </div>` :
-                                 '<div class="message-avatar-spacer" style="width: 40px; flex-shrink: 0;"></div>'
-                            }
-                            <div class="message-content">
-                                ${showAvatar && !isMine ? `<div class="message-sender">${msg.senderName || 'Unknown'}</div>` : ''}
-                                <div class="message-bubble premium-bubble ${isMine ? 'me' : 'them'}">${msg.text || ''}</div>
-                                <div class="message-meta">${timestamp}</div>
-                            </div>
-                        </div>`;
-                } catch (msgError) {
-                    console.error('Error rendering message:', msgError, msg);
-                    // Skip this message but continue with others
+                const msgDate = formatMessageDate(msg.createdAt);
+                if (msgDate !== lastDate) {
+                    messagesHTML += `<div class="chat-date-separator"><span>${msgDate}</span></div>`;
+                    lastDate = msgDate;
                 }
+                const isMine = msg.senderId === appState.currentUser.id;
+                const timestamp = formatDetailedTimestamp(msg.createdAt);
+                const prevMsg = messages[index - 1];
+                const showAvatar = !prevMsg || prevMsg.senderId !== msg.senderId;
+                const senderAvatarColor = getAvatarColor(msg.senderName || 'U');
+                messagesHTML += `
+                    <div class="message-wrapper premium-message ${isMine ? 'me' : 'them'}">
+                        ${!isMine && showAvatar ? `<div class="message-avatar premium-msg-avatar" style="background-color: ${senderAvatarColor}">${(msg.senderName || 'U').charAt(0).toUpperCase()}</div>` : '<div class="message-avatar-spacer"></div>'}
+                        <div class="message-content">
+                            ${showAvatar && !isMine ? `<div class="message-sender">${msg.senderName || 'N/A'}</div>` : ''}
+                            <div class="message-bubble premium-bubble ${isMine ? 'me' : 'them'}">${msg.text || ''}</div>
+                            <div class="message-meta">${timestamp}</div>
+                        </div>
+                    </div>`;
             });
-            messagesContainer.innerHTML = messagesHTML;
+            msgContainer.innerHTML = messagesHTML;
         }
-        // Scroll to bottom
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        // Focus on input
-        const messageInput = document.getElementById('message-text-input');
-        if (messageInput) {
-            messageInput.focus();
-        }
+        msgContainer.scrollTop = msgContainer.scrollHeight;
+        document.getElementById('message-text-input')?.focus();
     } catch (error) {
-        console.error('Error loading messages:', error);
-        messagesContainer.innerHTML = `
-            <div class="error-messages premium-error-messages">
-                <div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div>
-                <h4>Error loading messages</h4>
-                <p>Please try again later.</p>
-                <button class="btn btn-primary" onclick="renderConversationView('${conversation.id}')">
-                    Retry
-                </button>
-            </div>`;
+        msgContainer.innerHTML = `<div class="error-messages premium-error-messages"><div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div><h4>Error loading messages</h4><p>Please try again.</p><button class="btn btn-primary" onclick="renderConversationView('${convo.id}')">Retry</button></div>`;
     }
 }
 
-// Force immediate notification refresh after message send
 async function refreshNotificationsAfterMessage() {
-    console.log('🔄 [REFRESH] Forcing immediate notification refresh after message...');
-    // Wait a moment for server processing
     await new Promise(resolve => setTimeout(resolve, 1000));
     try {
         await fetchNotifications();
-        console.log('✅ [REFRESH] Immediate refresh completed');
-        // Schedule additional refreshes
-        setTimeout(async () => {
-            console.log('🔄 [REFRESH] Secondary refresh...');
-            await fetchNotifications();
-        }, 3000);
-        setTimeout(async () => {
-            console.log('🔄 [REFRESH] Final refresh...');
-            await fetchNotifications();
-        }, 8000);
+        setTimeout(async () => await fetchNotifications(), 3000);
     } catch (error) {
-        console.error('❌ [REFRESH] Refresh failed:', error);
+        console.error('Refresh failed:', error);
     }
 }
 
-// Enhanced message sending with immediate notification refresh
 async function handleSendMessage(conversationId) {
     const input = document.getElementById('message-text-input');
     const sendBtn = document.querySelector('.send-button');
     const text = input.value.trim();
-    if (!text) {
-        showNotification('Please enter a message', 'warning');
-        return;
-    }
-    if (!conversationId) {
-        showNotification('Conversation not found', 'error');
-        return;
-    }
+    if (!text) return;
     const originalBtnContent = sendBtn.innerHTML;
     input.disabled = true;
     sendBtn.disabled = true;
     sendBtn.innerHTML = '<div class="btn-spinner"></div>';
     try {
-        console.log(`📤 [SEND] Sending message to conversation ${conversationId}...`);
         const response = await fetch(`${BACKEND_URL}/messages/${conversationId}/messages`, {
             method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${appState.jwtToken}`,
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Authorization': `Bearer ${appState.jwtToken}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({ text })
         });
         const data = await response.json();
-        if (!response.ok) {
-            throw new Error(data.error || data.message || `Failed to send message: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(data.error || 'Failed to send message');
         if (data.success) {
-            console.log(`✅ [SEND] Message sent successfully:`, data.data);
             input.value = '';
-            const messagesContainer = document.getElementById('chat-messages-container');
-            // Remove empty state if it exists
-            const emptyState = messagesContainer.querySelector('.empty-messages');
-            if (emptyState) {
-                emptyState.remove();
-            }
-            // Add message to UI immediately with proper timestamp
-            const newMessage = data.data;
-            const timestamp = formatDetailedTimestamp(newMessage.createdAt);
-            const messageBubble = document.createElement('div');
-            messageBubble.className = 'message-wrapper premium-message me';
-            messageBubble.innerHTML = `
-                <div class="message-avatar-spacer" style="width: 40px; flex-shrink: 0;"></div>
-                <div class="message-content">
-                    <div class="message-bubble premium-bubble me">${newMessage.text}</div>
-                    <div class="message-meta">${timestamp}</div>
-                </div>`;
-            messagesContainer.appendChild(messageBubble);
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            // ENHANCED: Force immediate notification refresh
+            const msgContainer = document.getElementById('chat-messages-container');
+            msgContainer.querySelector('.empty-messages')?.remove();
+            const newMsg = data.data;
+            const timestamp = formatDetailedTimestamp(newMsg.createdAt);
+            const msgBubble = document.createElement('div');
+            msgBubble.className = 'message-wrapper premium-message me';
+            msgBubble.innerHTML = `<div class="message-avatar-spacer"></div><div class="message-content"><div class="message-bubble premium-bubble me">${newMsg.text}</div><div class="message-meta">${timestamp}</div></div>`;
+            msgContainer.appendChild(msgBubble);
+            msgContainer.scrollTop = msgContainer.scrollHeight;
             refreshNotificationsAfterMessage();
         } else {
             throw new Error(data.error || 'Failed to send message');
         }
-    } catch(error) {
-        console.error('❌ [SEND] Message send failed:', error);
-        showNotification(error.message || 'Failed to send message. Please try again.', 'error');
+    } catch (error) {
+        showNotification(error.message || 'Failed to send message.', 'error');
     } finally {
         input.disabled = false;
         sendBtn.disabled = false;
         sendBtn.innerHTML = originalBtnContent;
-        if (input) {
-            input.focus();
-        }
+        input?.focus();
     }
 }
 
 
 // --- UI & MODAL FUNCTIONS ---
 function showAuthModal(view) {
-    const modalContainer = document.getElementById('modal-container');
-    if(modalContainer) {
-        modalContainer.innerHTML = `
+    const modal = document.getElementById('modal-container');
+    if (modal) {
+        modal.innerHTML = `
             <div class="modal-overlay premium-overlay">
                 <div class="modal-content premium-modal" onclick="event.stopPropagation()">
                     <button class="modal-close-button premium-close" onclick="closeModal()"><i class="fas fa-times"></i></button>
                     <div id="modal-form-container"></div>
                 </div>
             </div>`;
-        modalContainer.querySelector('.modal-overlay').addEventListener('click', closeModal);
+        modal.querySelector('.modal-overlay').addEventListener('click', closeModal);
         renderAuthForm(view);
     }
 }
@@ -2308,58 +1786,44 @@ function renderAuthForm(view) {
 }
 
 function showGenericModal(innerHTML, style = '') {
-    const modalContainer = document.getElementById('modal-container');
-    if(modalContainer) {
-        modalContainer.innerHTML = `
+    const modal = document.getElementById('modal-container');
+    if (modal) {
+        modal.innerHTML = `
             <div class="modal-overlay premium-overlay">
                 <div class="modal-content premium-modal" style="${style}" onclick="event.stopPropagation()">
                     <button class="modal-close-button premium-close" onclick="closeModal()"><i class="fas fa-times"></i></button>
                     ${innerHTML}
                 </div>
             </div>`;
-        modalContainer.querySelector('.modal-overlay').addEventListener('click', closeModal);
+        modal.querySelector('.modal-overlay').addEventListener('click', closeModal);
     }
 }
 
 function closeModal() {
-    const modalContainer = document.getElementById('modal-container');
-    if (modalContainer) modalContainer.innerHTML = '';
+    const modal = document.getElementById('modal-container');
+    if (modal) modal.innerHTML = '';
 }
 
 // ========================================
-// INTEGRATION WITH EXISTING APP (UPDATED FUNCTIONS)
+// INTEGRATION WITH EXISTING APP
 // ========================================
 
-// Update the existing showAppView function to initialize notifications
 function showAppView() {
     document.getElementById('landing-page-content').style.display = 'none';
     document.getElementById('app-content').style.display = 'flex';
     document.getElementById('auth-buttons-container').style.display = 'none';
     document.getElementById('user-info-container').style.display = 'flex';
-
     const user = appState.currentUser;
     document.getElementById('user-info-name').textContent = user.name;
     document.getElementById('user-info-avatar').textContent = (user.name || "A").charAt(0).toUpperCase();
-
-    // REMOVE LANDING PAGE NAVIGATION ITEMS
     const navMenu = document.getElementById('main-nav-menu');
-    if (navMenu) {
-        navMenu.innerHTML = ''; // Clear all navigation items for authenticated users
-    }
-
-    // Initialize notification system
+    if (navMenu) navMenu.innerHTML = '';
     initializeNotificationSystem();
-
     checkProfileAndRoute();
 }
 
-// Update the existing logout function to cleanup notifications
 function logout() {
-    console.log('Logging out user...');
-    
-    // Clean up notification system
     cleanupNotificationSystem();
-    
     appState.currentUser = null;
     appState.jwtToken = null;
     appState.userSubmittedQuotes.clear();
@@ -2367,64 +1831,47 @@ function logout() {
     appState.notifications = [];
     appState.profileFiles = {};
     localStorage.clear();
-    
     clearTimeout(inactivityTimer);
     clearTimeout(warningTimer);
     dismissInactivityWarning();
-    
     showLandingPageView();
-    showNotification('You have been logged out successfully.', 'info');
+    showNotification('You have been logged out.', 'info');
 }
-
 
 function showLandingPageView() {
     document.getElementById('landing-page-content').style.display = 'block';
     document.getElementById('app-content').style.display = 'none';
     document.getElementById('auth-buttons-container').style.display = 'flex';
     document.getElementById('user-info-container').style.display = 'none';
-
     const navMenu = document.getElementById('main-nav-menu');
-    if (navMenu) {
-        navMenu.innerHTML = `
-            <a href="#ai-estimation" class="nav-link">AI Estimation</a>
-            <a href="#how-it-works" class="nav-link">How It Works</a>
-            <a href="#why-steelconnect" class="nav-link">Why Choose Us</a>
-            <a href="#showcase" class="nav-link">Showcase</a>`;
-    }
+    if (navMenu) navMenu.innerHTML = `
+        <a href="#ai-estimation" class="nav-link">AI Estimation</a><a href="#how-it-works" class="nav-link">How It Works</a>
+        <a href="#why-steelconnect" class="nav-link">Why Choose Us</a><a href="#showcase" class="nav-link">Showcase</a>`;
 }
 
 function buildSidebarNav() {
-    const navContainer = document.getElementById('sidebar-nav-menu');
+    const nav = document.getElementById('sidebar-nav-menu');
     const role = appState.currentUser.type;
     let links = `<a href="#" class="sidebar-nav-link" data-section="dashboard"><i class="fas fa-tachometer-alt fa-fw"></i><span>Dashboard</span></a>`;
-
     if (role === 'designer') {
-        links += `
-          <a href="#" class="sidebar-nav-link" data-section="jobs"><i class="fas fa-search fa-fw"></i><span>Find Projects</span></a>
-          <a href="#" class="sidebar-nav-link" data-section="my-quotes"><i class="fas fa-file-invoice-dollar fa-fw"></i><span>My Quotes</span></a>`;
+        links += `<a href="#" class="sidebar-nav-link" data-section="jobs"><i class="fas fa-search fa-fw"></i><span>Find Projects</span></a>
+                  <a href="#" class="sidebar-nav-link" data-section="my-quotes"><i class="fas fa-file-invoice-dollar fa-fw"></i><span>My Quotes</span></a>`;
     } else {
-        links += `
-          <a href="#" class="sidebar-nav-link" data-section="jobs"><i class="fas fa-tasks fa-fw"></i><span>My Projects</span></a>
-          <a href="#" class="sidebar-nav-link" data-section="approved-jobs"><i class="fas fa-check-circle fa-fw"></i><span>Approved Projects</span></a>
-          <a href="#" class="sidebar-nav-link" data-section="post-job"><i class="fas fa-plus-circle fa-fw"></i><span>Post Project</span></a>
-          <a href="#" class="sidebar-nav-link" data-section="estimation-tool"><i class="fas fa-calculator fa-fw"></i><span>AI Cost Estimation</span></a>
-          <a href="#" class="sidebar-nav-link" data-section="my-estimations"><i class="fas fa-file-invoice fa-fw"></i><span>My Estimations</span></a>`;
+        links += `<a href="#" class="sidebar-nav-link" data-section="jobs"><i class="fas fa-tasks fa-fw"></i><span>My Projects</span></a>
+                  <a href="#" class="sidebar-nav-link" data-section="approved-jobs"><i class="fas fa-check-circle fa-fw"></i><span>Approved Projects</span></a>
+                  <a href="#" class="sidebar-nav-link" data-section="post-job"><i class="fas fa-plus-circle fa-fw"></i><span>Post Project</span></a>
+                  <a href="#" class="sidebar-nav-link" data-section="estimation-tool"><i class="fas fa-calculator fa-fw"></i><span>AI Estimation</span></a>
+                  <a href="#" class="sidebar-nav-link" data-section="my-estimations"><i class="fas fa-file-invoice fa-fw"></i><span>My Estimations</span></a>`;
     }
-
-    links += `<a href="#" class="sidebar-nav-link" data-section="messages"><i class="fas fa-comments fa-fw"></i><span>Messages</span></a>`;
-    links += `<hr class="sidebar-divider">`;
-    links += `<a href="#" class="sidebar-nav-link" data-section="settings"><i class="fas fa-cog fa-fw"></i><span>Settings</span></a>`;
-
-    navContainer.innerHTML = links;
-    navContainer.querySelectorAll('.sidebar-nav-link').forEach(link => {
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-            renderAppSection(link.dataset.section);
-        });
+    links += `<a href="#" class="sidebar-nav-link" data-section="messages"><i class="fas fa-comments fa-fw"></i><span>Messages</span></a>
+              <hr class="sidebar-divider"><a href="#" class="sidebar-nav-link" data-section="settings"><i class="fas fa-cog fa-fw"></i><span>Settings</span></a>`;
+    nav.innerHTML = links;
+    nav.querySelectorAll('.sidebar-nav-link').forEach(link => {
+        link.addEventListener('click', (e) => { e.preventDefault(); renderAppSection(link.dataset.section); });
     });
 }
 
-// --- NEW/UPDATED PROFILE & ROUTING FUNCTIONS ---
+// --- PROFILE & ROUTING FUNCTIONS ---
 
 async function checkProfileAndRoute() {
     const container = document.getElementById('app-container');
@@ -2432,270 +1879,133 @@ async function checkProfileAndRoute() {
     try {
         const response = await apiCall('/profile/status', 'GET');
         const { profileStatus, canAccess, rejectionReason } = response.data;
-        // Update global state
         appState.currentUser.profileStatus = profileStatus;
         appState.currentUser.canAccess = canAccess;
-        appState.currentUser.rejectionReason = rejectionReason; // Store reason
-
-        // Always show the full app interface
-        const sidebar = document.querySelector('.sidebar');
-        if (sidebar) sidebar.style.display = 'flex';
-
-        // Set up sidebar user info
+        appState.currentUser.rejectionReason = rejectionReason;
+        document.querySelector('.sidebar').style.display = 'flex';
         document.getElementById('sidebarUserName').textContent = appState.currentUser.name;
         document.getElementById('sidebarUserType').textContent = appState.currentUser.type;
         document.getElementById('sidebarUserAvatar').textContent = (appState.currentUser.name || "A").charAt(0).toUpperCase();
         buildSidebarNav();
-
-        // Show dashboard regardless of profile status
         renderAppSection('dashboard');
-        // Load user data based on type
         if (appState.currentUser.type === 'designer') loadUserQuotes();
         if (appState.currentUser.type === 'contractor') loadUserEstimations();
-
-        // Initialize activity timer
         resetInactivityTimer();
-
-        // Show profile status notification if needed
-        if (profileStatus === 'incomplete') {
-            showNotification('Complete your profile in Settings to unlock all features.', 'info', 8000);
-        } else if (profileStatus === 'pending') {
-            showNotification('Your profile is under review. You\'ll get full access once approved.', 'info', 8000);
-        } else if (profileStatus === 'rejected') {
-            showNotification('Please update your profile in Settings - some changes are needed.', 'warning', 10000);
-        }
-
-        console.log('User portal loaded successfully');
+        if (profileStatus === 'incomplete') showNotification('Complete your profile to unlock all features.', 'info', 8000);
+        else if (profileStatus === 'pending') showNotification('Your profile is under review.', 'info', 8000);
+        else if (profileStatus === 'rejected') showNotification('Please update your profile.', 'warning', 10000);
     } catch (error) {
-        showNotification('Could not verify your profile status. Please try again.', 'error');
-        container.innerHTML = `<div class="error-state"><h2>Error</h2><p>Could not load your dashboard. Please try logging in again.</p><button class="btn btn-primary" onclick="logout()">Logout</button></div>`;
+        showNotification('Could not verify profile status.', 'error');
+        container.innerHTML = `<div class="error-state"><h2>Error</h2><p>Could not load dashboard.</p><button class="btn btn-primary" onclick="logout()">Logout</button></div>`;
     }
 }
 
 function renderAppSection(sectionId) {
     const container = document.getElementById('app-container');
-    document.querySelectorAll('.sidebar-nav-link').forEach(link => {
-        link.classList.toggle('active', link.dataset.section === sectionId);
-    });
-    const userRole = appState.currentUser.type;
+    document.querySelectorAll('.sidebar-nav-link').forEach(link => link.classList.toggle('active', link.dataset.section === sectionId));
     const profileStatus = appState.currentUser.profileStatus;
     const isApproved = profileStatus === 'approved';
-
-    // Check if feature requires approval
     const restrictedSections = ['post-job', 'jobs', 'my-quotes', 'approved-jobs', 'estimation-tool', 'my-estimations', 'messages'];
-    const isRestricted = restrictedSections.includes(sectionId);
-
-    if (isRestricted && !isApproved) {
+    if (restrictedSections.includes(sectionId) && !isApproved) {
         container.innerHTML = getRestrictedAccessTemplate(sectionId, profileStatus);
         return;
     }
-
-    if(sectionId === 'profile-completion') {
-        renderProfileCompletionView();
-        return;
-    }
-
-    // Handle settings section (always accessible)
-    if (sectionId === 'settings') {
-        container.innerHTML = getSettingsTemplate(appState.currentUser);
-        return;
-    }
-
-    // Regular section rendering for approved users or dashboard
+    if (sectionId === 'profile-completion') { renderProfileCompletionView(); return; }
+    if (sectionId === 'settings') { container.innerHTML = getSettingsTemplate(appState.currentUser); return; }
     if (sectionId === 'dashboard') {
         container.innerHTML = getDashboardTemplate(appState.currentUser);
         if (isApproved) renderRecentActivityWidgets();
     } else if (sectionId === 'jobs') {
-        const title = userRole === 'designer' ? 'Available Projects' : 'My Posted Projects';
-        const subtitle = userRole === 'designer' ? 'Browse and submit quotes for engineering projects' : 'Manage your project listings and review quotes';
-        container.innerHTML = `
-            ${userRole === 'contractor' ? '<div id="dynamic-feature-header" class="dynamic-feature-header"></div>' : ''}
-            <div class="section-header modern-header">
-                <div class="header-content"><h2><i class="fas ${userRole === 'designer' ? 'fa-search' : 'fa-tasks'}"></i> ${title}</h2><p class="header-subtitle">${subtitle}</p></div>
-            </div>
-            <div id="jobs-list" class="jobs-grid"></div>
-            <div id="load-more-container" class="load-more-section"></div>`;
-        if (userRole === 'contractor') updateDynamicHeader();
+        const role = appState.currentUser.type;
+        const title = role === 'designer' ? 'Available Projects' : 'My Posted Projects';
+        const subtitle = role === 'designer' ? 'Browse and submit quotes' : 'Manage your project listings';
+        container.innerHTML = `<div class="section-header modern-header"><div class="header-content"><h2><i class="fas ${role === 'designer' ? 'fa-search' : 'fa-tasks'}"></i> ${title}</h2><p class="header-subtitle">${subtitle}</p></div></div><div id="jobs-list" class="jobs-grid"></div><div id="load-more-container" class="load-more-section"></div>`;
         fetchAndRenderJobs();
     } else if (sectionId === 'post-job') {
+        appState.jobFiles = []; // Reset files
         container.innerHTML = getPostJobTemplate();
         document.getElementById('post-job-form').addEventListener('submit', handlePostJob);
-    } else if (sectionId === 'my-quotes') {
-        fetchAndRenderMyQuotes();
-    } else if (sectionId === 'approved-jobs') {
-        fetchAndRenderApprovedJobs();
-    } else if (sectionId === 'messages') {
-        fetchAndRenderConversations();
-    } else if (sectionId === 'estimation-tool') {
+        const wrapper = document.querySelector('.custom-file-input-wrapper');
+        const customInput = wrapper.querySelector('.custom-file-input');
+        const realInput = wrapper.querySelector('input[type="file"]');
+        customInput.addEventListener('click', () => realInput.click());
+        customInput.addEventListener('dragover', (e) => { e.preventDefault(); customInput.classList.add('drag-over'); });
+        customInput.addEventListener('dragleave', () => customInput.classList.remove('drag-over'));
+        customInput.addEventListener('drop', (e) => {
+            e.preventDefault();
+            customInput.classList.remove('drag-over');
+            if (e.dataTransfer.files.length > 0) {
+                const event = { target: { files: e.dataTransfer.files } };
+                handleJobFileChange(event);
+            }
+        });
+    } else if (sectionId === 'my-quotes') fetchAndRenderMyQuotes();
+    else if (sectionId === 'approved-jobs') fetchAndRenderApprovedJobs();
+    else if (sectionId === 'messages') fetchAndRenderConversations();
+    else if (sectionId === 'estimation-tool') {
         container.innerHTML = getEstimationToolTemplate();
         setupEstimationToolEventListeners();
-    } else if (sectionId === 'my-estimations') {
-        fetchAndRenderMyEstimations();
-    }
+    } else if (sectionId === 'my-estimations') fetchAndRenderMyEstimations();
 }
 
 function getRestrictedAccessTemplate(sectionId, profileStatus) {
-    const sectionNames = {
-        'post-job': 'Post Projects',
-        'jobs': 'Browse Projects',
-        'my-quotes': 'My Quotes',
-        'approved-jobs': 'Approved Projects',
-        'estimation-tool': 'AI Estimation',
-        'my-estimations': 'My Estimations',
-        'messages': 'Messages'
-    };
+    const sectionNames = { 'post-job': 'Post Projects', 'jobs': 'Browse Projects', 'my-quotes': 'My Quotes', 'approved-jobs': 'Approved Projects', 'estimation-tool': 'AI Estimation', 'my-estimations': 'My Estimations', 'messages': 'Messages' };
     const sectionName = sectionNames[sectionId] || 'This Feature';
-
-    let statusMessage = '';
-    let actionButton = '';
-    let statusIcon = 'fa-lock';
-    let statusColor = '#f59e0b';
-
+    let msg = '', btn = '', icon = 'fa-lock', color = '#f59e0b';
     if (profileStatus === 'incomplete') {
-        statusMessage = 'Complete your profile to unlock this feature.';
-        actionButton = `<button class="btn btn-primary" onclick="renderAppSection('profile-completion')">Complete Profile</button>`;
-        statusIcon = 'fa-user-edit';
+        msg = 'Complete your profile to unlock this feature.';
+        btn = `<button class="btn btn-primary" onclick="renderAppSection('profile-completion')">Complete Profile</button>`;
+        icon = 'fa-user-edit';
     } else if (profileStatus === 'pending') {
-        statusMessage = 'Your profile is under review. This feature will be available once approved.';
-        actionButton = `<button class="btn btn-outline" onclick="renderAppSection('settings')">Check Status</button>`;
-        statusIcon = 'fa-clock';
-        statusColor = '#0ea5e9';
+        msg = 'Your profile is under review. This feature will be available once approved.';
+        btn = `<button class="btn btn-outline" onclick="renderAppSection('settings')">Check Status</button>`;
+        icon = 'fa-clock'; color = '#0ea5e9';
     } else if (profileStatus === 'rejected') {
-        statusMessage = 'Please update your profile to access this feature.';
-        actionButton = `<button class="btn btn-primary" onclick="renderAppSection('profile-completion')">Update Profile</button>`;
-        statusIcon = 'fa-exclamation-triangle';
-        statusColor = '#ef4444';
+        msg = 'Please update your profile to access this feature.';
+        btn = `<button class="btn btn-primary" onclick="renderAppSection('profile-completion')">Update Profile</button>`;
+        icon = 'fa-exclamation-triangle'; color = '#ef4444';
     }
-
-    return `
-        <div class="restricted-access-container" style="max-width: 600px; margin: 4rem auto; text-align: center; background: white; padding: 3rem; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.1);">
-            <div class="restricted-icon" style="font-size: 4rem; margin-bottom: 1.5rem; color: ${statusColor};">
-                <i class="fas ${statusIcon}"></i>
-            </div>
-            <h2 style="font-size: 2rem; margin-bottom: 1rem;">${sectionName} - Access Restricted</h2>
-            <p style="color: var(--text-gray); margin-bottom: 2rem; font-size: 1.1rem;">${statusMessage}</p>
-            ${actionButton}
-            <div style="margin-top: 2rem; padding: 1rem; background: #f8fafc; border-radius: 8px;">
-                <p style="font-size: 0.9rem; color: var(--text-gray); margin: 0;">
-                    <i class="fas fa-info-circle"></i> All features will be unlocked once your profile is approved by our admin team.
-                </p>
-            </div>
-        </div>
-    `;
+    return `<div class="restricted-access-container"><div class="restricted-icon" style="color: ${color};"><i class="fas ${icon}"></i></div><h2>${sectionName} - Access Restricted</h2><p>${msg}</p>${btn}</div>`;
 }
 
 async function renderProfileCompletionView() {
     const container = document.getElementById('app-container');
     container.innerHTML = `<div class="loading-spinner"><div class="spinner"></div><p>Loading profile form...</p></div>`;
-    appState.profileFiles = {}; // Reset files
-
+    appState.profileFiles = {};
     try {
         const response = await apiCall('/profile/form-fields', 'GET');
         const { fields, userType } = response.data;
-
         const formFieldsHTML = fields.map(field => {
-            if (field.type === 'textarea') {
-                return `
-                    <div class="form-group">
-                        <label class="form-label">${field.label} ${field.required ? '<span style="color:red">*</span>' : ''}</label>
-                        <textarea class="form-textarea premium-input" name="${field.name}" ${field.required ? 'required' : ''} placeholder="${field.placeholder || ''}"></textarea>
-                    </div>`;
-            } else if (field.type === 'file') {
-                 return `
-                    <div class="form-group">
-                        <label class="form-label">${field.label} ${field.required ? '<span style="color:red">*</span>' : ''}</label>
-                        <div class="custom-file-input-wrapper">
-                            <input type="file" name="${field.name}" data-field-name="${field.name}" onchange="handleProfileFileChange(event)" accept="${field.accept || ''}" ${field.multiple ? 'multiple' : ''} ${field.required ? 'required' : ''}>
-                            <div class="custom-file-input">
-                                <span class="custom-file-input-label">
-                                    <i class="fas fa-upload"></i>
-                                    <span id="label-${field.name}">Click to upload or drag & drop</span>
-                                </span>
-                            </div>
-                        </div>
-                        <div id="file-list-${field.name}" class="file-list-container"></div>
-                    </div>`;
-            } else if (field.type === 'select') {
-                const optionsHTML = (field.options || []).map(opt => `<option value="${opt}">${opt}</option>`).join('');
-                return `
-                     <div class="form-group">
-                        <label class="form-label">${field.label} ${field.required ? '<span style="color:red">*</span>' : ''}</label>
-                        <select name="${field.name}" class="form-select premium-select" ${field.required ? 'required' : ''}>
-                            <option value="" disabled selected>Select an option</option>
-                            ${optionsHTML}
-                        </select>
-                    </div>`;
-            } else {
-                return `
-                    <div class="form-group">
-                        <label class="form-label">${field.label} ${field.required ? '<span style="color:red">*</span>' : ''}</label>
-                        <input type="${field.type}" class="form-input premium-input" name="${field.name}" ${field.required ? 'required' : ''} placeholder="${field.placeholder || ''}">
-                    </div>`;
-            }
+            if (field.type === 'textarea') return `<div class="form-group"><label class="form-label">${field.label} ${field.required ? '<span style="color:red">*</span>' : ''}</label><textarea class="form-textarea premium-input" name="${field.name}" ${field.required ? 'required' : ''} placeholder="${field.placeholder || ''}"></textarea></div>`;
+            else if (field.type === 'file') return `<div class="form-group"><label class="form-label">${field.label} ${field.required ? '<span style="color:red">*</span>' : ''}</label><div class="custom-file-input-wrapper"><input type="file" name="${field.name}" data-field-name="${field.name}" onchange="handleProfileFileChange(event)" accept="${field.accept || ''}" ${field.multiple ? 'multiple' : ''} ${field.required ? 'required' : ''}><div class="custom-file-input"><span class="custom-file-input-label"><i class="fas fa-upload"></i> <span id="label-${field.name}">Click to upload</span></span></div></div><div id="file-list-${field.name}" class="file-list-container"></div></div>`;
+            else if (field.type === 'select') {
+                const options = (field.options || []).map(opt => `<option value="${opt}">${opt}</option>`).join('');
+                return `<div class="form-group"><label class="form-label">${field.label} ${field.required ? '*' : ''}</label><select name="${field.name}" class="form-select premium-select" ${field.required ? 'required' : ''}><option value="" disabled selected>Select...</option>${options}</select></div>`;
+            } else return `<div class="form-group"><label class="form-label">${field.label} ${field.required ? '*' : ''}</label><input type="${field.type}" class="form-input premium-input" name="${field.name}" ${field.required ? 'required' : ''} placeholder="${field.placeholder || ''}"></div>`;
         }).join('');
-
         container.innerHTML = `
-            <div class="section-header modern-header">
-                <div class="header-content">
-                    <h2><i class="fas fa-user-check"></i> Complete Your Profile</h2>
-                    <p class="header-subtitle">To ensure a high-quality professional network, we require all ${userType}s to complete their profile for review.</p>
-                </div>
-            </div>
-            <div class="profile-completion-container">
-                <form id="profile-completion-form" class="profile-completion-form">
-                    <div class="form-section">
-                        <h3><i class="fas fa-user-circle"></i> Profile Information</h3>
-                        <div class="profile-form-grid">
-                            ${formFieldsHTML}
-                        </div>
-                    </div>
-                    <div class="form-actions" style="text-align:center;">
-                        <button type="submit" class="btn btn-primary btn-large">
-                            <i class="fas fa-paper-plane"></i> Submit for Review
-                        </button>
-                    </div>
-                </form>
-            </div>
-        `;
-
-        // **FIX: Add event listeners for custom file inputs to make them clickable and support drag/drop**
+            <div class="section-header modern-header"><div class="header-content"><h2><i class="fas fa-user-check"></i> Complete Your Profile</h2><p class="header-subtitle">We require all ${userType}s to complete their profile for review.</p></div></div>
+            <div class="profile-completion-container"><form id="profile-completion-form" class="profile-completion-form"><div class="form-section"><h3><i class="fas fa-user-circle"></i> Profile Information</h3><div class="profile-form-grid">${formFieldsHTML}</div></div><div class="form-actions" style="text-align:center;"><button type="submit" class="btn btn-primary btn-large"><i class="fas fa-paper-plane"></i> Submit for Review</button></div></form></div>`;
         document.querySelectorAll('.custom-file-input-wrapper').forEach(wrapper => {
-            const customInput = wrapper.querySelector('.custom-file-input');
-            const realInput = wrapper.querySelector('input[type="file"]');
-
-            if (customInput && realInput) {
-                // Forward clicks from the custom div to the real file input
-                customInput.addEventListener('click', () => {
-                    realInput.click();
-                });
-
-                // Add drag and drop functionality
-                customInput.addEventListener('dragover', (e) => {
+            const custom = wrapper.querySelector('.custom-file-input');
+            const real = wrapper.querySelector('input[type="file"]');
+            if (custom && real) {
+                custom.addEventListener('click', () => real.click());
+                custom.addEventListener('dragover', (e) => { e.preventDefault(); custom.classList.add('drag-over'); });
+                custom.addEventListener('dragleave', () => custom.classList.remove('drag-over'));
+                custom.addEventListener('drop', (e) => {
                     e.preventDefault();
-                    customInput.classList.add('drag-over');
-                });
-
-                customInput.addEventListener('dragleave', () => {
-                    customInput.classList.remove('drag-over');
-                });
-
-                customInput.addEventListener('drop', (e) => {
-                    e.preventDefault();
-                    customInput.classList.remove('drag-over');
+                    custom.classList.remove('drag-over');
                     if (e.dataTransfer.files.length > 0) {
-                        // Assign the dropped files to the input and trigger the change event
-                        realInput.files = e.dataTransfer.files;
-                        const changeEvent = new Event('change', { bubbles: true });
-                        realInput.dispatchEvent(changeEvent);
+                        real.files = e.dataTransfer.files;
+                        real.dispatchEvent(new Event('change', { bubbles: true }));
                     }
                 });
             }
         });
-        
         document.getElementById('profile-completion-form').addEventListener('submit', handleProfileCompletionSubmit);
-
     } catch (error) {
-        container.innerHTML = `<div class="error-state"><h2>Error Loading Form</h2><p>We couldn't load the profile form. Please try again later.</p></div>`;
+        container.innerHTML = `<div class="error-state"><h2>Error Loading Form</h2><p>Please try again later.</p></div>`;
     }
 }
 
@@ -2703,19 +2013,9 @@ function handleProfileFileChange(event) {
     const input = event.target;
     const fieldName = input.dataset.fieldName;
     const files = input.files;
-
     if (!files || files.length === 0) return;
-
-    if (input.multiple) {
-        appState.profileFiles[fieldName] = [...(appState.profileFiles[fieldName] || []), ...files];
-    } else {
-        appState.profileFiles[fieldName] = [files[0]];
-    }
-
-    if (appState.profileFiles[fieldName].length > 0) {
-        input.removeAttribute('required');
-    }
-
+    appState.profileFiles[fieldName] = input.multiple ? [...(appState.profileFiles[fieldName] || []), ...files] : [files[0]];
+    if (appState.profileFiles[fieldName].length > 0) input.removeAttribute('required');
     renderProfileFileList(fieldName);
 }
 
@@ -2723,11 +2023,9 @@ function removeProfileFile(fieldName, index) {
     if (appState.profileFiles[fieldName]) {
         appState.profileFiles[fieldName].splice(index, 1);
         renderProfileFileList(fieldName);
-
         const input = document.querySelector(`input[data-field-name="${fieldName}"]`);
-        const isOriginallyRequired = fieldName === 'resume' || fieldName === 'idProof'; // Example
-        if (appState.profileFiles[fieldName].length === 0 && isOriginallyRequired) {
-             input.setAttribute('required', 'true');
+        if (appState.profileFiles[fieldName].length === 0 && (fieldName === 'resume' || fieldName === 'idProof')) {
+            input.setAttribute('required', 'true');
         }
     }
 }
@@ -2736,180 +2034,93 @@ function renderProfileFileList(fieldName) {
     const container = document.getElementById(`file-list-${fieldName}`);
     const label = document.getElementById(`label-${fieldName}`);
     const files = appState.profileFiles[fieldName] || [];
-
     if (files.length === 0) {
         container.innerHTML = '';
-        label.textContent = 'Click to upload or drag & drop';
+        label.textContent = 'Click to upload';
         return;
     }
-
-    container.innerHTML = files.map((file, index) => `
-        <div class="file-list-item">
-            <div class="file-list-item-info">
-                <i class="fas fa-file-alt"></i>
-                <span>${file.name}</span>
-            </div>
-            <button type="button" class="remove-file-button" onclick="removeProfileFile('${fieldName}', ${index})">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-    `).join('');
-
+    container.innerHTML = files.map((file, index) => `<div class="file-list-item"><div class="file-list-item-info"><i class="fas fa-file-alt"></i><span>${file.name}</span></div><button type="button" class="remove-file-button" onclick="removeProfileFile('${fieldName}', ${index})"><i class="fas fa-times"></i></button></div>`).join('');
     label.textContent = `${files.length} file(s) selected`;
 }
-
 
 async function handleProfileCompletionSubmit(event) {
     event.preventDefault();
     const form = event.target;
-    const submitBtn = form.querySelector('button[type="submit"]');
-    const originalText = submitBtn.innerHTML;
-    submitBtn.innerHTML = '<div class="btn-spinner"></div> Submitting...';
-    submitBtn.disabled = true;
-
+    const btn = form.querySelector('button[type="submit"]');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<div class="btn-spinner"></div> Submitting...';
+    btn.disabled = true;
     try {
         const formData = new FormData(form);
-
-        // **FIX:** Use appState as the single source of truth for files.
-        // First, delete any file entries that might have been automatically 
-        // added by `new FormData(form)`. This is crucial to prevent duplicates
-        // or submitting files that the user has removed from the UI.
-        for (const fieldName in appState.profileFiles) {
-             formData.delete(fieldName);
-        }
-
-        // Now, append the files correctly from the appState object, which
-        // accurately reflects the user's selection.
+        for (const fieldName in appState.profileFiles) formData.delete(fieldName);
         for (const fieldName in appState.profileFiles) {
             const files = appState.profileFiles[fieldName];
-            if (files && files.length > 0) {
-                files.forEach(file => {
-                    formData.append(fieldName, file, file.name);
-                });
-            }
+            if (files && files.length > 0) files.forEach(file => formData.append(fieldName, file, file.name));
         }
-
         await apiCall('/profile/complete', 'PUT', formData);
         showNotification('Profile submitted for review!', 'success');
-
-        await checkProfileAndRoute(); // Re-check status to show the 'pending' view
-
+        await checkProfileAndRoute();
     } catch (error) {
-        showNotification('Failed to submit profile. Please check your inputs and try again.', 'error');
+        showNotification('Failed to submit profile.', 'error');
     } finally {
-        submitBtn.innerHTML = originalText;
-        submitBtn.disabled = false;
+        btn.innerHTML = originalText;
+        btn.disabled = false;
     }
 }
 
 
-// --- DASHBOARD WIDGETS (ENHANCED) ---
+// --- DASHBOARD WIDGETS ---
 async function renderRecentActivityWidgets() {
     const user = appState.currentUser;
-    const recentProjectsContainer = document.getElementById('recent-projects-widget');
-    const recentQuotesContainer = document.getElementById('recent-quotes-widget');
-
+    const projectsContainer = document.getElementById('recent-projects-widget');
+    const quotesContainer = document.getElementById('recent-quotes-widget');
     if (user.type === 'contractor') {
-        if(recentProjectsContainer) recentProjectsContainer.innerHTML = '<div class="widget-loader"><div class="spinner"></div></div>';
+        if (projectsContainer) projectsContainer.innerHTML = '<div class="widget-loader"><div class="spinner"></div></div>';
         try {
-            const endpoint = `/jobs/user/${user.id}?limit=3`;
-            const response = await apiCall(endpoint, 'GET');
+            const response = await apiCall(`/jobs/user/${user.id}?limit=3`, 'GET');
             const recentJobs = (response.data || []).slice(0, 3);
-            if (recentJobs.length > 0) {
-                recentProjectsContainer.innerHTML = recentJobs.map(job => `
-                    <div class="widget-list-item" id="widget-item-${job.id}">
-                        <div class="widget-item-header" onclick="toggleWidgetDetails('${job.id}', 'job')">
-                            <div class="widget-item-info">
-                                <i class="fas fa-briefcase widget-item-icon"></i>
-                                <div>
-                                    <p class="widget-item-title">${job.title}</p>
-                                    <span class="widget-item-meta">Budget: ${job.budget}</span>
-                                </div>
-                            </div>
-                            <span class="widget-item-status ${job.status}">${job.status}</span>
-                        </div>
-                        <div class="widget-item-details" id="widget-details-${job.id}"></div>
-                    </div>
-                `).join('');
-            } else {
-                recentProjectsContainer.innerHTML = '<p class="widget-empty-text">No recent projects found.</p>';
-            }
-        } catch(e) {
-            recentProjectsContainer.innerHTML = '<p class="widget-empty-text">Could not load projects.</p>';
+            if (recentJobs.length > 0) projectsContainer.innerHTML = recentJobs.map(job => `<div class="widget-list-item" id="widget-item-${job.id}"><div class="widget-item-header" onclick="toggleWidgetDetails('${job.id}', 'job')"><div class="widget-item-info"><i class="fas fa-briefcase widget-item-icon"></i><div><p class="widget-item-title">${job.title}</p><span class="widget-item-meta">Budget: ${job.budget}</span></div></div><span class="widget-item-status ${job.status}">${job.status}</span></div><div class="widget-item-details" id="widget-details-${job.id}"></div></div>`).join('');
+            else projectsContainer.innerHTML = '<p class="widget-empty-text">No recent projects.</p>';
+        } catch (e) {
+            projectsContainer.innerHTML = '<p class="widget-empty-text">Could not load projects.</p>';
         }
     } else if (user.type === 'designer') {
-        if(recentQuotesContainer) recentQuotesContainer.innerHTML = '<div class="widget-loader"><div class="spinner"></div></div>';
+        if (quotesContainer) quotesContainer.innerHTML = '<div class="widget-loader"><div class="spinner"></div></div>';
         try {
-            const endpoint = `/quotes/user/${user.id}?limit=3`;
-            const response = await apiCall(endpoint, 'GET');
+            const response = await apiCall(`/quotes/user/${user.id}?limit=3`, 'GET');
             const recentQuotes = (response.data || []).slice(0, 3);
-             if (recentQuotes.length > 0) {
-                recentQuotesContainer.innerHTML = recentQuotes.map(quote => `
-                    <div class="widget-list-item" id="widget-item-${quote.id}">
-                        <div class="widget-item-header" onclick="toggleWidgetDetails('${quote.id}', 'quote')">
-                             <div class="widget-item-info">
-                                <i class="fas fa-file-invoice-dollar widget-item-icon"></i>
-                                <div>
-                                    <p class="widget-item-title">Quote for: ${quote.jobTitle}</p>
-                                    <span class="widget-item-meta">Amount: ${quote.quoteAmount}</span>
-                                </div>
-                            </div>
-                            <span class="widget-item-status ${quote.status}">${quote.status}</span>
-                        </div>
-                        <div class="widget-item-details" id="widget-details-${quote.id}"></div>
-                    </div>
-                `).join('');
-            } else {
-                recentQuotesContainer.innerHTML = '<p class="widget-empty-text">No recent quotes found.</p>';
-            }
-        } catch(e) {
-            recentQuotesContainer.innerHTML = '<p class="widget-empty-text">Could not load quotes.</p>';
+            if (recentQuotes.length > 0) quotesContainer.innerHTML = recentQuotes.map(quote => `<div class="widget-list-item" id="widget-item-${quote.id}"><div class="widget-item-header" onclick="toggleWidgetDetails('${quote.id}', 'quote')"><div class="widget-item-info"><i class="fas fa-file-invoice-dollar widget-item-icon"></i><div><p class="widget-item-title">Quote for: ${quote.jobTitle}</p><span class="widget-item-meta">Amount: ${quote.quoteAmount}</span></div></div><span class="widget-item-status ${quote.status}">${quote.status}</span></div><div class="widget-item-details" id="widget-details-${quote.id}"></div></div>`).join('');
+            else quotesContainer.innerHTML = '<p class="widget-empty-text">No recent quotes.</p>';
+        } catch (e) {
+            quotesContainer.innerHTML = '<p class="widget-empty-text">Could not load quotes.</p>';
         }
     }
 }
 
 async function toggleWidgetDetails(itemId, itemType) {
-    const detailsContainer = document.getElementById(`widget-details-${itemId}`);
-    if (!detailsContainer) return;
-
-    if (detailsContainer.classList.contains('expanded')) {
-        detailsContainer.classList.remove('expanded');
-        detailsContainer.innerHTML = '';
+    const details = document.getElementById(`widget-details-${itemId}`);
+    if (!details) return;
+    if (details.classList.contains('expanded')) {
+        details.classList.remove('expanded');
+        details.innerHTML = '';
         return;
     }
-
-    // Close any other open details
     document.querySelectorAll('.widget-item-details.expanded').forEach(el => {
         el.classList.remove('expanded');
         el.innerHTML = '';
     });
-
-    detailsContainer.innerHTML = '<div class="widget-loader"><div class="spinner"></div></div>';
-    detailsContainer.classList.add('expanded');
-
+    details.innerHTML = '<div class="widget-loader"><div class="spinner"></div></div>';
+    details.classList.add('expanded');
     try {
         if (itemType === 'job') {
             const job = appState.jobs.find(j => j.id === itemId) || (await apiCall(`/jobs/${itemId}`, 'GET')).data;
-            if (job) {
-                detailsContainer.innerHTML = `
-                    <p><strong>Description:</strong> ${job.description}</p>
-                    <p><strong>Deadline:</strong> ${new Date(job.deadline).toLocaleDateString()}</p>
-                    ${job.assignedToName ? `<p><strong>Assigned To:</strong> ${job.assignedToName}</p>` : ''}
-                    <button class="btn btn-outline" onclick="renderAppSection('jobs')">View Full Details</button>
-                `;
-            }
+            if (job) details.innerHTML = `<p><strong>Description:</strong> ${job.description}</p><p><strong>Deadline:</strong> ${new Date(job.deadline).toLocaleDateString()}</p><button class="btn btn-outline" onclick="renderAppSection('jobs')">View Full Details</button>`;
         } else if (itemType === 'quote') {
             const quote = appState.myQuotes.find(q => q.id === itemId) || (await apiCall(`/quotes/${itemId}`, 'GET')).data;
-            if (quote) {
-                detailsContainer.innerHTML = `
-                    <p><strong>Description:</strong> ${quote.description}</p>
-                    <p><strong>Timeline:</strong> ${quote.timeline} days</p>
-                    <button class="btn btn-outline" onclick="renderAppSection('my-quotes')">View Full Details</button>
-                `;
-            }
+            if (quote) details.innerHTML = `<p><strong>Description:</strong> ${quote.description}</p><p><strong>Timeline:</strong> ${quote.timeline} days</p><button class="btn btn-outline" onclick="renderAppSection('my-quotes')">View Full Details</button>`;
         }
     } catch (error) {
-        detailsContainer.innerHTML = '<p>Could not load details.</p>';
+        details.innerHTML = '<p>Could not load details.</p>';
     }
 }
 
@@ -2917,24 +2128,17 @@ async function toggleWidgetDetails(itemId, itemType) {
 function setupEstimationToolEventListeners() {
     const uploadArea = document.getElementById('file-upload-area');
     const fileInput = document.getElementById('file-upload-input');
-
     if (uploadArea) {
         uploadArea.addEventListener('click', () => fileInput.click());
         uploadArea.addEventListener('dragover', (e) => { e.preventDefault(); uploadArea.classList.add('drag-over'); });
-        uploadArea.addEventListener('dragleave', () => { uploadArea.classList.remove('drag-over'); });
+        uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('drag-over'));
         uploadArea.addEventListener('drop', (e) => {
             e.preventDefault();
             uploadArea.classList.remove('drag-over');
             if (e.dataTransfer.files.length > 0) handleFileSelect(e.dataTransfer.files);
         });
     }
-
-    if (fileInput) {
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) handleFileSelect(e.target.files);
-        });
-    }
-
+    if (fileInput) fileInput.addEventListener('change', (e) => { if (e.target.files.length > 0) handleFileSelect(e.target.files); });
     const submitBtn = document.getElementById('submit-estimation-btn');
     if (submitBtn) submitBtn.addEventListener('click', handleEstimationSubmit);
 }
@@ -2948,63 +2152,37 @@ function handleFileSelect(files) {
         const file = files[i];
         const fileSize = (file.size / 1024 / 1024).toFixed(2);
         const fileType = getFileTypeIcon(file.type, file.name);
-        filesHTML += `
-            <div class="selected-file-item">
-                <div class="file-info">
-                    <i class="fas ${fileType.icon}"></i>
-                    <div class="file-details">
-                        <span class="file-name">${file.name}</span>
-                        <span class="file-size">${fileSize} MB</span>
-                    </div>
-                </div>
-                <button type="button" class="remove-file-btn" onclick="removeFile(${i})"><i class="fas fa-times"></i></button>
-            </div>`;
+        filesHTML += `<div class="selected-file-item"><div class="file-info"><i class="fas ${fileType.icon}"></i><div class="file-details"><span class="file-name">${file.name}</span><span class="file-size">${fileSize} MB</span></div></div><button type="button" class="remove-file-btn" onclick="removeFile(${i})"><i class="fas fa-times"></i></button></div>`;
     }
     fileList.innerHTML = filesHTML;
     document.getElementById('file-info-container').style.display = 'block';
     submitBtn.disabled = false;
-    updateEstimationStep(2); // Update progress
-    showNotification(`${files.length} file(s) selected for estimation`, 'success');
+    updateEstimationStep(2);
+    showNotification(`${files.length} file(s) selected`, 'success');
 }
 
 function getFileTypeIcon(mimeType, fileName) {
-    const extension = fileName.split('.').pop().toLowerCase();
-    const types = {
-        'pdf': { icon: 'fa-file-pdf', class: 'pdf-file', label: 'PDF Document' },
-        'dwg': { icon: 'fa-drafting-compass', class: 'dwg-file', label: 'CAD Drawing' },
-        'doc': { icon: 'fa-file-word', class: 'doc-file', label: 'Word Document' },
-        'docx': { icon: 'fa-file-word', class: 'doc-file', label: 'Word Document' },
-        'jpg': { icon: 'fa-file-image', class: 'img-file', label: 'Image' },
-        'jpeg': { icon: 'fa-file-image', class: 'img-file', label: 'Image' },
-        'png': { icon: 'fa-file-image', class: 'img-file', label: 'Image' }
-    };
-    return types[extension] || { icon: 'fa-file', class: 'unknown-file', label: 'Document' };
+    const ext = fileName.split('.').pop().toLowerCase();
+    const types = { 'pdf': { icon: 'fa-file-pdf' }, 'dwg': { icon: 'fa-drafting-compass' }, 'doc': { icon: 'fa-file-word' }, 'docx': { icon: 'fa-file-word' }, 'jpg': { icon: 'fa-file-image' }, 'jpeg': { icon: 'fa-file-image' }, 'png': { icon: 'fa-file-image' } };
+    return types[ext] || { icon: 'fa-file' };
 }
 
 function updateEstimationStep(activeStep) {
     document.querySelectorAll('.estimation-steps .step').forEach((step, index) => {
-        const stepNumber = index + 1;
-        if (stepNumber < activeStep) {
-            step.classList.add('completed');
-            step.classList.remove('active');
-        } else if (stepNumber === activeStep) {
-            step.classList.add('active');
-            step.classList.remove('completed');
-        } else {
-            step.classList.remove('active', 'completed');
-        }
+        const stepNum = index + 1;
+        if (stepNum < activeStep) step.classList.add('completed'); else step.classList.remove('completed');
+        if (stepNum === activeStep) step.classList.add('active'); else step.classList.remove('active');
     });
 }
 
 function removeFile(index) {
     const filesArray = Array.from(appState.uploadedFile);
     filesArray.splice(index, 1);
-
     if (filesArray.length === 0) {
         appState.uploadedFile = null;
         document.getElementById('file-info-container').style.display = 'none';
         document.getElementById('submit-estimation-btn').disabled = true;
-        updateEstimationStep(1); // Revert progress
+        updateEstimationStep(1);
     } else {
         const dt = new DataTransfer();
         filesArray.forEach(file => dt.items.add(file));
@@ -3016,22 +2194,19 @@ function removeFile(index) {
 async function handleEstimationSubmit() {
     const form = document.getElementById('estimation-form');
     const submitBtn = document.getElementById('submit-estimation-btn');
-    
     if (!appState.uploadedFile || appState.uploadedFile.length === 0) {
-        showNotification('Please select files for estimation', 'warning');
+        showNotification('Please select files', 'warning');
         return;
     }
     const projectTitle = form.projectTitle.value.trim();
     const description = form.description.value.trim();
     if (!projectTitle || !description) {
-        showNotification('Please fill in all required fields', 'warning');
+        showNotification('Please fill in all fields', 'warning');
         return;
     }
-
-    updateEstimationStep(3); // Update progress
+    updateEstimationStep(3);
     submitBtn.disabled = true;
-    submitBtn.innerHTML = '<div class="btn-spinner"></div> Submitting Request...';
-    
+    submitBtn.innerHTML = '<div class="btn-spinner"></div> Submitting...';
     try {
         const formData = new FormData();
         formData.append('projectTitle', projectTitle);
@@ -3041,126 +2216,95 @@ async function handleEstimationSubmit() {
         for (let i = 0; i < appState.uploadedFile.length; i++) {
             formData.append('files', appState.uploadedFile[i]);
         }
-        await apiCall('/estimation/contractor/submit', 'POST', formData, 'Estimation request submitted successfully!');
-        addLocalNotification('Submitted', `Your AI estimation request for "${projectTitle}" has been submitted.`, 'estimation');
+        await apiCall('/estimation/contractor/submit', 'POST', formData, 'Estimation request submitted!');
+        addLocalNotification('Submitted', `Estimation request for "${projectTitle}" submitted.`, 'estimation');
         form.reset();
         appState.uploadedFile = null;
         document.getElementById('file-info-container').style.display = 'none';
-        updateEstimationStep(1); // Reset progress
+        updateEstimationStep(1);
         renderAppSection('my-estimations');
     } catch (error) {
-        addLocalNotification('Error', 'Failed to submit estimation request. Please try again.', 'error');
-        updateEstimationStep(2); // Revert progress
+        addLocalNotification('Error', 'Failed to submit estimation.', 'error');
+        updateEstimationStep(2);
     } finally {
         submitBtn.disabled = false;
-        submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Estimation Request';
+        submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Request';
     }
 }
 
 function showNotification(message, type = 'info', duration = 4000) {
-    let notificationContainer = document.getElementById('notification-container');
-    if (!notificationContainer) {
-        notificationContainer = document.createElement('div');
-        notificationContainer.id = 'notification-container';
-        notificationContainer.className = 'notification-container';
-        document.body.appendChild(notificationContainer);
+    let container = document.getElementById('notification-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'notification-container';
+        container.className = 'notification-container';
+        document.body.appendChild(container);
     }
-
-    const notification = document.createElement('div');
-    notification.className = `notification premium-notification notification-${type}`;
-    const iconClass = getNotificationIcon(type);
-
-    notification.innerHTML = `
-        <div class="notification-content">
-            <i class="fas ${iconClass}"></i>
-            <span>${message}</span>
-        </div>
-        <button class="notification-close" onclick="this.parentElement.remove()">
-            <i class="fas fa-times"></i>
-        </button>`;
-
-    notificationContainer.appendChild(notification);
-
+    const notif = document.createElement('div');
+    notif.className = `notification premium-notification notification-${type}`;
+    notif.innerHTML = `<div class="notification-content"><i class="fas ${getNotificationIcon(type)}"></i><span>${message}</span></div><button class="notification-close" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>`;
+    container.appendChild(notif);
     setTimeout(() => {
-        if (notification.parentElement) {
-            notification.style.opacity = '0';
-            notification.style.transform = 'translateX(100%)';
-            setTimeout(() => notification.remove(), 300);
+        if (notif.parentElement) {
+            notif.style.opacity = '0';
+            setTimeout(() => notif.remove(), 300);
         }
     }, duration);
 }
 
 function showRestrictedFeature(featureName) {
-    const profileStatus = appState.currentUser.profileStatus;
-    let message = '';
-
-    if (profileStatus === 'incomplete') {
-        message = 'Complete your profile to access this feature.';
-    } else if (profileStatus === 'pending') {
-        message = 'This feature will be available once your profile is approved.';
-    } else if (profileStatus === 'rejected') {
-        message = 'Please update your profile to access this feature.';
-    }
-
-    showNotification(message, 'warning', 6000);
+    const status = appState.currentUser.profileStatus;
+    let msg = '';
+    if (status === 'incomplete') msg = 'Complete your profile to access this.';
+    else if (status === 'pending') msg = 'This will be available once your profile is approved.';
+    else if (status === 'rejected') msg = 'Please update your profile to access this.';
+    showNotification(msg, 'warning', 6000);
 }
 
 
 // --- TEMPLATE GETTERS ---
 function getLoginTemplate() {
-    return `
-        <div class="auth-header premium-auth-header">
-            <div class="auth-logo"><i class="fas fa-drafting-compass"></i></div>
-            <h2>Welcome Back</h2><p>Sign in to your SteelConnect account</p>
-        </div>
-        <form id="login-form" class="premium-form">
-            <div class="form-group"><label class="form-label"><i class="fas fa-envelope"></i> Email Address</label><input type="email" class="form-input premium-input" name="loginEmail" required placeholder="Enter your email"></div>
-            <div class="form-group"><label class="form-label"><i class="fas fa-lock"></i> Password</label><input type="password" class="form-input premium-input" name="loginPassword" required placeholder="Enter your password"></div>
-            <button type="submit" class="btn btn-primary btn-full premium-btn"><i class="fas fa-sign-in-alt"></i> Sign In</button>
-        </form>
-        <div class="auth-switch">Don't have an account? <a onclick="renderAuthForm('register')" class="auth-link">Create Account</a></div>`;
+    return `<div class="auth-header premium-auth-header"><div class="auth-logo"><i class="fas fa-drafting-compass"></i></div><h2>Welcome Back</h2><p>Sign in to your account</p></div><form id="login-form" class="premium-form"><div class="form-group"><label class="form-label"><i class="fas fa-envelope"></i> Email</label><input type="email" class="form-input" name="loginEmail" required></div><div class="form-group"><label class="form-label"><i class="fas fa-lock"></i> Password</label><input type="password" class="form-input" name="loginPassword" required></div><button type="submit" class="btn btn-primary btn-full"><i class="fas fa-sign-in-alt"></i> Sign In</button></form><div class="auth-switch">Don't have an account? <a onclick="renderAuthForm('register')">Create one</a></div>`;
 }
 
 function getRegisterTemplate() {
-    return `
-        <div class="auth-header premium-auth-header">
-            <div class="auth-logo"><i class="fas fa-drafting-compass"></i></div>
-            <h2>Join SteelConnect</h2><p>Create your professional account</p>
-        </div>
-        <form id="register-form" class="premium-form">
-            <div class="form-group"><label class="form-label"><i class="fas fa-user"></i> Full Name</label><input type="text" class="form-input premium-input" name="regName" required placeholder="Enter your full name"></div>
-            <div class="form-group"><label class="form-label"><i class="fas fa-envelope"></i> Email Address</label><input type="email" class="form-input premium-input" name="regEmail" required placeholder="Enter your email"></div>
-            <div class="form-group"><label class="form-label"><i class="fas fa-lock"></i> Password</label><input type="password" class="form-input premium-input" name="regPassword" required placeholder="Create a strong password"></div>
-            <div class="form-group"><label class="form-label"><i class="fas fa-user-tag"></i> I am a...</label><select class="form-select premium-select" name="regRole" required><option value="" disabled selected>Select your role</option><option value="contractor">Client / Contractor</option><option value="designer">Designer / Engineer</option></select></div>
-            <button type="submit" class="btn btn-primary btn-full premium-btn"><i class="fas fa-user-plus"></i> Create Account</button>
-        </form>
-        <div class="auth-switch">Already have an account? <a onclick="renderAuthForm('login')" class="auth-link">Sign In</a></div>`;
+    return `<div class="auth-header premium-auth-header"><div class="auth-logo"><i class="fas fa-drafting-compass"></i></div><h2>Join SteelConnect</h2><p>Create your professional account</p></div><form id="register-form" class="premium-form"><div class="form-group"><label class="form-label"><i class="fas fa-user"></i> Full Name</label><input type="text" class="form-input" name="regName" required></div><div class="form-group"><label class="form-label"><i class="fas fa-envelope"></i> Email</label><input type="email" class="form-input" name="regEmail" required></div><div class="form-group"><label class="form-label"><i class="fas fa-lock"></i> Password</label><input type="password" class="form-input" name="regPassword" required></div><div class="form-group"><label class="form-label"><i class="fas fa-user-tag"></i> I am a...</label><select class="form-select" name="regRole" required><option value="" disabled selected>Select role</option><option value="contractor">Client / Contractor</option><option value="designer">Designer / Engineer</option></select></div><button type="submit" class="btn btn-primary btn-full"><i class="fas fa-user-plus"></i> Create Account</button></form><div class="auth-switch">Already have an account? <a onclick="renderAuthForm('login')">Sign In</a></div>`;
 }
 
 function getPostJobTemplate() {
     return `
-        <div id="dynamic-feature-header" class="dynamic-feature-header"></div>
-        <div class="section-header modern-header">
-            <div class="header-content"><h2><i class="fas fa-plus-circle"></i> Post a New Project</h2><p class="header-subtitle">Create a detailed project listing to attract qualified professionals</p></div>
-        </div>
+        <div class="section-header modern-header"><div class="header-content"><h2><i class="fas fa-plus-circle"></i> Post a New Project</h2><p class="header-subtitle">Create a listing to attract qualified professionals</p></div></div>
         <div class="post-job-container premium-container">
             <form id="post-job-form" class="premium-form post-job-form">
                 <div class="form-section premium-section">
                     <h3><i class="fas fa-info-circle"></i> Project Details</h3>
-                    <div class="form-group"><label class="form-label"><i class="fas fa-heading"></i> Project Title</label><input type="text" class="form-input premium-input" name="title" required placeholder="e.g., Structural Steel Design for Warehouse"></div>
+                    <div class="form-group"><label class="form-label"><i class="fas fa-heading"></i> Project Title</label><input type="text" class="form-input" name="title" required placeholder="e.g., Structural Steel Design for Warehouse"></div>
                     <div class="form-row">
-                        <div class="form-group"><label class="form-label"><i class="fas fa-dollar-sign"></i> Budget Range</label><input type="text" class="form-input premium-input" name="budget" required placeholder="e.g., $5,000 - $10,000"></div>
-                        <div class="form-group"><label class="form-label"><i class="fas fa-calendar-alt"></i> Project Deadline</label><input type="date" class="form-input premium-input" name="deadline" required></div>
+                        <div class="form-group"><label class="form-label"><i class="fas fa-dollar-sign"></i> Budget Range</label><input type="text" class="form-input" name="budget" required placeholder="e.g., $5,000 - $10,000"></div>
+                        <div class="form-group"><label class="form-label"><i class="fas fa-calendar-alt"></i> Deadline</label><input type="date" class="form-input" name="deadline" required></div>
                     </div>
-                    <div class="form-group"><label class="form-label"><i class="fas fa-tools"></i> Required Skills</label><input type="text" class="form-input premium-input" name="skills" placeholder="e.g., AutoCAD, Revit, Structural Analysis"><small class="form-help">Separate skills with commas</small></div>
-                    <div class="form-group"><label class="form-label"><i class="fas fa-external-link-alt"></i> Project Link (Optional)</label><input type="url" class="form-input premium-input" name="link" placeholder="https://example.com/project-details"><small class="form-help">Link to additional project information</small></div>
+                    <div class="form-group"><label class="form-label"><i class="fas fa-tools"></i> Skills</label><input type="text" class="form-input" name="skills" placeholder="e.g., AutoCAD, Revit"><small>Separate with commas</small></div>
+                    <div class="form-group"><label class="form-label"><i class="fas fa-external-link-alt"></i> Project Link (Optional)</label><input type="url" class="form-input" name="link" placeholder="https://example.com/details"></div>
                 </div>
                 <div class="form-section premium-section">
                     <h3><i class="fas fa-file-alt"></i> Project Description</h3>
-                    <div class="form-group"><label class="form-label"><i class="fas fa-align-left"></i> Detailed Description</label><textarea class="form-textarea premium-textarea" name="description" required placeholder="Provide a comprehensive description of your project..."></textarea></div>
-                    <div class="form-group"><label class="form-label"><i class="fas fa-paperclip"></i> Project Attachments</label><input type="file" class="form-input file-input premium-file-input" name="attachment" accept=".pdf,.doc,.docx,.dwg,.jpg,.jpeg,.png"><small class="form-help">Upload drawings or specifications (Max 10MB)</small></div>
+                    <div class="form-group"><label class="form-label"><i class="fas fa-align-left"></i> Detailed Description</label><textarea class="form-textarea" name="description" required placeholder="Provide a comprehensive description..."></textarea></div>
+                    <div class="form-group">
+                        <label class="form-label"><i class="fas fa-paperclip"></i> Project Attachments (Optional)</label>
+                        <div class="custom-file-input-wrapper">
+                            <input type="file" name="attachments" id="job-attachments-input" onchange="handleJobFileChange(event)" accept=".pdf,.doc,.docx,.dwg,.jpg,.jpeg,.png" multiple>
+                            <div class="custom-file-input">
+                                <span class="custom-file-input-label">
+                                    <i class="fas fa-upload"></i>
+                                    <span id="job-attachments-label">Click to upload or drag & drop</span>
+                                </span>
+                            </div>
+                        </div>
+                        <div id="job-attachments-list" class="file-list-container"></div>
+                        <small class="form-help">Upload up to 10 files, 15MB each. Supported formats: PDF, DOC, DWG, Images</small>
+                    </div>
                 </div>
-                <div class="form-actions"><button type="submit" class="btn btn-primary btn-large premium-btn"><i class="fas fa-rocket"></i> Post Project</button></div>
+                <div class="form-actions"><button type="submit" class="btn btn-primary btn-large"><i class="fas fa-rocket"></i> Post Project</button></div>
             </form>
         </div>`;
 }
@@ -3169,34 +2313,13 @@ function getEstimationToolTemplate() {
     return `
         <div id="dynamic-feature-header" class="dynamic-feature-header"></div>
         <div class="section-header modern-header">
-            <div class="header-content">
-                <h2><i class="fas fa-robot"></i> AI-Powered Cost Estimation</h2>
-                <p class="header-subtitle">Upload your structural drawings and get precise, instant cost estimates powered by advanced machine learning algorithms</p>
-            </div>
+            <div class="header-content"><h2><i class="fas fa-robot"></i> AI-Powered Cost Estimation</h2><p class="header-subtitle">Upload your drawings and get instant cost estimates</p></div>
         </div>
         <div class="estimation-tool-container premium-estimation-container">
             <div class="estimation-steps">
-                <div class="step active" data-step="1">
-                    <div class="step-number">1</div>
-                    <div class="step-content">
-                        <h4>Upload Files</h4>
-                        <p>Add your drawings & specs</p>
-                    </div>
-                </div>
-                <div class="step" data-step="2">
-                    <div class="step-number">2</div>
-                    <div class="step-content">
-                        <h4>Project Details</h4>
-                        <p>Describe your requirements</p>
-                    </div>
-                </div>
-                <div class="step" data-step="3">
-                    <div class="step-number">3</div>
-                    <div class="step-content">
-                        <h4>Get Estimate</h4>
-                        <p>Receive detailed cost breakdown</p>
-                    </div>
-                </div>
+                <div class="step active" data-step="1"><div class="step-number">1</div><div class="step-content"><h4>Upload Files</h4><p>Add your drawings</p></div></div>
+                <div class="step" data-step="2"><div class="step-number">2</div><div class="step-content"><h4>Project Details</h4><p>Describe requirements</p></div></div>
+                <div class="step" data-step="3"><div class="step-number">3</div><div class="step-content"><h4>Get Estimate</h4><p>Receive detailed cost breakdown</p></div></div>
             </div>
             <form id="estimation-form" class="premium-estimation-form">
                 <div class="form-section premium-section">
@@ -3204,65 +2327,17 @@ function getEstimationToolTemplate() {
                     <div class="file-upload-section premium-upload-section">
                         <div id="file-upload-area" class="file-upload-area premium-upload-area">
                             <input type="file" id="file-upload-input" accept=".pdf,.dwg,.doc,.docx,.jpg,.jpeg,.png" multiple />
-                            <div class="upload-content">
-                                <div class="file-upload-icon"><i class="fas fa-cloud-upload-alt"></i></div>
-                                <h3>Drag & Drop Your Files Here</h3>
-                                <p>or click to browse</p>
-                                <div class="supported-formats">
-                                    <span class="format-badge">PDF</span>
-                                    <span class="format-badge">DWG</span>
-                                    <span class="format-badge">DOC</span>
-                                    <span class="format-badge">Images</span>
-                                </div>
-                                <small class="upload-limit">Maximum 10 files, 15MB each</small>
-                            </div>
+                            <div class="upload-content"><div class="file-upload-icon"><i class="fas fa-cloud-upload-alt"></i></div><h3>Drag & Drop Files Here</h3><p>or click to browse</p><small class="upload-limit">Max 10 files, 15MB each</small></div>
                         </div>
-                        <div id="file-info-container" class="selected-files-container" style="display: none;">
-                            <h4><i class="fas fa-files"></i> Selected Files</h4>
-                            <div id="selected-files-list" class="selected-files-list"></div>
-                        </div>
+                        <div id="file-info-container" class="selected-files-container" style="display: none;"><h4><i class="fas fa-files"></i> Selected Files</h4><div id="selected-files-list" class="selected-files-list"></div></div>
                     </div>
                 </div>
                 <div class="form-section premium-section">
                     <h3><i class="fas fa-info-circle"></i> Project Information</h3>
-                    <div class="form-group">
-                        <label class="form-label"><i class="fas fa-heading"></i> Project Title</label>
-                        <input type="text" class="form-input premium-input" name="projectTitle" required placeholder="e.g., Commercial Building Steel Framework">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label"><i class="fas fa-file-alt"></i> Project Description</label>
-                        <textarea class="form-textarea premium-textarea" name="description" required placeholder="Describe your project in detail..."></textarea>
-                    </div>
+                    <div class="form-group"><label class="form-label"><i class="fas fa-heading"></i> Project Title</label><input type="text" class="form-input premium-input" name="projectTitle" required placeholder="e.g., Commercial Building Steel Framework"></div>
+                    <div class="form-group"><label class="form-label"><i class="fas fa-file-alt"></i> Project Description</label><textarea class="form-textarea premium-textarea" name="description" required placeholder="Describe your project..."></textarea></div>
                 </div>
-                <div class="estimation-features">
-                    <div class="feature-item">
-                        <i class="fas fa-robot"></i>
-                        <div>
-                            <h4>AI-Powered Analysis</h4>
-                            <p>Advanced algorithms analyze your drawings</p>
-                        </div>
-                    </div>
-                    <div class="feature-item">
-                        <i class="fas fa-chart-line"></i>
-                        <div>
-                            <h4>Detailed Breakdown</h4>
-                            <p>Get itemized costs for materials, labor, and logistics</p>
-                        </div>
-                    </div>
-                    <div class="feature-item">
-                        <i class="fas fa-clock"></i>
-                        <div>
-                            <h4>Instant Results</h4>
-                            <p>Receive your estimation within minutes</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="form-actions estimation-actions">
-                    <button type="button" id="submit-estimation-btn" class="btn btn-primary btn-large premium-btn" disabled>
-                        <i class="fas fa-paper-plane"></i> Submit Estimation Request
-                    </button>
-                    <p class="estimation-note"><i class="fas fa-info-circle"></i> Our expert team will review your submission and provide a detailed cost analysis.</p>
-                </div>
+                <div class="form-actions estimation-actions"><button type="button" id="submit-estimation-btn" class="btn btn-primary btn-large premium-btn" disabled><i class="fas fa-paper-plane"></i> Submit Request</button></div>
             </form>
         </div>`;
 }
@@ -3272,403 +2347,44 @@ function getDashboardTemplate(user) {
     const name = user.name.split(' ')[0];
     const profileStatus = user.profileStatus || 'incomplete';
     const isApproved = profileStatus === 'approved';
-    // Profile status card based on current status
     let profileStatusCard = '';
-
-    if (profileStatus === 'incomplete') {
-        profileStatusCard = `
-            <div class="dashboard-profile-status-card">
-                <h3><i class="fas fa-exclamation-triangle"></i> Complete Your Profile</h3>
-                <p>Your profile is incomplete. Complete it now to unlock all platform features and get access to ${isContractor ? 'posting projects and AI estimation tools' : 'browsing projects and submitting quotes'}.</p>
-                <button class="btn btn-primary" onclick="renderAppSection('profile-completion')">
-                    <i class="fas fa-user-edit"></i> Complete Profile Now
-                </button>
-            </div>`;
-    } else if (profileStatus === 'pending') {
-        profileStatusCard = `
-            <div class="dashboard-profile-status-card" style="background: linear-gradient(135deg, #dbeafe 0%, #e0f2fe 100%); border-color: #3b82f6;">
-                <h3 style="color: #1e40af;"><i class="fas fa-clock"></i> Profile Under Review</h3>
-                <p style="color: #1e40af;">Your profile has been submitted and is currently under review by our admin team. You'll receive an email notification once approved. Review typically takes 24-48 hours.</p>
-                <div style="background: rgba(59, 130, 246, 0.1); padding: 1rem; border-radius: 8px; margin-top: 1rem;">
-                    <p style="margin: 0; color: #1e40af; font-size: 0.9rem;"><i class="fas fa-info-circle"></i> You have limited access until approval. All features will be unlocked once approved.</p>
-                </div>
-            </div>`;
-    } else if (profileStatus === 'rejected') {
-        profileStatusCard = `
-            <div class="dashboard-profile-status-card" style="background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); border-color: #ef4444;">
-                <h3 style="color: #dc2626;"><i class="fas fa-times-circle"></i> Profile Needs Update</h3>
-                <p style="color: #dc2626;">Your profile needs some updates before it can be approved. Please review the feedback and update your profile.</p>
-                ${user.rejectionReason ? `<div style="background: rgba(239, 68, 68, 0.1); padding: 1rem; border-radius: 8px; margin: 1rem 0;"><p style="margin: 0; color: #dc2626; font-size: 0.9rem;"><strong>Reason:</strong> ${user.rejectionReason}</p></div>` : ''}
-                <button class="btn btn-primary" onclick="renderAppSection('profile-completion')">
-                    <i class="fas fa-edit"></i> Update Profile Now
-                </button>
-            </div>`;
-    } else if (profileStatus === 'approved') {
-        profileStatusCard = `
-            <div class="dashboard-profile-status-card" style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border-color: #10b981;">
-                <h3 style="color: #059669;"><i class="fas fa-check-circle"></i> Profile Approved</h3>
-                <p style="color: #059669;">Your profile is approved and you have full access to all platform features. Start exploring and connecting with professionals!</p>
-                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-                    ${isContractor ? `
-                        <button class="btn btn-outline" onclick="renderAppSection('post-job')" style="border-color: #059669; color: #059669;">
-                            <i class="fas fa-plus"></i> Post First Project
-                        </button>
-                        <button class="btn btn-outline" onclick="renderAppSection('estimation-tool')" style="border-color: #059669; color: #059669;">
-                            <i class="fas fa-calculator"></i> Try AI Estimation
-                        </button>
-                    ` : `
-                        <button class="btn btn-outline" onclick="renderAppSection('jobs')" style="border-color: #059669; color: #059669;">
-                            <i class="fas fa-search"></i> Browse Projects
-                        </button>
-                        <button class="btn btn-outline" onclick="renderAppSection('my-quotes')" style="border-color: #059669; color: #059669;">
-                            <i class="fas fa-file-invoice-dollar"></i> View My Quotes
-                        </button>
-                    `}
-                </div>
-            </div>`;
-    }
+    if (profileStatus === 'incomplete') profileStatusCard = `<div class="dashboard-profile-status-card"><h3><i class="fas fa-exclamation-triangle"></i> Complete Your Profile</h3><p>Complete your profile to unlock all features.</p><button class="btn btn-primary" onclick="renderAppSection('profile-completion')"><i class="fas fa-user-edit"></i> Complete Profile</button></div>`;
+    else if (profileStatus === 'pending') profileStatusCard = `<div class="dashboard-profile-status-card"><h3><i class="fas fa-clock"></i> Profile Under Review</h3><p>Your profile is under review. You'll get full access once approved.</p></div>`;
+    else if (profileStatus === 'rejected') profileStatusCard = `<div class="dashboard-profile-status-card"><h3><i class="fas fa-times-circle"></i> Profile Needs Update</h3><p>Your profile needs updates. ${user.rejectionReason ? `<strong>Reason:</strong> ${user.rejectionReason}` : ''}</p><button class="btn btn-primary" onclick="renderAppSection('profile-completion')"><i class="fas fa-edit"></i> Update Profile</button></div>`;
+    else if (profileStatus === 'approved') profileStatusCard = `<div class="dashboard-profile-status-card" style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border-color: #10b981;"><h3 style="color: #059669;"><i class="fas fa-check-circle"></i> Profile Approved</h3><p style="color: #059669;">You have full access to all platform features.</p></div>`;
     const contractorQuickActions = `
-        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'post-job\')' : 'showRestrictedFeature(\'post-job\')'}">
-            <i class="fas fa-plus-circle card-icon"></i>
-            <h3>Create New Project</h3>
-            <p>Post a new listing for designers to quote on.</p>
-            ${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}
-        </div>
-        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'jobs\')' : 'showRestrictedFeature(\'jobs\')'}">
-            <i class="fas fa-tasks card-icon"></i>
-            <h3>My Projects</h3>
-            <p>View and manage all your active projects.</p>
-            ${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}
-        </div>
-        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'estimation-tool\')' : 'showRestrictedFeature(\'estimation-tool\')'}">
-            <i class="fas fa-calculator card-icon"></i>
-            <h3>AI Estimation</h3>
-            <p>Get instant cost estimates for your drawings.</p>
-            ${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}
-        </div>
-        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'approved-jobs\')' : 'showRestrictedFeature(\'approved-jobs\')'}">
-            <i class="fas fa-check-circle card-icon"></i>
-            <h3>Approved Projects</h3>
-            <p>Track progress and communicate on assigned work.</p>
-            ${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}
-        </div>`;
-
-    const contractorWidgets = `
-        <div class="widget-card">
-            <h3><i class="fas fa-history"></i> Recent Projects</h3>
-            <div id="recent-projects-widget" class="widget-content">
-                ${!isApproved ? '<p class="widget-empty-text">Complete your profile to start posting projects.</p>' : ''}
-            </div>
-        </div>`;
-
+        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'post-job\')' : 'showRestrictedFeature(\'post-job\')'}"><i class="fas fa-plus-circle card-icon"></i><h3>Create Project</h3><p>Post a new listing</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>
+        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'jobs\')' : 'showRestrictedFeature(\'jobs\')'}"><i class="fas fa-tasks card-icon"></i><h3>My Projects</h3><p>Manage your listings</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>
+        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'estimation-tool\')' : 'showRestrictedFeature(\'estimation-tool\')'}"><i class="fas fa-calculator card-icon"></i><h3>AI Estimation</h3><p>Get instant cost estimates</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>
+        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'approved-jobs\')' : 'showRestrictedFeature(\'approved-jobs\')'}"><i class="fas fa-check-circle card-icon"></i><h3>Approved</h3><p>Track assigned work</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>`;
+    const contractorWidgets = `<div class="widget-card"><h3><i class="fas fa-history"></i> Recent Projects</h3><div id="recent-projects-widget" class="widget-content">${!isApproved ? '<p class="widget-empty-text">Complete your profile to post projects.</p>' : ''}</div></div>`;
     const designerQuickActions = `
-        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'jobs\')' : 'showRestrictedFeature(\'jobs\')'}">
-            <i class="fas fa-search card-icon"></i>
-            <h3>Browse Projects</h3>
-            <p>Find new opportunities and submit quotes.</p>
-            ${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}
-        </div>
-        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'my-quotes\')' : 'showRestrictedFeature(\'my-quotes\')'}">
-            <i class="fas fa-file-invoice-dollar card-icon"></i>
-            <h3>My Quotes</h3>
-            <p>Track the status of your submitted quotes.</p>
-            ${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}
-        </div>
-        <div class="quick-action-card" onclick="showNotification('Feature coming soon!', 'info')">
-            <i class="fas fa-upload card-icon"></i>
-            <h3>Submit Work</h3>
-            <p>Upload deliverables for your assigned projects.</p>
-        </div>
-        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'messages\')' : 'showRestrictedFeature(\'messages\')'}">
-            <i class="fas fa-comments card-icon"></i>
-            <h3>Messages</h3>
-            <p>Communicate with clients about projects.</p>
-            ${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}
-        </div>`;
-
-    const designerWidgets = `
-        <div class="widget-card">
-            <h3><i class="fas fa-history"></i> Recent Quotes</h3>
-            <div id="recent-quotes-widget" class="widget-content">
-                ${!isApproved ? '<p class="widget-empty-text">Complete your profile to start submitting quotes.</p>' : ''}
-            </div>
-        </div>`;
-
-    // Calculate profile completion percentage
-    let completionPercentage = 0;
-    if (profileStatus === 'incomplete') completionPercentage = 25;
-    else if (profileStatus === 'pending') completionPercentage = 75;
-    else if (profileStatus === 'rejected') completionPercentage = 50;
-    else if (profileStatus === 'approved') completionPercentage = 100;
-
+        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'jobs\')' : 'showRestrictedFeature(\'jobs\')'}"><i class="fas fa-search card-icon"></i><h3>Browse Projects</h3><p>Find new opportunities</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>
+        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'my-quotes\')' : 'showRestrictedFeature(\'my-quotes\')'}"><i class="fas fa-file-invoice-dollar card-icon"></i><h3>My Quotes</h3><p>Track your submissions</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>
+        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'messages\')' : 'showRestrictedFeature(\'messages\')'}"><i class="fas fa-comments card-icon"></i><h3>Messages</h3><p>Communicate with clients</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>`;
+    const designerWidgets = `<div class="widget-card"><h3><i class="fas fa-history"></i> Recent Quotes</h3><div id="recent-quotes-widget" class="widget-content">${!isApproved ? '<p class="widget-empty-text">Complete your profile to submit quotes.</p>' : ''}</div></div>`;
     return `
         <div class="dashboard-container">
-            <div class="dashboard-hero">
-                <div>
-                    <h2>Welcome back, ${name} 👋</h2>
-                    <p>You are logged in to your <strong>${isContractor ? 'Contractor' : 'Designer'} Portal</strong>. ${isApproved ? 'All features are available.' : 'Complete your profile to unlock all features.'}</p>
-                </div>
-                <div class="subscription-badge">
-                    <i class="fas fa-star"></i> Pro Plan
-                </div>
-            </div>
-
+            <div class="dashboard-hero"><div><h2>Welcome back, ${name} 👋</h2><p>You are logged in to your <strong>${isContractor ? 'Contractor' : 'Designer'} Portal</strong>.</p></div></div>
             ${profileStatusCard}
-
             <h3 class="dashboard-section-title">Quick Actions</h3>
-            <div class="dashboard-grid">
-                ${isContractor ? contractorQuickActions : designerQuickActions}
-            </div>
-
-            <div class="dashboard-columns">
-                ${isContractor ? contractorWidgets : designerWidgets}
-
-                <div class="widget-card">
-                    <h3><i class="fas fa-user-circle"></i> Your Profile</h3>
-                    <div class="widget-content">
-                        <p>Profile Status: <strong style="color: ${profileStatus === 'approved' ? '#10b981' : profileStatus === 'pending' ? '#3b82f6' : '#f59e0b'}">${profileStatus.charAt(0).toUpperCase() + profileStatus.slice(1)}</strong></p>
-                        <div class="progress-bar-container">
-                            <div class="progress-bar" style="width: ${completionPercentage}%;"></div>
-                        </div>
-                        <p class="progress-label">${completionPercentage}% Complete</p>
-                        ${profileStatus !== 'approved' ? `
-                            <button class="btn btn-primary" onclick="${profileStatus === 'incomplete' || profileStatus === 'rejected' ? 'renderAppSection(\'profile-completion\')' : 'renderAppSection(\'settings\')'}">
-                                <i class="fas fa-edit"></i> ${profileStatus === 'incomplete' || profileStatus === 'rejected' ? 'Complete Profile' : 'View Profile Status'}
-                            </button>
-                        ` : `
-                            <button class="btn btn-outline" onclick="renderAppSection('settings')">
-                                <i class="fas fa-edit"></i> Update Profile
-                            </button>
-                        `}
-                        <hr class="widget-divider">
-                        <p>Upgrade your plan for advanced features.</p>
-                        <button class="btn btn-primary" onclick="renderAppSection('settings')">
-                           <i class="fas fa-arrow-up"></i> Upgrade Subscription
-                        </button>
-                    </div>
-                </div>
-            </div>
+            <div class="dashboard-grid">${isContractor ? contractorQuickActions : designerQuickActions}</div>
+            <div class="dashboard-columns">${isContractor ? contractorWidgets : designerWidgets}</div>
         </div>`;
 }
 
 function getSettingsTemplate(user) {
     const profileStatus = user.profileStatus || 'incomplete';
-    const canAccess = user.canAccess !== false;
-
     let profileSection = '';
-
-    if (profileStatus === 'incomplete') {
-        profileSection = `
-            <div class="settings-card" style="border-left: 4px solid #f59e0b;">
-                <h3><i class="fas fa-user-edit"></i> Complete Your Profile</h3>
-                <div style="background: #fef3c7; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
-                    <p style="margin: 0; color: #92400e;"><strong>Action Required:</strong> Your profile is incomplete. Complete it to unlock all platform features.</p>
-                </div>
-                <button class="btn btn-primary" onclick="renderAppSection('profile-completion')">
-                    <i class="fas fa-edit"></i> Complete Profile Now
-                </button>
-            </div>`;
-    } else if (profileStatus === 'pending') {
-        profileSection = `
-            <div class="settings-card" style="border-left: 4px solid #0ea5e9;">
-                <h3><i class="fas fa-clock"></i> Profile Under Review</h3>
-                <div style="background: #e0f2fe; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
-                    <p style="margin: 0; color: #075985;"><strong>Status:</strong> Your profile has been submitted and is currently under review by our admin team.</p>
-                </div>
-                <p>Review typically takes 24-48 hours. You'll receive an email once approved.</p>
-            </div>`;
-    } else if (profileStatus === 'rejected') {
-        profileSection = `
-            <div class="settings-card" style="border-left: 4px solid #ef4444;">
-                <h3><i class="fas fa-exclamation-triangle"></i> Profile Needs Update</h3>
-                <div style="background: #fee2e2; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
-                    <p style="margin: 0; color: #991b1b;"><strong>Action Required:</strong> Your profile needs some updates before it can be approved.</p>
-                    ${user.rejectionReason ? `<p style="margin: 0.5rem 0 0 0; color: #991b1b;"><strong>Reason:</strong> ${user.rejectionReason}</p>` : ''}
-                </div>
-                <button class="btn btn-primary" onclick="renderAppSection('profile-completion')">
-                    <i class="fas fa-edit"></i> Update Profile
-                </button>
-            </div>`;
-    } else if (profileStatus === 'approved') {
-        profileSection = `
-            <div class="settings-card" style="border-left: 4px solid #10b981;">
-                <h3><i class="fas fa-check-circle"></i> Profile Approved</h3>
-                <div style="background: #d1fae5; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
-                    <p style="margin: 0; color: #065f46;"><strong>Status:</strong> Your profile is approved and you have full access to all platform features.</p>
-                </div>
-                <button class="btn btn-outline" onclick="renderAppSection('profile-completion')">
-                    <i class="fas fa-edit"></i> Update Profile Information
-                </button>
-            </div>`;
-    }
-
+    if (profileStatus === 'incomplete') profileSection = `<div class="settings-card"><h3><i class="fas fa-user-edit"></i> Complete Your Profile</h3><p>Your profile is incomplete. Complete it to unlock all features.</p><button class="btn btn-primary" onclick="renderAppSection('profile-completion')"><i class="fas fa-edit"></i> Complete Profile</button></div>`;
+    else if (profileStatus === 'pending') profileSection = `<div class="settings-card"><h3><i class="fas fa-clock"></i> Profile Under Review</h3><p>Your profile is under review by our admin team.</p></div>`;
+    else if (profileStatus === 'rejected') profileSection = `<div class="settings-card"><h3><i class="fas fa-exclamation-triangle"></i> Profile Needs Update</h3><p>Your profile needs updates. ${user.rejectionReason ? `<strong>Reason:</strong> ${user.rejectionReason}` : ''}</p><button class="btn btn-primary" onclick="renderAppSection('profile-completion')"><i class="fas fa-edit"></i> Update Profile</button></div>`;
+    else if (profileStatus === 'approved') profileSection = `<div class="settings-card"><h3><i class="fas fa-check-circle"></i> Profile Approved</h3><p>Your profile is approved.</p><button class="btn btn-outline" onclick="renderAppSection('profile-completion')"><i class="fas fa-edit"></i> Update Information</button></div>`;
     return `
-        <div class="section-header modern-header">
-            <div class="header-content">
-                <h2><i class="fas fa-cog"></i> Settings</h2>
-                <p class="header-subtitle">Manage your account, profile, and subscription details</p>
-            </div>
-        </div>
+        <div class="section-header modern-header"><div class="header-content"><h2><i class="fas fa-cog"></i> Settings</h2><p class="header-subtitle">Manage your account and profile</p></div></div>
         <div class="settings-container">
             ${profileSection}
-
-            <div class="settings-card">
-                <h3><i class="fas fa-user-edit"></i> Personal Information</h3>
-                <form class="premium-form" onsubmit="event.preventDefault(); showNotification('Profile updated successfully!', 'success');">
-                    <div class="form-group">
-                        <label class="form-label">Full Name</label>
-                        <input type="text" class="form-input" value="${user.name}" required>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Email Address</label>
-                        <input type="email" class="form-input" value="${user.email}" disabled>
-                        <small class="form-help">Email cannot be changed.</small>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Account Type</label>
-                        <input type="text" class="form-input" value="${user.type.charAt(0).toUpperCase() + user.type.slice(1)}" disabled>
-                        <small class="form-help">Account type cannot be changed.</small>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Save Changes</button>
-                </form>
-            </div>
-
-            <div class="settings-card">
-                <h3><i class="fas fa-shield-alt"></i> Security</h3>
-                 <form class="premium-form" onsubmit="event.preventDefault(); showNotification('Password functionality not implemented.', 'info');">
-                    <div class="form-group">
-                        <label class="form-label">Current Password</label>
-                        <input type="password" class="form-input">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">New Password</label>
-                        <input type="password" class="form-input">
-                    </div>
-                    <button type="submit" class="btn btn-primary">Change Password</button>
-                </form>
-            </div>
-
-            <div class="settings-card subscription-card">
-                <h3><i class="fas fa-gem"></i> Subscription & Billing</h3>
-                <p>You are currently on the <strong>Pro Plan</strong>. This gives you access to unlimited projects and AI estimations.</p>
-                <div class="subscription-plans">
-                    <div class="plan-card">
-                        <h4>Basic</h4>
-                        <p class="price">Free</p>
-                        <ul>
-                            <li><i class="fas fa-check"></i> 3 Projects / month</li>
-                            <li><i class="fas fa-times"></i> AI Estimations</li>
-                            <li><i class="fas fa-check"></i> Standard Support</li>
-                        </ul>
-                        <button class="btn btn-outline" disabled>Current Plan</button>
-                    </div>
-                    <div class="plan-card active">
-                        <h4>Pro</h4>
-                        <p class="price">$49<span>/mo</span></p>
-                        <ul>
-                            <li><i class="fas fa-check"></i> Unlimited Projects</li>
-                            <li><i class="fas fa-check"></i> AI Estimations</li>
-                            <li><i class="fas fa-check"></i> Priority Support</li>
-                        </ul>
-                         <button class="btn btn-success" onclick="showNotification('You are on the best plan!', 'info')">Your Plan</button>
-                    </div>
-                     <div class="plan-card">
-                        <h4>Enterprise</h4>
-                        <p class="price">Contact Us</p>
-                        <ul>
-                            <li><i class="fas fa-check"></i> Team Accounts</li>
-                            <li><i class="fas fa-check"></i> Advanced Analytics</li>
-                            <li><i class="fas fa-check"></i> Dedicated Support</li>
-                        </ul>
-                         <button class="btn btn-primary" onclick="showNotification('Contacting sales...', 'info')">Get a Quote</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
+            <div class="settings-card"><h3><i class="fas fa-user-edit"></i> Personal Information</h3><form class="premium-form" onsubmit="event.preventDefault(); showNotification('Profile updated!', 'success');"><div class="form-group"><label class="form-label">Full Name</label><input type="text" class="form-input" value="${user.name}" required></div><div class="form-group"><label class="form-label">Email Address</label><input type="email" class="form-input" value="${user.email}" disabled></div><button type="submit" class="btn btn-primary">Save Changes</button></form></div>
+            <div class="settings-card"><h3><i class="fas fa-shield-alt"></i> Security</h3><form class="premium-form" onsubmit="event.preventDefault(); showNotification('Password functionality not implemented.', 'info');"><div class="form-group"><label class="form-label">New Password</label><input type="password" class="form-input"></div><button type="submit" class="btn btn-primary">Change Password</button></form></div>
+        </div>`;
 }
-
-// --- DEBUG SYSTEM ---
-// Keep the comprehensive debug system as it is for testing purposes.
-async function debugNotificationFlow() {
-    console.log('=== COMPREHENSIVE NOTIFICATION DEBUG ===');
-    console.log('1. Testing notification endpoints...');
-    try {
-        const unreadResponse = await apiCall('/notifications/unread-count', 'GET');
-        console.log('✅ Notification service is accessible:', unreadResponse);
-    } catch (error) {
-        console.error('❌ Notification service error:', error);
-    }
-    console.log('2. Current notification state:');
-    try {
-        const response = await apiCall('/notifications', 'GET');
-        const allNotifications = response.data || [];
-        console.log(`Total notifications: ${allNotifications.length}`);
-        const messageNotifications = allNotifications.filter(n => n.type === 'message');
-        console.log(`Message notifications: ${messageNotifications.length}`);
-        if (messageNotifications.length > 0) {
-            console.log('Recent message notifications:');
-            messageNotifications.slice(0, 3).forEach((n, i) => {
-                console.log(`  ${i + 1}. "${n.message}" (${n.isRead ? 'read' : 'unread'})`);
-                console.log(`     Created: ${n.createdAt}`);
-                console.log(`     Metadata:`, n.metadata);
-            });
-        }
-    } catch (error) {
-        console.error('Error fetching notifications:', error);
-    }
-    console.log('3. User and authentication:');
-    console.log('Current user:', appState.currentUser?.name, `(ID: ${appState.currentUser?.id})`);
-    console.log('JWT token exists:', !!appState.jwtToken);
-    console.log('Token length:', appState.jwtToken?.length || 0);
-    console.log('4. Conversation state:');
-    console.log('Loaded conversations:', appState.conversations.length);
-    if (appState.conversations.length > 0) {
-        console.log('First conversation participants:',
-             appState.conversations[0].participants?.map(p => `${p.name} (${p.id})`)
-        );
-    }
-    console.log('5. Testing timestamp functions:');
-    const testDates = [
-        new Date(),
-        new Date().toISOString(),
-        Date.now(),
-        { seconds: Math.floor(Date.now() / 1000), nanoseconds: 0 }
-    ];
-    testDates.forEach((date, i) => {
-        console.log(`Test ${i + 1}:`, typeof date, formatMessageTimestamp(date));
-    });
-    console.log('=== DEBUG COMPLETE ===');
-}
-
-window.debugNotificationFlow = debugNotificationFlow;
-// (Other debug functions can be kept as they are)
-
-document.addEventListener('DOMContentLoaded', function() {
-    document.addEventListener('input', function(e) {
-        if (e.target.name === 'description' && e.target.closest('#estimation-form')) {
-            const counter = document.getElementById('desc-counter');
-            if (counter) {
-                counter.textContent = e.target.value.length;
-                counter.style.color = e.target.value.length > 2000 ? '#ef4444' : '#64748b';
-            }
-        }
-    });
-});
-
-function previewFile(index) {
-    if (appState.uploadedFile && appState.uploadedFile[index]) {
-        const file = appState.uploadedFile[index];
-        showNotification(`Preview for ${file.name} - Feature coming soon!`, 'info');
-    }
-}
-
-
-
-
-
-
-
-
-
-
