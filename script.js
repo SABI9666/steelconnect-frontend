@@ -1234,51 +1234,6 @@ async function markJobCompleted(jobId) {
     }
 }
 
-async function fetchAndRenderMyQuotes() {
-    const container = document.getElementById('app-container');
-    container.innerHTML = `
-        <div id="dynamic-feature-header" class="dynamic-feature-header"></div>
-        <div class="section-header modern-header"><div class="header-content"><h2><i class="fas fa-file-invoice-dollar"></i> My Submitted Quotes</h2><p class="header-subtitle">Track your quote submissions</p></div></div>
-        <div id="my-quotes-list" class="jobs-grid"></div>`;
-    updateDynamicHeader();
-    const listContainer = document.getElementById('my-quotes-list');
-    listContainer.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Loading your quotes...</p></div>';
-    try {
-        const response = await apiCall(`/quotes/user/${appState.currentUser.id}`, 'GET');
-        const quotes = response.data || [];
-        appState.myQuotes = quotes;
-        if (quotes.length === 0) {
-            listContainer.innerHTML = `<div class="empty-state premium-empty"><div class="empty-icon"><i class="fas fa-file-invoice"></i></div><h3>No Quotes Submitted</h3><p>You haven't submitted any quotes yet. Find projects to get started.</p><button class="btn btn-primary" onclick="renderAppSection('jobs')">Find Projects</button></div>`;
-            return;
-        }
-        listContainer.innerHTML = quotes.map(quote => {
-            const attachments = quote.attachments || [];
-            let attachmentLink = attachments.length > 0 ? `<div class="quote-attachment"><i class="fas fa-paperclip"></i><a href="${attachments[0]}" target="_blank">View Attachment</a></div>` : '';
-            const canDelete = quote.status === 'submitted';
-            const canEdit = quote.status === 'submitted';
-            const statusIcon = {'submitted': 'fa-clock', 'approved': 'fa-check-circle', 'rejected': 'fa-times-circle'}[quote.status] || 'fa-question-circle';
-            const statusClass = quote.status;
-            const actionButtons = [];
-            if (quote.status === 'approved') actionButtons.push(`<button class="btn btn-primary" onclick="openConversation('${quote.jobId}', '${quote.contractorId}')"><i class="fas fa-comments"></i> Message Client</button>`);
-            if (canEdit) actionButtons.push(`<button class="btn btn-outline" onclick="editQuote('${quote.id}')"><i class="fas fa-edit"></i> Edit</button>`);
-            if (canDelete) actionButtons.push(`<button class="btn btn-danger" onclick="deleteQuote('${quote.id}')"><i class="fas fa-trash"></i> Delete</button>`);
-            return `
-                <div class="quote-card premium-card quote-status-${statusClass}">
-                    <div class="quote-header"><div class="quote-title-section"><h3 class="quote-title">Quote for: ${quote.jobTitle || 'N/A'}</h3><span class="quote-status-badge ${statusClass}"><i class="fas ${statusIcon}"></i> ${quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}</span></div><div class="quote-amount-section"><span class="amount-label">Amount</span><span class="amount-value">${quote.quoteAmount}</span></div></div>
-                    <div class="quote-meta">
-                        ${quote.timeline ? `<div class="quote-meta-item"><i class="fas fa-calendar-alt"></i><span>Timeline: <strong>${quote.timeline} days</strong></span></div>` : ''}
-                        <div class="quote-meta-item"><i class="fas fa-clock"></i><span>Submitted: <strong>${new Date(quote.createdAt?.toDate ? quote.createdAt.toDate() : quote.createdAt).toLocaleDateString()}</strong></span></div>
-                    </div>
-                    <div class="quote-description"><p>${quote.description}</p></div>
-                    ${attachmentLink}
-                    <div class="quote-actions"><div class="quote-actions-group">${actionButtons.join('')}</div></div>
-                </div>`;
-        }).join('');
-    } catch (error) {
-        listContainer.innerHTML = `<div class="error-state premium-error"><div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div><h3>Error Loading Quotes</h3><p>Please try again.</p><button class="btn btn-primary" onclick="fetchAndRenderMyQuotes()">Retry</button></div>`;
-    }
-}
-
 // --- QUOTE FILE HANDLING FUNCTIONS (NEW) ---
 let quoteFiles = []; // Global array to store quote files
 function handleQuoteFileChange(event) {
@@ -1683,43 +1638,366 @@ async function deleteQuote(quoteId) {
     }
 }
 
+
+// --- START: FIXED Frontend Quote Functions with proper file downloads ---
+// Add these functions to your main JavaScript file
+
+// FIXED: Handle quote attachment downloads
+async function downloadQuoteAttachment(quoteId, attachmentIndex, filename) {
+    try {
+        showNotification('Preparing download...', 'info');
+
+        const response = await apiCall(`/quotes/${quoteId}/attachments/${attachmentIndex}/download`, 'GET');
+
+        if (response.success && response.downloadUrl) {
+            // Create download link
+            const link = document.createElement('a');
+            link.href = response.downloadUrl;
+            link.download = filename || response.filename || 'attachment';
+            link.style.display = 'none';
+
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            showNotification(`Download started: ${filename || response.filename}`, 'success');
+        } else {
+            throw new Error('Download URL not available');
+        }
+    } catch (error) {
+        console.error('Quote attachment download error:', error);
+        showNotification(`Download failed: ${error.message}`, 'error');
+    }
+}
+
+// FIXED: View quote attachments with download links
+async function viewQuoteAttachments(quoteId) {
+    try {
+        showNotification('Loading attachments...', 'info');
+
+        const response = await apiCall(`/quotes/${quoteId}/attachments`, 'GET');
+
+        if (response.success) {
+            const attachments = response.attachments || [];
+
+            const content = `
+                <div class="modal-header">
+                    <h3><i class="fas fa-paperclip"></i> Quote Attachments</h3>
+                    <p class="modal-subtitle">Files submitted with this quote</p>
+                </div>
+                <div class="attachments-list premium-attachments">
+                    ${attachments.length === 0 ?
+                        `<div class="empty-state"><i class="fas fa-file"></i><p>No attachments found.</p></div>` :
+                        attachments.map(attachment => `
+                            <div class="attachment-item">
+                                <div class="attachment-info">
+                                    <i class="fas ${getFileIcon(attachment.mimetype)}"></i>
+                                    <div class="attachment-details">
+                                        <h4>${attachment.name}</h4>
+                                        <span class="attachment-meta">
+                                            ${(attachment.size / (1024 * 1024)).toFixed(2)} MB
+                                            ${attachment.uploadedAt ? ` • ${formatAttachmentDate(attachment.uploadedAt)}` : ''}
+                                        </span>
+                                    </div>
+                                </div>
+                                <button class="btn btn-outline btn-sm" onclick="downloadQuoteAttachment('${quoteId}', ${attachment.index}, '${attachment.name}')">
+                                    <i class="fas fa-download"></i> Download
+                                </button>
+                            </div>
+                        `).join('')
+                    }
+                </div>
+            `;
+
+            showGenericModal(content, 'max-width: 600px;');
+        } else {
+            throw new Error('Failed to load attachments');
+        }
+    } catch (error) {
+        console.error('Error viewing quote attachments:', error);
+        showNotification('Failed to load attachments', 'error');
+    }
+}
+
+// FIXED: Update viewQuotes function to include attachment download links
 async function viewQuotes(jobId) {
     try {
         const response = await apiCall(`/quotes/job/${jobId}`, 'GET');
         const quotes = response.data || [];
-        let quotesHTML = `<div class="modal-header premium-modal-header"><h3><i class="fas fa-file-invoice-dollar"></i> Received Quotes</h3><p class="modal-subtitle">Review quotes for this project</p></div>`;
+
+        let quotesHTML = `
+            <div class="modal-header premium-modal-header">
+                <h3><i class="fas fa-file-invoice-dollar"></i> Received Quotes</h3>
+                <p class="modal-subtitle">Review quotes for this project</p>
+            </div>`;
+
         if (quotes.length === 0) {
-            quotesHTML += `<div class="empty-state premium-empty"><div class="empty-icon"><i class="fas fa-file-invoice"></i></div><h3>No Quotes Received</h3><p>No quotes have been submitted yet.</p></div>`;
+            quotesHTML += `
+                <div class="empty-state premium-empty">
+                    <div class="empty-icon"><i class="fas fa-file-invoice"></i></div>
+                    <h3>No Quotes Received</h3>
+                    <p>No quotes have been submitted yet.</p>
+                </div>`;
         } else {
             const job = appState.jobs.find(j => j.id === jobId);
-            quotesHTML += `<div class="quotes-list premium-quotes">${quotes.map(quote => {
+            quotesHTML += `<div class="quotes-list premium-quotes">`;
+
+            quotes.forEach(quote => {
                 const attachments = quote.attachments || [];
-                let attachmentLink = attachments.length > 0 ? `<div class="quote-attachment"><i class="fas fa-paperclip"></i><a href="${attachments[0]}" target="_blank">View Attachment</a></div>` : '';
+                const hasAttachments = attachments.length > 0;
+
+                // FIXED: Create proper attachment display with download functionality
+                let attachmentSection = '';
+                if (hasAttachments) {
+                    attachmentSection = `
+                        <div class="quote-attachments">
+                            <div class="attachments-header">
+                                <i class="fas fa-paperclip"></i>
+                                <span>Attachments (${attachments.length}):</span>
+                            </div>
+                            <div class="attachment-actions">
+                                <button class="btn btn-outline btn-sm" onclick="viewQuoteAttachments('${quote.id}')">
+                                    <i class="fas fa-folder-open"></i> View All (${attachments.length})
+                                </button>
+                                ${attachments.length === 1 ? `
+                                    <button class="btn btn-outline btn-sm" onclick="downloadQuoteAttachment('${quote.id}', 0, '${attachments[0].name}')">
+                                        <i class="fas fa-download"></i> Download
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>`;
+                }
+
                 const canApprove = job && job.status === 'open' && quote.status === 'submitted';
                 let actionButtons = '';
                 const messageButton = `<button class="btn btn-outline btn-sm" onclick="openConversation('${quote.jobId}', '${quote.designerId}')"><i class="fas fa-comments"></i> Message</button>`;
-                if (canApprove) actionButtons = `<button class="btn btn-success btn-sm" onclick="approveQuote('${quote.id}', '${jobId}')"><i class="fas fa-check"></i> Approve</button>${messageButton}`;
-                else if (quote.status === 'approved') actionButtons = `<span class="status-approved"><i class="fas fa-check-circle"></i> Approved</span>${messageButton}`;
-                else actionButtons = messageButton;
+
+                if (canApprove) {
+                    actionButtons = `
+                        <button class="btn btn-success btn-sm" onclick="approveQuote('${quote.id}', '${jobId}')">
+                            <i class="fas fa-check"></i> Approve
+                        </button>
+                        ${messageButton}`;
+                } else if (quote.status === 'approved') {
+                    actionButtons = `
+                        <span class="status-approved"><i class="fas fa-check-circle"></i> Approved</span>
+                        ${messageButton}`;
+                } else {
+                    actionButtons = messageButton;
+                }
+
                 const statusClass = quote.status;
-                const statusIcon = {'submitted': 'fa-clock', 'approved': 'fa-check-circle', 'rejected': 'fa-times-circle'}[quote.status] || 'fa-question-circle';
-                return `
+                const statusIcon = {
+                    'submitted': 'fa-clock',
+                    'approved': 'fa-check-circle',
+                    'rejected': 'fa-times-circle'
+                }[quote.status] || 'fa-question-circle';
+
+                quotesHTML += `
                     <div class="quote-item premium-quote-item quote-status-${statusClass}">
-                        <div class="quote-item-header"><div class="designer-info"><div class="designer-avatar">${quote.designerName.charAt(0).toUpperCase()}</div><div class="designer-details"><h4>${quote.designerName}</h4><span class="quote-status-badge ${statusClass}"><i class="fas ${statusIcon}"></i> ${quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}</span></div></div><div class="quote-amount"><span class="amount-label">Quote</span><span class="amount-value">${quote.quoteAmount}</span></div></div>
+                        <div class="quote-item-header">
+                            <div class="designer-info">
+                                <div class="designer-avatar">${quote.designerName.charAt(0).toUpperCase()}</div>
+                                <div class="designer-details">
+                                    <h4>${quote.designerName}</h4>
+                                    <span class="quote-status-badge ${statusClass}">
+                                        <i class="fas ${statusIcon}"></i>
+                                         ${quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="quote-amount">
+                                <span class="amount-label">Quote</span>
+                                <span class="amount-value">${quote.quoteAmount}</span>
+                            </div>
+                        </div>
                         <div class="quote-details">
-                            ${quote.timeline ? `<div class="quote-meta-item"><i class="fas fa-calendar-alt"></i><span>Timeline: <strong>${quote.timeline} days</strong></span></div>` : ''}
-                            <div class="quote-description"><p>${quote.description}</p></div>
-                            ${attachmentLink}
+                            ${quote.timeline ? `
+                                <div class="quote-meta-item">
+                                    <i class="fas fa-calendar-alt"></i>
+                                    <span>Timeline: <strong>${quote.timeline} days</strong></span>
+                                </div>
+                            ` : ''}
+                            <div class="quote-description">
+                                <p>${quote.description}</p>
+                            </div>
+                            ${attachmentSection}
                         </div>
                         <div class="quote-actions">${actionButtons}</div>
                     </div>`;
-            }).join('')}</div>`;
+            });
+
+            quotesHTML += `</div>`;
         }
+
         showGenericModal(quotesHTML, 'max-width: 900px;');
     } catch (error) {
-        showGenericModal(`<div class="modal-header premium-modal-header"><h3><i class="fas fa-exclamation-triangle"></i> Error</h3></div><div class="error-state premium-error"><p>Could not load quotes.</p></div>`);
+        console.error('Error viewing quotes:', error);
+        showGenericModal(`
+            <div class="modal-header premium-modal-header">
+                <h3><i class="fas fa-exclamation-triangle"></i> Error</h3>
+            </div>
+            <div class="error-state premium-error">
+                <p>Could not load quotes. Please try again.</p>
+                <button class="btn btn-primary" onclick="closeModal()">Close</button>
+            </div>`);
     }
 }
+
+// FIXED: Update fetchAndRenderMyQuotes to include attachment download links
+async function fetchAndRenderMyQuotes() {
+    const container = document.getElementById('app-container');
+    container.innerHTML = `
+        <div id="dynamic-feature-header" class="dynamic-feature-header"></div>
+        <div class="section-header modern-header">
+            <div class="header-content">
+                <h2><i class="fas fa-file-invoice-dollar"></i> My Submitted Quotes</h2>
+                <p class="header-subtitle">Track your quote submissions</p>
+            </div>
+        </div>
+        <div id="my-quotes-list" class="jobs-grid"></div>`;
+        updateDynamicHeader();
+    const listContainer = document.getElementById('my-quotes-list');
+    listContainer.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Loading your quotes...</p></div>';
+
+    try {
+        const response = await apiCall(`/quotes/user/${appState.currentUser.id}`, 'GET');
+        const quotes = response.data || [];
+        appState.myQuotes = quotes;
+
+        if (quotes.length === 0) {
+            listContainer.innerHTML = `
+                <div class="empty-state premium-empty">
+                    <div class="empty-icon"><i class="fas fa-file-invoice"></i></div>
+                    <h3>No Quotes Submitted</h3>
+                    <p>You haven't submitted any quotes yet. Find projects to get started.</p>
+                    <button class="btn btn-primary" onclick="renderAppSection('jobs')">Find Projects</button>
+                </div>`;
+            return;
+        }
+
+        listContainer.innerHTML = quotes.map(quote => {
+            const attachments = quote.attachments || [];
+            const hasAttachments = attachments.length > 0;
+
+            // FIXED: Create proper attachment display for designer's own quotes
+            let attachmentSection = '';
+            if (hasAttachments) {
+                attachmentSection = `
+                    <div class="quote-attachment">
+                        <i class="fas fa-paperclip"></i>
+                        <span>Attachments (${attachments.length})</span>
+                        <button class="btn btn-xs btn-outline" onclick="viewQuoteAttachments('${quote.id}')">
+                            <i class="fas fa-eye"></i> View
+                        </button>
+                    </div>`;
+            }
+
+            const canDelete = quote.status === 'submitted';
+            const canEdit = quote.status === 'submitted';
+            const statusIcon = {
+                'submitted': 'fa-clock',
+                'approved': 'fa-check-circle',
+                'rejected': 'fa-times-circle'
+            }[quote.status] || 'fa-question-circle';
+            const statusClass = quote.status;
+
+            const actionButtons = [];
+            if (quote.status === 'approved') {
+                actionButtons.push(`
+                    <button class="btn btn-primary" onclick="openConversation('${quote.jobId}', '${quote.contractorId}')">
+                        <i class="fas fa-comments"></i> Message Client
+                    </button>`);
+            }
+            if (canEdit) {
+                actionButtons.push(`
+                    <button class="btn btn-outline" onclick="editQuote('${quote.id}')">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>`);
+            }
+            if (canDelete) {
+                actionButtons.push(`
+                    <button class="btn btn-danger" onclick="deleteQuote('${quote.id}')">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>`);
+            }
+
+            return `
+                <div class="quote-card premium-card quote-status-${statusClass}">
+                    <div class="quote-header">
+                        <div class="quote-title-section">
+                            <h3 class="quote-title">Quote for: ${quote.jobTitle || 'N/A'}</h3>
+                            <span class="quote-status-badge ${statusClass}">
+                                <i class="fas ${statusIcon}"></i>
+                                 ${quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}
+                            </span>
+                        </div>
+                        <div class="quote-amount-section">
+                            <span class="amount-label">Amount</span>
+                            <span class="amount-value">${quote.quoteAmount}</span>
+                        </div>
+                    </div>
+                    <div class="quote-meta">
+                        ${quote.timeline ? `
+                            <div class="quote-meta-item">
+                                <i class="fas fa-calendar-alt"></i>
+                                <span>Timeline: <strong>${quote.timeline} days</strong></span>
+                            </div>
+                        ` : ''}
+                        <div class="quote-meta-item">
+                            <i class="fas fa-clock"></i>
+                            <span>Submitted: <strong>${new Date(quote.createdAt?.toDate ? quote.createdAt.toDate() : quote.createdAt).toLocaleDateString()}</strong></span>
+                        </div>
+                    </div>
+                    <div class="quote-description">
+                        <p>${quote.description}</p>
+                    </div>
+                    ${attachmentSection}
+                    <div class="quote-actions">
+                        <div class="quote-actions-group">${actionButtons.join('')}</div>
+                    </div>
+                </div>`;
+        }).join('');
+    } catch (error) {
+        console.error('Error loading quotes:', error);
+        listContainer.innerHTML = `
+            <div class="error-state premium-error">
+                <div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                <h3>Error Loading Quotes</h3>
+                <p>Please try again.</p>
+                <button class="btn btn-primary" onclick="fetchAndRenderMyQuotes()">Retry</button>
+            </div>`;
+    }
+}
+
+// Helper functions
+function getFileIcon(mimetype) {
+    if (!mimetype) return 'fa-file';
+
+    const iconMap = {
+        'application/pdf': 'fa-file-pdf',
+        'application/msword': 'fa-file-word',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'fa-file-word',
+        'application/vnd.ms-excel': 'fa-file-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'fa-file-excel',
+        'text/plain': 'fa-file-alt',
+        'image/jpeg': 'fa-file-image',
+        'image/png': 'fa-file-image',
+        'image/gif': 'fa-file-image'
+    };
+
+    return iconMap[mimetype] || 'fa-file';
+}
+
+function formatAttachmentDate(dateString) {
+    try {
+        return new Date(dateString).toLocaleDateString();
+    } catch {
+        return '';
+    }
+}
+// --- END: FIXED Frontend Quote Functions ---
+
 
 async function approveQuote(quoteId, jobId) {
     if (confirm('Are you sure you want to approve this quote? This will assign the job to the designer.')) {
@@ -2637,3 +2915,14 @@ function getSettingsTemplate(user) {
             <div class="settings-card"><h3><i class="fas fa-shield-alt"></i> Security</h3><form class="premium-form" onsubmit="event.preventDefault(); showNotification('Password functionality not implemented.', 'info');"><div class="form-group"><label class="form-label">New Password</label><input type="password" class="form-input"></div><button type="submit" class="btn btn-primary">Change Password</button></form></div>
         </div>`;
 }
+
+
+
+
+
+
+
+
+
+
+
