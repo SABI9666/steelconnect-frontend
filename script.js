@@ -939,29 +939,16 @@ function getEstimationStatusConfig(status) {
     return configs[status] || { icon: 'fa-question-circle', label: status };
 }
 
-// --- CORRECTED FILE DOWNLOAD FUNCTIONS ---
+// --- FILE DOWNLOAD FUNCTIONS ---
 
 async function downloadEstimationResult(estimationId) {
     try {
         addLocalNotification('Download', 'Preparing your download...', 'info');
         // First get the secure download URL from the dedicated download endpoint
         const response = await apiCall(`/estimation/${estimationId}/result/download`, 'GET');
-
         if (response.success && response.downloadUrl) {
-            // Create a hidden link to trigger the download
-            const link = document.createElement('a');
-            link.href = response.downloadUrl;
-            link.download = response.filename || 'estimation_result.pdf';
-            link.style.display = 'none';
-
-            // Add to DOM, click, then remove
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-
-            addLocalNotification('Success', `Download started: ${response.filename || 'estimation_result.pdf'}`, 'success');
+            downloadFileDirect(response.downloadUrl, response.filename || 'estimation_result.pdf');
         } else {
-            // If the response was successful but didn't contain the URL, throw an error.
             throw new Error(response.message || 'Download URL not available');
         }
     } catch (error) {
@@ -1005,37 +992,29 @@ async function viewEstimationFiles(estimationId) {
     }
 }
 
-// FIXED: Alternative direct download function for immediate URLs
+// FIXED: Universal direct download function
 function downloadFileDirect(url, filename) {
     try {
         if (!url) {
             throw new Error('Download URL not provided');
         }
-
         showNotification('Starting download...', 'info');
-
-        // Create temporary link
         const link = document.createElement('a');
         link.href = url;
         link.download = filename || 'download';
         link.target = '_blank';
         link.rel = 'noopener noreferrer';
         link.style.display = 'none';
-
-        // Add to DOM, click, then remove
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-
-        showNotification('Download started', 'success');
-
+        // Do not show success here, as it can be blocked by pop-up blockers.
+        // The browser handles the download feedback.
     } catch (error) {
         console.error('Direct download error:', error);
         showNotification(`Download failed: ${error.message}`, 'error');
     }
 }
-
-// --- END CORRECTED FILE DOWNLOAD FUNCTIONS ---
 
 
 async function deleteEstimation(estimationId) {
@@ -1777,73 +1756,24 @@ async function deleteQuote(quoteId) {
 
 // --- START: FIXED Frontend Quote Functions with proper file downloads ---
 
-// FIXED: Download quote attachment with proper error handling and CORS support
+// FIXED: Download quote attachment with proper error handling and CORS bypass
 async function downloadQuoteAttachment(quoteId, attachmentIndex, filename) {
+    // Add safeguard for undefined index
+    if (typeof attachmentIndex === 'undefined' || attachmentIndex === null) {
+        console.error('Download aborted: attachmentIndex is undefined.');
+        showNotification('Cannot download file: Invalid attachment data.', 'error');
+        return;
+    }
     try {
         showNotification('Preparing download...', 'info');
-
-        // Get the download URL from the API
+        // Get the secure download URL from the API
         const response = await apiCall(`/quotes/${quoteId}/attachments/${attachmentIndex}/download`, 'GET');
-
         if (response.success && response.downloadUrl) {
-            // FIXED: Use fetch to download the file and handle CORS properly
-            try {
-                const fileResponse = await fetch(response.downloadUrl, {
-                    method: 'GET',
-                    mode: 'cors', // Handle CORS for Firebase URLs
-                    credentials: 'omit', // Don't send credentials to Firebase
-                    headers: {
-                        'Accept': '*/*'
-                    }
-                });
-
-                if (!fileResponse.ok) {
-                    throw new Error(`Download failed: ${fileResponse.status} ${fileResponse.statusText}`);
-                }
-
-                // Get the file blob
-                const blob = await fileResponse.blob();
-
-                // Create download link
-                const downloadUrl = window.URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = downloadUrl;
-                link.download = filename || response.filename || `attachment_${attachmentIndex}`;
-                link.style.display = 'none';
-
-                // Trigger download
-                document.body.appendChild(link);
-                link.click();
-
-                // Cleanup
-                document.body.removeChild(link);
-                window.URL.revokeObjectURL(downloadUrl);
-
-                showNotification(`Download completed: ${link.download}`, 'success');
-
-            } catch (downloadError) {
-                console.error('File download error:', downloadError);
-
-                // Fallback: Try direct link opening in new tab
-                console.log('Trying fallback download method...');
-                const link = document.createElement('a');
-                link.href = response.downloadUrl;
-                link.download = filename || response.filename || `attachment_${attachmentIndex}`;
-                link.target = '_blank';
-                link.rel = 'noopener noreferrer';
-                link.style.display = 'none';
-
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-
-                showNotification('Download started in new tab', 'success');
-            }
-
+            // Use the reliable direct download method which avoids CORS fetch issues
+            downloadFileDirect(response.downloadUrl, filename || response.filename);
         } else {
             throw new Error(response.error || 'Download URL not available');
         }
-
     } catch (error) {
         console.error('Quote attachment download error:', error);
         showNotification(`Download failed: ${error.message}`, 'error');
@@ -1854,12 +1784,9 @@ async function downloadQuoteAttachment(quoteId, attachmentIndex, filename) {
 async function viewQuoteAttachments(quoteId) {
     try {
         showNotification('Loading attachments...', 'info');
-
         const response = await apiCall(`/quotes/${quoteId}/attachments`, 'GET');
-
         if (response.success) {
             const attachments = response.attachments || [];
-
             const content = `
                 <div class="modal-header">
                     <h3><i class="fas fa-paperclip"></i> Quote Attachments</h3>
@@ -1906,13 +1833,10 @@ async function viewQuoteAttachments(quoteId) {
                     </div>
                 `}
             `;
-
             showGenericModal(content, 'max-width: 700px;');
-
         } else {
             throw new Error(response.error || 'Failed to load attachments');
         }
-
     } catch (error) {
         console.error('Error viewing quote attachments:', error);
         showNotification('Failed to load attachments', 'error');
@@ -1923,26 +1847,18 @@ async function viewQuoteAttachments(quoteId) {
 async function downloadAllAttachments(quoteId, attachments) {
     try {
         showNotification('Preparing to download all files...', 'info');
-
-        const attachmentsList = typeof attachments === 'string'
-             ? JSON.parse(attachments)
-             : attachments;
-
+        const attachmentsList = typeof attachments === 'string' ? JSON.parse(attachments) : attachments;
         if (!attachmentsList || attachmentsList.length === 0) {
             throw new Error('No attachments to download');
         }
-
         // Download each file with a small delay to avoid overwhelming the browser
         for (let i = 0; i < attachmentsList.length; i++) {
             const attachment = attachmentsList[i];
-
             setTimeout(() => {
                 downloadQuoteAttachment(quoteId, attachment.index, attachment.name);
             }, i * 1000); // 1 second delay between downloads
         }
-
         showNotification(`Downloading ${attachmentsList.length} files...`, 'info');
-
     } catch (error) {
         console.error('Error downloading all attachments:', error);
         showNotification('Failed to download all files', 'error');
@@ -1954,13 +1870,11 @@ async function viewQuotes(jobId) {
     try {
         const response = await apiCall(`/quotes/job/${jobId}`, 'GET');
         const quotes = response.data || [];
-
         let quotesHTML = `
             <div class="modal-header premium-modal-header">
                 <h3><i class="fas fa-file-invoice-dollar"></i> Received Quotes</h3>
                 <p class="modal-subtitle">Review quotes for this project (${quotes.length} quotes)</p>
             </div>`;
-
         if (quotes.length === 0) {
             quotesHTML += `
                 <div class="empty-state premium-empty">
@@ -1971,12 +1885,9 @@ async function viewQuotes(jobId) {
         } else {
             const job = appState.jobs.find(j => j.id === jobId);
             quotesHTML += `<div class="quotes-list premium-quotes">`;
-
             quotes.forEach(quote => {
                 const attachments = quote.attachments || [];
                 const hasAttachments = attachments.length > 0;
-
-                // Create attachment display
                 let attachmentSection = '';
                 if (hasAttachments) {
                     attachmentSection = `
@@ -2001,32 +1912,18 @@ async function viewQuotes(jobId) {
                             </div>
                         </div>`;
                 }
-
                 const canApprove = job && job.status === 'open' && quote.status === 'submitted';
                 let actionButtons = '';
                 const messageButton = `<button class="btn btn-outline btn-sm" onclick="openConversation('${quote.jobId}', '${quote.designerId}')"><i class="fas fa-comments"></i> Message</button>`;
-
                 if (canApprove) {
-                    actionButtons = `
-                        <button class="btn btn-success btn-sm" onclick="approveQuote('${quote.id}', '${jobId}')">
-                            <i class="fas fa-check"></i> Approve
-                        </button>
-                        ${messageButton}`;
+                    actionButtons = `<button class="btn btn-success btn-sm" onclick="approveQuote('${quote.id}', '${jobId}')"><i class="fas fa-check"></i> Approve</button>${messageButton}`;
                 } else if (quote.status === 'approved') {
-                    actionButtons = `
-                        <span class="status-approved"><i class="fas fa-check-circle"></i> Approved</span>
-                        ${messageButton}`;
+                    actionButtons = `<span class="status-approved"><i class="fas fa-check-circle"></i> Approved</span>${messageButton}`;
                 } else {
                     actionButtons = messageButton;
                 }
-
                 const statusClass = quote.status;
-                const statusIcon = {
-                    'submitted': 'fa-clock',
-                    'approved': 'fa-check-circle',
-                    'rejected': 'fa-times-circle'
-                }[quote.status] || 'fa-question-circle';
-
+                const statusIcon = {'submitted': 'fa-clock', 'approved': 'fa-check-circle', 'rejected': 'fa-times-circle'}[quote.status] || 'fa-question-circle';
                 quotesHTML += `
                     <div class="quote-item premium-quote-item quote-status-${statusClass}">
                         <div class="quote-item-header">
@@ -2034,48 +1931,27 @@ async function viewQuotes(jobId) {
                                 <div class="designer-avatar">${quote.designerName.charAt(0).toUpperCase()}</div>
                                 <div class="designer-details">
                                     <h4>${quote.designerName}</h4>
-                                    <span class="quote-status-badge ${statusClass}">
-                                        <i class="fas ${statusIcon}"></i>
-                                         ${quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}
-                                    </span>
+                                    <span class="quote-status-badge ${statusClass}"><i class="fas ${statusIcon}"></i> ${quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}</span>
                                 </div>
                             </div>
-                            <div class="quote-amount">
-                                <span class="amount-label">Quote</span>
-                                <span class="amount-value">${quote.quoteAmount}</span>
-                            </div>
+                            <div class="quote-amount"><span class="amount-label">Quote</span><span class="amount-value">${quote.quoteAmount}</span></div>
                         </div>
                         <div class="quote-details">
-                            ${quote.timeline ? `
-                                <div class="quote-meta-item">
-                                    <i class="fas fa-calendar-alt"></i>
-                                    <span>Timeline: <strong>${quote.timeline} days</strong></span>
-                                </div>
-                            ` : ''}
-                            <div class="quote-description">
-                                <p>${quote.description}</p>
-                            </div>
+                            ${quote.timeline ? `<div class="quote-meta-item"><i class="fas fa-calendar-alt"></i><span>Timeline: <strong>${quote.timeline} days</strong></span></div>` : ''}
+                            <div class="quote-description"><p>${quote.description}</p></div>
                             ${attachmentSection}
                         </div>
                         <div class="quote-actions">${actionButtons}</div>
                     </div>`;
             });
-
             quotesHTML += `</div>`;
         }
-
         showGenericModal(quotesHTML, 'max-width: 900px;');
-
     } catch (error) {
         console.error('Error viewing quotes:', error);
         showGenericModal(`
-            <div class="modal-header premium-modal-header">
-                <h3><i class="fas fa-exclamation-triangle"></i> Error</h3>
-            </div>
-            <div class="error-state premium-error">
-                <p>Could not load quotes. Please try again.</p>
-                <button class="btn btn-primary" onclick="closeModal()">Close</button>
-            </div>`);
+            <div class="modal-header premium-modal-header"><h3><i class="fas fa-exclamation-triangle"></i> Error</h3></div>
+            <div class="error-state premium-error"><p>Could not load quotes. Please try again.</p><button class="btn btn-primary" onclick="closeModal()">Close</button></div>`);
     }
 }
 
@@ -2087,25 +1963,18 @@ function formatFileSize(bytes) {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
-
 function getFileIcon(mimetype) {
     if (!mimetype) return 'fa-file';
-
     const iconMap = {
-        'application/pdf': 'fa-file-pdf',
-        'application/msword': 'fa-file-word',
+        'application/pdf': 'fa-file-pdf', 'application/msword': 'fa-file-word',
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'fa-file-word',
         'application/vnd.ms-excel': 'fa-file-excel',
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'fa-file-excel',
-        'text/plain': 'fa-file-alt',
-        'image/jpeg': 'fa-file-image',
-        'image/png': 'fa-file-image',
-        'image/gif': 'fa-file-image'
+        'text/plain': 'fa-file-alt', 'image/jpeg': 'fa-file-image',
+        'image/png': 'fa-file-image', 'image/gif': 'fa-file-image'
     };
-
     return iconMap[mimetype] || 'fa-file';
 }
-
 function formatAttachmentDate(dateString) {
     try {
         return new Date(dateString).toLocaleDateString();
@@ -2405,9 +2274,23 @@ async function handleSendMessage(conversationId) {
 
 
 // --- UI & MODAL FUNCTIONS ---
+
+// --- FIX for UI SHAKING ---
+function lockBodyScroll() {
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    document.body.style.paddingRight = `${scrollbarWidth}px`;
+    document.body.style.overflow = 'hidden';
+}
+
+function unlockBodyScroll() {
+    document.body.style.paddingRight = '';
+    document.body.style.overflow = '';
+}
+
 function showAuthModal(view) {
     const modal = document.getElementById('modal-container');
     if (modal) {
+        lockBodyScroll();
         modal.innerHTML = `
             <div class="modal-overlay premium-overlay">
                 <div class="modal-content premium-modal" onclick="event.stopPropagation()">
@@ -2432,6 +2315,7 @@ function renderAuthForm(view) {
 function showGenericModal(innerHTML, style = '') {
     const modal = document.getElementById('modal-container');
     if (modal) {
+        lockBodyScroll();
         modal.innerHTML = `
             <div class="modal-overlay premium-overlay">
                 <div class="modal-content premium-modal" style="${style}" onclick="event.stopPropagation()">
@@ -2445,7 +2329,10 @@ function showGenericModal(innerHTML, style = '') {
 
 function closeModal() {
     const modal = document.getElementById('modal-container');
-    if (modal) modal.innerHTML = '';
+    if (modal) {
+        modal.innerHTML = '';
+        unlockBodyScroll();
+    }
 }
 
 // ========================================
