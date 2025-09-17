@@ -943,28 +943,30 @@ function getEstimationStatusConfig(status) {
 
 async function downloadEstimationResult(estimationId) {
     try {
-        addLocalNotification('Download', 'Preparing download...', 'info');
-        // Add authorization header by fetching the download info first
-        const response = await apiCall(`/estimation/${estimationId}/result-info`, 'GET');
-        if (response.success && response.downloadInfo) {
-            // Create a temporary link to trigger download
+        addLocalNotification('Download', 'Preparing your download...', 'info');
+        // First get the secure download URL from the dedicated download endpoint
+        const response = await apiCall(`/estimation/${estimationId}/result/download`, 'GET');
+
+        if (response.success && response.downloadUrl) {
+            // Create a hidden link to trigger the download
             const link = document.createElement('a');
-            // Use the direct URL from Firebase
-            link.href = response.downloadInfo.url;
-            link.download = response.downloadInfo.filename;
-            link.target = '_blank';
+            link.href = response.downloadUrl;
+            link.download = response.filename || 'estimation_result.pdf';
             link.style.display = 'none';
+
+            // Add to DOM, click, then remove
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            addLocalNotification('Success', 'Download started successfully.', 'success');
-            setTimeout(() => fetchNotifications(), 1000);
+
+            addLocalNotification('Success', `Download started: ${response.filename || 'estimation_result.pdf'}`, 'success');
         } else {
-            throw new Error('Download info not available');
+            // If the response was successful but didn't contain the URL, throw an error.
+            throw new Error(response.message || 'Download URL not available');
         }
     } catch (error) {
         console.error('Download error:', error);
-        addLocalNotification('Error', 'Failed to download estimation result.', 'error');
+        addLocalNotification('Error', `Download failed: ${error.message}`, 'error');
     }
 }
 
