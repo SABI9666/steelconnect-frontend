@@ -992,7 +992,7 @@ async function viewEstimationFiles(estimationId) {
                                     <span class="file-date">Uploaded: ${new Date(file.uploadedAt).toLocaleDateString()}</span>
                                 </div>
                             </div>
-                            <button class="btn btn-outline btn-sm" onclick="downloadFileDirectly('${file.url}', '${file.name}')">
+                            <button class="btn btn-outline btn-sm" onclick="downloadFileDirect('${file.url}', '${file.name}')">
                                 <i class="fas fa-download"></i> Download
                             </button>
                         </div>
@@ -1005,20 +1005,33 @@ async function viewEstimationFiles(estimationId) {
     }
 }
 
-function downloadFileDirectly(fileUrl, fileName) {
+// FIXED: Alternative direct download function for immediate URLs
+function downloadFileDirect(url, filename) {
     try {
+        if (!url) {
+            throw new Error('Download URL not provided');
+        }
+
+        showNotification('Starting download...', 'info');
+
+        // Create temporary link
         const link = document.createElement('a');
-        link.href = fileUrl;
-        link.download = fileName || 'download';
+        link.href = url;
+        link.download = filename || 'download';
         link.target = '_blank';
+        link.rel = 'noopener noreferrer';
         link.style.display = 'none';
+
+        // Add to DOM, click, then remove
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        addLocalNotification('Success', 'Download started.', 'success');
+
+        showNotification('Download started', 'success');
+
     } catch (error) {
         console.error('Direct download error:', error);
-        addLocalNotification('Error', 'Download failed.', 'error');
+        showNotification(`Download failed: ${error.message}`, 'error');
     }
 }
 
@@ -1231,6 +1244,130 @@ async function markJobCompleted(jobId) {
         } catch (error) {
             addLocalNotification('Error', 'Failed to mark job as completed.', 'error');
         }
+    }
+}
+
+async function fetchAndRenderMyQuotes() {
+    const container = document.getElementById('app-container');
+    container.innerHTML = `
+        <div id="dynamic-feature-header" class="dynamic-feature-header"></div>
+        <div class="section-header modern-header">
+            <div class="header-content">
+                <h2><i class="fas fa-file-invoice-dollar"></i> My Submitted Quotes</h2>
+                <p class="header-subtitle">Track your quote submissions</p>
+            </div>
+        </div>
+        <div id="my-quotes-list" class="jobs-grid"></div>`;
+        updateDynamicHeader();
+    const listContainer = document.getElementById('my-quotes-list');
+    listContainer.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Loading your quotes...</p></div>';
+
+    try {
+        const response = await apiCall(`/quotes/user/${appState.currentUser.id}`, 'GET');
+        const quotes = response.data || [];
+        appState.myQuotes = quotes;
+
+        if (quotes.length === 0) {
+            listContainer.innerHTML = `
+                <div class="empty-state premium-empty">
+                    <div class="empty-icon"><i class="fas fa-file-invoice"></i></div>
+                    <h3>No Quotes Submitted</h3>
+                    <p>You haven't submitted any quotes yet. Find projects to get started.</p>
+                    <button class="btn btn-primary" onclick="renderAppSection('jobs')">Find Projects</button>
+                </div>`;
+            return;
+        }
+
+        listContainer.innerHTML = quotes.map(quote => {
+            const attachments = quote.attachments || [];
+            const hasAttachments = attachments.length > 0;
+
+            let attachmentSection = '';
+            if (hasAttachments) {
+                attachmentSection = `
+                    <div class="quote-attachment">
+                        <i class="fas fa-paperclip"></i>
+                        <span>Attachments (${attachments.length})</span>
+                        <button class="btn btn-xs btn-outline" onclick="viewQuoteAttachments('${quote.id}')">
+                            <i class="fas fa-eye"></i> View
+                        </button>
+                    </div>`;
+            }
+
+            const canDelete = quote.status === 'submitted';
+            const canEdit = quote.status === 'submitted';
+            const statusIcon = {
+                'submitted': 'fa-clock',
+                'approved': 'fa-check-circle',
+                'rejected': 'fa-times-circle'
+            }[quote.status] || 'fa-question-circle';
+            const statusClass = quote.status;
+
+            const actionButtons = [];
+            if (quote.status === 'approved') {
+                actionButtons.push(`
+                    <button class="btn btn-primary" onclick="openConversation('${quote.jobId}', '${quote.contractorId}')">
+                        <i class="fas fa-comments"></i> Message Client
+                    </button>`);
+            }
+            if (canEdit) {
+                actionButtons.push(`
+                    <button class="btn btn-outline" onclick="editQuote('${quote.id}')">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>`);
+            }
+            if (canDelete) {
+                actionButtons.push(`
+                    <button class="btn btn-danger" onclick="deleteQuote('${quote.id}')">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>`);
+            }
+
+            return `
+                <div class="quote-card premium-card quote-status-${statusClass}">
+                    <div class="quote-header">
+                        <div class="quote-title-section">
+                            <h3 class="quote-title">Quote for: ${quote.jobTitle || 'N/A'}</h3>
+                            <span class="quote-status-badge ${statusClass}">
+                                <i class="fas ${statusIcon}"></i>
+                                 ${quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}
+                            </span>
+                        </div>
+                        <div class="quote-amount-section">
+                            <span class="amount-label">Amount</span>
+                            <span class="amount-value">${quote.quoteAmount}</span>
+                        </div>
+                    </div>
+                    <div class="quote-meta">
+                        ${quote.timeline ? `
+                            <div class="quote-meta-item">
+                                <i class="fas fa-calendar-alt"></i>
+                                <span>Timeline: <strong>${quote.timeline} days</strong></span>
+                            </div>
+                        ` : ''}
+                        <div class="quote-meta-item">
+                            <i class="fas fa-clock"></i>
+                            <span>Submitted: <strong>${new Date(quote.createdAt?.toDate ? quote.createdAt.toDate() : quote.createdAt).toLocaleDateString()}</strong></span>
+                        </div>
+                    </div>
+                    <div class="quote-description">
+                        <p>${quote.description}</p>
+                    </div>
+                    ${attachmentSection}
+                    <div class="quote-actions">
+                        <div class="quote-actions-group">${actionButtons.join('')}</div>
+                    </div>
+                </div>`;
+        }).join('');
+    } catch (error) {
+        console.error('Error loading quotes:', error);
+        listContainer.innerHTML = `
+            <div class="error-state premium-error">
+                <div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                <h3>Error Loading Quotes</h3>
+                <p>Please try again.</p>
+                <button class="btn btn-primary" onclick="fetchAndRenderMyQuotes()">Retry</button>
+            </div>`;
     }
 }
 
@@ -1638,39 +1775,82 @@ async function deleteQuote(quoteId) {
     }
 }
 
-
 // --- START: FIXED Frontend Quote Functions with proper file downloads ---
-// Add these functions to your main JavaScript file
 
-// FIXED: Handle quote attachment downloads
+// FIXED: Download quote attachment with proper error handling and CORS support
 async function downloadQuoteAttachment(quoteId, attachmentIndex, filename) {
     try {
         showNotification('Preparing download...', 'info');
 
+        // Get the download URL from the API
         const response = await apiCall(`/quotes/${quoteId}/attachments/${attachmentIndex}/download`, 'GET');
 
         if (response.success && response.downloadUrl) {
-            // Create download link
-            const link = document.createElement('a');
-            link.href = response.downloadUrl;
-            link.download = filename || response.filename || 'attachment';
-            link.style.display = 'none';
+            // FIXED: Use fetch to download the file and handle CORS properly
+            try {
+                const fileResponse = await fetch(response.downloadUrl, {
+                    method: 'GET',
+                    mode: 'cors', // Handle CORS for Firebase URLs
+                    credentials: 'omit', // Don't send credentials to Firebase
+                    headers: {
+                        'Accept': '*/*'
+                    }
+                });
 
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+                if (!fileResponse.ok) {
+                    throw new Error(`Download failed: ${fileResponse.status} ${fileResponse.statusText}`);
+                }
 
-            showNotification(`Download started: ${filename || response.filename}`, 'success');
+                // Get the file blob
+                const blob = await fileResponse.blob();
+
+                // Create download link
+                const downloadUrl = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = downloadUrl;
+                link.download = filename || response.filename || `attachment_${attachmentIndex}`;
+                link.style.display = 'none';
+
+                // Trigger download
+                document.body.appendChild(link);
+                link.click();
+
+                // Cleanup
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(downloadUrl);
+
+                showNotification(`Download completed: ${link.download}`, 'success');
+
+            } catch (downloadError) {
+                console.error('File download error:', downloadError);
+
+                // Fallback: Try direct link opening in new tab
+                console.log('Trying fallback download method...');
+                const link = document.createElement('a');
+                link.href = response.downloadUrl;
+                link.download = filename || response.filename || `attachment_${attachmentIndex}`;
+                link.target = '_blank';
+                link.rel = 'noopener noreferrer';
+                link.style.display = 'none';
+
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                showNotification('Download started in new tab', 'success');
+            }
+
         } else {
-            throw new Error('Download URL not available');
+            throw new Error(response.error || 'Download URL not available');
         }
+
     } catch (error) {
         console.error('Quote attachment download error:', error);
         showNotification(`Download failed: ${error.message}`, 'error');
     }
 }
 
-// FIXED: View quote attachments with download links
+// UPDATED: View quote attachments with improved download links
 async function viewQuoteAttachments(quoteId) {
     try {
         showNotification('Loading attachments...', 'info');
@@ -1683,11 +1863,14 @@ async function viewQuoteAttachments(quoteId) {
             const content = `
                 <div class="modal-header">
                     <h3><i class="fas fa-paperclip"></i> Quote Attachments</h3>
-                    <p class="modal-subtitle">Files submitted with this quote</p>
+                    <p class="modal-subtitle">Files submitted with this quote (${attachments.length} files)</p>
                 </div>
                 <div class="attachments-list premium-attachments">
                     ${attachments.length === 0 ?
-                        `<div class="empty-state"><i class="fas fa-file"></i><p>No attachments found.</p></div>` :
+                        `<div class="empty-state">
+                            <i class="fas fa-file"></i>
+                            <p>No attachments found.</p>
+                        </div>` :
                         attachments.map(attachment => `
                             <div class="attachment-item">
                                 <div class="attachment-info">
@@ -1695,31 +1878,78 @@ async function viewQuoteAttachments(quoteId) {
                                     <div class="attachment-details">
                                         <h4>${attachment.name}</h4>
                                         <span class="attachment-meta">
-                                            ${(attachment.size / (1024 * 1024)).toFixed(2)} MB
+                                            ${formatFileSize(attachment.size)}
+                                            ${attachment.mimetype ? ` • ${attachment.mimetype}` : ''}
                                             ${attachment.uploadedAt ? ` • ${formatAttachmentDate(attachment.uploadedAt)}` : ''}
                                         </span>
                                     </div>
                                 </div>
-                                <button class="btn btn-outline btn-sm" onclick="downloadQuoteAttachment('${quoteId}', ${attachment.index}, '${attachment.name}')">
-                                    <i class="fas fa-download"></i> Download
-                                </button>
+                                <div class="attachment-actions">
+                                    <button class="btn btn-primary btn-sm" onclick="downloadQuoteAttachment('${quoteId}', ${attachment.index}, '${attachment.name}')">
+                                        <i class="fas fa-download"></i> Download
+                                    </button>
+                                </div>
                             </div>
                         `).join('')
                     }
                 </div>
+                ${attachments.length > 0 ? `
+                    <div class="modal-footer">
+                        <button class="btn btn-outline" onclick="downloadAllAttachments('${quoteId}', ${JSON.stringify(attachments).replace(/"/g, '&quot;')})">
+                            <i class="fas fa-download"></i> Download All
+                        </button>
+                        <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+                    </div>
+                ` : `
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+                    </div>
+                `}
             `;
 
-            showGenericModal(content, 'max-width: 600px;');
+            showGenericModal(content, 'max-width: 700px;');
+
         } else {
-            throw new Error('Failed to load attachments');
+            throw new Error(response.error || 'Failed to load attachments');
         }
+
     } catch (error) {
         console.error('Error viewing quote attachments:', error);
         showNotification('Failed to load attachments', 'error');
     }
 }
 
-// FIXED: Update viewQuotes function to include attachment download links
+// NEW: Download all attachments function
+async function downloadAllAttachments(quoteId, attachments) {
+    try {
+        showNotification('Preparing to download all files...', 'info');
+
+        const attachmentsList = typeof attachments === 'string'
+             ? JSON.parse(attachments)
+             : attachments;
+
+        if (!attachmentsList || attachmentsList.length === 0) {
+            throw new Error('No attachments to download');
+        }
+
+        // Download each file with a small delay to avoid overwhelming the browser
+        for (let i = 0; i < attachmentsList.length; i++) {
+            const attachment = attachmentsList[i];
+
+            setTimeout(() => {
+                downloadQuoteAttachment(quoteId, attachment.index, attachment.name);
+            }, i * 1000); // 1 second delay between downloads
+        }
+
+        showNotification(`Downloading ${attachmentsList.length} files...`, 'info');
+
+    } catch (error) {
+        console.error('Error downloading all attachments:', error);
+        showNotification('Failed to download all files', 'error');
+    }
+}
+
+// UPDATED: Enhanced viewQuotes function with better attachment handling
 async function viewQuotes(jobId) {
     try {
         const response = await apiCall(`/quotes/job/${jobId}`, 'GET');
@@ -1728,7 +1958,7 @@ async function viewQuotes(jobId) {
         let quotesHTML = `
             <div class="modal-header premium-modal-header">
                 <h3><i class="fas fa-file-invoice-dollar"></i> Received Quotes</h3>
-                <p class="modal-subtitle">Review quotes for this project</p>
+                <p class="modal-subtitle">Review quotes for this project (${quotes.length} quotes)</p>
             </div>`;
 
         if (quotes.length === 0) {
@@ -1746,7 +1976,7 @@ async function viewQuotes(jobId) {
                 const attachments = quote.attachments || [];
                 const hasAttachments = attachments.length > 0;
 
-                // FIXED: Create proper attachment display with download functionality
+                // Create attachment display
                 let attachmentSection = '';
                 if (hasAttachments) {
                     attachmentSection = `
@@ -1760,8 +1990,12 @@ async function viewQuotes(jobId) {
                                     <i class="fas fa-folder-open"></i> View All (${attachments.length})
                                 </button>
                                 ${attachments.length === 1 ? `
-                                    <button class="btn btn-outline btn-sm" onclick="downloadQuoteAttachment('${quote.id}', 0, '${attachments[0].name}')">
+                                    <button class="btn btn-primary btn-sm" onclick="downloadQuoteAttachment('${quote.id}', 0, '${attachments[0].name || 'attachment'}')">
                                         <i class="fas fa-download"></i> Download
+                                    </button>
+                                ` : attachments.length > 1 ? `
+                                    <button class="btn btn-success btn-sm" onclick="downloadAllAttachments('${quote.id}', ${JSON.stringify(attachments).replace(/"/g, '&quot;')})">
+                                        <i class="fas fa-download"></i> Download All
                                     </button>
                                 ` : ''}
                             </div>
@@ -1831,6 +2065,7 @@ async function viewQuotes(jobId) {
         }
 
         showGenericModal(quotesHTML, 'max-width: 900px;');
+
     } catch (error) {
         console.error('Error viewing quotes:', error);
         showGenericModal(`
@@ -1844,133 +2079,15 @@ async function viewQuotes(jobId) {
     }
 }
 
-// FIXED: Update fetchAndRenderMyQuotes to include attachment download links
-async function fetchAndRenderMyQuotes() {
-    const container = document.getElementById('app-container');
-    container.innerHTML = `
-        <div id="dynamic-feature-header" class="dynamic-feature-header"></div>
-        <div class="section-header modern-header">
-            <div class="header-content">
-                <h2><i class="fas fa-file-invoice-dollar"></i> My Submitted Quotes</h2>
-                <p class="header-subtitle">Track your quote submissions</p>
-            </div>
-        </div>
-        <div id="my-quotes-list" class="jobs-grid"></div>`;
-        updateDynamicHeader();
-    const listContainer = document.getElementById('my-quotes-list');
-    listContainer.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Loading your quotes...</p></div>';
-
-    try {
-        const response = await apiCall(`/quotes/user/${appState.currentUser.id}`, 'GET');
-        const quotes = response.data || [];
-        appState.myQuotes = quotes;
-
-        if (quotes.length === 0) {
-            listContainer.innerHTML = `
-                <div class="empty-state premium-empty">
-                    <div class="empty-icon"><i class="fas fa-file-invoice"></i></div>
-                    <h3>No Quotes Submitted</h3>
-                    <p>You haven't submitted any quotes yet. Find projects to get started.</p>
-                    <button class="btn btn-primary" onclick="renderAppSection('jobs')">Find Projects</button>
-                </div>`;
-            return;
-        }
-
-        listContainer.innerHTML = quotes.map(quote => {
-            const attachments = quote.attachments || [];
-            const hasAttachments = attachments.length > 0;
-
-            // FIXED: Create proper attachment display for designer's own quotes
-            let attachmentSection = '';
-            if (hasAttachments) {
-                attachmentSection = `
-                    <div class="quote-attachment">
-                        <i class="fas fa-paperclip"></i>
-                        <span>Attachments (${attachments.length})</span>
-                        <button class="btn btn-xs btn-outline" onclick="viewQuoteAttachments('${quote.id}')">
-                            <i class="fas fa-eye"></i> View
-                        </button>
-                    </div>`;
-            }
-
-            const canDelete = quote.status === 'submitted';
-            const canEdit = quote.status === 'submitted';
-            const statusIcon = {
-                'submitted': 'fa-clock',
-                'approved': 'fa-check-circle',
-                'rejected': 'fa-times-circle'
-            }[quote.status] || 'fa-question-circle';
-            const statusClass = quote.status;
-
-            const actionButtons = [];
-            if (quote.status === 'approved') {
-                actionButtons.push(`
-                    <button class="btn btn-primary" onclick="openConversation('${quote.jobId}', '${quote.contractorId}')">
-                        <i class="fas fa-comments"></i> Message Client
-                    </button>`);
-            }
-            if (canEdit) {
-                actionButtons.push(`
-                    <button class="btn btn-outline" onclick="editQuote('${quote.id}')">
-                        <i class="fas fa-edit"></i> Edit
-                    </button>`);
-            }
-            if (canDelete) {
-                actionButtons.push(`
-                    <button class="btn btn-danger" onclick="deleteQuote('${quote.id}')">
-                        <i class="fas fa-trash"></i> Delete
-                    </button>`);
-            }
-
-            return `
-                <div class="quote-card premium-card quote-status-${statusClass}">
-                    <div class="quote-header">
-                        <div class="quote-title-section">
-                            <h3 class="quote-title">Quote for: ${quote.jobTitle || 'N/A'}</h3>
-                            <span class="quote-status-badge ${statusClass}">
-                                <i class="fas ${statusIcon}"></i>
-                                 ${quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}
-                            </span>
-                        </div>
-                        <div class="quote-amount-section">
-                            <span class="amount-label">Amount</span>
-                            <span class="amount-value">${quote.quoteAmount}</span>
-                        </div>
-                    </div>
-                    <div class="quote-meta">
-                        ${quote.timeline ? `
-                            <div class="quote-meta-item">
-                                <i class="fas fa-calendar-alt"></i>
-                                <span>Timeline: <strong>${quote.timeline} days</strong></span>
-                            </div>
-                        ` : ''}
-                        <div class="quote-meta-item">
-                            <i class="fas fa-clock"></i>
-                            <span>Submitted: <strong>${new Date(quote.createdAt?.toDate ? quote.createdAt.toDate() : quote.createdAt).toLocaleDateString()}</strong></span>
-                        </div>
-                    </div>
-                    <div class="quote-description">
-                        <p>${quote.description}</p>
-                    </div>
-                    ${attachmentSection}
-                    <div class="quote-actions">
-                        <div class="quote-actions-group">${actionButtons.join('')}</div>
-                    </div>
-                </div>`;
-        }).join('');
-    } catch (error) {
-        console.error('Error loading quotes:', error);
-        listContainer.innerHTML = `
-            <div class="error-state premium-error">
-                <div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div>
-                <h3>Error Loading Quotes</h3>
-                <p>Please try again.</p>
-                <button class="btn btn-primary" onclick="fetchAndRenderMyQuotes()">Retry</button>
-            </div>`;
-    }
+// Helper functions
+function formatFileSize(bytes) {
+    if (!bytes) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
-// Helper functions
 function getFileIcon(mimetype) {
     if (!mimetype) return 'fa-file';
 
@@ -2915,14 +3032,3 @@ function getSettingsTemplate(user) {
             <div class="settings-card"><h3><i class="fas fa-shield-alt"></i> Security</h3><form class="premium-form" onsubmit="event.preventDefault(); showNotification('Password functionality not implemented.', 'info');"><div class="form-group"><label class="form-label">New Password</label><input type="password" class="form-input"></div><button type="submit" class="btn btn-primary">Change Password</button></form></div>
         </div>`;
 }
-
-
-
-
-
-
-
-
-
-
-
