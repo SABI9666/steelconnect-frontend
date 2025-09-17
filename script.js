@@ -816,7 +816,8 @@ function renderEstimatesGrid(filteredEstimates = null) {
         const statusConfig = getEstimationStatusConfig(est.status);
         const createdDate = formatEstimationDate(est.createdAt);
         const hasFiles = est.uploadedFiles && est.uploadedFiles.length > 0;
-        const hasResult = est.resultFile;
+        // CORRECTED: Only show download button if status is 'completed'
+        const canDownloadResult = est.status === 'completed';
         const progress = getEstimationProgress(est.status);
         const canEdit = est.status === 'pending';
         return `
@@ -833,7 +834,7 @@ function renderEstimatesGrid(filteredEstimates = null) {
                 ${est.estimatedAmount ? `<div class="estimation-amount-section"><span class="amount-label">Estimated Cost</span><span class="amount-value">$${Number(est.estimatedAmount).toLocaleString()}</span></div>` : ''}
                 <div class="estimation-actions">
                     ${hasFiles ? `<button class="btn btn-outline btn-sm" onclick="viewEstimationFiles('${est._id}')"><i class="fas fa-folder-open"></i> View Files</button>` : ''}
-                    ${hasResult ? `<button class="btn btn-success btn-sm" onclick="downloadEstimationResult('${est._id}')"><i class="fas fa-download"></i> Download Result</button>` : ''}
+                    ${canDownloadResult ? `<button class="btn btn-success btn-sm" onclick="downloadEstimationResult('${est._id}')"><i class="fas fa-download"></i> Download Result</button>` : ''}
                     <button class="btn btn-outline btn-sm" onclick="viewEstimationDetails('${est._id}')"><i class="fas fa-eye"></i> Details</button>
                     ${canEdit ? `<button class="btn btn-outline btn-sm" onclick="editEstimation('${est._id}')"><i class="fas fa-edit"></i> Edit</button>` : ''}
                     <button class="btn btn-danger btn-sm" onclick="deleteEstimation('${est._id}')"><i class="fas fa-trash"></i> Delete</button>
@@ -944,7 +945,6 @@ function getEstimationStatusConfig(status) {
 async function downloadEstimationResult(estimationId) {
     try {
         addLocalNotification('Download', 'Preparing your download...', 'info');
-        // First get the secure download URL from the dedicated download endpoint
         const response = await apiCall(`/estimation/${estimationId}/result/download`, 'GET');
         if (response.success && response.downloadUrl) {
             downloadFileDirect(response.downloadUrl, response.filename || 'estimation_result.pdf');
@@ -992,7 +992,7 @@ async function viewEstimationFiles(estimationId) {
     }
 }
 
-// FIXED: Universal direct download function
+// Universal direct download function
 function downloadFileDirect(url, filename) {
     try {
         if (!url) {
@@ -1008,8 +1008,6 @@ function downloadFileDirect(url, filename) {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        // Do not show success here, as it can be blocked by pop-up blockers.
-        // The browser handles the download feedback.
     } catch (error) {
         console.error('Direct download error:', error);
         showNotification(`Download failed: ${error.message}`, 'error');
@@ -1754,11 +1752,10 @@ async function deleteQuote(quoteId) {
     }
 }
 
-// --- START: FIXED Frontend Quote Functions with proper file downloads ---
+// --- START: CORRECTED QUOTE ATTACHMENT FUNCTIONS ---
 
-// FIXED: Download quote attachment with proper error handling and CORS bypass
+// Download a single quote attachment
 async function downloadQuoteAttachment(quoteId, attachmentIndex, filename) {
-    // Add safeguard for undefined index
     if (typeof attachmentIndex === 'undefined' || attachmentIndex === null) {
         console.error('Download aborted: attachmentIndex is undefined.');
         showNotification('Cannot download file: Invalid attachment data.', 'error');
@@ -1766,10 +1763,8 @@ async function downloadQuoteAttachment(quoteId, attachmentIndex, filename) {
     }
     try {
         showNotification('Preparing download...', 'info');
-        // Get the secure download URL from the API
         const response = await apiCall(`/quotes/${quoteId}/attachments/${attachmentIndex}/download`, 'GET');
         if (response.success && response.downloadUrl) {
-            // Use the reliable direct download method which avoids CORS fetch issues
             downloadFileDirect(response.downloadUrl, filename || response.filename);
         } else {
             throw new Error(response.error || 'Download URL not available');
@@ -1780,7 +1775,7 @@ async function downloadQuoteAttachment(quoteId, attachmentIndex, filename) {
     }
 }
 
-// UPDATED: View quote attachments with improved download links
+// View all attachments for a quote in a modal
 async function viewQuoteAttachments(quoteId) {
     try {
         showNotification('Loading attachments...', 'info');
@@ -1794,10 +1789,7 @@ async function viewQuoteAttachments(quoteId) {
                 </div>
                 <div class="attachments-list premium-attachments">
                     ${attachments.length === 0 ?
-                        `<div class="empty-state">
-                            <i class="fas fa-file"></i>
-                            <p>No attachments found.</p>
-                        </div>` :
+                        `<div class="empty-state"><i class="fas fa-file"></i><p>No attachments found.</p></div>` :
                         attachments.map(attachment => `
                             <div class="attachment-item">
                                 <div class="attachment-info">
@@ -1806,7 +1798,6 @@ async function viewQuoteAttachments(quoteId) {
                                         <h4>${attachment.name}</h4>
                                         <span class="attachment-meta">
                                             ${formatFileSize(attachment.size)}
-                                            ${attachment.mimetype ? ` • ${attachment.mimetype}` : ''}
                                             ${attachment.uploadedAt ? ` • ${formatAttachmentDate(attachment.uploadedAt)}` : ''}
                                         </span>
                                     </div>
@@ -1822,16 +1813,13 @@ async function viewQuoteAttachments(quoteId) {
                 </div>
                 ${attachments.length > 0 ? `
                     <div class="modal-footer">
-                        <button class="btn btn-outline" onclick="downloadAllAttachments('${quoteId}', ${JSON.stringify(attachments).replace(/"/g, '&quot;')})">
+                        <button class="btn btn-outline" onclick="downloadAllAttachments('${quoteId}')">
                             <i class="fas fa-download"></i> Download All
                         </button>
                         <button class="btn btn-secondary" onclick="closeModal()">Close</button>
-                    </div>
-                ` : `
-                    <div class="modal-footer">
-                        <button class="btn btn-secondary" onclick="closeModal()">Close</button>
-                    </div>
-                `}
+                    </div>` : 
+                    `<div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Close</button></div>`
+                }
             `;
             showGenericModal(content, 'max-width: 700px;');
         } else {
@@ -1843,29 +1831,35 @@ async function viewQuoteAttachments(quoteId) {
     }
 }
 
-// NEW: Download all attachments function
-async function downloadAllAttachments(quoteId, attachments) {
+// CORRECTED: Download all attachments for a quote
+async function downloadAllAttachments(quoteId) {
     try {
         showNotification('Preparing to download all files...', 'info');
-        const attachmentsList = typeof attachments === 'string' ? JSON.parse(attachments) : attachments;
-        if (!attachmentsList || attachmentsList.length === 0) {
-            throw new Error('No attachments to download');
+        // First, get the fresh list of attachments to ensure we have the correct indices
+        const response = await apiCall(`/quotes/${quoteId}/attachments`, 'GET');
+        if (!response.success || !response.attachments) {
+            throw new Error('Could not retrieve attachment list.');
         }
-        // Download each file with a small delay to avoid overwhelming the browser
-        for (let i = 0; i < attachmentsList.length; i++) {
-            const attachment = attachmentsList[i];
+        const attachmentsList = response.attachments;
+        if (attachmentsList.length === 0) {
+            showNotification('No attachments to download.', 'info');
+            return;
+        }
+        // Download each file with a delay
+        attachmentsList.forEach((attachment, i) => {
             setTimeout(() => {
                 downloadQuoteAttachment(quoteId, attachment.index, attachment.name);
-            }, i * 1000); // 1 second delay between downloads
-        }
+            }, i * 1000);
+        });
         showNotification(`Downloading ${attachmentsList.length} files...`, 'info');
     } catch (error) {
         console.error('Error downloading all attachments:', error);
-        showNotification('Failed to download all files', 'error');
+        showNotification(`Failed to start download all: ${error.message}`, 'error');
     }
 }
 
-// UPDATED: Enhanced viewQuotes function with better attachment handling
+
+// CORRECTED: Enhanced viewQuotes function with better attachment handling
 async function viewQuotes(jobId) {
     try {
         const response = await apiCall(`/quotes/job/${jobId}`, 'GET');
@@ -1876,12 +1870,7 @@ async function viewQuotes(jobId) {
                 <p class="modal-subtitle">Review quotes for this project (${quotes.length} quotes)</p>
             </div>`;
         if (quotes.length === 0) {
-            quotesHTML += `
-                <div class="empty-state premium-empty">
-                    <div class="empty-icon"><i class="fas fa-file-invoice"></i></div>
-                    <h3>No Quotes Received</h3>
-                    <p>No quotes have been submitted yet.</p>
-                </div>`;
+            quotesHTML += `<div class="empty-state premium-empty"><div class="empty-icon"><i class="fas fa-file-invoice"></i></div><h3>No Quotes Received</h3><p>No quotes have been submitted yet.</p></div>`;
         } else {
             const job = appState.jobs.find(j => j.id === jobId);
             quotesHTML += `<div class="quotes-list premium-quotes">`;
@@ -1892,23 +1881,10 @@ async function viewQuotes(jobId) {
                 if (hasAttachments) {
                     attachmentSection = `
                         <div class="quote-attachments">
-                            <div class="attachments-header">
-                                <i class="fas fa-paperclip"></i>
-                                <span>Attachments (${attachments.length}):</span>
-                            </div>
+                            <div class="attachments-header"><i class="fas fa-paperclip"></i><span>Attachments (${attachments.length}):</span></div>
                             <div class="attachment-actions">
-                                <button class="btn btn-outline btn-sm" onclick="viewQuoteAttachments('${quote.id}')">
-                                    <i class="fas fa-folder-open"></i> View All (${attachments.length})
-                                </button>
-                                ${attachments.length === 1 ? `
-                                    <button class="btn btn-primary btn-sm" onclick="downloadQuoteAttachment('${quote.id}', 0, '${attachments[0].name || 'attachment'}')">
-                                        <i class="fas fa-download"></i> Download
-                                    </button>
-                                ` : attachments.length > 1 ? `
-                                    <button class="btn btn-success btn-sm" onclick="downloadAllAttachments('${quote.id}', ${JSON.stringify(attachments).replace(/"/g, '&quot;')})">
-                                        <i class="fas fa-download"></i> Download All
-                                    </button>
-                                ` : ''}
+                                <button class="btn btn-outline btn-sm" onclick="viewQuoteAttachments('${quote.id}')"><i class="fas fa-folder-open"></i> View All</button>
+                                ${attachments.length > 1 ? `<button class="btn btn-success btn-sm" onclick="downloadAllAttachments('${quote.id}')"><i class="fas fa-download"></i> Download All</button>` : ''}
                             </div>
                         </div>`;
                 }
@@ -1929,10 +1905,7 @@ async function viewQuotes(jobId) {
                         <div class="quote-item-header">
                             <div class="designer-info">
                                 <div class="designer-avatar">${quote.designerName.charAt(0).toUpperCase()}</div>
-                                <div class="designer-details">
-                                    <h4>${quote.designerName}</h4>
-                                    <span class="quote-status-badge ${statusClass}"><i class="fas ${statusIcon}"></i> ${quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}</span>
-                                </div>
+                                <div class="designer-details"><h4>${quote.designerName}</h4><span class="quote-status-badge ${statusClass}"><i class="fas ${statusIcon}"></i> ${quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}</span></div>
                             </div>
                             <div class="quote-amount"><span class="amount-label">Quote</span><span class="amount-value">${quote.quoteAmount}</span></div>
                         </div>
@@ -1949,20 +1922,19 @@ async function viewQuotes(jobId) {
         showGenericModal(quotesHTML, 'max-width: 900px;');
     } catch (error) {
         console.error('Error viewing quotes:', error);
-        showGenericModal(`
-            <div class="modal-header premium-modal-header"><h3><i class="fas fa-exclamation-triangle"></i> Error</h3></div>
-            <div class="error-state premium-error"><p>Could not load quotes. Please try again.</p><button class="btn btn-primary" onclick="closeModal()">Close</button></div>`);
+        showGenericModal(`<div class="modal-header premium-modal-header"><h3><i class="fas fa-exclamation-triangle"></i> Error</h3></div><div class="error-state premium-error"><p>Could not load quotes. Please try again.</p><button class="btn btn-primary" onclick="closeModal()">Close</button></div>`);
     }
 }
 
-// Helper functions
+// Helper functions for files
 function formatFileSize(bytes) {
-    if (!bytes) return '0 B';
+    if (!bytes || bytes === 0) return '0 B';
     const k = 1024;
     const sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
+
 function getFileIcon(mimetype) {
     if (!mimetype) return 'fa-file';
     const iconMap = {
@@ -1975,6 +1947,7 @@ function getFileIcon(mimetype) {
     };
     return iconMap[mimetype] || 'fa-file';
 }
+
 function formatAttachmentDate(dateString) {
     try {
         return new Date(dateString).toLocaleDateString();
@@ -1982,7 +1955,7 @@ function formatAttachmentDate(dateString) {
         return '';
     }
 }
-// --- END: FIXED Frontend Quote Functions ---
+// --- END: CORRECTED QUOTE ATTACHMENT FUNCTIONS ---
 
 
 async function approveQuote(quoteId, jobId) {
@@ -2275,7 +2248,7 @@ async function handleSendMessage(conversationId) {
 
 // --- UI & MODAL FUNCTIONS ---
 
-// --- FIX for UI SHAKING ---
+// FIX for UI SHAKING
 function lockBodyScroll() {
     const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
     document.body.style.paddingRight = `${scrollbarWidth}px`;
@@ -2769,6 +2742,8 @@ function showNotification(message, type = 'info', duration = 4000) {
         container = document.createElement('div');
         container.id = 'notification-container';
         container.className = 'notification-container';
+        // CORRECTED: Set a high z-index to appear over modals
+        container.style.zIndex = '10001';
         document.body.appendChild(container);
     }
     const notif = document.createElement('div');
