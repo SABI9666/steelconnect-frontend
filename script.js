@@ -1081,82 +1081,50 @@ function getEstimationStatusConfig(status) {
 
 // --- FILE DOWNLOAD FUNCTIONS ---
 
-// Enhanced version of downloadFileDirect
-function downloadFileDirect(url, filename) {
+// UPDATED FUNCTION
+async function downloadFileDirect(url, filename) {
     try {
         if (!url) {
             throw new Error('Download URL not provided');
         }
-
-        // Clean the URL - remove any double slashes except after protocol
-        url = url.replace(/([^:])\/\/+/g, "$1");
-
-        console.log('Starting download:', { url, filename });
         showNotification('Preparing download...', 'info');
-
-        // Method 1: Try fetch first for better error handling
-        fetch(url, {
+        const response = await fetch(url, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${appState.jwtToken}`
-            },
-            mode: 'cors'
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
             }
-            return response.blob();
-        })
-        .then(blob => {
-            const blobUrl = window.URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = blobUrl;
-            link.download = filename || 'download';
-            link.style.display = 'none';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-
-            // Clean up the blob URL after a delay
-            setTimeout(() => window.URL.revokeObjectURL(blobUrl), 100);
-            showNotification('Download started successfully', 'success');
-        })
-        .catch(error => {
-            console.error('Fetch download failed, trying direct link:', error);
-            // Fallback to direct link method
-            directLinkDownload(url, filename);
         });
-
-    } catch (error) {
-        console.error('Direct download error:', error);
-        showNotification(`Download failed: ${error.message}`, 'error');
-    }
-}
-
-// Helper function for fallback download method
-function directLinkDownload(url, filename) {
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename || 'download';
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
-    link.style.display = 'none';
-
-    // Add auth token as query parameter for fallback
-    if (appState.jwtToken && !url.includes('token=')) {
-        const separator = url.includes('?') ? '&' : '?';
-        link.href = `${url}${separator}token=${appState.jwtToken}`;
-    }
-
-    document.body.appendChild(link);
-    link.click();
-
-    setTimeout(() => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const blob = await response.blob();
+        const blobUrl = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = filename || 'download';
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
         document.body.removeChild(link);
-    }, 100);
+        setTimeout(() => window.URL.revokeObjectURL(blobUrl), 100);
+        showNotification('Download started successfully', 'success');
+    } catch (error) {
+        console.error('Download error:', error);
+        // Fallback: Try opening in new tab
+        if (url) {
+            try {
+                const newTab = window.open(url, '_blank');
+                if (newTab) {
+                    showNotification('Opening file in new tab...', 'info');
+                } else {
+                    showNotification('Please allow popups and try again', 'warning');
+                }
+            } catch (fallbackError) {
+                showNotification(`Download failed: ${error.message}`, 'error');
+            }
+        }
+    }
 }
-
 
 // Download function with retry mechanism
 async function downloadWithRetry(apiCall, maxRetries = 3) {
@@ -3150,15 +3118,3 @@ function getSettingsTemplate(user) {
             <div class="settings-card"><h3><i class="fas fa-shield-alt"></i> Security</h3><form class="premium-form" onsubmit="event.preventDefault(); showNotification('Password functionality not implemented.', 'info');"><div class="form-group"><label class="form-label">New Password</label><input type="password" class="form-input"></div><button type="submit" class="btn btn-primary">Change Password</button></form></div>
         </div>`;
 }
-
-
-
-
-
-
-
-
-
-
-
-
