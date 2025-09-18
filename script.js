@@ -161,6 +161,78 @@ function dismissInactivityWarning() {
     }
 }
 
+// ============================================
+// CONNECTION STATUS INDICATOR
+// ============================================
+let connectionStatus = 'online';
+function setupConnectionMonitoring() {
+    function updateConnectionStatus() {
+        connectionStatus = navigator.onLine ? 'online' : 'offline';
+
+        if (connectionStatus === 'offline') {
+            showNotification('You are offline. Some features may not work.', 'warning', 0);
+        }
+    }
+
+    window.addEventListener('online', () => {
+        connectionStatus = 'online';
+        showNotification('Connection restored', 'success');
+    });
+
+    window.addEventListener('offline', () => {
+        connectionStatus = 'offline';
+        showNotification('Connection lost. Please check your internet.', 'error', 0);
+    });
+
+    updateConnectionStatus();
+}
+
+// ============================================
+// PERFORMANCE MONITORING
+// ============================================
+function monitorDownloadPerformance() {
+    const originalFetch = window.fetch;
+
+    window.fetch = function(...args) {
+        const startTime = performance.now();
+        const url = args[0];
+
+        return originalFetch.apply(this, args)
+            .then(response => {
+                const endTime = performance.now();
+                const duration = endTime - startTime;
+
+                if (duration > 5000 && url.includes('/download')) {
+                    console.warn(`Slow download detected: ${url} took ${duration}ms`);
+                }
+
+                return response;
+            })
+            .catch(error => {
+                console.error(`Fetch failed for ${url}:`, error);
+                throw error;
+            });
+    };
+}
+
+function initializePerformanceImprovements() {
+    // Enable performance monitoring in development
+    if (IS_LOCAL) {
+        monitorDownloadPerformance();
+    }
+
+    // Preload critical resources
+    if ('requestIdleCallback' in window) {
+        requestIdleCallback(() => {
+            // Preload user data if needed
+            if (appState.currentUser) {
+                loadUserQuotes().catch(() => {});
+                loadUserEstimations().catch(() => {});
+            }
+        });
+    }
+}
+
 
 function initializeApp() {
     console.log("SteelConnect App Initializing...");
@@ -249,6 +321,8 @@ function initializeApp() {
     }
 
     initializeHeaderRotation();
+    initializePerformanceImprovements();
+    setupConnectionMonitoring();
 }
 
 
@@ -284,12 +358,22 @@ function updateDynamicHeader() {
     }
 }
 
+// Optimized API call function with better error handling
 async function apiCall(endpoint, method, body = null, successMessage = null) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
     try {
-        const options = { method, headers: {} };
+        const options = {
+             method,
+             headers: {},
+            signal: controller.signal
+        };
+
         if (appState.jwtToken) {
             options.headers['Authorization'] = `Bearer ${appState.jwtToken}`;
         }
+
         if (body) {
             if (body instanceof FormData) {
                 options.body = body;
@@ -298,36 +382,41 @@ async function apiCall(endpoint, method, body = null, successMessage = null) {
                 options.body = JSON.stringify(body);
             }
         }
-
         const response = await fetch(BACKEND_URL + endpoint, options);
-
+        clearTimeout(timeoutId);
         if (response.status === 204 || response.headers.get("content-length") === "0") {
-             if (!response.ok) {
-                const errorMsg = response.headers.get('X-Error-Message') || `Request failed with status ${response.status}`;
+            if (!response.ok) {
+                const errorMsg = response.headers.get('X-Error-Message') ||
+                               `Request failed with status ${response.status}`;
                 throw new Error(errorMsg);
-             }
-             if (successMessage) showNotification(successMessage, 'success');
-             return { success: true };
+            }
+            if (successMessage) showNotification(successMessage, 'success');
+            return { success: true };
         }
-
         const responseData = await response.json();
-
         if (!response.ok) {
-            throw new Error(responseData.message || responseData.error || `Request failed with status ${response.status}`);
+            throw new Error(responseData.message || responseData.error ||
+                           `Request failed with status ${response.status}`);
         }
-
         if (successMessage) {
             showNotification(successMessage, 'success');
         }
-
         return responseData;
-
     } catch (error) {
-        console.error(`API call to ${endpoint} failed:`, error);
-        showNotification(error.message, 'error');
+        clearTimeout(timeoutId);
+
+        if (error.name === 'AbortError') {
+            console.error(`API call to ${endpoint} timed out`);
+            showNotification('Request timed out. Please try again.', 'error');
+        } else {
+            console.error(`API call to ${endpoint} failed:`, error);
+            showNotification(error.message, 'error');
+        }
+
         throw error;
     }
 }
+
 
 async function handleRegister(event) {
     event.preventDefault();
@@ -343,23 +432,73 @@ async function handleRegister(event) {
         .catch(() => {});
 }
 
+// Optimized handleLogin
 async function handleLogin(event) {
     event.preventDefault();
     const form = event.target;
-    const authData = { email: form.loginEmail.value, password: form.loginPassword.value };
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+
+    // Show loading state immediately
+    submitBtn.innerHTML = '<div class="btn-spinner"></div> Signing in...';
+    submitBtn.disabled = true;
+
+    const authData = {
+         email: form.loginEmail.value,
+         password: form.loginPassword.value
+     };
+
     try {
-        const data = await apiCall('/auth/login', 'POST', authData);
+        // Set a timeout for the login request
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+
+        const response = await fetch(BACKEND_URL + '/auth/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(authData),
+            signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Login failed');
+        }
+
+        const data = await response.json();
+
+        // Store credentials
         appState.currentUser = data.user;
         appState.jwtToken = data.token;
         localStorage.setItem('currentUser', JSON.stringify(data.user));
         localStorage.setItem('jwtToken', data.token);
+
+        // Close modal and show app view in parallel
         closeModal();
-        showAppView();
-        showNotification(`Welcome to SteelConnect, ${data.user.name}!`, 'success');
+
+        // Defer non-critical operations
+        requestAnimationFrame(() => {
+            showAppView();
+            showNotification(`Welcome to SteelConnect, ${data.user.name}!`, 'success');
+        });
+
     } catch (error) {
-        // Error is already shown by apiCall
+        if (error.name === 'AbortError') {
+            showNotification('Login timeout. Please check your connection and try again.', 'error');
+        } else {
+            showNotification(error.message || 'Login failed. Please try again.', 'error');
+        }
+
+        // Reset button state
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
     }
 }
+
 
 // ========================================
 // START: NEW NOTIFICATION SYSTEM
@@ -942,18 +1081,127 @@ function getEstimationStatusConfig(status) {
 
 // --- FILE DOWNLOAD FUNCTIONS ---
 
+// Enhanced version of downloadFileDirect
+function downloadFileDirect(url, filename) {
+    try {
+        if (!url) {
+            throw new Error('Download URL not provided');
+        }
+
+        // Clean the URL - remove any double slashes except after protocol
+        url = url.replace(/([^:])\/\/+/g, "$1");
+
+        console.log('Starting download:', { url, filename });
+        showNotification('Preparing download...', 'info');
+
+        // Method 1: Try fetch first for better error handling
+        fetch(url, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${appState.jwtToken}`
+            },
+            mode: 'cors'
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.blob();
+        })
+        .then(blob => {
+            const blobUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.download = filename || 'download';
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            // Clean up the blob URL after a delay
+            setTimeout(() => window.URL.revokeObjectURL(blobUrl), 100);
+            showNotification('Download started successfully', 'success');
+        })
+        .catch(error => {
+            console.error('Fetch download failed, trying direct link:', error);
+            // Fallback to direct link method
+            directLinkDownload(url, filename);
+        });
+
+    } catch (error) {
+        console.error('Direct download error:', error);
+        showNotification(`Download failed: ${error.message}`, 'error');
+    }
+}
+
+// Helper function for fallback download method
+function directLinkDownload(url, filename) {
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename || 'download';
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.style.display = 'none';
+
+    // Add auth token as query parameter for fallback
+    if (appState.jwtToken && !url.includes('token=')) {
+        const separator = url.includes('?') ? '&' : '?';
+        link.href = `${url}${separator}token=${appState.jwtToken}`;
+    }
+
+    document.body.appendChild(link);
+    link.click();
+
+    setTimeout(() => {
+        document.body.removeChild(link);
+    }, 100);
+}
+
+
+// Download function with retry mechanism
+async function downloadWithRetry(apiCall, maxRetries = 3) {
+    let lastError;
+
+    for (let i = 0; i < maxRetries; i++) {
+        try {
+            const response = await apiCall();
+            if (response.success && response.downloadUrl) {
+                return response;
+            }
+            throw new Error(response.message || 'Download URL not available');
+        } catch (error) {
+            lastError = error;
+            console.log(`Download attempt ${i + 1} failed:`, error.message);
+            if (i < maxRetries - 1) {
+                await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+            }
+        }
+    }
+
+    throw lastError;
+}
+
+// Enhanced downloadEstimationResult
 async function downloadEstimationResult(estimationId) {
     try {
-        addLocalNotification('Download', 'Preparing your download...', 'info');
-        const response = await apiCall(`/estimation/${estimationId}/result/download`, 'GET');
-        if (response.success && response.downloadUrl) {
-            downloadFileDirect(response.downloadUrl, response.filename || 'estimation_result.pdf');
-        } else {
-            throw new Error(response.message || 'Download URL not available');
+        showNotification('Preparing your download...', 'info');
+
+        const response = await downloadWithRetry(() =>
+             apiCall(`/estimation/${estimationId}/result/download`, 'GET')
+        );
+
+        if (response.downloadUrl) {
+            // Ensure URL is absolute
+            let downloadUrl = response.downloadUrl;
+            if (!downloadUrl.startsWith('http')) {
+                downloadUrl = `${BACKEND_URL}${downloadUrl.startsWith('/') ? '' : '/'}${downloadUrl}`;
+            }
+
+            downloadFileDirect(downloadUrl, response.filename || 'estimation_result.pdf');
         }
     } catch (error) {
         console.error('Download error:', error);
-        addLocalNotification('Error', `Download failed: ${error.message}`, 'error');
+        showNotification(`Download failed: ${error.message}. Please try again.`, 'error');
     }
 }
 
@@ -989,28 +1237,6 @@ async function viewEstimationFiles(estimationId) {
         showGenericModal(content, 'max-width: 600px;');
     } catch (error) {
         addLocalNotification('Error', 'Failed to load estimation files.', 'error');
-    }
-}
-
-// Universal direct download function
-function downloadFileDirect(url, filename) {
-    try {
-        if (!url) {
-            throw new Error('Download URL not provided');
-        }
-        showNotification('Starting download...', 'info');
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = filename || 'download';
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer';
-        link.style.display = 'none';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    } catch (error) {
-        console.error('Direct download error:', error);
-        showNotification(`Download failed: ${error.message}`, 'error');
     }
 }
 
@@ -1754,24 +1980,32 @@ async function deleteQuote(quoteId) {
 
 // --- START: CORRECTED QUOTE ATTACHMENT FUNCTIONS ---
 
-// Download a single quote attachment
+// Enhanced downloadQuoteAttachment
 async function downloadQuoteAttachment(quoteId, attachmentIndex, filename) {
     if (typeof attachmentIndex === 'undefined' || attachmentIndex === null) {
         console.error('Download aborted: attachmentIndex is undefined.');
         showNotification('Cannot download file: Invalid attachment data.', 'error');
         return;
     }
+
     try {
         showNotification('Preparing download...', 'info');
-        const response = await apiCall(`/quotes/${quoteId}/attachments/${attachmentIndex}/download`, 'GET');
-        if (response.success && response.downloadUrl) {
-            downloadFileDirect(response.downloadUrl, filename || response.filename);
-        } else {
-            throw new Error(response.error || 'Download URL not available');
+
+        const response = await downloadWithRetry(() =>
+             apiCall(`/quotes/${quoteId}/attachments/${attachmentIndex}/download`, 'GET')
+        );
+
+        if (response.downloadUrl) {
+            let downloadUrl = response.downloadUrl;
+            if (!downloadUrl.startsWith('http')) {
+                downloadUrl = `${BACKEND_URL}${downloadUrl.startsWith('/') ? '' : '/'}${downloadUrl}`;
+            }
+
+            downloadFileDirect(downloadUrl, filename || response.filename);
         }
     } catch (error) {
         console.error('Quote attachment download error:', error);
-        showNotification(`Download failed: ${error.message}`, 'error');
+        showNotification(`Download failed: ${error.message}. Please try again.`, 'error');
     }
 }
 
@@ -1831,30 +2065,48 @@ async function viewQuoteAttachments(quoteId) {
     }
 }
 
-// CORRECTED: Download all attachments for a quote
+// Enhanced batch download with queue management
 async function downloadAllAttachments(quoteId) {
     try {
         showNotification('Preparing to download all files...', 'info');
-        // First, get the fresh list of attachments to ensure we have the correct indices
+
         const response = await apiCall(`/quotes/${quoteId}/attachments`, 'GET');
         if (!response.success || !response.attachments) {
             throw new Error('Could not retrieve attachment list.');
         }
+
         const attachmentsList = response.attachments;
         if (attachmentsList.length === 0) {
             showNotification('No attachments to download.', 'info');
             return;
         }
-        // Download each file with a delay
-        attachmentsList.forEach((attachment, i) => {
-            setTimeout(() => {
-                downloadQuoteAttachment(quoteId, attachment.index, attachment.name);
-            }, i * 1000);
-        });
-        showNotification(`Downloading ${attachmentsList.length} files...`, 'info');
+
+        // Download queue with controlled concurrency
+        const downloadQueue = [];
+        const maxConcurrent = 2; // Limit concurrent downloads
+
+        for (let i = 0; i < attachmentsList.length; i += maxConcurrent) {
+            const batch = attachmentsList.slice(i, i + maxConcurrent);
+
+            await Promise.all(batch.map((attachment, batchIndex) =>
+                new Promise(resolve => {
+                    setTimeout(() => {
+                        downloadQuoteAttachment(quoteId, attachment.index, attachment.name)
+                            .finally(resolve);
+                    }, batchIndex * 500); // Stagger downloads in batch
+                })
+            ));
+
+            // Wait between batches
+            if (i + maxConcurrent < attachmentsList.length) {
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+        }
+
+        showNotification(`Downloaded ${attachmentsList.length} files successfully`, 'success');
     } catch (error) {
         console.error('Error downloading all attachments:', error);
-        showNotification(`Failed to start download all: ${error.message}`, 'error');
+        showNotification(`Failed to download all files: ${error.message}`, 'error');
     }
 }
 
@@ -2117,7 +2369,7 @@ function formatMessageDate(date) {
         return msgDate.toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' });
     } catch (error) {
         console.error('formatMessageDate error:', error, 'Input:', date);
-        return 'Invalid Date';
+        return 'Unknown Date';
     }
 }
 
@@ -2750,12 +3002,16 @@ function showNotification(message, type = 'info', duration = 4000) {
     notif.className = `notification premium-notification notification-${type}`;
     notif.innerHTML = `<div class="notification-content"><i class="fas ${getNotificationIcon(type)}"></i><span>${message}</span></div><button class="notification-close" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>`;
     container.appendChild(notif);
-    setTimeout(() => {
-        if (notif.parentElement) {
-            notif.style.opacity = '0';
-            setTimeout(() => notif.remove(), 300);
-        }
-    }, duration);
+    
+    // Do not auto-dismiss if duration is 0
+    if (duration > 0) {
+        setTimeout(() => {
+            if (notif.parentElement) {
+                notif.style.opacity = '0';
+                setTimeout(() => notif.remove(), 300);
+            }
+        }, duration);
+    }
 }
 
 function showRestrictedFeature(featureName) {
@@ -2894,3 +3150,15 @@ function getSettingsTemplate(user) {
             <div class="settings-card"><h3><i class="fas fa-shield-alt"></i> Security</h3><form class="premium-form" onsubmit="event.preventDefault(); showNotification('Password functionality not implemented.', 'info');"><div class="form-group"><label class="form-label">New Password</label><input type="password" class="form-input"></div><button type="submit" class="btn btn-primary">Change Password</button></form></div>
         </div>`;
 }
+
+
+
+
+
+
+
+
+
+
+
+
