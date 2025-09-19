@@ -578,7 +578,7 @@ function getNotificationIcon(type) {
         info: 'fa-info-circle', success: 'fa-check-circle', warning: 'fa-exclamation-triangle',
         error: 'fa-times-circle', message: 'fa-comment-alt', job: 'fa-briefcase',
         quote: 'fa-file-invoice-dollar', estimation: 'fa-calculator', profile: 'fa-user-circle',
-        user: 'fa-user', file: 'fa-paperclip', support: 'fa-life-ring'
+        user: 'fa-user', file: 'fa-paperclip'
     };
     return iconMap[type] || 'fa-info-circle';
 }
@@ -587,7 +587,7 @@ function getNotificationColor(type) {
     const colorMap = {
         info: '#3b82f6', success: '#10b981', warning: '#f59e0b', error: '#ef4444',
         message: '#8b5cf6', job: '#06b6d4', quote: '#f97316', estimation: '#84cc16',
-        profile: '#6366f1', user: '#64748b', file: '#94a3b8', support: '#ec4899'
+        profile: '#6366f1', user: '#64748b', file: '#94a3b8'
     };
     return colorMap[type] || '#6b7280';
 }
@@ -692,17 +692,6 @@ function getNotificationActionButtons(notification) {
                 buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); renderAppSection('profile-completion')"><i class="fas fa-edit"></i> Update Profile</button>`;
             }
             break;
-        case 'support':
-             if (metadata?.action === 'support_reply' && metadata?.ticketId) {
-                buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); renderAppSection('support');">
-                    <i class="fas fa-eye"></i> View Ticket
-                </button>`;
-            } else {
-                buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); renderAppSection('support')">
-                    <i class="fas fa-life-ring"></i> Go to Support
-                </button>`;
-            }
-            break;
     }
     return buttons ? `<div class="notification-actions">${buttons}</div>` : '';
 }
@@ -730,9 +719,6 @@ function handleNotificationClick(notificationId, type, metadata) {
         case 'profile':
             if (metadata.action === 'profile_rejected') renderAppSection('profile-completion');
             else renderAppSection('settings');
-            break;
-        case 'support':
-            renderAppSection('support');
             break;
         default:
             renderAppSection('dashboard');
@@ -2856,8 +2842,525 @@ async function handleEstimationSubmit() {
         for (let i = 0; i < appState.uploadedFile.length; i++) {
             formData.append('files', appState.uploadedFile[i]);
         }
-        await apiCall('/estimation/contractor/submit', 'POST', formData, 'Estimation request
-                      </div>
+        await apiCall('/estimation/contractor/submit', 'POST', formData, 'Estimation request submitted!');
+        addLocalNotification('Submitted', `Estimation request for "${projectTitle}" submitted.`, 'estimation');
+        form.reset();
+        appState.uploadedFile = null;
+        document.getElementById('file-info-container').style.display = 'none';
+        updateEstimationStep(1);
+        renderAppSection('my-estimations');
+    } catch (error) {
+        addLocalNotification('Error', 'Failed to submit estimation.', 'error');
+        updateEstimationStep(2);
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Request';
+    }
+}
+
+function showNotification(message, type = 'info', duration = 4000) {
+    let container = document.getElementById('notification-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'notification-container';
+        container.className = 'notification-container';
+        // CORRECTED: Set a high z-index to appear over modals
+        container.style.zIndex = '10001';
+        document.body.appendChild(container);
+    }
+    const notif = document.createElement('div');
+    notif.className = `notification premium-notification notification-${type}`;
+    notif.innerHTML = `<div class="notification-content"><i class="fas ${getNotificationIcon(type)}"></i><span>${message}</span></div><button class="notification-close" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>`;
+    container.appendChild(notif);
+    
+    // Do not auto-dismiss if duration is 0
+    if (duration > 0) {
+        setTimeout(() => {
+            if (notif.parentElement) {
+                notif.style.opacity = '0';
+                setTimeout(() => notif.remove(), 300);
+            }
+        }, duration);
+    }
+}
+
+function showRestrictedFeature(featureName) {
+    const status = appState.currentUser.profileStatus;
+    let msg = '';
+    if (status === 'incomplete') msg = 'Complete your profile to access this.';
+    else if (status === 'pending') msg = 'This will be available once your profile is approved.';
+    else if (status === 'rejected') msg = 'Please update your profile to access this.';
+    showNotification(msg, 'warning', 6000);
+}
+
+
+// --- TEMPLATE GETTERS ---
+function getLoginTemplate() {
+    return `<div class="auth-header premium-auth-header"><div class="auth-logo"><i class="fas fa-drafting-compass"></i></div><h2>Welcome Back</h2><p>Sign in to your account</p></div><form id="login-form" class="premium-form"><div class="form-group"><label class="form-label"><i class="fas fa-envelope"></i> Email</label><input type="email" class="form-input" name="loginEmail" required></div><div class="form-group"><label class="form-label"><i class="fas fa-lock"></i> Password</label><input type="password" class="form-input" name="loginPassword" required></div><button type="submit" class="btn btn-primary btn-full"><i class="fas fa-sign-in-alt"></i> Sign In</button></form><div class="auth-switch">Don't have an account? <a onclick="renderAuthForm('register')">Create one</a></div>`;
+}
+
+function getRegisterTemplate() {
+    return `<div class="auth-header premium-auth-header"><div class="auth-logo"><i class="fas fa-drafting-compass"></i></div><h2>Join SteelConnect</h2><p>Create your professional account</p></div><form id="register-form" class="premium-form"><div class="form-group"><label class="form-label"><i class="fas fa-user"></i> Full Name</label><input type="text" class="form-input" name="regName" required></div><div class="form-group"><label class="form-label"><i class="fas fa-envelope"></i> Email</label><input type="email" class="form-input" name="regEmail" required></div><div class="form-group"><label class="form-label"><i class="fas fa-lock"></i> Password</label><input type="password" class="form-input" name="regPassword" required></div><div class="form-group"><label class="form-label"><i class="fas fa-user-tag"></i> I am a...</label><select class="form-select" name="regRole" required><option value="" disabled selected>Select role</option><option value="contractor">Client / Contractor</option><option value="designer">Designer / Engineer</option></select></div><button type="submit" class="btn btn-primary btn-full"><i class="fas fa-user-plus"></i> Create Account</button></form><div class="auth-switch">Already have an account? <a onclick="renderAuthForm('login')">Sign In</a></div>`;
+}
+
+function getPostJobTemplate() {
+    return `
+        <div class="section-header modern-header"><div class="header-content"><h2><i class="fas fa-plus-circle"></i> Post a New Project</h2><p class="header-subtitle">Create a listing to attract qualified professionals</p></div></div>
+        <div class="post-job-container premium-container">
+            <form id="post-job-form" class="premium-form post-job-form">
+                <div class="form-section premium-section">
+                    <h3><i class="fas fa-info-circle"></i> Project Details</h3>
+                    <div class="form-group"><label class="form-label"><i class="fas fa-heading"></i> Project Title</label><input type="text" class="form-input" name="title" required placeholder="e.g., Structural Steel Design for Warehouse"></div>
+                    <div class="form-row">
+                        <div class="form-group"><label class="form-label"><i class="fas fa-dollar-sign"></i> Budget Range</label><input type="text" class="form-input" name="budget" required placeholder="e.g., $5,000 - $10,000"></div>
+                        <div class="form-group"><label class="form-label"><i class="fas fa-calendar-alt"></i> Deadline</label><input type="date" class="form-input" name="deadline" required></div>
+                    </div>
+                    <div class="form-group"><label class="form-label"><i class="fas fa-tools"></i> Skills</label><input type="text" class="form-input" name="skills" placeholder="e.g., AutoCAD, Revit"><small>Separate with commas</small></div>
+                    <div class="form-group"><label class="form-label"><i class="fas fa-external-link-alt"></i> Project Link (Optional)</label><input type="url" class="form-input" name="link" placeholder="https://example.com/details"></div>
+                </div>
+                <div class="form-section premium-section">
+                    <h3><i class="fas fa-file-alt"></i> Project Description</h3>
+                    <div class="form-group"><label class="form-label"><i class="fas fa-align-left"></i> Detailed Description</label><textarea class="form-textarea" name="description" required placeholder="Provide a comprehensive description..."></textarea></div>
+                    <div class="form-group">
+                        <label class="form-label"><i class="fas fa-paperclip"></i> Project Attachments (Optional)</label>
+                        <div class="custom-file-input-wrapper">
+                            <input type="file" name="attachments" id="job-attachments-input" onchange="handleJobFileChange(event)" accept=".pdf,.doc,.docx,.dwg,.jpg,.jpeg,.png" multiple>
+                            <div class="custom-file-input">
+                                <span class="custom-file-input-label">
+                                    <i class="fas fa-upload"></i>
+                                    <span id="job-attachments-label">Click to upload or drag & drop</span>
+                                </span>
+                            </div>
+                        </div>
+                        <div id="job-attachments-list" class="file-list-container"></div>
+                        <small class="form-help">Upload up to 10 files, 15MB each. Supported formats: PDF, DOC, DWG, Images</small>
+                    </div>
+                </div>
+                <div class="form-actions"><button type="submit" class="btn btn-primary btn-large"><i class="fas fa-rocket"></i> Post Project</button></div>
+            </form>
+        </div>`;
+}
+
+function getEstimationToolTemplate() {
+    return `
+        <div id="dynamic-feature-header" class="dynamic-feature-header"></div>
+        <div class="section-header modern-header">
+            <div class="header-content"><h2><i class="fas fa-robot"></i> AI-Powered Cost Estimation</h2><p class="header-subtitle">Upload your drawings and get instant cost estimates</p></div>
+        </div>
+        <div class="estimation-tool-container premium-estimation-container">
+            <div class="estimation-steps">
+                <div class="step active" data-step="1"><div class="step-number">1</div><div class="step-content"><h4>Upload Files</h4><p>Add your drawings</p></div></div>
+                <div class="step" data-step="2"><div class="step-number">2</div><div class="step-content"><h4>Project Details</h4><p>Describe requirements</p></div></div>
+                <div class="step" data-step="3"><div class="step-number">3</div><div class="step-content"><h4>Get Estimate</h4><p>Receive detailed cost breakdown</p></div></div>
+            </div>
+            <form id="estimation-form" class="premium-estimation-form">
+                <div class="form-section premium-section">
+                    <h3><i class="fas fa-upload"></i> Upload Project Files</h3>
+                    <div class="file-upload-section premium-upload-section">
+                        <div id="file-upload-area" class="file-upload-area premium-upload-area">
+                            <input type="file" id="file-upload-input" accept=".pdf,.dwg,.doc,.docx,.jpg,.jpeg,.png" multiple />
+                            <div class="upload-content"><div class="file-upload-icon"><i class="fas fa-cloud-upload-alt"></i></div><h3>Drag & Drop Files Here</h3><p>or click to browse</p><small class="upload-limit">Max 10 files, 15MB each</small></div>
+                        </div>
+                        <div id="file-info-container" class="selected-files-container" style="display: none;"><h4><i class="fas fa-files"></i> Selected Files</h4><div id="selected-files-list" class="selected-files-list"></div></div>
+                    </div>
+                </div>
+                <div class="form-section premium-section">
+                    <h3><i class="fas fa-info-circle"></i> Project Information</h3>
+                    <div class="form-group"><label class="form-label"><i class="fas fa-heading"></i> Project Title</label><input type="text" class="form-input premium-input" name="projectTitle" required placeholder="e.g., Commercial Building Steel Framework"></div>
+                    <div class="form-group"><label class="form-label"><i class="fas fa-file-alt"></i> Project Description</label><textarea class="form-textarea premium-textarea" name="description" required placeholder="Describe your project..."></textarea></div>
+                </div>
+                <div class="form-actions estimation-actions"><button type="button" id="submit-estimation-btn" class="btn btn-primary btn-large premium-btn" disabled><i class="fas fa-paper-plane"></i> Submit Request</button></div>
+            </form>
+        </div>`;
+}
+
+function getDashboardTemplate(user) {
+    const isContractor = user.type === 'contractor';
+    const name = user.name.split(' ')[0];
+    const profileStatus = user.profileStatus || 'incomplete';
+    const isApproved = profileStatus === 'approved';
+    let profileStatusCard = '';
+    if (profileStatus === 'incomplete') profileStatusCard = `<div class="dashboard-profile-status-card"><h3><i class="fas fa-exclamation-triangle"></i> Complete Your Profile</h3><p>Complete your profile to unlock all features.</p><button class="btn btn-primary" onclick="renderAppSection('profile-completion')"><i class="fas fa-user-edit"></i> Complete Profile</button></div>`;
+    else if (profileStatus === 'pending') profileStatusCard = `<div class="dashboard-profile-status-card"><h3><i class="fas fa-clock"></i> Profile Under Review</h3><p>Your profile is under review. You'll get full access once approved.</p></div>`;
+    else if (profileStatus === 'rejected') profileStatusCard = `<div class="dashboard-profile-status-card"><h3><i class="fas fa-times-circle"></i> Profile Needs Update</h3><p>Your profile needs updates. ${user.rejectionReason ? `<strong>Reason:</strong> ${user.rejectionReason}` : ''}</p><button class="btn btn-primary" onclick="renderAppSection('profile-completion')"><i class="fas fa-edit"></i> Update Profile</button></div>`;
+    else if (profileStatus === 'approved') profileStatusCard = `<div class="dashboard-profile-status-card" style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border-color: #10b981;"><h3 style="color: #059669;"><i class="fas fa-check-circle"></i> Profile Approved</h3><p style="color: #059669;">You have full access to all platform features.</p></div>`;
+    const contractorQuickActions = `
+        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'post-job\')' : 'showRestrictedFeature(\'post-job\')'}"><i class="fas fa-plus-circle card-icon"></i><h3>Create Project</h3><p>Post a new listing</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>
+        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'jobs\')' : 'showRestrictedFeature(\'jobs\')'}"><i class="fas fa-tasks card-icon"></i><h3>My Projects</h3><p>Manage your listings</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>
+        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'estimation-tool\')' : 'showRestrictedFeature(\'estimation-tool\')'}"><i class="fas fa-calculator card-icon"></i><h3>AI Estimation</h3><p>Get instant cost estimates</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>
+        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'approved-jobs\')' : 'showRestrictedFeature(\'approved-jobs\')'}"><i class="fas fa-check-circle card-icon"></i><h3>Approved</h3><p>Track assigned work</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>`;
+    const contractorWidgets = `<div class="widget-card"><h3><i class="fas fa-history"></i> Recent Projects</h3><div id="recent-projects-widget" class="widget-content">${!isApproved ? '<p class="widget-empty-text">Complete your profile to post projects.</p>' : ''}</div></div>`;
+    const designerQuickActions = `
+        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'jobs\')' : 'showRestrictedFeature(\'jobs\')'}"><i class="fas fa-search card-icon"></i><h3>Browse Projects</h3><p>Find new opportunities</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>
+        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'my-quotes\')' : 'showRestrictedFeature(\'my-quotes\')'}"><i class="fas fa-file-invoice-dollar card-icon"></i><h3>My Quotes</h3><p>Track your submissions</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>
+        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'messages\')' : 'showRestrictedFeature(\'messages\')'}"><i class="fas fa-comments card-icon"></i><h3>Messages</h3><p>Communicate with clients</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>`;
+    const designerWidgets = `<div class="widget-card"><h3><i class="fas fa-history"></i> Recent Quotes</h3><div id="recent-quotes-widget" class="widget-content">${!isApproved ? '<p class="widget-empty-text">Complete your profile to submit quotes.</p>' : ''}</div></div>`;
+    return `
+        <div class="dashboard-container">
+            <div class="dashboard-hero"><div><h2>Welcome back, ${name} 👋</h2><p>You are logged in to your <strong>${isContractor ? 'Contractor' : 'Designer'} Portal</strong>.</p></div></div>
+            ${profileStatusCard}
+            <h3 class="dashboard-section-title">Quick Actions</h3>
+            <div class="dashboard-grid">${isContractor ? contractorQuickActions : designerQuickActions}</div>
+            <div class="dashboard-columns">${isContractor ? contractorWidgets : designerWidgets}</div>
+        </div>`;
+}
+
+function getSettingsTemplate(user) {
+    const profileStatus = user.profileStatus || 'incomplete';
+    let profileSection = '';
+    if (profileStatus === 'incomplete') profileSection = `<div class="settings-card"><h3><i class="fas fa-user-edit"></i> Complete Your Profile</h3><p>Your profile is incomplete. Complete it to unlock all features.</p><button class="btn btn-primary" onclick="renderAppSection('profile-completion')"><i class="fas fa-edit"></i> Complete Profile</button></div>`;
+    else if (profileStatus === 'pending') profileSection = `<div class="settings-card"><h3><i class="fas fa-clock"></i> Profile Under Review</h3><p>Your profile is under review by our admin team.</p></div>`;
+    else if (profileStatus === 'rejected') profileSection = `<div class="settings-card"><h3><i class="fas fa-exclamation-triangle"></i> Profile Needs Update</h3><p>Your profile needs updates. ${user.rejectionReason ? `<strong>Reason:</strong> ${user.rejectionReason}` : ''}</p><button class="btn btn-primary" onclick="renderAppSection('profile-completion')"><i class="fas fa-edit"></i> Update Profile</button></div>`;
+    else if (profileStatus === 'approved') profileSection = `<div class="settings-card"><h3><i class="fas fa-check-circle"></i> Profile Approved</h3><p>Your profile is approved.</p><button class="btn btn-outline" onclick="renderAppSection('profile-completion')"><i class="fas fa-edit"></i> Update Information</button></div>`;
+    return `
+        <div class="section-header modern-header"><div class="header-content"><h2><i class="fas fa-cog"></i> Settings</h2><p class="header-subtitle">Manage your account and profile</p></div></div>
+        <div class="settings-container">
+            ${profileSection}
+            <div class="settings-card"><h3><i class="fas fa-user-edit"></i> Personal Information</h3><form class="premium-form" onsubmit="event.preventDefault(); showNotification('Profile updated!', 'success');"><div class="form-group"><label class="form-label">Full Name</label><input type="text" class="form-input" value="${user.name}" required></div><div class="form-group"><label class="form-label">Email Address</label><input type="email" class="form-input" value="${user.email}" disabled></div><button type="submit" class="btn btn-primary">Save Changes</button></form></div>
+            <div class="settings-card"><h3><i class="fas fa-shield-alt"></i> Security</h3><form class="premium-form" onsubmit="event.preventDefault(); showNotification('Password functionality not implemented.', 'info');"><div class="form-group"><label class="form-label">New Password</label><input type="password" class="form-input"></div><button type="submit" class="btn btn-primary">Change Password</button></form></div>
+        </div>`;
+}
+
+// ===================================
+// NEW AND UPDATED FUNCTIONS
+// ===================================
+
+// FIXED TIMESTAMP FUNCTIONS
+function formatDetailedTimestamp(date) {
+    try {
+        if (!date) return 'Unknown time';
+        
+        let msgDate;
+        
+        // Handle Firestore Timestamp objects
+        if (date && typeof date === 'object' && typeof date.toDate === 'function') {
+            msgDate = date.toDate();
+        }
+        // Handle Firestore-like objects with seconds
+        else if (date && typeof date === 'object' && typeof date.seconds === 'number') {
+            msgDate = new Date(date.seconds * 1000 + (date.nanoseconds || 0) / 1000000);
+        }
+        // Handle Date objects
+        else if (date instanceof Date) {
+            msgDate = date;
+        }
+        // Handle ISO strings
+        else if (typeof date === 'string') {
+            msgDate = new Date(date);
+        }
+        // Handle timestamps (milliseconds)
+        else if (typeof date === 'number') {
+            // If number is too small, assume it's seconds and convert to milliseconds
+            msgDate = new Date(date < 10000000000 ? date * 1000 : date);
+        }
+        else {
+            console.warn('Unknown date format:', date);
+            return 'Invalid time';
+        }
+
+        // Validate the date
+        if (!msgDate || isNaN(msgDate.getTime())) {
+            console.warn('Invalid date created from:', date);
+            return 'Invalid date';
+        }
+
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const msgDay = new Date(msgDate.getFullYear(), msgDate.getMonth(), msgDate.getDate());
+        
+        const time = msgDate.toLocaleTimeString([], { 
+            hour: '2-digit', 
+            minute: '2-digit', 
+            hour12: true 
+        });
+
+        // Today
+        if (today.getTime() === msgDay.getTime()) {
+            return time;
+        }
+
+        // Yesterday
+        const yesterday = new Date(today);
+        yesterday.setDate(today.getDate() - 1);
+        if (yesterday.getTime() === msgDay.getTime()) {
+            return `Yesterday, ${time}`;
+        }
+
+        // Older dates
+        return `${msgDate.toLocaleDateString([], {
+            month: 'short',
+            day: 'numeric',
+            year: msgDate.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+        })}, ${time}`;
+
+    } catch (error) {
+        console.error('formatDetailedTimestamp error:', error, 'Input:', date);
+        return 'Invalid date';
+    }
+}
+
+function formatMessageTimestamp(date) {
+    try {
+        if (!date) return 'Unknown time';
+        
+        let msgDate;
+        
+        // Handle Firestore Timestamp objects
+        if (date && typeof date === 'object' && typeof date.toDate === 'function') {
+            msgDate = date.toDate();
+        }
+        // Handle Firestore-like objects with seconds
+        else if (date && typeof date === 'object' && typeof date.seconds === 'number') {
+            msgDate = new Date(date.seconds * 1000 + (date.nanoseconds || 0) / 1000000);
+        }
+        // Handle Date objects
+        else if (date instanceof Date) {
+            msgDate = date;
+        }
+        // Handle ISO strings
+        else if (typeof date === 'string') {
+            msgDate = new Date(date);
+        }
+        // Handle timestamps (milliseconds)
+        else if (typeof date === 'number') {
+            // If number is too small, assume it's seconds and convert to milliseconds
+            msgDate = new Date(date < 10000000000 ? date * 1000 : date);
+        }
+        else {
+            console.warn('Unknown date format:', date);
+            return 'Invalid time';
+        }
+
+        // Validate the date
+        if (!msgDate || isNaN(msgDate.getTime())) {
+            console.warn('Invalid date created from:', date);
+            return 'Invalid date';
+        }
+
+        const now = new Date();
+        const diffMs = now - msgDate;
+        const diffSeconds = Math.floor(diffMs / 1000);
+        const diffMinutes = Math.floor(diffSeconds / 60);
+        const diffHours = Math.floor(diffMinutes / 60);
+        const diffDays = Math.floor(diffHours / 24);
+
+        if (diffSeconds < 30) return 'Just now';
+        if (diffMinutes < 60) return `${diffMinutes}m ago`;
+        if (diffHours < 24) return `${diffHours}h ago`;
+        if (diffDays === 1) return 'Yesterday';
+        if (diffDays < 7) return `${diffDays}d ago`;
+        
+        return msgDate.toLocaleDateString([], {
+            month: 'short',
+            day: 'numeric',
+            year: msgDate.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+        });
+
+    } catch (error) {
+        console.error('formatMessageTimestamp error:', error, 'Input:', date);
+        return 'Invalid date';
+    }
+}
+
+function formatMessageDate(date) {
+    try {
+        if (!date) return 'Unknown Date';
+        
+        let msgDate;
+        
+        // Handle Firestore Timestamp objects
+        if (date && typeof date === 'object' && typeof date.toDate === 'function') {
+            msgDate = date.toDate();
+        }
+        // Handle Firestore-like objects with seconds
+        else if (date && typeof date === 'object' && typeof date.seconds === 'number') {
+            msgDate = new Date(date.seconds * 1000 + (date.nanoseconds || 0) / 1000000);
+        }
+        // Handle Date objects
+        else if (date instanceof Date) {
+            msgDate = date;
+        }
+        // Handle ISO strings
+        else if (typeof date === 'string') {
+            msgDate = new Date(date);
+        }
+        // Handle timestamps (milliseconds)
+        else if (typeof date === 'number') {
+            // If number is too small, assume it's seconds and convert to milliseconds
+            msgDate = new Date(date < 10000000000 ? date * 1000 : date);
+        }
+        else {
+            console.warn('Unknown date format:', date);
+            return 'Unknown Date';
+        }
+
+        // Validate the date
+        if (!msgDate || isNaN(msgDate.getTime())) {
+            console.warn('Invalid date created from:', date);
+            return 'Unknown Date';
+        }
+
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const msgDay = new Date(msgDate.getFullYear(), msgDate.getMonth(), msgDate.getDate());
+
+        if (today.getTime() === msgDay.getTime()) {
+            return 'Today';
+        }
+
+        const yesterday = new Date(today);
+        yesterday.setDate(today.getDate() - 1);
+        if (yesterday.getTime() === msgDay.getTime()) {
+            return 'Yesterday';
+        }
+
+        return msgDate.toLocaleDateString([], { 
+            month: 'long', 
+            day: 'numeric', 
+            year: msgDate.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+        });
+
+    } catch (error) {
+        console.error('formatMessageDate error:', error, 'Input:', date);
+        return 'Unknown Date';
+    }
+}
+
+// ENHANCED SIDEBAR NAVIGATION WITH SUPPORT
+function buildSidebarNav() {
+    const nav = document.getElementById('sidebar-nav-menu');
+    const role = appState.currentUser.type;
+    
+    let links = `<a href="#" class="sidebar-nav-link" data-section="dashboard">
+                    <i class="fas fa-tachometer-alt fa-fw"></i>
+                    <span>Dashboard</span>
+                 </a>`;
+    
+    if (role === 'designer') {
+        links += `
+            <a href="#" class="sidebar-nav-link" data-section="jobs">
+                <i class="fas fa-search fa-fw"></i>
+                <span>Find Projects</span>
+            </a>
+            <a href="#" class="sidebar-nav-link" data-section="my-quotes">
+                <i class="fas fa-file-invoice-dollar fa-fw"></i>
+                <span>My Quotes</span>
+            </a>`;
+    } else {
+        links += `
+            <a href="#" class="sidebar-nav-link" data-section="jobs">
+                <i class="fas fa-tasks fa-fw"></i>
+                <span>My Projects</span>
+            </a>
+            <a href="#" class="sidebar-nav-link" data-section="approved-jobs">
+                <i class="fas fa-check-circle fa-fw"></i>
+                <span>Approved Projects</span>
+            </a>
+            <a href="#" class="sidebar-nav-link" data-section="post-job">
+                <i class="fas fa-plus-circle fa-fw"></i>
+                <span>Post Project</span>
+            </a>
+            <a href="#" class="sidebar-nav-link" data-section="estimation-tool">
+                <i class="fas fa-calculator fa-fw"></i>
+                <span>AI Estimation</span>
+            </a>
+            <a href="#" class="sidebar-nav-link" data-section="my-estimations">
+                <i class="fas fa-file-invoice fa-fw"></i>
+                <span>My Estimations</span>
+            </a>`;
+    }
+    
+    // Common links for both user types
+    links += `
+        <a href="#" class="sidebar-nav-link" data-section="messages">
+            <i class="fas fa-comments fa-fw"></i>
+            <span>Messages</span>
+        </a>
+        <hr class="sidebar-divider">
+        <a href="#" class="sidebar-nav-link" data-section="support">
+            <i class="fas fa-life-ring fa-fw"></i>
+            <span>Support</span>
+        </a>
+        <a href="#" class="sidebar-nav-link" data-section="settings">
+            <i class="fas fa-cog fa-fw"></i>
+            <span>Settings</span>
+        </a>`;
+        
+    nav.innerHTML = links;
+    
+    // Add event listeners
+    nav.querySelectorAll('.sidebar-nav-link').forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            renderAppSection(link.dataset.section);
+        });
+    });
+}
+
+// --- SUPPORT SECTION FUNCTIONS ---
+function renderSupportSection() {
+    const container = document.getElementById('app-container');
+    
+    container.innerHTML = `
+        <div class="section-header modern-header">
+            <div class="header-content">
+                <h2><i class="fas fa-life-ring"></i> Support Center</h2>
+                <p class="header-subtitle">Get help and contact our support team</p>
+            </div>
+        </div>
+        
+        <div class="support-container">
+            <div class="support-section">
+                <h3><i class="fas fa-question-circle"></i> Frequently Asked Questions</h3>
+                <div class="faq-grid">
+                    <div class="faq-item" onclick="toggleFAQ(this)">
+                        <div class="faq-question">
+                            <h4>How do I post a project?</h4>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            <p>Navigate to "Post Project" in the sidebar, fill out the project details, and click submit. Your project will be visible to designers once approved.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="faq-item" onclick="toggleFAQ(this)">
+                        <div class="faq-question">
+                            <h4>How does the AI estimation work?</h4>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            <p>Upload your project drawings and specifications. Our AI analyzes the documents and provides cost estimates based on current market rates and material costs.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="faq-item" onclick="toggleFAQ(this)">
+                        <div class="faq-question">
+                            <h4>How do I communicate with designers/clients?</h4>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            <p>Use the Messages section to communicate directly with other users. Conversations are automatically created when quotes are submitted or approved.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="faq-item" onclick="toggleFAQ(this)">
+                        <div class="faq-question">
+                            <h4>What file formats are supported?</h4>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            <p>We support PDF, DWG, DOC, DOCX, JPG, PNG, XLS, XLSX, and TXT files. Maximum file size is 15MB per file.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="support-section">
+                <h3><i class="fas fa-envelope"></i> Contact Support</h3>
+                <div class="contact-support-card">
+                    <div class="support-intro">
+                        <p>Can't find what you're looking for? Send us a message and our support team will get back to you within 24 hours.</p>
+                    </div>
                     
                     <form id="support-form" class="premium-form support-form">
                         <div class="form-group">
@@ -2936,51 +3439,6 @@ async function handleEstimationSubmit() {
                             </button>
                         </div>
                     </form>
-                </div>
-            </div>
-            
-            <div class="support-section">
-                <h3><i class="fas fa-question-circle"></i> Frequently Asked Questions</h3>
-                <div class="faq-grid">
-                    <div class="faq-item" onclick="toggleFAQ(this)">
-                        <div class="faq-question">
-                            <h4>How do I post a project?</h4>
-                            <i class="fas fa-chevron-down"></i>
-                        </div>
-                        <div class="faq-answer">
-                            <p>Navigate to "Post Project" in the sidebar, fill out the project details, and click submit. Your project will be visible to designers once approved.</p>
-                        </div>
-                    </div>
-                    
-                    <div class="faq-item" onclick="toggleFAQ(this)">
-                        <div class="faq-question">
-                            <h4>How does the AI estimation work?</h4>
-                            <i class="fas fa-chevron-down"></i>
-                        </div>
-                        <div class="faq-answer">
-                            <p>Upload your project drawings and specifications. Our AI analyzes the documents and provides cost estimates based on current market rates and material costs.</p>
-                        </div>
-                    </div>
-                    
-                    <div class="faq-item" onclick="toggleFAQ(this)">
-                        <div class="faq-question">
-                            <h4>How do I communicate with designers/clients?</h4>
-                            <i class="fas fa-chevron-down"></i>
-                        </div>
-                        <div class="faq-answer">
-                            <p>Use the Messages section to communicate directly with other users. Conversations are automatically created when quotes are submitted or approved.</p>
-                        </div>
-                    </div>
-                    
-                    <div class="faq-item" onclick="toggleFAQ(this)">
-                        <div class="faq-question">
-                            <h4>What file formats are supported?</h4>
-                            <i class="fas fa-chevron-down"></i>
-                        </div>
-                        <div class="faq-answer">
-                            <p>We support PDF, DWG, DOC, DOCX, JPG, PNG, XLS, XLSX, and TXT files. Maximum file size is 15MB per file.</p>
-                        </div>
-                    </div>
                 </div>
             </div>
             
@@ -3203,3 +3661,17 @@ function toggleFAQ(faqItem) {
         icon.classList.add('fa-chevron-up');
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
