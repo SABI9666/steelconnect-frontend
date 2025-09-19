@@ -59,7 +59,6 @@ const appState = {
     currentHeaderSlide: 0,
     notifications: [],
     profileFiles: {}, // For profile completion uploads
-    supportTickets: [], // For support ticket system
 };
 
 
@@ -694,10 +693,14 @@ function getNotificationActionButtons(notification) {
             }
             break;
         case 'support':
-            if (metadata?.action === 'support_reply' && metadata?.ticketId) {
-                buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); viewSupportTicket('${metadata.ticketId}')"><i class="fas fa-eye"></i> View Ticket</button>`;
+             if (metadata?.action === 'support_reply' && metadata?.ticketId) {
+                buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); renderAppSection('support');">
+                    <i class="fas fa-eye"></i> View Ticket
+                </button>`;
             } else {
-                buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); renderAppSection('support')"><i class="fas fa-life-ring"></i> Go to Support</button>`;
+                buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); renderAppSection('support')">
+                    <i class="fas fa-life-ring"></i> Go to Support
+                </button>`;
             }
             break;
     }
@@ -729,11 +732,7 @@ function handleNotificationClick(notificationId, type, metadata) {
             else renderAppSection('settings');
             break;
         case 'support':
-            if (metadata.action === 'support_reply' && metadata.ticketId) {
-                viewSupportTicket(metadata.ticketId);
-            } else {
-                renderAppSection('support');
-            }
+            renderAppSection('support');
             break;
         default:
             renderAppSection('dashboard');
@@ -2857,485 +2856,89 @@ async function handleEstimationSubmit() {
         for (let i = 0; i < appState.uploadedFile.length; i++) {
             formData.append('files', appState.uploadedFile[i]);
         }
-        await apiCall('/estimation/contractor/submit', 'POST', formData, 'Estimation request submitted!');
-        addLocalNotification('Submitted', `Estimation request for "${projectTitle}" submitted.`, 'estimation');
-        form.reset();
-        appState.uploadedFile = null;
-        document.getElementById('file-info-container').style.display = 'none';
-        updateEstimationStep(1);
-        renderAppSection('my-estimations');
-    } catch (error) {
-        addLocalNotification('Error', 'Failed to submit estimation.', 'error');
-        updateEstimationStep(2);
-    } finally {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Request';
-    }
-}
-
-function showNotification(message, type = 'info', duration = 4000) {
-    let container = document.getElementById('notification-container');
-    if (!container) {
-        container = document.createElement('div');
-        container.id = 'notification-container';
-        container.className = 'notification-container';
-        // CORRECTED: Set a high z-index to appear over modals
-        container.style.zIndex = '10001';
-        document.body.appendChild(container);
-    }
-    const notif = document.createElement('div');
-    notif.className = `notification premium-notification notification-${type}`;
-    notif.innerHTML = `<div class="notification-content"><i class="fas ${getNotificationIcon(type)}"></i><span>${message}</span></div><button class="notification-close" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>`;
-    container.appendChild(notif);
-    
-    // Do not auto-dismiss if duration is 0
-    if (duration > 0) {
-        setTimeout(() => {
-            if (notif.parentElement) {
-                notif.style.opacity = '0';
-                setTimeout(() => notif.remove(), 300);
-            }
-        }, duration);
-    }
-}
-
-function showRestrictedFeature(featureName) {
-    const status = appState.currentUser.profileStatus;
-    let msg = '';
-    if (status === 'incomplete') msg = 'Complete your profile to access this.';
-    else if (status === 'pending') msg = 'This will be available once your profile is approved.';
-    else if (status === 'rejected') msg = 'Please update your profile to access this.';
-    showNotification(msg, 'warning', 6000);
-}
-
-
-// --- TEMPLATE GETTERS ---
-function getLoginTemplate() {
-    return `<div class="auth-header premium-auth-header"><div class="auth-logo"><i class="fas fa-drafting-compass"></i></div><h2>Welcome Back</h2><p>Sign in to your account</p></div><form id="login-form" class="premium-form"><div class="form-group"><label class="form-label"><i class="fas fa-envelope"></i> Email</label><input type="email" class="form-input" name="loginEmail" required></div><div class="form-group"><label class="form-label"><i class="fas fa-lock"></i> Password</label><input type="password" class="form-input" name="loginPassword" required></div><button type="submit" class="btn btn-primary btn-full"><i class="fas fa-sign-in-alt"></i> Sign In</button></form><div class="auth-switch">Don't have an account? <a onclick="renderAuthForm('register')">Create one</a></div>`;
-}
-
-function getRegisterTemplate() {
-    return `<div class="auth-header premium-auth-header"><div class="auth-logo"><i class="fas fa-drafting-compass"></i></div><h2>Join SteelConnect</h2><p>Create your professional account</p></div><form id="register-form" class="premium-form"><div class="form-group"><label class="form-label"><i class="fas fa-user"></i> Full Name</label><input type="text" class="form-input" name="regName" required></div><div class="form-group"><label class="form-label"><i class="fas fa-envelope"></i> Email</label><input type="email" class="form-input" name="regEmail" required></div><div class="form-group"><label class="form-label"><i class="fas fa-lock"></i> Password</label><input type="password" class="form-input" name="regPassword" required></div><div class="form-group"><label class="form-label"><i class="fas fa-user-tag"></i> I am a...</label><select class="form-select" name="regRole" required><option value="" disabled selected>Select role</option><option value="contractor">Client / Contractor</option><option value="designer">Designer / Engineer</option></select></div><button type="submit" class="btn btn-primary btn-full"><i class="fas fa-user-plus"></i> Create Account</button></form><div class="auth-switch">Already have an account? <a onclick="renderAuthForm('login')">Sign In</a></div>`;
-}
-
-function getPostJobTemplate() {
-    return `
-        <div class="section-header modern-header"><div class="header-content"><h2><i class="fas fa-plus-circle"></i> Post a New Project</h2><p class="header-subtitle">Create a listing to attract qualified professionals</p></div></div>
-        <div class="post-job-container premium-container">
-            <form id="post-job-form" class="premium-form post-job-form">
-                <div class="form-section premium-section">
-                    <h3><i class="fas fa-info-circle"></i> Project Details</h3>
-                    <div class="form-group"><label class="form-label"><i class="fas fa-heading"></i> Project Title</label><input type="text" class="form-input" name="title" required placeholder="e.g., Structural Steel Design for Warehouse"></div>
-                    <div class="form-row">
-                        <div class="form-group"><label class="form-label"><i class="fas fa-dollar-sign"></i> Budget Range</label><input type="text" class="form-input" name="budget" required placeholder="e.g., $5,000 - $10,000"></div>
-                        <div class="form-group"><label class="form-label"><i class="fas fa-calendar-alt"></i> Deadline</label><input type="date" class="form-input" name="deadline" required></div>
-                    </div>
-                    <div class="form-group"><label class="form-label"><i class="fas fa-tools"></i> Skills</label><input type="text" class="form-input" name="skills" placeholder="e.g., AutoCAD, Revit"><small>Separate with commas</small></div>
-                    <div class="form-group"><label class="form-label"><i class="fas fa-external-link-alt"></i> Project Link (Optional)</label><input type="url" class="form-input" name="link" placeholder="https://example.com/details"></div>
-                </div>
-                <div class="form-section premium-section">
-                    <h3><i class="fas fa-file-alt"></i> Project Description</h3>
-                    <div class="form-group"><label class="form-label"><i class="fas fa-align-left"></i> Detailed Description</label><textarea class="form-textarea" name="description" required placeholder="Provide a comprehensive description..."></textarea></div>
-                    <div class="form-group">
-                        <label class="form-label"><i class="fas fa-paperclip"></i> Project Attachments (Optional)</label>
-                        <div class="custom-file-input-wrapper">
-                            <input type="file" name="attachments" id="job-attachments-input" onchange="handleJobFileChange(event)" accept=".pdf,.doc,.docx,.dwg,.jpg,.jpeg,.png" multiple>
-                            <div class="custom-file-input">
-                                <span class="custom-file-input-label">
-                                    <i class="fas fa-upload"></i>
-                                    <span id="job-attachments-label">Click to upload or drag & drop</span>
-                                </span>
+        await apiCall('/estimation/contractor/submit', 'POST', formData, 'Estimation request
+                      </div>
+                    
+                    <form id="support-form" class="premium-form support-form">
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-tag"></i> Subject
+                            </label>
+                            <select class="form-select" name="subject" required>
+                                <option value="" disabled selected>Select a topic</option>
+                                <option value="Technical Issue">Technical Issue</option>
+                                <option value="Account Problem">Account Problem</option>
+                                <option value="Payment Issue">Payment Issue</option>
+                                <option value="Project Help">Project Help</option>
+                                <option value="AI Estimation">AI Estimation</option>
+                                <option value="Profile/Verification">Profile/Verification</option>
+                                <option value="Feature Request">Feature Request</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-exclamation-circle"></i> Priority
+                            </label>
+                            <select class="form-select" name="priority" required>
+                                <option value="" disabled selected>Select priority</option>
+                                <option value="Low">Low - General question</option>
+                                <option value="Medium">Medium - Need help soon</option>
+                                <option value="High">High - Urgent issue</option>
+                                <option value="Critical">Critical - System down</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-file-alt"></i> Description
+                            </label>
+                            <textarea
+                                 class="form-textarea"
+                                 name="message"
+                                 required
+                                 rows="6"
+                                placeholder="Please describe your issue or question in detail. Include any error messages, steps you tried, or specific information that might help us assist you better."
+                            ></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-paperclip"></i> Attachments (Optional)
+                            </label>
+                            <div class="custom-file-input-wrapper">
+                                <input
+                                     type="file"
+                                     name="attachments"
+                                     id="support-attachments-input"
+                                    onchange="handleSupportFileChange(event)"
+                                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.txt"
+                                     multiple
+                                >
+                                <div class="custom-file-input">
+                                    <span class="custom-file-input-label">
+                                        <i class="fas fa-upload"></i>
+                                        <span id="support-attachments-label">Click to upload screenshots or files</span>
+                                    </span>
+                                </div>
                             </div>
+                            <div id="support-attachments-list" class="file-list-container"></div>
+                            <small class="form-help">
+                                Upload screenshots, error logs, or relevant files. Max 5 files, 10MB each.
+                            </small>
                         </div>
-                        <div id="job-attachments-list" class="file-list-container"></div>
-                        <small class="form-help">Upload up to 10 files, 15MB each. Supported formats: PDF, DOC, DWG, Images</small>
-                    </div>
-                </div>
-                <div class="form-actions"><button type="submit" class="btn btn-primary btn-large"><i class="fas fa-rocket"></i> Post Project</button></div>
-            </form>
-        </div>`;
-}
-
-function getEstimationToolTemplate() {
-    return `
-        <div id="dynamic-feature-header" class="dynamic-feature-header"></div>
-        <div class="section-header modern-header">
-            <div class="header-content"><h2><i class="fas fa-robot"></i> AI-Powered Cost Estimation</h2><p class="header-subtitle">Upload your drawings and get instant cost estimates</p></div>
-        </div>
-        <div class="estimation-tool-container premium-estimation-container">
-            <div class="estimation-steps">
-                <div class="step active" data-step="1"><div class="step-number">1</div><div class="step-content"><h4>Upload Files</h4><p>Add your drawings</p></div></div>
-                <div class="step" data-step="2"><div class="step-number">2</div><div class="step-content"><h4>Project Details</h4><p>Describe requirements</p></div></div>
-                <div class="step" data-step="3"><div class="step-number">3</div><div class="step-content"><h4>Get Estimate</h4><p>Receive detailed cost breakdown</p></div></div>
-            </div>
-            <form id="estimation-form" class="premium-estimation-form">
-                <div class="form-section premium-section">
-                    <h3><i class="fas fa-upload"></i> Upload Project Files</h3>
-                    <div class="file-upload-section premium-upload-section">
-                        <div id="file-upload-area" class="file-upload-area premium-upload-area">
-                            <input type="file" id="file-upload-input" accept=".pdf,.dwg,.doc,.docx,.jpg,.jpeg,.png" multiple />
-                            <div class="upload-content"><div class="file-upload-icon"><i class="fas fa-cloud-upload-alt"></i></div><h3>Drag & Drop Files Here</h3><p>or click to browse</p><small class="upload-limit">Max 10 files, 15MB each</small></div>
+                        
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary btn-large">
+                                <i class="fas fa-paper-plane"></i>
+                                 Send Support Request
+                            </button>
                         </div>
-                        <div id="file-info-container" class="selected-files-container" style="display: none;"><h4><i class="fas fa-files"></i> Selected Files</h4><div id="selected-files-list" class="selected-files-list"></div></div>
-                    </div>
-                </div>
-                <div class="form-section premium-section">
-                    <h3><i class="fas fa-info-circle"></i> Project Information</h3>
-                    <div class="form-group"><label class="form-label"><i class="fas fa-heading"></i> Project Title</label><input type="text" class="form-input premium-input" name="projectTitle" required placeholder="e.g., Commercial Building Steel Framework"></div>
-                    <div class="form-group"><label class="form-label"><i class="fas fa-file-alt"></i> Project Description</label><textarea class="form-textarea premium-textarea" name="description" required placeholder="Describe your project..."></textarea></div>
-                </div>
-                <div class="form-actions estimation-actions"><button type="button" id="submit-estimation-btn" class="btn btn-primary btn-large premium-btn" disabled><i class="fas fa-paper-plane"></i> Submit Request</button></div>
-            </form>
-        </div>`;
-}
-
-function getDashboardTemplate(user) {
-    const isContractor = user.type === 'contractor';
-    const name = user.name.split(' ')[0];
-    const profileStatus = user.profileStatus || 'incomplete';
-    const isApproved = profileStatus === 'approved';
-    let profileStatusCard = '';
-    if (profileStatus === 'incomplete') profileStatusCard = `<div class="dashboard-profile-status-card"><h3><i class="fas fa-exclamation-triangle"></i> Complete Your Profile</h3><p>Complete your profile to unlock all features.</p><button class="btn btn-primary" onclick="renderAppSection('profile-completion')"><i class="fas fa-user-edit"></i> Complete Profile</button></div>`;
-    else if (profileStatus === 'pending') profileStatusCard = `<div class="dashboard-profile-status-card"><h3><i class="fas fa-clock"></i> Profile Under Review</h3><p>Your profile is under review. You'll get full access once approved.</p></div>`;
-    else if (profileStatus === 'rejected') profileStatusCard = `<div class="dashboard-profile-status-card"><h3><i class="fas fa-times-circle"></i> Profile Needs Update</h3><p>Your profile needs updates. ${user.rejectionReason ? `<strong>Reason:</strong> ${user.rejectionReason}` : ''}</p><button class="btn btn-primary" onclick="renderAppSection('profile-completion')"><i class="fas fa-edit"></i> Update Profile</button></div>`;
-    else if (profileStatus === 'approved') profileStatusCard = `<div class="dashboard-profile-status-card" style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border-color: #10b981;"><h3 style="color: #059669;"><i class="fas fa-check-circle"></i> Profile Approved</h3><p style="color: #059669;">You have full access to all platform features.</p></div>`;
-    const contractorQuickActions = `
-        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'post-job\')' : 'showRestrictedFeature(\'post-job\')'}"><i class="fas fa-plus-circle card-icon"></i><h3>Create Project</h3><p>Post a new listing</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>
-        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'jobs\')' : 'showRestrictedFeature(\'jobs\')'}"><i class="fas fa-tasks card-icon"></i><h3>My Projects</h3><p>Manage your listings</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>
-        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'estimation-tool\')' : 'showRestrictedFeature(\'estimation-tool\')'}"><i class="fas fa-calculator card-icon"></i><h3>AI Estimation</h3><p>Get instant cost estimates</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>
-        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'approved-jobs\')' : 'showRestrictedFeature(\'approved-jobs\')'}"><i class="fas fa-check-circle card-icon"></i><h3>Approved</h3><p>Track assigned work</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>`;
-    const contractorWidgets = `<div class="widget-card"><h3><i class="fas fa-history"></i> Recent Projects</h3><div id="recent-projects-widget" class="widget-content">${!isApproved ? '<p class="widget-empty-text">Complete your profile to post projects.</p>' : ''}</div></div>`;
-    const designerQuickActions = `
-        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'jobs\')' : 'showRestrictedFeature(\'jobs\')'}"><i class="fas fa-search card-icon"></i><h3>Browse Projects</h3><p>Find new opportunities</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>
-        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'my-quotes\')' : 'showRestrictedFeature(\'my-quotes\')'}"><i class="fas fa-file-invoice-dollar card-icon"></i><h3>My Quotes</h3><p>Track your submissions</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>
-        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'messages\')' : 'showRestrictedFeature(\'messages\')'}"><i class="fas fa-comments card-icon"></i><h3>Messages</h3><p>Communicate with clients</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>`;
-    const designerWidgets = `<div class="widget-card"><h3><i class="fas fa-history"></i> Recent Quotes</h3><div id="recent-quotes-widget" class="widget-content">${!isApproved ? '<p class="widget-empty-text">Complete your profile to submit quotes.</p>' : ''}</div></div>`;
-    return `
-        <div class="dashboard-container">
-            <div class="dashboard-hero"><div><h2>Welcome back, ${name} 👋</h2><p>You are logged in to your <strong>${isContractor ? 'Contractor' : 'Designer'} Portal</strong>.</p></div></div>
-            ${profileStatusCard}
-            <h3 class="dashboard-section-title">Quick Actions</h3>
-            <div class="dashboard-grid">${isContractor ? contractorQuickActions : designerQuickActions}</div>
-            <div class="dashboard-columns">${isContractor ? contractorWidgets : designerWidgets}</div>
-        </div>`;
-}
-
-function getSettingsTemplate(user) {
-    const profileStatus = user.profileStatus || 'incomplete';
-    let profileSection = '';
-    if (profileStatus === 'incomplete') profileSection = `<div class="settings-card"><h3><i class="fas fa-user-edit"></i> Complete Your Profile</h3><p>Your profile is incomplete. Complete it to unlock all features.</p><button class="btn btn-primary" onclick="renderAppSection('profile-completion')"><i class="fas fa-edit"></i> Complete Profile</button></div>`;
-    else if (profileStatus === 'pending') profileSection = `<div class="settings-card"><h3><i class="fas fa-clock"></i> Profile Under Review</h3><p>Your profile is under review by our admin team.</p></div>`;
-    else if (profileStatus === 'rejected') profileSection = `<div class="settings-card"><h3><i class="fas fa-exclamation-triangle"></i> Profile Needs Update</h3><p>Your profile needs updates. ${user.rejectionReason ? `<strong>Reason:</strong> ${user.rejectionReason}` : ''}</p><button class="btn btn-primary" onclick="renderAppSection('profile-completion')"><i class="fas fa-edit"></i> Update Profile</button></div>`;
-    else if (profileStatus === 'approved') profileSection = `<div class="settings-card"><h3><i class="fas fa-check-circle"></i> Profile Approved</h3><p>Your profile is approved.</p><button class="btn btn-outline" onclick="renderAppSection('profile-completion')"><i class="fas fa-edit"></i> Update Information</button></div>`;
-    return `
-        <div class="section-header modern-header"><div class="header-content"><h2><i class="fas fa-cog"></i> Settings</h2><p class="header-subtitle">Manage your account and profile</p></div></div>
-        <div class="settings-container">
-            ${profileSection}
-            <div class="settings-card"><h3><i class="fas fa-user-edit"></i> Personal Information</h3><form class="premium-form" onsubmit="event.preventDefault(); showNotification('Profile updated!', 'success');"><div class="form-group"><label class="form-label">Full Name</label><input type="text" class="form-input" value="${user.name}" required></div><div class="form-group"><label class="form-label">Email Address</label><input type="email" class="form-input" value="${user.email}" disabled></div><button type="submit" class="btn btn-primary">Save Changes</button></form></div>
-            <div class="settings-card"><h3><i class="fas fa-shield-alt"></i> Security</h3><form class="premium-form" onsubmit="event.preventDefault(); showNotification('Password functionality not implemented.', 'info');"><div class="form-group"><label class="form-label">New Password</label><input type="password" class="form-input"></div><button type="submit" class="btn btn-primary">Change Password</button></form></div>
-        </div>`;
-}
-
-// ===================================
-// NEW AND UPDATED FUNCTIONS
-// ===================================
-
-// FIXED TIMESTAMP FUNCTIONS
-function formatDetailedTimestamp(date) {
-    try {
-        if (!date) return 'Unknown time';
-        
-        let msgDate;
-        
-        // Handle Firestore Timestamp objects
-        if (date && typeof date === 'object' && typeof date.toDate === 'function') {
-            msgDate = date.toDate();
-        }
-        // Handle Firestore-like objects with seconds
-        else if (date && typeof date === 'object' && typeof date.seconds === 'number') {
-            msgDate = new Date(date.seconds * 1000 + (date.nanoseconds || 0) / 1000000);
-        }
-        // Handle Date objects
-        else if (date instanceof Date) {
-            msgDate = date;
-        }
-        // Handle ISO strings
-        else if (typeof date === 'string') {
-            msgDate = new Date(date);
-        }
-        // Handle timestamps (milliseconds)
-        else if (typeof date === 'number') {
-            // If number is too small, assume it's seconds and convert to milliseconds
-            msgDate = new Date(date < 10000000000 ? date * 1000 : date);
-        }
-        else {
-            console.warn('Unknown date format:', date);
-            return 'Invalid time';
-        }
-
-        // Validate the date
-        if (!msgDate || isNaN(msgDate.getTime())) {
-            console.warn('Invalid date created from:', date);
-            return 'Invalid date';
-        }
-
-        const now = new Date();
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const msgDay = new Date(msgDate.getFullYear(), msgDate.getMonth(), msgDate.getDate());
-        
-        const time = msgDate.toLocaleTimeString([], { 
-            hour: '2-digit', 
-            minute: '2-digit', 
-            hour12: true 
-        });
-
-        // Today
-        if (today.getTime() === msgDay.getTime()) {
-            return time;
-        }
-
-        // Yesterday
-        const yesterday = new Date(today);
-        yesterday.setDate(today.getDate() - 1);
-        if (yesterday.getTime() === msgDay.getTime()) {
-            return `Yesterday, ${time}`;
-        }
-
-        // Older dates
-        return `${msgDate.toLocaleDateString([], {
-            month: 'short',
-            day: 'numeric',
-            year: msgDate.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
-        })}, ${time}`;
-
-    } catch (error) {
-        console.error('formatDetailedTimestamp error:', error, 'Input:', date);
-        return 'Invalid date';
-    }
-}
-
-function formatMessageTimestamp(date) {
-    try {
-        if (!date) return 'Unknown time';
-        
-        let msgDate;
-        
-        // Handle Firestore Timestamp objects
-        if (date && typeof date === 'object' && typeof date.toDate === 'function') {
-            msgDate = date.toDate();
-        }
-        // Handle Firestore-like objects with seconds
-        else if (date && typeof date === 'object' && typeof date.seconds === 'number') {
-            msgDate = new Date(date.seconds * 1000 + (date.nanoseconds || 0) / 1000000);
-        }
-        // Handle Date objects
-        else if (date instanceof Date) {
-            msgDate = date;
-        }
-        // Handle ISO strings
-        else if (typeof date === 'string') {
-            msgDate = new Date(date);
-        }
-        // Handle timestamps (milliseconds)
-        else if (typeof date === 'number') {
-            // If number is too small, assume it's seconds and convert to milliseconds
-            msgDate = new Date(date < 10000000000 ? date * 1000 : date);
-        }
-        else {
-            console.warn('Unknown date format:', date);
-            return 'Invalid time';
-        }
-
-        // Validate the date
-        if (!msgDate || isNaN(msgDate.getTime())) {
-            console.warn('Invalid date created from:', date);
-            return 'Invalid date';
-        }
-
-        const now = new Date();
-        const diffMs = now - msgDate;
-        const diffSeconds = Math.floor(diffMs / 1000);
-        const diffMinutes = Math.floor(diffSeconds / 60);
-        const diffHours = Math.floor(diffMinutes / 60);
-        const diffDays = Math.floor(diffHours / 24);
-
-        if (diffSeconds < 30) return 'Just now';
-        if (diffMinutes < 60) return `${diffMinutes}m ago`;
-        if (diffHours < 24) return `${diffHours}h ago`;
-        if (diffDays === 1) return 'Yesterday';
-        if (diffDays < 7) return `${diffDays}d ago`;
-        
-        return msgDate.toLocaleDateString([], {
-            month: 'short',
-            day: 'numeric',
-            year: msgDate.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
-        });
-
-    } catch (error) {
-        console.error('formatMessageTimestamp error:', error, 'Input:', date);
-        return 'Invalid date';
-    }
-}
-
-function formatMessageDate(date) {
-    try {
-        if (!date) return 'Unknown Date';
-        
-        let msgDate;
-        
-        // Handle Firestore Timestamp objects
-        if (date && typeof date === 'object' && typeof date.toDate === 'function') {
-            msgDate = date.toDate();
-        }
-        // Handle Firestore-like objects with seconds
-        else if (date && typeof date === 'object' && typeof date.seconds === 'number') {
-            msgDate = new Date(date.seconds * 1000 + (date.nanoseconds || 0) / 1000000);
-        }
-        // Handle Date objects
-        else if (date instanceof Date) {
-            msgDate = date;
-        }
-        // Handle ISO strings
-        else if (typeof date === 'string') {
-            msgDate = new Date(date);
-        }
-        // Handle timestamps (milliseconds)
-        else if (typeof date === 'number') {
-            // If number is too small, assume it's seconds and convert to milliseconds
-            msgDate = new Date(date < 10000000000 ? date * 1000 : date);
-        }
-        else {
-            console.warn('Unknown date format:', date);
-            return 'Unknown Date';
-        }
-
-        // Validate the date
-        if (!msgDate || isNaN(msgDate.getTime())) {
-            console.warn('Invalid date created from:', date);
-            return 'Unknown Date';
-        }
-
-        const now = new Date();
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const msgDay = new Date(msgDate.getFullYear(), msgDate.getMonth(), msgDate.getDate());
-
-        if (today.getTime() === msgDay.getTime()) {
-            return 'Today';
-        }
-
-        const yesterday = new Date(today);
-        yesterday.setDate(today.getDate() - 1);
-        if (yesterday.getTime() === msgDay.getTime()) {
-            return 'Yesterday';
-        }
-
-        return msgDate.toLocaleDateString([], { 
-            month: 'long', 
-            day: 'numeric', 
-            year: msgDate.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
-        });
-
-    } catch (error) {
-        console.error('formatMessageDate error:', error, 'Input:', date);
-        return 'Unknown Date';
-    }
-}
-
-// ENHANCED SIDEBAR NAVIGATION WITH SUPPORT
-function buildSidebarNav() {
-    const nav = document.getElementById('sidebar-nav-menu');
-    const role = appState.currentUser.type;
-    
-    let links = `<a href="#" class="sidebar-nav-link" data-section="dashboard">
-                    <i class="fas fa-tachometer-alt fa-fw"></i>
-                    <span>Dashboard</span>
-                 </a>`;
-    
-    if (role === 'designer') {
-        links += `
-            <a href="#" class="sidebar-nav-link" data-section="jobs">
-                <i class="fas fa-search fa-fw"></i>
-                <span>Find Projects</span>
-            </a>
-            <a href="#" class="sidebar-nav-link" data-section="my-quotes">
-                <i class="fas fa-file-invoice-dollar fa-fw"></i>
-                <span>My Quotes</span>
-            </a>`;
-    } else {
-        links += `
-            <a href="#" class="sidebar-nav-link" data-section="jobs">
-                <i class="fas fa-tasks fa-fw"></i>
-                <span>My Projects</span>
-            </a>
-            <a href="#" class="sidebar-nav-link" data-section="approved-jobs">
-                <i class="fas fa-check-circle fa-fw"></i>
-                <span>Approved Projects</span>
-            </a>
-            <a href="#" class="sidebar-nav-link" data-section="post-job">
-                <i class="fas fa-plus-circle fa-fw"></i>
-                <span>Post Project</span>
-            </a>
-            <a href="#" class="sidebar-nav-link" data-section="estimation-tool">
-                <i class="fas fa-calculator fa-fw"></i>
-                <span>AI Estimation</span>
-            </a>
-            <a href="#" class="sidebar-nav-link" data-section="my-estimations">
-                <i class="fas fa-file-invoice fa-fw"></i>
-                <span>My Estimations</span>
-            </a>`;
-    }
-    
-    // Common links for both user types
-    links += `
-        <a href="#" class="sidebar-nav-link" data-section="messages">
-            <i class="fas fa-comments fa-fw"></i>
-            <span>Messages</span>
-        </a>
-        <hr class="sidebar-divider">
-        <a href="#" class="sidebar-nav-link" data-section="support">
-            <i class="fas fa-life-ring fa-fw"></i>
-            <span>Support</span>
-        </a>
-        <a href="#" class="sidebar-nav-link" data-section="settings">
-            <i class="fas fa-cog fa-fw"></i>
-            <span>Settings</span>
-        </a>`;
-        
-    nav.innerHTML = links;
-    
-    // Add event listeners
-    nav.querySelectorAll('.sidebar-nav-link').forEach(link => {
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-            renderAppSection(link.dataset.section);
-        });
-    });
-}
-
-// --- SUPPORT SECTION FUNCTIONS ---
-async function renderSupportSection() {
-    const container = document.getElementById('app-container');
-    
-    container.innerHTML = `
-        <div class="section-header modern-header">
-            <div class="header-content">
-                <h2><i class="fas fa-life-ring"></i> Support Center</h2>
-                <p class="header-subtitle">Get help and contact our support team</p>
-            </div>
-        </div>
-        
-        <div class="support-container">
-             <div class="support-section">
-                <h3><i class="fas fa-ticket-alt"></i> My Support Tickets</h3>
-                <div id="support-tickets-container">
-                    <div class="loading-spinner"><div class="spinner"></div><p>Loading tickets...</p></div>
-                </div>
-                <div class="support-actions">
-                    <button class="btn btn-primary" onclick="showNewTicketModal()">
-                        <i class="fas fa-plus"></i> New Support Ticket
-                    </button>
+                    </form>
                 </div>
             </div>
+            
             <div class="support-section">
                 <h3><i class="fas fa-question-circle"></i> Frequently Asked Questions</h3>
                 <div class="faq-grid">
@@ -3415,437 +3018,166 @@ async function renderSupportSection() {
         </div>
     `;
     
-    loadSupportTickets();
+    // Setup form submission
+    document.getElementById('support-form').addEventListener('submit', handleSupportSubmit);
+    
+    // Setup file drag and drop
+    setupSupportFileDragDrop();
 }
 
-async function loadSupportTickets() {
-    try {
-        const response = await apiCall('/support/tickets', 'GET');
-        const tickets = response.tickets || [];
-        appState.supportTickets = tickets;
-        renderSupportTickets();
-    } catch (error) {
-        console.error('Error loading support tickets:', error);
-        document.getElementById('support-tickets-container').innerHTML = `
-            <div class="error-state">
-                <i class="fas fa-exclamation-triangle"></i>
-                <p>Failed to load support tickets</p>
-                <button class="btn btn-outline" onclick="loadSupportTickets()">Retry</button>
-            </div>
-        `;
-    }
-}
+// Support file handling
+let supportFiles = [];
 
-function renderSupportTickets() {
-    const container = document.getElementById('support-tickets-container');
-    const tickets = appState.supportTickets;
-
-    if (tickets.length === 0) {
-        container.innerHTML = `
-            <div class="empty-state">
-                <i class="fas fa-inbox"></i>
-                <h4>No Support Tickets</h4>
-                <p>You haven't created any support tickets yet.</p>
-            </div>
-        `;
+function handleSupportFileChange(event) {
+    const input = event.target;
+    const files = Array.from(input.files);
+    
+    // Validate file count
+    if (supportFiles.length + files.length > 5) {
+        showNotification('Maximum 5 files allowed for support requests', 'warning');
         return;
     }
-
-    container.innerHTML = tickets.map(ticket => {
-        const statusClass = ticket.status === 'resolved' ? 'success' :
-                           ticket.status === 'pending' ? 'warning' : 'info';
-        const statusIcon = ticket.status === 'resolved' ? 'fa-check-circle' :
-                           ticket.status === 'pending' ? 'fa-clock' : 'fa-reply';
-        const hasUnread = ticket.hasAdminReply && !ticket.lastReadByUser;
-
-        return `
-            <div class="support-ticket-card ${hasUnread ? 'unread' : ''}" onclick="viewSupportTicket('${ticket.id}')">
-                <div class="ticket-header">
-                    <div class="ticket-info">
-                        <h4>${ticket.subject}</h4>
-                        <div class="ticket-meta">
-                            <span class="ticket-id">#${ticket.ticketNumber || ticket.id.substring(0, 8)}</span>
-                            <span class="ticket-date">${formatTicketDate(ticket.createdAt)}</span>
-                            <span class="ticket-priority priority-${ticket.priority.toLowerCase()}">${ticket.priority}</span>
-                        </div>
-                    </div>
-                    <span class="ticket-status status-${statusClass}">
-                        <i class="fas ${statusIcon}"></i> ${ticket.status}
-                    </span>
-                </div>
-                <p class="ticket-preview">${ticket.message.substring(0, 150)}${ticket.message.length > 150 ? '...' : ''}</p>
-                ${hasUnread ? '<div class="unread-badge">New Reply</div>' : ''}
-                ${ticket.lastReply ? `
-                    <div class="ticket-last-reply">
-                        <i class="fas fa-reply"></i>
-                        <span>Last reply: ${formatTicketDate(ticket.lastReply)} by ${ticket.lastReplyBy}</span>
-                    </div>
-                ` : ''}
-            </div>
-        `;
-    }).join('');
+    
+    // Validate file size (10MB limit)
+    const maxSize = 10 * 1024 * 1024;
+    const invalidFiles = files.filter(file => file.size > maxSize);
+    if (invalidFiles.length > 0) {
+        showNotification(`Some files exceed 10MB limit: ${invalidFiles.map(f => f.name).join(', ')}`, 'error');
+        return;
+    }
+    
+    supportFiles.push(...files);
+    renderSupportFileList();
 }
 
-async function viewSupportTicket(ticketId) {
-    try {
-        showNotification('Loading ticket details...', 'info');
-        const response = await apiCall(`/support/tickets/${ticketId}`, 'GET');
-        const ticket = response.ticket;
-        const messages = response.messages || [];
+function removeSupportFile(index) {
+    supportFiles.splice(index, 1);
+    renderSupportFileList();
+}
 
-        // Mark ticket as read
-        if (ticket.hasAdminReply && !ticket.lastReadByUser) {
-            apiCall(`/support/tickets/${ticketId}/read`, 'POST').catch(console.error);
-        }
+function renderSupportFileList() {
+    const container = document.getElementById('support-attachments-list');
+    const label = document.getElementById('support-attachments-label');
+    
+    if (!container || !label) return;
+    
+    if (supportFiles.length === 0) {
+        container.innerHTML = '';
+        label.textContent = 'Click to upload screenshots or files';
+        return;
+    }
+    
+    container.innerHTML = supportFiles.map((file, index) => `
+        <div class="file-list-item">
+            <div class="file-list-item-info">
+                <i class="fas ${getSupportFileIcon(file)}"></i>
+                <span>${file.name}</span>
+                <span class="file-size">(${(file.size / (1024 * 1024)).toFixed(2)}MB)</span>
+            </div>
+            <button type="button" class="remove-file-button" onclick="removeSupportFile(${index})">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `).join('');
+    
+    label.textContent = `${supportFiles.length} file(s) selected`;
+}
 
-        const content = `
-            <div class="modal-header">
-                <h3><i class="fas fa-ticket-alt"></i> Support Ticket #${ticket.ticketNumber || ticket.id.substring(0, 8)}</h3>
-                <span class="ticket-status status-${ticket.status}">${ticket.status}</span>
-            </div>
-            <div class="ticket-details">
-                <div class="ticket-meta-info">
-                    <div class="meta-item">
-                        <strong>Subject:</strong> ${ticket.subject}
-                    </div>
-                    <div class="meta-item">
-                        <strong>Priority:</strong> 
-                        <span class="priority-${ticket.priority.toLowerCase()}">${ticket.priority}</span>
-                    </div>
-                    <div class="meta-item">
-                        <strong>Created:</strong> ${formatDetailedDate(ticket.createdAt)}
-                    </div>
-                </div>
-            </div>
-            <div class="ticket-messages">
-                <h4>Conversation</h4>
-                <div class="messages-list">
-                    ${renderTicketMessages(messages, ticket)}
-                </div>
-            </div>
-            ${ticket.status !== 'resolved' ? `
-                <div class="ticket-reply-section">
-                    <h4>Add Reply</h4>
-                    <form id="ticket-reply-form" class="ticket-reply-form">
-                        <input type="hidden" name="ticketId" value="${ticket.id}">
-                        <textarea 
-                            class="form-textarea" 
-                            name="message" 
-                            placeholder="Type your reply..."
-                            rows="4"
-                            required
-                        ></textarea>
-                        <div class="form-actions">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-paper-plane"></i> Send Reply
-                            </button>
-                            <button type="button" class="btn btn-outline" onclick="markTicketResolved('${ticket.id}')">
-                                <i class="fas fa-check"></i> Mark as Resolved
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            ` : `
-                <div class="ticket-resolved-notice">
-                    <i class="fas fa-check-circle"></i>
-                    <p>This ticket has been resolved. Create a new ticket if you need further assistance.</p>
-                </div>
-            `}
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal()">Close</button>
-            </div>
-        `;
+function getSupportFileIcon(file) {
+    const ext = file.name.toLowerCase().split('.').pop();
+    const iconMap = {
+        'pdf': 'fa-file-pdf',
+        'doc': 'fa-file-word',
+        'docx': 'fa-file-word',
+        'txt': 'fa-file-alt',
+        'jpg': 'fa-file-image',
+        'jpeg': 'fa-file-image',
+        'png': 'fa-file-image'
+    };
+    return iconMap[ext] || 'fa-file';
+}
 
-        showGenericModal(content, 'max-width: 800px;');
-
-        // Setup reply form
-        if (ticket.status !== 'resolved') {
-            document.getElementById('ticket-reply-form').addEventListener('submit', handleTicketReply);
-        }
-    } catch (error) {
-        console.error('Error viewing ticket:', error);
-        showNotification('Failed to load ticket details', 'error');
+function setupSupportFileDragDrop() {
+    const wrapper = document.querySelector('#support-form .custom-file-input-wrapper');
+    if (!wrapper) return;
+    const customInput = wrapper.querySelector('.custom-file-input');
+    const realInput = wrapper.querySelector('input[type="file"]');
+    
+    if (customInput && realInput) {
+        customInput.addEventListener('click', () => realInput.click());
+        
+        customInput.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            customInput.classList.add('drag-over');
+        });
+        
+        customInput.addEventListener('dragleave', () => {
+            customInput.classList.remove('drag-over');
+        });
+        
+        customInput.addEventListener('drop', (e) => {
+            e.preventDefault();
+            customInput.classList.remove('drag-over');
+            if (e.dataTransfer.files.length > 0) {
+                const event = {
+                    target: {
+                        files: e.dataTransfer.files
+                    }
+                };
+                handleSupportFileChange(event);
+            }
+        });
     }
 }
 
-function renderTicketMessages(messages, ticket) {
-    // Always show the original message first
-    let html = `
-        <div class="ticket-message user-message">
-            <div class="message-header">
-                <span class="message-author">
-                    <i class="fas fa-user"></i> You
-                </span>
-                <span class="message-time">${formatDetailedDate(ticket.createdAt)}</span>
-            </div>
-            <div class="message-body">${ticket.message}</div>
-        </div>
-    `;
-
-    // Add all reply messages
-    messages.forEach(msg => {
-        const isAdmin = msg.senderType === 'admin';
-        html += `
-            <div class="ticket-message ${isAdmin ? 'admin-message' : 'user-message'}">
-                <div class="message-header">
-                    <span class="message-author">
-                        <i class="fas ${isAdmin ? 'fa-shield-alt' : 'fa-user'}"></i> 
-                        ${isAdmin ? 'Support Team' : 'You'}
-                    </span>
-                    <span class="message-time">${formatDetailedDate(msg.createdAt)}</span>
-                </div>
-                <div class="message-body">${msg.message}</div>
-            </div>
-        `;
-    });
-
-    return html;
-}
-
-
-async function handleTicketReply(event) {
+async function handleSupportSubmit(event) {
     event.preventDefault();
+    
     const form = event.target;
     const submitBtn = form.querySelector('button[type="submit"]');
     const originalText = submitBtn.innerHTML;
-
+    
     submitBtn.innerHTML = '<div class="btn-spinner"></div> Sending...';
     submitBtn.disabled = true;
-
+    
     try {
-        const ticketId = form.ticketId.value;
-        const message = form.message.value;
-
-        await apiCall(`/support/tickets/${ticketId}/reply`, 'POST', { message }, 'Reply sent successfully!');
-
-        closeModal();
-        loadSupportTickets();
-    } catch (error) {
-        showNotification('Failed to send reply', 'error');
-    } finally {
-        submitBtn.innerHTML = originalText;
-        submitBtn.disabled = false;
-    }
-}
-
-async function markTicketResolved(ticketId) {
-    if (confirm('Are you sure you want to mark this ticket as resolved?')) {
-        try {
-            await apiCall(`/support/tickets/${ticketId}/resolve`, 'POST', null, 'Ticket marked as resolved');
-            closeModal();
-            loadSupportTickets();
-        } catch (error) {
-            showNotification('Failed to resolve ticket', 'error');
+        const formData = new FormData();
+        formData.append('subject', form.subject.value);
+        formData.append('priority', form.priority.value);
+        formData.append('message', form.message.value);
+        formData.append('userType', appState.currentUser.type);
+        formData.append('userName', appState.currentUser.name);
+        formData.append('userEmail', appState.currentUser.email);
+        
+        // Add files if any
+        if (supportFiles && supportFiles.length > 0) {
+            for (let i = 0; i < supportFiles.length; i++) {
+                formData.append('attachments', supportFiles[i]);
+            }
         }
-    }
-}
-
-function showNewTicketModal() {
-    supportFiles = []; // Reset files
-
-    const content = `
-        <div class="modal-header">
-            <h3><i class="fas fa-plus-circle"></i> Create New Support Ticket</h3>
-        </div>
-        <form id="new-support-form" class="premium-form support-form">
-            <div class="form-group">
-                <label class="form-label">
-                    <i class="fas fa-tag"></i> Subject
-                </label>
-                <input type="text" class="form-input" name="subject" required placeholder="Brief description of your issue">
-            </div>
-            <div class="form-group">
-                <label class="form-label">
-                    <i class="fas fa-list"></i> Category
-                </label>
-                <select class="form-select" name="category" required>
-                    <option value="" disabled selected>Select a category</option>
-                    <option value="Technical Issue">Technical Issue</option>
-                    <option value="Account Problem">Account Problem</option>
-                    <option value="Payment Issue">Payment Issue</option>
-                    <option value="Project Help">Project Help</option>
-                    <option value="AI Estimation">AI Estimation</option>
-                    <option value="Profile/Verification">Profile/Verification</option>
-                    <option value="Feature Request">Feature Request</option>
-                    <option value="Other">Other</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label class="form-label">
-                    <i class="fas fa-exclamation-circle"></i> Priority
-                </label>
-                <select class="form-select" name="priority" required>
-                    <option value="" disabled selected>Select priority</option>
-                    <option value="Low">Low - General question</option>
-                    <option value="Medium">Medium - Need help soon</option>
-                    <option value="High">High - Urgent issue</option>
-                    <option value="Critical">Critical - System down</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label class="form-label">
-                    <i class="fas fa-file-alt"></i> Description
-                </label>
-                <textarea
-                    class="form-textarea"
-                    name="message"
-                    required
-                    rows="6"
-                    placeholder="Please describe your issue in detail..."
-                ></textarea>
-            </div>
-            <div class="form-actions">
-                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-                <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-paper-plane"></i> Create Ticket
-                </button>
-            </div>
-        </form>
-    `;
-
-    showGenericModal(content, 'max-width: 600px;');
-    document.getElementById('new-support-form').addEventListener('submit', handleNewSupportTicket);
-}
-
-async function handleNewSupportTicket(event) {
-    event.preventDefault();
-    const form = event.target;
-    const submitBtn = form.querySelector('button[type="submit"]');
-    const originalText = submitBtn.innerHTML;
-
-    submitBtn.innerHTML = '<div class="btn-spinner"></div> Creating...';
-    submitBtn.disabled = true;
-
-    try {
-        const formData = {
-            subject: form.subject.value,
-            category: form.category.value,
-            priority: form.priority.value,
-            message: form.message.value,
-            userType: appState.currentUser.type,
-            userName: appState.currentUser.name,
-            userEmail: appState.currentUser.email
-        };
-
-        await apiCall('/support/tickets/create', 'POST', formData, 'Support ticket created successfully!');
-
+        
+        // Send to support endpoint (this will create a message for admin)
+        await apiCall('/support/submit', 'POST', formData, 'Support request submitted successfully!');
+        
         addLocalNotification(
-            'Ticket Created',
-            'Your support ticket has been created. We\'ll respond within 24 hours.',
-            'support'
+            'Support Request Sent', 
+            'Your support request has been submitted. We\'ll get back to you within 24 hours.', 
+            'success'
         );
-
-        closeModal();
-        loadSupportTickets();
+        
+        // Reset form and files
+        form.reset();
+        supportFiles = [];
+        renderSupportFileList();
+        
     } catch (error) {
-        showNotification('Failed to create support ticket', 'error');
+        addLocalNotification('Error', 'Failed to submit support request. Please try again.', 'error');
     } finally {
         submitBtn.innerHTML = originalText;
         submitBtn.disabled = false;
     }
 }
 
-
-function formatDetailedDate(dateInput) {
-    try {
-        if (!dateInput) return 'Unknown time';
-
-        let date;
-
-        // Handle Firestore Timestamp
-        if (dateInput && typeof dateInput === 'object') {
-            if (typeof dateInput.toDate === 'function') {
-                date = dateInput.toDate();
-            } else if (typeof dateInput.seconds === 'number') {
-                // Firestore timestamp-like object
-                date = new Date(dateInput.seconds * 1000);
-            } else if (dateInput._seconds !== undefined) {
-                // Alternative Firestore format
-                date = new Date(dateInput._seconds * 1000);
-            } else {
-                date = new Date(dateInput);
-            }
-        } else if (typeof dateInput === 'string') {
-            date = new Date(dateInput);
-        } else if (typeof dateInput === 'number') {
-            // Check if it's seconds or milliseconds
-            date = new Date(dateInput < 10000000000 ? dateInput * 1000 : dateInput);
-        } else {
-            date = new Date(dateInput);
-        }
-
-        // Validate date
-        if (!date || isNaN(date.getTime())) {
-            console.warn('Invalid date in formatDetailedDate:', dateInput);
-            return 'Invalid date';
-        }
-
-        return date.toLocaleString([], {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-
-    } catch (error) {
-        console.error('formatDetailedDate error:', error, 'Input:', dateInput);
-        return 'Invalid date';
-    }
-}
-
-function formatTicketDate(dateInput) {
-    try {
-        if (!dateInput) return 'Unknown';
-
-        let date;
-
-        // Handle various date formats
-        if (dateInput && typeof dateInput === 'object') {
-            if (typeof dateInput.toDate === 'function') {
-                date = dateInput.toDate();
-            } else if (typeof dateInput.seconds === 'number') {
-                date = new Date(dateInput.seconds * 1000);
-            } else if (dateInput._seconds !== undefined) {
-                date = new Date(dateInput._seconds * 1000);
-            } else {
-                date = new Date(dateInput);
-            }
-        } else if (typeof dateInput === 'string') {
-            date = new Date(dateInput);
-        } else if (typeof dateInput === 'number') {
-            date = new Date(dateInput < 10000000000 ? dateInput * 1000 : dateInput);
-        } else {
-            date = new Date(dateInput);
-        }
-
-        // Validate date
-        if (!date || isNaN(date.getTime())) {
-            console.warn('Invalid date in formatTicketDate:', dateInput);
-            return 'Unknown';
-        }
-
-        const now = new Date();
-        const diffMs = now - date;
-        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-        const diffDays = Math.floor(diffHours / 24);
-
-        if (diffHours < 1) return 'Just now';
-        if (diffHours < 24) return `${diffHours}h ago`;
-        if (diffDays === 1) return 'Yesterday';
-        if (diffDays < 7) return `${diffDays}d ago`;
-
-        return date.toLocaleDateString([], {
-            month: 'short',
-            day: 'numeric',
-            year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
-        });
-
-    } catch (error) {
-        console.error('formatTicketDate error:', error, 'Input:', dateInput);
-        return 'Unknown';
-    }
-}
 // FAQ Toggle Function
 function toggleFAQ(faqItem) {
     const answer = faqItem.querySelector('.faq-answer');
@@ -3871,182 +3203,3 @@ function toggleFAQ(faqItem) {
         icon.classList.add('fa-chevron-up');
     }
 }
-
-
-const supportStyles = `<style>
-/* Support Ticket Styles */
-.support-ticket-card {
-    background: white;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    padding: 1.5rem;
-    margin-bottom: 1rem;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    position: relative;
-}
-.support-ticket-card:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    transform: translateY(-2px);
-}
-.support-ticket-card.unread {
-    border-left: 4px solid #3b82f6;
-    background: linear-gradient(90deg, rgba(59, 130, 246, 0.05), transparent);
-}
-.ticket-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 1rem;
-}
-.ticket-info h4 {
-    margin: 0 0 0.5rem 0;
-    color: #111827;
-}
-.ticket-meta {
-    display: flex;
-    gap: 1rem;
-    font-size: 0.875rem;
-    color: #6b7280;
-}
-.ticket-id {
-    font-family: monospace;
-    background: #f3f4f6;
-    padding: 2px 6px;
-    border-radius: 4px;
-}
-.ticket-priority {
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-weight: 500;
-}
-.priority-low {
-    background: #d1fae5;
-    color: #065f46;
-}
-.priority-medium {
-    background: #fed7aa;
-    color: #92400e;
-}
-.priority-high {
-    background: #fecaca;
-    color: #991b1b;
-}
-.priority-critical {
-    background: #dc2626;
-    color: white;
-}
-.ticket-status {
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 0.875rem;
-    font-weight: 500;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-.status-success {
-    background: #d1fae5;
-    color: #065f46;
-}
-.status-warning {
-    background: #fef3c7;
-    color: #92400e;
-}
-.status-info {
-    background: #dbeafe;
-    color: #1e40af;
-}
-.ticket-preview {
-    color: #4b5563;
-    margin: 0.5rem 0;
-    line-height: 1.5;
-}
-.unread-badge {
-    position: absolute;
-    top: 1rem;
-    right: 1rem;
-    background: #3b82f6;
-    color: white;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 0.75rem;
-    font-weight: 600;
-}
-.ticket-last-reply {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-top: 0.75rem;
-    padding-top: 0.75rem;
-    border-top: 1px solid #e5e7eb;
-    font-size: 0.875rem;
-    color: #6b7280;
-}
-/* Ticket Messages */
-.ticket-messages {
-    margin: 1.5rem 0;
-}
-.messages-list {
-    max-height: 400px;
-    overflow-y: auto;
-    padding: 1rem;
-    background: #f9fafb;
-    border-radius: 8px;
-}
-.ticket-message {
-    margin-bottom: 1rem;
-    padding: 1rem;
-    background: white;
-    border-radius: 8px;
-    border: 1px solid #e5e7eb;
-}
-.ticket-message.admin-message {
-    background: linear-gradient(135deg, #fef3c7, #fef9c3);
-    border-color: #fbbf24;
-}
-.message-header {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 0.5rem;
-}
-.message-author {
-    font-weight: 600;
-    color: #111827;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-.message-time {
-    font-size: 0.875rem;
-    color: #6b7280;
-}
-.message-body {
-    color: #374151;
-    line-height: 1.6;
-    white-space: pre-wrap;
-}
-/* Ticket Reply Form */
-.ticket-reply-form {
-    margin-top: 1rem;
-}
-.ticket-resolved-notice {
-    text-align: center;
-    padding: 2rem;
-    background: #f0fdf4;
-    border-radius: 8px;
-    color: #065f46;
-}
-.ticket-resolved-notice i {
-    font-size: 3rem;
-    margin-bottom: 1rem;
-}
-/* Support Actions */
-.support-actions {
-    margin-top: 1rem;
-    display: flex;
-    gap: 1rem;
-}
-</style>`;
-
-document.head.insertAdjacentHTML('beforeend', supportStyles);
