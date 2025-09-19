@@ -2262,85 +2262,6 @@ function getAvatarColor(name) {
     return colors[index];
 }
 
-function formatDetailedTimestamp(date) {
-    try {
-        if (!date) return 'Unknown time';
-        let msgDate;
-        if (date && typeof date === 'object' && typeof date.toDate === 'function') msgDate = date.toDate();
-        else if (date && typeof date === 'object' && date.seconds !== undefined) msgDate = new Date(date.seconds * 1000);
-        else if (date instanceof Date) msgDate = date;
-        else if (typeof date === 'string') msgDate = new Date(date);
-        else if (typeof date === 'number') msgDate = new Date(date);
-        else return 'Invalid time';
-        if (!msgDate || isNaN(msgDate.getTime())) return 'Invalid date';
-        const now = new Date();
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const msgDay = new Date(msgDate.getFullYear(), msgDate.getMonth(), msgDate.getDate());
-        const time = msgDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-        if (today.getTime() === msgDay.getTime()) return time;
-        const yesterday = new Date(today);
-        yesterday.setDate(today.getDate() - 1);
-        if (yesterday.getTime() === msgDay.getTime()) return `Yesterday, ${time}`;
-        return `${msgDate.toLocaleDateString()}, ${time}`;
-    } catch (error) {
-        console.error('formatDetailedTimestamp error:', error, 'Input:', date);
-        return 'Invalid date';
-    }
-}
-
-function formatMessageTimestamp(date) {
-    try {
-        if (!date) return 'Unknown time';
-        let msgDate;
-        if (date && typeof date === 'object' && typeof date.toDate === 'function') msgDate = date.toDate();
-        else if (date && typeof date === 'object' && date.seconds !== undefined) msgDate = new Date(date.seconds * 1000);
-        else if (date instanceof Date) msgDate = date;
-        else if (typeof date === 'string') msgDate = new Date(date);
-        else if (typeof date === 'number') msgDate = new Date(date);
-        else return 'Invalid time';
-        if (!msgDate || isNaN(msgDate.getTime())) return 'Invalid date';
-        const now = new Date();
-        const diffS = Math.floor((now - msgDate) / 1000);
-        const diffM = Math.floor(diffS / 60);
-        const diffH = Math.floor(diffM / 60);
-        const diffD = Math.floor(diffH / 24);
-        if (diffS < 30) return 'Just now';
-        if (diffM < 60) return `${diffM}m ago`;
-        if (diffH < 24) return `${diffH}h ago`;
-        if (diffD === 1) return 'Yesterday';
-        if (diffD < 7) return `${diffD}d ago`;
-        return msgDate.toLocaleDateString();
-    } catch (error) {
-        console.error('formatMessageTimestamp error:', error, 'Input:', date);
-        return 'Invalid date';
-    }
-}
-
-function formatMessageDate(date) {
-    try {
-        if (!date) return 'Unknown Date';
-        let msgDate;
-        if (date && typeof date === 'object' && typeof date.toDate === 'function') msgDate = date.toDate();
-        else if (date && typeof date === 'object' && date.seconds !== undefined) msgDate = new Date(date.seconds * 1000);
-        else if (date instanceof Date) msgDate = date;
-        else if (typeof date === 'string') msgDate = new Date(date);
-        else if (typeof date === 'number') msgDate = new Date(date);
-        else return 'Unknown Date';
-        if (!msgDate || isNaN(msgDate.getTime())) return 'Unknown Date';
-        const now = new Date();
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const msgDay = new Date(msgDate.getFullYear(), msgDate.getMonth(), msgDate.getDate());
-        if (today.getTime() === msgDay.getTime()) return 'Today';
-        const yesterday = new Date(today);
-        yesterday.setDate(today.getDate() - 1);
-        if (yesterday.getTime() === msgDay.getTime()) return 'Yesterday';
-        return msgDate.toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' });
-    } catch (error) {
-        console.error('formatMessageDate error:', error, 'Input:', date);
-        return 'Unknown Date';
-    }
-}
-
 async function renderConversationView(conversationOrId) {
     let convo;
     if (typeof conversationOrId === 'string') convo = appState.conversations.find(c => c.id === conversationOrId) || { id: conversationOrId };
@@ -2573,28 +2494,6 @@ function showLandingPageView() {
         <a href="#why-steelconnect" class="nav-link">Why Choose Us</a><a href="#showcase" class="nav-link">Showcase</a>`;
 }
 
-function buildSidebarNav() {
-    const nav = document.getElementById('sidebar-nav-menu');
-    const role = appState.currentUser.type;
-    let links = `<a href="#" class="sidebar-nav-link" data-section="dashboard"><i class="fas fa-tachometer-alt fa-fw"></i><span>Dashboard</span></a>`;
-    if (role === 'designer') {
-        links += `<a href="#" class="sidebar-nav-link" data-section="jobs"><i class="fas fa-search fa-fw"></i><span>Find Projects</span></a>
-                  <a href="#" class="sidebar-nav-link" data-section="my-quotes"><i class="fas fa-file-invoice-dollar fa-fw"></i><span>My Quotes</span></a>`;
-    } else {
-        links += `<a href="#" class="sidebar-nav-link" data-section="jobs"><i class="fas fa-tasks fa-fw"></i><span>My Projects</span></a>
-                  <a href="#" class="sidebar-nav-link" data-section="approved-jobs"><i class="fas fa-check-circle fa-fw"></i><span>Approved Projects</span></a>
-                  <a href="#" class="sidebar-nav-link" data-section="post-job"><i class="fas fa-plus-circle fa-fw"></i><span>Post Project</span></a>
-                  <a href="#" class="sidebar-nav-link" data-section="estimation-tool"><i class="fas fa-calculator fa-fw"></i><span>AI Estimation</span></a>
-                  <a href="#" class="sidebar-nav-link" data-section="my-estimations"><i class="fas fa-file-invoice fa-fw"></i><span>My Estimations</span></a>`;
-    }
-    links += `<a href="#" class="sidebar-nav-link" data-section="messages"><i class="fas fa-comments fa-fw"></i><span>Messages</span></a>
-              <hr class="sidebar-divider"><a href="#" class="sidebar-nav-link" data-section="settings"><i class="fas fa-cog fa-fw"></i><span>Settings</span></a>`;
-    nav.innerHTML = links;
-    nav.querySelectorAll('.sidebar-nav-link').forEach(link => {
-        link.addEventListener('click', (e) => { e.preventDefault(); renderAppSection(link.dataset.section); });
-    });
-}
-
 // --- PROFILE & ROUTING FUNCTIONS ---
 
 async function checkProfileAndRoute() {
@@ -2670,6 +2569,9 @@ function renderAppSection(sectionId) {
         container.innerHTML = getEstimationToolTemplate();
         setupEstimationToolEventListeners();
     } else if (sectionId === 'my-estimations') fetchAndRenderMyEstimations();
+    else if (sectionId === 'support') {
+        renderSupportSection();
+    }
 }
 
 function getRestrictedAccessTemplate(sectionId, profileStatus) {
@@ -3118,3 +3020,658 @@ function getSettingsTemplate(user) {
             <div class="settings-card"><h3><i class="fas fa-shield-alt"></i> Security</h3><form class="premium-form" onsubmit="event.preventDefault(); showNotification('Password functionality not implemented.', 'info');"><div class="form-group"><label class="form-label">New Password</label><input type="password" class="form-input"></div><button type="submit" class="btn btn-primary">Change Password</button></form></div>
         </div>`;
 }
+
+// ===================================
+// NEW AND UPDATED FUNCTIONS
+// ===================================
+
+// FIXED TIMESTAMP FUNCTIONS
+function formatDetailedTimestamp(date) {
+    try {
+        if (!date) return 'Unknown time';
+        
+        let msgDate;
+        
+        // Handle Firestore Timestamp objects
+        if (date && typeof date === 'object' && typeof date.toDate === 'function') {
+            msgDate = date.toDate();
+        }
+        // Handle Firestore-like objects with seconds
+        else if (date && typeof date === 'object' && typeof date.seconds === 'number') {
+            msgDate = new Date(date.seconds * 1000 + (date.nanoseconds || 0) / 1000000);
+        }
+        // Handle Date objects
+        else if (date instanceof Date) {
+            msgDate = date;
+        }
+        // Handle ISO strings
+        else if (typeof date === 'string') {
+            msgDate = new Date(date);
+        }
+        // Handle timestamps (milliseconds)
+        else if (typeof date === 'number') {
+            // If number is too small, assume it's seconds and convert to milliseconds
+            msgDate = new Date(date < 10000000000 ? date * 1000 : date);
+        }
+        else {
+            console.warn('Unknown date format:', date);
+            return 'Invalid time';
+        }
+
+        // Validate the date
+        if (!msgDate || isNaN(msgDate.getTime())) {
+            console.warn('Invalid date created from:', date);
+            return 'Invalid date';
+        }
+
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const msgDay = new Date(msgDate.getFullYear(), msgDate.getMonth(), msgDate.getDate());
+        
+        const time = msgDate.toLocaleTimeString([], { 
+            hour: '2-digit', 
+            minute: '2-digit', 
+            hour12: true 
+        });
+
+        // Today
+        if (today.getTime() === msgDay.getTime()) {
+            return time;
+        }
+
+        // Yesterday
+        const yesterday = new Date(today);
+        yesterday.setDate(today.getDate() - 1);
+        if (yesterday.getTime() === msgDay.getTime()) {
+            return `Yesterday, ${time}`;
+        }
+
+        // Older dates
+        return `${msgDate.toLocaleDateString([], {
+            month: 'short',
+            day: 'numeric',
+            year: msgDate.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+        })}, ${time}`;
+
+    } catch (error) {
+        console.error('formatDetailedTimestamp error:', error, 'Input:', date);
+        return 'Invalid date';
+    }
+}
+
+function formatMessageTimestamp(date) {
+    try {
+        if (!date) return 'Unknown time';
+        
+        let msgDate;
+        
+        // Handle Firestore Timestamp objects
+        if (date && typeof date === 'object' && typeof date.toDate === 'function') {
+            msgDate = date.toDate();
+        }
+        // Handle Firestore-like objects with seconds
+        else if (date && typeof date === 'object' && typeof date.seconds === 'number') {
+            msgDate = new Date(date.seconds * 1000 + (date.nanoseconds || 0) / 1000000);
+        }
+        // Handle Date objects
+        else if (date instanceof Date) {
+            msgDate = date;
+        }
+        // Handle ISO strings
+        else if (typeof date === 'string') {
+            msgDate = new Date(date);
+        }
+        // Handle timestamps (milliseconds)
+        else if (typeof date === 'number') {
+            // If number is too small, assume it's seconds and convert to milliseconds
+            msgDate = new Date(date < 10000000000 ? date * 1000 : date);
+        }
+        else {
+            console.warn('Unknown date format:', date);
+            return 'Invalid time';
+        }
+
+        // Validate the date
+        if (!msgDate || isNaN(msgDate.getTime())) {
+            console.warn('Invalid date created from:', date);
+            return 'Invalid date';
+        }
+
+        const now = new Date();
+        const diffMs = now - msgDate;
+        const diffSeconds = Math.floor(diffMs / 1000);
+        const diffMinutes = Math.floor(diffSeconds / 60);
+        const diffHours = Math.floor(diffMinutes / 60);
+        const diffDays = Math.floor(diffHours / 24);
+
+        if (diffSeconds < 30) return 'Just now';
+        if (diffMinutes < 60) return `${diffMinutes}m ago`;
+        if (diffHours < 24) return `${diffHours}h ago`;
+        if (diffDays === 1) return 'Yesterday';
+        if (diffDays < 7) return `${diffDays}d ago`;
+        
+        return msgDate.toLocaleDateString([], {
+            month: 'short',
+            day: 'numeric',
+            year: msgDate.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+        });
+
+    } catch (error) {
+        console.error('formatMessageTimestamp error:', error, 'Input:', date);
+        return 'Invalid date';
+    }
+}
+
+function formatMessageDate(date) {
+    try {
+        if (!date) return 'Unknown Date';
+        
+        let msgDate;
+        
+        // Handle Firestore Timestamp objects
+        if (date && typeof date === 'object' && typeof date.toDate === 'function') {
+            msgDate = date.toDate();
+        }
+        // Handle Firestore-like objects with seconds
+        else if (date && typeof date === 'object' && typeof date.seconds === 'number') {
+            msgDate = new Date(date.seconds * 1000 + (date.nanoseconds || 0) / 1000000);
+        }
+        // Handle Date objects
+        else if (date instanceof Date) {
+            msgDate = date;
+        }
+        // Handle ISO strings
+        else if (typeof date === 'string') {
+            msgDate = new Date(date);
+        }
+        // Handle timestamps (milliseconds)
+        else if (typeof date === 'number') {
+            // If number is too small, assume it's seconds and convert to milliseconds
+            msgDate = new Date(date < 10000000000 ? date * 1000 : date);
+        }
+        else {
+            console.warn('Unknown date format:', date);
+            return 'Unknown Date';
+        }
+
+        // Validate the date
+        if (!msgDate || isNaN(msgDate.getTime())) {
+            console.warn('Invalid date created from:', date);
+            return 'Unknown Date';
+        }
+
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const msgDay = new Date(msgDate.getFullYear(), msgDate.getMonth(), msgDate.getDate());
+
+        if (today.getTime() === msgDay.getTime()) {
+            return 'Today';
+        }
+
+        const yesterday = new Date(today);
+        yesterday.setDate(today.getDate() - 1);
+        if (yesterday.getTime() === msgDay.getTime()) {
+            return 'Yesterday';
+        }
+
+        return msgDate.toLocaleDateString([], { 
+            month: 'long', 
+            day: 'numeric', 
+            year: msgDate.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+        });
+
+    } catch (error) {
+        console.error('formatMessageDate error:', error, 'Input:', date);
+        return 'Unknown Date';
+    }
+}
+
+// ENHANCED SIDEBAR NAVIGATION WITH SUPPORT
+function buildSidebarNav() {
+    const nav = document.getElementById('sidebar-nav-menu');
+    const role = appState.currentUser.type;
+    
+    let links = `<a href="#" class="sidebar-nav-link" data-section="dashboard">
+                    <i class="fas fa-tachometer-alt fa-fw"></i>
+                    <span>Dashboard</span>
+                 </a>`;
+    
+    if (role === 'designer') {
+        links += `
+            <a href="#" class="sidebar-nav-link" data-section="jobs">
+                <i class="fas fa-search fa-fw"></i>
+                <span>Find Projects</span>
+            </a>
+            <a href="#" class="sidebar-nav-link" data-section="my-quotes">
+                <i class="fas fa-file-invoice-dollar fa-fw"></i>
+                <span>My Quotes</span>
+            </a>`;
+    } else {
+        links += `
+            <a href="#" class="sidebar-nav-link" data-section="jobs">
+                <i class="fas fa-tasks fa-fw"></i>
+                <span>My Projects</span>
+            </a>
+            <a href="#" class="sidebar-nav-link" data-section="approved-jobs">
+                <i class="fas fa-check-circle fa-fw"></i>
+                <span>Approved Projects</span>
+            </a>
+            <a href="#" class="sidebar-nav-link" data-section="post-job">
+                <i class="fas fa-plus-circle fa-fw"></i>
+                <span>Post Project</span>
+            </a>
+            <a href="#" class="sidebar-nav-link" data-section="estimation-tool">
+                <i class="fas fa-calculator fa-fw"></i>
+                <span>AI Estimation</span>
+            </a>
+            <a href="#" class="sidebar-nav-link" data-section="my-estimations">
+                <i class="fas fa-file-invoice fa-fw"></i>
+                <span>My Estimations</span>
+            </a>`;
+    }
+    
+    // Common links for both user types
+    links += `
+        <a href="#" class="sidebar-nav-link" data-section="messages">
+            <i class="fas fa-comments fa-fw"></i>
+            <span>Messages</span>
+        </a>
+        <hr class="sidebar-divider">
+        <a href="#" class="sidebar-nav-link" data-section="support">
+            <i class="fas fa-life-ring fa-fw"></i>
+            <span>Support</span>
+        </a>
+        <a href="#" class="sidebar-nav-link" data-section="settings">
+            <i class="fas fa-cog fa-fw"></i>
+            <span>Settings</span>
+        </a>`;
+        
+    nav.innerHTML = links;
+    
+    // Add event listeners
+    nav.querySelectorAll('.sidebar-nav-link').forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            renderAppSection(link.dataset.section);
+        });
+    });
+}
+
+// --- SUPPORT SECTION FUNCTIONS ---
+function renderSupportSection() {
+    const container = document.getElementById('app-container');
+    
+    container.innerHTML = `
+        <div class="section-header modern-header">
+            <div class="header-content">
+                <h2><i class="fas fa-life-ring"></i> Support Center</h2>
+                <p class="header-subtitle">Get help and contact our support team</p>
+            </div>
+        </div>
+        
+        <div class="support-container">
+            <div class="support-section">
+                <h3><i class="fas fa-question-circle"></i> Frequently Asked Questions</h3>
+                <div class="faq-grid">
+                    <div class="faq-item" onclick="toggleFAQ(this)">
+                        <div class="faq-question">
+                            <h4>How do I post a project?</h4>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            <p>Navigate to "Post Project" in the sidebar, fill out the project details, and click submit. Your project will be visible to designers once approved.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="faq-item" onclick="toggleFAQ(this)">
+                        <div class="faq-question">
+                            <h4>How does the AI estimation work?</h4>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            <p>Upload your project drawings and specifications. Our AI analyzes the documents and provides cost estimates based on current market rates and material costs.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="faq-item" onclick="toggleFAQ(this)">
+                        <div class="faq-question">
+                            <h4>How do I communicate with designers/clients?</h4>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            <p>Use the Messages section to communicate directly with other users. Conversations are automatically created when quotes are submitted or approved.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="faq-item" onclick="toggleFAQ(this)">
+                        <div class="faq-question">
+                            <h4>What file formats are supported?</h4>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            <p>We support PDF, DWG, DOC, DOCX, JPG, PNG, XLS, XLSX, and TXT files. Maximum file size is 15MB per file.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="support-section">
+                <h3><i class="fas fa-envelope"></i> Contact Support</h3>
+                <div class="contact-support-card">
+                    <div class="support-intro">
+                        <p>Can't find what you're looking for? Send us a message and our support team will get back to you within 24 hours.</p>
+                    </div>
+                    
+                    <form id="support-form" class="premium-form support-form">
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-tag"></i> Subject
+                            </label>
+                            <select class="form-select" name="subject" required>
+                                <option value="" disabled selected>Select a topic</option>
+                                <option value="Technical Issue">Technical Issue</option>
+                                <option value="Account Problem">Account Problem</option>
+                                <option value="Payment Issue">Payment Issue</option>
+                                <option value="Project Help">Project Help</option>
+                                <option value="AI Estimation">AI Estimation</option>
+                                <option value="Profile/Verification">Profile/Verification</option>
+                                <option value="Feature Request">Feature Request</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-exclamation-circle"></i> Priority
+                            </label>
+                            <select class="form-select" name="priority" required>
+                                <option value="" disabled selected>Select priority</option>
+                                <option value="Low">Low - General question</option>
+                                <option value="Medium">Medium - Need help soon</option>
+                                <option value="High">High - Urgent issue</option>
+                                <option value="Critical">Critical - System down</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-file-alt"></i> Description
+                            </label>
+                            <textarea
+                                 class="form-textarea"
+                                 name="message"
+                                 required
+                                 rows="6"
+                                placeholder="Please describe your issue or question in detail. Include any error messages, steps you tried, or specific information that might help us assist you better."
+                            ></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-paperclip"></i> Attachments (Optional)
+                            </label>
+                            <div class="custom-file-input-wrapper">
+                                <input
+                                     type="file"
+                                     name="attachments"
+                                     id="support-attachments-input"
+                                    onchange="handleSupportFileChange(event)"
+                                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.txt"
+                                     multiple
+                                >
+                                <div class="custom-file-input">
+                                    <span class="custom-file-input-label">
+                                        <i class="fas fa-upload"></i>
+                                        <span id="support-attachments-label">Click to upload screenshots or files</span>
+                                    </span>
+                                </div>
+                            </div>
+                            <div id="support-attachments-list" class="file-list-container"></div>
+                            <small class="form-help">
+                                Upload screenshots, error logs, or relevant files. Max 5 files, 10MB each.
+                            </small>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary btn-large">
+                                <i class="fas fa-paper-plane"></i>
+                                 Send Support Request
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="support-section">
+                <h3><i class="fas fa-book"></i> Resources</h3>
+                <div class="resources-grid">
+                    <div class="resource-card">
+                        <i class="fas fa-play-circle"></i>
+                        <h4>Video Tutorials</h4>
+                        <p>Watch step-by-step guides</p>
+                        <button class="btn btn-outline" onclick="showNotification('Video tutorials coming soon!', 'info')">
+                            Coming Soon
+                        </button>
+                    </div>
+                    
+                    <div class="resource-card">
+                        <i class="fas fa-download"></i>
+                        <h4>User Guide</h4>
+                        <p>Download comprehensive manual</p>
+                        <button class="btn btn-outline" onclick="showNotification('User guide coming soon!', 'info')">
+                            Coming Soon
+                        </button>
+                    </div>
+                    
+                    <div class="resource-card">
+                        <i class="fas fa-comments"></i>
+                        <h4>Community</h4>
+                        <p>Connect with other users</p>
+                        <button class="btn btn-outline" onclick="showNotification('Community forum coming soon!', 'info')">
+                            Coming Soon
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Setup form submission
+    document.getElementById('support-form').addEventListener('submit', handleSupportSubmit);
+    
+    // Setup file drag and drop
+    setupSupportFileDragDrop();
+}
+
+// Support file handling
+let supportFiles = [];
+
+function handleSupportFileChange(event) {
+    const input = event.target;
+    const files = Array.from(input.files);
+    
+    // Validate file count
+    if (supportFiles.length + files.length > 5) {
+        showNotification('Maximum 5 files allowed for support requests', 'warning');
+        return;
+    }
+    
+    // Validate file size (10MB limit)
+    const maxSize = 10 * 1024 * 1024;
+    const invalidFiles = files.filter(file => file.size > maxSize);
+    if (invalidFiles.length > 0) {
+        showNotification(`Some files exceed 10MB limit: ${invalidFiles.map(f => f.name).join(', ')}`, 'error');
+        return;
+    }
+    
+    supportFiles.push(...files);
+    renderSupportFileList();
+}
+
+function removeSupportFile(index) {
+    supportFiles.splice(index, 1);
+    renderSupportFileList();
+}
+
+function renderSupportFileList() {
+    const container = document.getElementById('support-attachments-list');
+    const label = document.getElementById('support-attachments-label');
+    
+    if (!container || !label) return;
+    
+    if (supportFiles.length === 0) {
+        container.innerHTML = '';
+        label.textContent = 'Click to upload screenshots or files';
+        return;
+    }
+    
+    container.innerHTML = supportFiles.map((file, index) => `
+        <div class="file-list-item">
+            <div class="file-list-item-info">
+                <i class="fas ${getSupportFileIcon(file)}"></i>
+                <span>${file.name}</span>
+                <span class="file-size">(${(file.size / (1024 * 1024)).toFixed(2)}MB)</span>
+            </div>
+            <button type="button" class="remove-file-button" onclick="removeSupportFile(${index})">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `).join('');
+    
+    label.textContent = `${supportFiles.length} file(s) selected`;
+}
+
+function getSupportFileIcon(file) {
+    const ext = file.name.toLowerCase().split('.').pop();
+    const iconMap = {
+        'pdf': 'fa-file-pdf',
+        'doc': 'fa-file-word',
+        'docx': 'fa-file-word',
+        'txt': 'fa-file-alt',
+        'jpg': 'fa-file-image',
+        'jpeg': 'fa-file-image',
+        'png': 'fa-file-image'
+    };
+    return iconMap[ext] || 'fa-file';
+}
+
+function setupSupportFileDragDrop() {
+    const wrapper = document.querySelector('#support-form .custom-file-input-wrapper');
+    if (!wrapper) return;
+    const customInput = wrapper.querySelector('.custom-file-input');
+    const realInput = wrapper.querySelector('input[type="file"]');
+    
+    if (customInput && realInput) {
+        customInput.addEventListener('click', () => realInput.click());
+        
+        customInput.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            customInput.classList.add('drag-over');
+        });
+        
+        customInput.addEventListener('dragleave', () => {
+            customInput.classList.remove('drag-over');
+        });
+        
+        customInput.addEventListener('drop', (e) => {
+            e.preventDefault();
+            customInput.classList.remove('drag-over');
+            if (e.dataTransfer.files.length > 0) {
+                const event = {
+                    target: {
+                        files: e.dataTransfer.files
+                    }
+                };
+                handleSupportFileChange(event);
+            }
+        });
+    }
+}
+
+async function handleSupportSubmit(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    
+    submitBtn.innerHTML = '<div class="btn-spinner"></div> Sending...';
+    submitBtn.disabled = true;
+    
+    try {
+        const formData = new FormData();
+        formData.append('subject', form.subject.value);
+        formData.append('priority', form.priority.value);
+        formData.append('message', form.message.value);
+        formData.append('userType', appState.currentUser.type);
+        formData.append('userName', appState.currentUser.name);
+        formData.append('userEmail', appState.currentUser.email);
+        
+        // Add files if any
+        if (supportFiles && supportFiles.length > 0) {
+            for (let i = 0; i < supportFiles.length; i++) {
+                formData.append('attachments', supportFiles[i]);
+            }
+        }
+        
+        // Send to support endpoint (this will create a message for admin)
+        await apiCall('/support/submit', 'POST', formData, 'Support request submitted successfully!');
+        
+        addLocalNotification(
+            'Support Request Sent', 
+            'Your support request has been submitted. We\'ll get back to you within 24 hours.', 
+            'success'
+        );
+        
+        // Reset form and files
+        form.reset();
+        supportFiles = [];
+        renderSupportFileList();
+        
+    } catch (error) {
+        addLocalNotification('Error', 'Failed to submit support request. Please try again.', 'error');
+    } finally {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    }
+}
+
+// FAQ Toggle Function
+function toggleFAQ(faqItem) {
+    const answer = faqItem.querySelector('.faq-answer');
+    const icon = faqItem.querySelector('.fas');
+    
+    // Close other open FAQs
+    document.querySelectorAll('.faq-item').forEach(item => {
+        if (item !== faqItem) {
+            item.querySelector('.faq-answer').style.display = 'none';
+            item.querySelector('.fas').classList.remove('fa-chevron-up');
+            item.querySelector('.fas').classList.add('fa-chevron-down');
+        }
+    });
+    
+    // Toggle current FAQ
+    if (answer.style.display === 'block') {
+        answer.style.display = 'none';
+        icon.classList.remove('fa-chevron-up');
+        icon.classList.add('fa-chevron-down');
+    } else {
+        answer.style.display = 'block';
+        icon.classList.remove('fa-chevron-down');
+        icon.classList.add('fa-chevron-up');
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+Gemini can m
