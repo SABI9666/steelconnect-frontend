@@ -59,6 +59,7 @@ const appState = {
     currentHeaderSlide: 0,
     notifications: [],
     profileFiles: {}, // For profile completion uploads
+    supportTickets: [], // For support ticket system
 };
 
 
@@ -578,7 +579,7 @@ function getNotificationIcon(type) {
         info: 'fa-info-circle', success: 'fa-check-circle', warning: 'fa-exclamation-triangle',
         error: 'fa-times-circle', message: 'fa-comment-alt', job: 'fa-briefcase',
         quote: 'fa-file-invoice-dollar', estimation: 'fa-calculator', profile: 'fa-user-circle',
-        user: 'fa-user', file: 'fa-paperclip'
+        user: 'fa-user', file: 'fa-paperclip', support: 'fa-life-ring'
     };
     return iconMap[type] || 'fa-info-circle';
 }
@@ -587,7 +588,7 @@ function getNotificationColor(type) {
     const colorMap = {
         info: '#3b82f6', success: '#10b981', warning: '#f59e0b', error: '#ef4444',
         message: '#8b5cf6', job: '#06b6d4', quote: '#f97316', estimation: '#84cc16',
-        profile: '#6366f1', user: '#64748b', file: '#94a3b8'
+        profile: '#6366f1', user: '#64748b', file: '#94a3b8', support: '#ec4899'
     };
     return colorMap[type] || '#6b7280';
 }
@@ -692,6 +693,13 @@ function getNotificationActionButtons(notification) {
                 buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); renderAppSection('profile-completion')"><i class="fas fa-edit"></i> Update Profile</button>`;
             }
             break;
+        case 'support':
+            if (metadata?.action === 'support_reply' && metadata?.ticketId) {
+                buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); viewSupportTicket('${metadata.ticketId}')"><i class="fas fa-eye"></i> View Ticket</button>`;
+            } else {
+                buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); renderAppSection('support')"><i class="fas fa-life-ring"></i> Go to Support</button>`;
+            }
+            break;
     }
     return buttons ? `<div class="notification-actions">${buttons}</div>` : '';
 }
@@ -719,6 +727,13 @@ function handleNotificationClick(notificationId, type, metadata) {
         case 'profile':
             if (metadata.action === 'profile_rejected') renderAppSection('profile-completion');
             else renderAppSection('settings');
+            break;
+        case 'support':
+            if (metadata.action === 'support_reply' && metadata.ticketId) {
+                viewSupportTicket(metadata.ticketId);
+            } else {
+                renderAppSection('support');
+            }
             break;
         default:
             renderAppSection('dashboard');
@@ -3298,7 +3313,7 @@ function buildSidebarNav() {
 }
 
 // --- SUPPORT SECTION FUNCTIONS ---
-function renderSupportSection() {
+async function renderSupportSection() {
     const container = document.getElementById('app-container');
     
     container.innerHTML = `
@@ -3310,6 +3325,17 @@ function renderSupportSection() {
         </div>
         
         <div class="support-container">
+             <div class="support-section">
+                <h3><i class="fas fa-ticket-alt"></i> My Support Tickets</h3>
+                <div id="support-tickets-container">
+                    <div class="loading-spinner"><div class="spinner"></div><p>Loading tickets...</p></div>
+                </div>
+                <div class="support-actions">
+                    <button class="btn btn-primary" onclick="showNewTicketModal()">
+                        <i class="fas fa-plus"></i> New Support Ticket
+                    </button>
+                </div>
+            </div>
             <div class="support-section">
                 <h3><i class="fas fa-question-circle"></i> Frequently Asked Questions</h3>
                 <div class="faq-grid">
@@ -3356,93 +3382,6 @@ function renderSupportSection() {
             </div>
             
             <div class="support-section">
-                <h3><i class="fas fa-envelope"></i> Contact Support</h3>
-                <div class="contact-support-card">
-                    <div class="support-intro">
-                        <p>Can't find what you're looking for? Send us a message and our support team will get back to you within 24 hours.</p>
-                    </div>
-                    
-                    <form id="support-form" class="premium-form support-form">
-                        <div class="form-group">
-                            <label class="form-label">
-                                <i class="fas fa-tag"></i> Subject
-                            </label>
-                            <select class="form-select" name="subject" required>
-                                <option value="" disabled selected>Select a topic</option>
-                                <option value="Technical Issue">Technical Issue</option>
-                                <option value="Account Problem">Account Problem</option>
-                                <option value="Payment Issue">Payment Issue</option>
-                                <option value="Project Help">Project Help</option>
-                                <option value="AI Estimation">AI Estimation</option>
-                                <option value="Profile/Verification">Profile/Verification</option>
-                                <option value="Feature Request">Feature Request</option>
-                                <option value="Other">Other</option>
-                            </select>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label">
-                                <i class="fas fa-exclamation-circle"></i> Priority
-                            </label>
-                            <select class="form-select" name="priority" required>
-                                <option value="" disabled selected>Select priority</option>
-                                <option value="Low">Low - General question</option>
-                                <option value="Medium">Medium - Need help soon</option>
-                                <option value="High">High - Urgent issue</option>
-                                <option value="Critical">Critical - System down</option>
-                            </select>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label">
-                                <i class="fas fa-file-alt"></i> Description
-                            </label>
-                            <textarea
-                                 class="form-textarea"
-                                 name="message"
-                                 required
-                                 rows="6"
-                                placeholder="Please describe your issue or question in detail. Include any error messages, steps you tried, or specific information that might help us assist you better."
-                            ></textarea>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label">
-                                <i class="fas fa-paperclip"></i> Attachments (Optional)
-                            </label>
-                            <div class="custom-file-input-wrapper">
-                                <input
-                                     type="file"
-                                     name="attachments"
-                                     id="support-attachments-input"
-                                    onchange="handleSupportFileChange(event)"
-                                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.txt"
-                                     multiple
-                                >
-                                <div class="custom-file-input">
-                                    <span class="custom-file-input-label">
-                                        <i class="fas fa-upload"></i>
-                                        <span id="support-attachments-label">Click to upload screenshots or files</span>
-                                    </span>
-                                </div>
-                            </div>
-                            <div id="support-attachments-list" class="file-list-container"></div>
-                            <small class="form-help">
-                                Upload screenshots, error logs, or relevant files. Max 5 files, 10MB each.
-                            </small>
-                        </div>
-                        
-                        <div class="form-actions">
-                            <button type="submit" class="btn btn-primary btn-large">
-                                <i class="fas fa-paper-plane"></i>
-                                 Send Support Request
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-            
-            <div class="support-section">
                 <h3><i class="fas fa-book"></i> Resources</h3>
                 <div class="resources-grid">
                     <div class="resource-card">
@@ -3476,166 +3415,437 @@ function renderSupportSection() {
         </div>
     `;
     
-    // Setup form submission
-    document.getElementById('support-form').addEventListener('submit', handleSupportSubmit);
-    
-    // Setup file drag and drop
-    setupSupportFileDragDrop();
+    loadSupportTickets();
 }
 
-// Support file handling
-let supportFiles = [];
-
-function handleSupportFileChange(event) {
-    const input = event.target;
-    const files = Array.from(input.files);
-    
-    // Validate file count
-    if (supportFiles.length + files.length > 5) {
-        showNotification('Maximum 5 files allowed for support requests', 'warning');
-        return;
-    }
-    
-    // Validate file size (10MB limit)
-    const maxSize = 10 * 1024 * 1024;
-    const invalidFiles = files.filter(file => file.size > maxSize);
-    if (invalidFiles.length > 0) {
-        showNotification(`Some files exceed 10MB limit: ${invalidFiles.map(f => f.name).join(', ')}`, 'error');
-        return;
-    }
-    
-    supportFiles.push(...files);
-    renderSupportFileList();
-}
-
-function removeSupportFile(index) {
-    supportFiles.splice(index, 1);
-    renderSupportFileList();
-}
-
-function renderSupportFileList() {
-    const container = document.getElementById('support-attachments-list');
-    const label = document.getElementById('support-attachments-label');
-    
-    if (!container || !label) return;
-    
-    if (supportFiles.length === 0) {
-        container.innerHTML = '';
-        label.textContent = 'Click to upload screenshots or files';
-        return;
-    }
-    
-    container.innerHTML = supportFiles.map((file, index) => `
-        <div class="file-list-item">
-            <div class="file-list-item-info">
-                <i class="fas ${getSupportFileIcon(file)}"></i>
-                <span>${file.name}</span>
-                <span class="file-size">(${(file.size / (1024 * 1024)).toFixed(2)}MB)</span>
+async function loadSupportTickets() {
+    try {
+        const response = await apiCall('/support/tickets', 'GET');
+        const tickets = response.tickets || [];
+        appState.supportTickets = tickets;
+        renderSupportTickets();
+    } catch (error) {
+        console.error('Error loading support tickets:', error);
+        document.getElementById('support-tickets-container').innerHTML = `
+            <div class="error-state">
+                <i class="fas fa-exclamation-triangle"></i>
+                <p>Failed to load support tickets</p>
+                <button class="btn btn-outline" onclick="loadSupportTickets()">Retry</button>
             </div>
-            <button type="button" class="remove-file-button" onclick="removeSupportFile(${index})">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-    `).join('');
-    
-    label.textContent = `${supportFiles.length} file(s) selected`;
-}
-
-function getSupportFileIcon(file) {
-    const ext = file.name.toLowerCase().split('.').pop();
-    const iconMap = {
-        'pdf': 'fa-file-pdf',
-        'doc': 'fa-file-word',
-        'docx': 'fa-file-word',
-        'txt': 'fa-file-alt',
-        'jpg': 'fa-file-image',
-        'jpeg': 'fa-file-image',
-        'png': 'fa-file-image'
-    };
-    return iconMap[ext] || 'fa-file';
-}
-
-function setupSupportFileDragDrop() {
-    const wrapper = document.querySelector('#support-form .custom-file-input-wrapper');
-    if (!wrapper) return;
-    const customInput = wrapper.querySelector('.custom-file-input');
-    const realInput = wrapper.querySelector('input[type="file"]');
-    
-    if (customInput && realInput) {
-        customInput.addEventListener('click', () => realInput.click());
-        
-        customInput.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            customInput.classList.add('drag-over');
-        });
-        
-        customInput.addEventListener('dragleave', () => {
-            customInput.classList.remove('drag-over');
-        });
-        
-        customInput.addEventListener('drop', (e) => {
-            e.preventDefault();
-            customInput.classList.remove('drag-over');
-            if (e.dataTransfer.files.length > 0) {
-                const event = {
-                    target: {
-                        files: e.dataTransfer.files
-                    }
-                };
-                handleSupportFileChange(event);
-            }
-        });
+        `;
     }
 }
 
-async function handleSupportSubmit(event) {
+function renderSupportTickets() {
+    const container = document.getElementById('support-tickets-container');
+    const tickets = appState.supportTickets;
+
+    if (tickets.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-inbox"></i>
+                <h4>No Support Tickets</h4>
+                <p>You haven't created any support tickets yet.</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = tickets.map(ticket => {
+        const statusClass = ticket.status === 'resolved' ? 'success' :
+                           ticket.status === 'pending' ? 'warning' : 'info';
+        const statusIcon = ticket.status === 'resolved' ? 'fa-check-circle' :
+                           ticket.status === 'pending' ? 'fa-clock' : 'fa-reply';
+        const hasUnread = ticket.hasAdminReply && !ticket.lastReadByUser;
+
+        return `
+            <div class="support-ticket-card ${hasUnread ? 'unread' : ''}" onclick="viewSupportTicket('${ticket.id}')">
+                <div class="ticket-header">
+                    <div class="ticket-info">
+                        <h4>${ticket.subject}</h4>
+                        <div class="ticket-meta">
+                            <span class="ticket-id">#${ticket.ticketNumber || ticket.id.substring(0, 8)}</span>
+                            <span class="ticket-date">${formatTicketDate(ticket.createdAt)}</span>
+                            <span class="ticket-priority priority-${ticket.priority.toLowerCase()}">${ticket.priority}</span>
+                        </div>
+                    </div>
+                    <span class="ticket-status status-${statusClass}">
+                        <i class="fas ${statusIcon}"></i> ${ticket.status}
+                    </span>
+                </div>
+                <p class="ticket-preview">${ticket.message.substring(0, 150)}${ticket.message.length > 150 ? '...' : ''}</p>
+                ${hasUnread ? '<div class="unread-badge">New Reply</div>' : ''}
+                ${ticket.lastReply ? `
+                    <div class="ticket-last-reply">
+                        <i class="fas fa-reply"></i>
+                        <span>Last reply: ${formatTicketDate(ticket.lastReply)} by ${ticket.lastReplyBy}</span>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    }).join('');
+}
+
+async function viewSupportTicket(ticketId) {
+    try {
+        showNotification('Loading ticket details...', 'info');
+        const response = await apiCall(`/support/tickets/${ticketId}`, 'GET');
+        const ticket = response.ticket;
+        const messages = response.messages || [];
+
+        // Mark ticket as read
+        if (ticket.hasAdminReply && !ticket.lastReadByUser) {
+            apiCall(`/support/tickets/${ticketId}/read`, 'POST').catch(console.error);
+        }
+
+        const content = `
+            <div class="modal-header">
+                <h3><i class="fas fa-ticket-alt"></i> Support Ticket #${ticket.ticketNumber || ticket.id.substring(0, 8)}</h3>
+                <span class="ticket-status status-${ticket.status}">${ticket.status}</span>
+            </div>
+            <div class="ticket-details">
+                <div class="ticket-meta-info">
+                    <div class="meta-item">
+                        <strong>Subject:</strong> ${ticket.subject}
+                    </div>
+                    <div class="meta-item">
+                        <strong>Priority:</strong> 
+                        <span class="priority-${ticket.priority.toLowerCase()}">${ticket.priority}</span>
+                    </div>
+                    <div class="meta-item">
+                        <strong>Created:</strong> ${formatDetailedDate(ticket.createdAt)}
+                    </div>
+                </div>
+            </div>
+            <div class="ticket-messages">
+                <h4>Conversation</h4>
+                <div class="messages-list">
+                    ${renderTicketMessages(messages, ticket)}
+                </div>
+            </div>
+            ${ticket.status !== 'resolved' ? `
+                <div class="ticket-reply-section">
+                    <h4>Add Reply</h4>
+                    <form id="ticket-reply-form" class="ticket-reply-form">
+                        <input type="hidden" name="ticketId" value="${ticket.id}">
+                        <textarea 
+                            class="form-textarea" 
+                            name="message" 
+                            placeholder="Type your reply..."
+                            rows="4"
+                            required
+                        ></textarea>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-paper-plane"></i> Send Reply
+                            </button>
+                            <button type="button" class="btn btn-outline" onclick="markTicketResolved('${ticket.id}')">
+                                <i class="fas fa-check"></i> Mark as Resolved
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            ` : `
+                <div class="ticket-resolved-notice">
+                    <i class="fas fa-check-circle"></i>
+                    <p>This ticket has been resolved. Create a new ticket if you need further assistance.</p>
+                </div>
+            `}
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+            </div>
+        `;
+
+        showGenericModal(content, 'max-width: 800px;');
+
+        // Setup reply form
+        if (ticket.status !== 'resolved') {
+            document.getElementById('ticket-reply-form').addEventListener('submit', handleTicketReply);
+        }
+    } catch (error) {
+        console.error('Error viewing ticket:', error);
+        showNotification('Failed to load ticket details', 'error');
+    }
+}
+
+function renderTicketMessages(messages, ticket) {
+    // Always show the original message first
+    let html = `
+        <div class="ticket-message user-message">
+            <div class="message-header">
+                <span class="message-author">
+                    <i class="fas fa-user"></i> You
+                </span>
+                <span class="message-time">${formatDetailedDate(ticket.createdAt)}</span>
+            </div>
+            <div class="message-body">${ticket.message}</div>
+        </div>
+    `;
+
+    // Add all reply messages
+    messages.forEach(msg => {
+        const isAdmin = msg.senderType === 'admin';
+        html += `
+            <div class="ticket-message ${isAdmin ? 'admin-message' : 'user-message'}">
+                <div class="message-header">
+                    <span class="message-author">
+                        <i class="fas ${isAdmin ? 'fa-shield-alt' : 'fa-user'}"></i> 
+                        ${isAdmin ? 'Support Team' : 'You'}
+                    </span>
+                    <span class="message-time">${formatDetailedDate(msg.createdAt)}</span>
+                </div>
+                <div class="message-body">${msg.message}</div>
+            </div>
+        `;
+    });
+
+    return html;
+}
+
+
+async function handleTicketReply(event) {
     event.preventDefault();
-    
     const form = event.target;
     const submitBtn = form.querySelector('button[type="submit"]');
     const originalText = submitBtn.innerHTML;
-    
+
     submitBtn.innerHTML = '<div class="btn-spinner"></div> Sending...';
     submitBtn.disabled = true;
-    
+
     try {
-        const formData = new FormData();
-        formData.append('subject', form.subject.value);
-        formData.append('priority', form.priority.value);
-        formData.append('message', form.message.value);
-        formData.append('userType', appState.currentUser.type);
-        formData.append('userName', appState.currentUser.name);
-        formData.append('userEmail', appState.currentUser.email);
-        
-        // Add files if any
-        if (supportFiles && supportFiles.length > 0) {
-            for (let i = 0; i < supportFiles.length; i++) {
-                formData.append('attachments', supportFiles[i]);
-            }
-        }
-        
-        // Send to support endpoint (this will create a message for admin)
-        await apiCall('/support/submit', 'POST', formData, 'Support request submitted successfully!');
-        
-        addLocalNotification(
-            'Support Request Sent', 
-            'Your support request has been submitted. We\'ll get back to you within 24 hours.', 
-            'success'
-        );
-        
-        // Reset form and files
-        form.reset();
-        supportFiles = [];
-        renderSupportFileList();
-        
+        const ticketId = form.ticketId.value;
+        const message = form.message.value;
+
+        await apiCall(`/support/tickets/${ticketId}/reply`, 'POST', { message }, 'Reply sent successfully!');
+
+        closeModal();
+        loadSupportTickets();
     } catch (error) {
-        addLocalNotification('Error', 'Failed to submit support request. Please try again.', 'error');
+        showNotification('Failed to send reply', 'error');
     } finally {
         submitBtn.innerHTML = originalText;
         submitBtn.disabled = false;
     }
 }
 
+async function markTicketResolved(ticketId) {
+    if (confirm('Are you sure you want to mark this ticket as resolved?')) {
+        try {
+            await apiCall(`/support/tickets/${ticketId}/resolve`, 'POST', null, 'Ticket marked as resolved');
+            closeModal();
+            loadSupportTickets();
+        } catch (error) {
+            showNotification('Failed to resolve ticket', 'error');
+        }
+    }
+}
+
+function showNewTicketModal() {
+    supportFiles = []; // Reset files
+
+    const content = `
+        <div class="modal-header">
+            <h3><i class="fas fa-plus-circle"></i> Create New Support Ticket</h3>
+        </div>
+        <form id="new-support-form" class="premium-form support-form">
+            <div class="form-group">
+                <label class="form-label">
+                    <i class="fas fa-tag"></i> Subject
+                </label>
+                <input type="text" class="form-input" name="subject" required placeholder="Brief description of your issue">
+            </div>
+            <div class="form-group">
+                <label class="form-label">
+                    <i class="fas fa-list"></i> Category
+                </label>
+                <select class="form-select" name="category" required>
+                    <option value="" disabled selected>Select a category</option>
+                    <option value="Technical Issue">Technical Issue</option>
+                    <option value="Account Problem">Account Problem</option>
+                    <option value="Payment Issue">Payment Issue</option>
+                    <option value="Project Help">Project Help</option>
+                    <option value="AI Estimation">AI Estimation</option>
+                    <option value="Profile/Verification">Profile/Verification</option>
+                    <option value="Feature Request">Feature Request</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">
+                    <i class="fas fa-exclamation-circle"></i> Priority
+                </label>
+                <select class="form-select" name="priority" required>
+                    <option value="" disabled selected>Select priority</option>
+                    <option value="Low">Low - General question</option>
+                    <option value="Medium">Medium - Need help soon</option>
+                    <option value="High">High - Urgent issue</option>
+                    <option value="Critical">Critical - System down</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">
+                    <i class="fas fa-file-alt"></i> Description
+                </label>
+                <textarea
+                    class="form-textarea"
+                    name="message"
+                    required
+                    rows="6"
+                    placeholder="Please describe your issue in detail..."
+                ></textarea>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-paper-plane"></i> Create Ticket
+                </button>
+            </div>
+        </form>
+    `;
+
+    showGenericModal(content, 'max-width: 600px;');
+    document.getElementById('new-support-form').addEventListener('submit', handleNewSupportTicket);
+}
+
+async function handleNewSupportTicket(event) {
+    event.preventDefault();
+    const form = event.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+
+    submitBtn.innerHTML = '<div class="btn-spinner"></div> Creating...';
+    submitBtn.disabled = true;
+
+    try {
+        const formData = {
+            subject: form.subject.value,
+            category: form.category.value,
+            priority: form.priority.value,
+            message: form.message.value,
+            userType: appState.currentUser.type,
+            userName: appState.currentUser.name,
+            userEmail: appState.currentUser.email
+        };
+
+        await apiCall('/support/tickets/create', 'POST', formData, 'Support ticket created successfully!');
+
+        addLocalNotification(
+            'Ticket Created',
+            'Your support ticket has been created. We\'ll respond within 24 hours.',
+            'support'
+        );
+
+        closeModal();
+        loadSupportTickets();
+    } catch (error) {
+        showNotification('Failed to create support ticket', 'error');
+    } finally {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    }
+}
+
+
+function formatDetailedDate(dateInput) {
+    try {
+        if (!dateInput) return 'Unknown time';
+
+        let date;
+
+        // Handle Firestore Timestamp
+        if (dateInput && typeof dateInput === 'object') {
+            if (typeof dateInput.toDate === 'function') {
+                date = dateInput.toDate();
+            } else if (typeof dateInput.seconds === 'number') {
+                // Firestore timestamp-like object
+                date = new Date(dateInput.seconds * 1000);
+            } else if (dateInput._seconds !== undefined) {
+                // Alternative Firestore format
+                date = new Date(dateInput._seconds * 1000);
+            } else {
+                date = new Date(dateInput);
+            }
+        } else if (typeof dateInput === 'string') {
+            date = new Date(dateInput);
+        } else if (typeof dateInput === 'number') {
+            // Check if it's seconds or milliseconds
+            date = new Date(dateInput < 10000000000 ? dateInput * 1000 : dateInput);
+        } else {
+            date = new Date(dateInput);
+        }
+
+        // Validate date
+        if (!date || isNaN(date.getTime())) {
+            console.warn('Invalid date in formatDetailedDate:', dateInput);
+            return 'Invalid date';
+        }
+
+        return date.toLocaleString([], {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
+    } catch (error) {
+        console.error('formatDetailedDate error:', error, 'Input:', dateInput);
+        return 'Invalid date';
+    }
+}
+
+function formatTicketDate(dateInput) {
+    try {
+        if (!dateInput) return 'Unknown';
+
+        let date;
+
+        // Handle various date formats
+        if (dateInput && typeof dateInput === 'object') {
+            if (typeof dateInput.toDate === 'function') {
+                date = dateInput.toDate();
+            } else if (typeof dateInput.seconds === 'number') {
+                date = new Date(dateInput.seconds * 1000);
+            } else if (dateInput._seconds !== undefined) {
+                date = new Date(dateInput._seconds * 1000);
+            } else {
+                date = new Date(dateInput);
+            }
+        } else if (typeof dateInput === 'string') {
+            date = new Date(dateInput);
+        } else if (typeof dateInput === 'number') {
+            date = new Date(dateInput < 10000000000 ? dateInput * 1000 : dateInput);
+        } else {
+            date = new Date(dateInput);
+        }
+
+        // Validate date
+        if (!date || isNaN(date.getTime())) {
+            console.warn('Invalid date in formatTicketDate:', dateInput);
+            return 'Unknown';
+        }
+
+        const now = new Date();
+        const diffMs = now - date;
+        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+        const diffDays = Math.floor(diffHours / 24);
+
+        if (diffHours < 1) return 'Just now';
+        if (diffHours < 24) return `${diffHours}h ago`;
+        if (diffDays === 1) return 'Yesterday';
+        if (diffDays < 7) return `${diffDays}d ago`;
+
+        return date.toLocaleDateString([], {
+            month: 'short',
+            day: 'numeric',
+            year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+        });
+
+    } catch (error) {
+        console.error('formatTicketDate error:', error, 'Input:', dateInput);
+        return 'Unknown';
+    }
+}
 // FAQ Toggle Function
 function toggleFAQ(faqItem) {
     const answer = faqItem.querySelector('.faq-answer');
@@ -3663,15 +3873,180 @@ function toggleFAQ(faqItem) {
 }
 
 
+const supportStyles = `<style>
+/* Support Ticket Styles */
+.support-ticket-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+}
+.support-ticket-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+.support-ticket-card.unread {
+    border-left: 4px solid #3b82f6;
+    background: linear-gradient(90deg, rgba(59, 130, 246, 0.05), transparent);
+}
+.ticket-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+}
+.ticket-info h4 {
+    margin: 0 0 0.5rem 0;
+    color: #111827;
+}
+.ticket-meta {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+.ticket-id {
+    font-family: monospace;
+    background: #f3f4f6;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+.ticket-priority {
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 500;
+}
+.priority-low {
+    background: #d1fae5;
+    color: #065f46;
+}
+.priority-medium {
+    background: #fed7aa;
+    color: #92400e;
+}
+.priority-high {
+    background: #fecaca;
+    color: #991b1b;
+}
+.priority-critical {
+    background: #dc2626;
+    color: white;
+}
+.ticket-status {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.status-success {
+    background: #d1fae5;
+    color: #065f46;
+}
+.status-warning {
+    background: #fef3c7;
+    color: #92400e;
+}
+.status-info {
+    background: #dbeafe;
+    color: #1e40af;
+}
+.ticket-preview {
+    color: #4b5563;
+    margin: 0.5rem 0;
+    line-height: 1.5;
+}
+.unread-badge {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: #3b82f6;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+.ticket-last-reply {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #e5e7eb;
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+/* Ticket Messages */
+.ticket-messages {
+    margin: 1.5rem 0;
+}
+.messages-list {
+    max-height: 400px;
+    overflow-y: auto;
+    padding: 1rem;
+    background: #f9fafb;
+    border-radius: 8px;
+}
+.ticket-message {
+    margin-bottom: 1rem;
+    padding: 1rem;
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+}
+.ticket-message.admin-message {
+    background: linear-gradient(135deg, #fef3c7, #fef9c3);
+    border-color: #fbbf24;
+}
+.message-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+.message-author {
+    font-weight: 600;
+    color: #111827;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.message-time {
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+.message-body {
+    color: #374151;
+    line-height: 1.6;
+    white-space: pre-wrap;
+}
+/* Ticket Reply Form */
+.ticket-reply-form {
+    margin-top: 1rem;
+}
+.ticket-resolved-notice {
+    text-align: center;
+    padding: 2rem;
+    background: #f0fdf4;
+    border-radius: 8px;
+    color: #065f46;
+}
+.ticket-resolved-notice i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+/* Support Actions */
+.support-actions {
+    margin-top: 1rem;
+    display: flex;
+    gap: 1rem;
+}
+</style>`;
 
-
-
-
-
-
-
-
-
-
-
-
+document.head.insertAdjacentHTML('beforeend', supportStyles);
