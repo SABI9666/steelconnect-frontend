@@ -578,7 +578,7 @@ function getNotificationIcon(type) {
         info: 'fa-info-circle', success: 'fa-check-circle', warning: 'fa-exclamation-triangle',
         error: 'fa-times-circle', message: 'fa-comment-alt', job: 'fa-briefcase',
         quote: 'fa-file-invoice-dollar', estimation: 'fa-calculator', profile: 'fa-user-circle',
-        user: 'fa-user', file: 'fa-paperclip'
+        user: 'fa-user', file: 'fa-paperclip', support: 'fa-life-ring'
     };
     return iconMap[type] || 'fa-info-circle';
 }
@@ -587,7 +587,7 @@ function getNotificationColor(type) {
     const colorMap = {
         info: '#3b82f6', success: '#10b981', warning: '#f59e0b', error: '#ef4444',
         message: '#8b5cf6', job: '#06b6d4', quote: '#f97316', estimation: '#84cc16',
-        profile: '#6366f1', user: '#64748b', file: '#94a3b8'
+        profile: '#6366f1', user: '#64748b', file: '#94a3b8', support: '#d946ef'
     };
     return colorMap[type] || '#6b7280';
 }
@@ -692,6 +692,11 @@ function getNotificationActionButtons(notification) {
                 buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); renderAppSection('profile-completion')"><i class="fas fa-edit"></i> Update Profile</button>`;
             }
             break;
+        case 'support':
+             if (metadata?.ticketId) {
+                buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); viewSupportTicketDetails('${metadata.ticketId}')"><i class="fas fa-eye"></i> View Ticket</button>`;
+            }
+            break;
     }
     return buttons ? `<div class="notification-actions">${buttons}</div>` : '';
 }
@@ -719,6 +724,10 @@ function handleNotificationClick(notificationId, type, metadata) {
         case 'profile':
             if (metadata.action === 'profile_rejected') renderAppSection('profile-completion');
             else renderAppSection('settings');
+            break;
+        case 'support':
+            renderAppSection('support');
+            if (metadata.ticketId) setTimeout(() => viewSupportTicketDetails(metadata.ticketId), 500);
             break;
         default:
             renderAppSection('dashboard');
@@ -955,7 +964,6 @@ function renderEstimatesGrid(filteredEstimates = null) {
         const statusConfig = getEstimationStatusConfig(est.status);
         const createdDate = formatEstimationDate(est.createdAt);
         const hasFiles = est.uploadedFiles && est.uploadedFiles.length > 0;
-        // CORRECTED: Only show download button if status is 'completed'
         const canDownloadResult = est.status === 'completed';
         const progress = getEstimationProgress(est.status);
         const canEdit = est.status === 'pending';
@@ -1080,8 +1088,6 @@ function getEstimationStatusConfig(status) {
 }
 
 // --- FILE DOWNLOAD FUNCTIONS ---
-
-// UPDATED FUNCTION
 async function downloadFileDirect(url, filename) {
     try {
         if (!url) {
@@ -1126,7 +1132,6 @@ async function downloadFileDirect(url, filename) {
     }
 }
 
-// Download function with retry mechanism
 async function downloadWithRetry(apiCall, maxRetries = 3) {
     let lastError;
 
@@ -1149,7 +1154,6 @@ async function downloadWithRetry(apiCall, maxRetries = 3) {
     throw lastError;
 }
 
-// Enhanced downloadEstimationResult
 async function downloadEstimationResult(estimationId) {
     try {
         showNotification('Preparing your download...', 'info');
@@ -1948,7 +1952,6 @@ async function deleteQuote(quoteId) {
 
 // --- START: CORRECTED QUOTE ATTACHMENT FUNCTIONS ---
 
-// Enhanced downloadQuoteAttachment
 async function downloadQuoteAttachment(quoteId, attachmentIndex, filename) {
     if (typeof attachmentIndex === 'undefined' || attachmentIndex === null) {
         console.error('Download aborted: attachmentIndex is undefined.');
@@ -1977,7 +1980,6 @@ async function downloadQuoteAttachment(quoteId, attachmentIndex, filename) {
     }
 }
 
-// View all attachments for a quote in a modal
 async function viewQuoteAttachments(quoteId) {
     try {
         showNotification('Loading attachments...', 'info');
@@ -2033,7 +2035,6 @@ async function viewQuoteAttachments(quoteId) {
     }
 }
 
-// Enhanced batch download with queue management
 async function downloadAllAttachments(quoteId) {
     try {
         showNotification('Preparing to download all files...', 'info');
@@ -2049,9 +2050,7 @@ async function downloadAllAttachments(quoteId) {
             return;
         }
 
-        // Download queue with controlled concurrency
-        const downloadQueue = [];
-        const maxConcurrent = 2; // Limit concurrent downloads
+        const maxConcurrent = 2;
 
         for (let i = 0; i < attachmentsList.length; i += maxConcurrent) {
             const batch = attachmentsList.slice(i, i + maxConcurrent);
@@ -2061,11 +2060,10 @@ async function downloadAllAttachments(quoteId) {
                     setTimeout(() => {
                         downloadQuoteAttachment(quoteId, attachment.index, attachment.name)
                             .finally(resolve);
-                    }, batchIndex * 500); // Stagger downloads in batch
+                    }, batchIndex * 500);
                 })
             ));
 
-            // Wait between batches
             if (i + maxConcurrent < attachmentsList.length) {
                 await new Promise(resolve => setTimeout(resolve, 1000));
             }
@@ -2079,7 +2077,6 @@ async function downloadAllAttachments(quoteId) {
 }
 
 
-// CORRECTED: Enhanced viewQuotes function with better attachment handling
 async function viewQuotes(jobId) {
     try {
         const response = await apiCall(`/quotes/job/${jobId}`, 'GET');
@@ -2388,8 +2385,6 @@ async function handleSendMessage(conversationId) {
 
 
 // --- UI & MODAL FUNCTIONS ---
-
-// FIX for UI SHAKING
 function lockBodyScroll() {
     const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
     document.body.style.paddingRight = `${scrollbarWidth}px`;
@@ -2864,7 +2859,6 @@ function showNotification(message, type = 'info', duration = 4000) {
         container = document.createElement('div');
         container.id = 'notification-container';
         container.className = 'notification-container';
-        // CORRECTED: Set a high z-index to appear over modals
         container.style.zIndex = '10001';
         document.body.appendChild(container);
     }
@@ -2873,7 +2867,6 @@ function showNotification(message, type = 'info', duration = 4000) {
     notif.innerHTML = `<div class="notification-content"><i class="fas ${getNotificationIcon(type)}"></i><span>${message}</span></div><button class="notification-close" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>`;
     container.appendChild(notif);
     
-    // Do not auto-dismiss if duration is 0
     if (duration > 0) {
         setTimeout(() => {
             if (notif.parentElement) {
@@ -3354,7 +3347,7 @@ function renderSupportSection() {
                     <div class="loading-spinner"><div class="spinner"></div><p>Loading your support tickets...</p></div>
                 </div>
                 <button class="btn btn-outline" onclick="loadSupportTickets()">
-                    <i class="fas fa-refresh"></i> Refresh
+                    <i class="fas fa-sync-alt"></i> Refresh
                 </button>
             </div>
             
@@ -3569,9 +3562,9 @@ async function viewSupportTicketDetails(ticketId) {
                     </div>
 
                     <div class="ticket-message-section">
-                        <h4><i class="fas fa-comment"></i> Your Message</h4>
+                        <h4><i class="fas fa-comment"></i> Your Original Message</h4>
                         <div class="ticket-message-content">
-                            <p>${ticket.message}</p>
+                            <p>${ticket.message.replace(/\n/g, '<br>')}</p>
                         </div>
                     </div>
 
@@ -3594,9 +3587,9 @@ async function viewSupportTicketDetails(ticketId) {
                         </div>
                     ` : ''}
 
-                    ${ticket.responses && ticket.responses.length > 0 ? `
-                        <div class="ticket-responses-section">
-                            <h4><i class="fas fa-comments"></i> Admin Responses (${ticket.responses.length})</h4>
+                    <div class="ticket-responses-section">
+                        <h4><i class="fas fa-comments"></i> Conversation History</h4>
+                        ${ticket.responses && ticket.responses.length > 0 ? `
                             <div class="responses-timeline">
                                 ${ticket.responses.map(response => `
                                     <div class="response-item ${response.responderType}">
@@ -3611,28 +3604,28 @@ async function viewSupportTicketDetails(ticketId) {
                                             <span class="response-time">${formatDetailedDate(response.createdAt)}</span>
                                         </div>
                                         <div class="response-content">
-                                            <p>${response.message}</p>
+                                            <p>${response.message.replace(/\n/g, '<br>')}</p>
                                         </div>
                                     </div>
                                 `).join('')}
                             </div>
-                        </div>
-                    ` : `
-                        <div class="no-responses-section">
-                            <div class="empty-state">
-                                <i class="fas fa-comment-slash"></i>
-                                <h4>No Responses Yet</h4>
-                                <p>Our support team will respond to your ticket within 24 hours.</p>
+                        ` : `
+                            <div class="no-responses-section">
+                                <div class="empty-state">
+                                    <i class="fas fa-comment-slash"></i>
+                                    <h4>No Responses Yet</h4>
+                                    <p>Our support team will respond to your ticket within 24 hours.</p>
+                                </div>
                             </div>
-                        </div>
-                    `}
+                        `}
+                    </div>
                     
-                    ${ticket.ticketStatus === 'open' || ticket.ticketStatus === 'in_progress' ? `
+                    ${ticket.ticketStatus === 'open' || ticket.ticketStatus === 'in_progress' || ticket.ticketStatus === 'waiting_admin_response' ? `
                         <div class="add-response-section">
-                            <h4><i class="fas fa-reply"></i> Add Response</h4>
+                            <h4><i class="fas fa-reply"></i> Add to Conversation</h4>
                             <form id="ticket-response-form">
                                 <div class="form-group">
-                                    <textarea id="response-message" class="form-textarea" rows="4" placeholder="Add additional information or respond to admin..." required></textarea>
+                                    <textarea id="response-message" class="form-textarea" rows="4" placeholder="Add additional information or respond to the support team..." required></textarea>
                                 </div>
                                 <div class="form-actions">
                                     <button type="submit" class="btn btn-primary">
@@ -3684,13 +3677,15 @@ async function submitTicketResponse(ticketId) {
         await apiCall(`/support/ticket/${ticketId}/respond`, 'POST', { message });
 
         showNotification('Response sent successfully!', 'success');
-        closeModal();
-        loadSupportTickets(); // Refresh the tickets list
+        
+        // Refresh the modal content with the new response
+        viewSupportTicketDetails(ticketId);
+        // Refresh the main tickets list in the background
+        loadSupportTickets();
 
     } catch (error) {
         console.error('Error sending response:', error);
         showNotification('Failed to send response. Please try again.', 'error');
-    } finally {
         submitBtn.innerHTML = originalText;
         submitBtn.disabled = false;
     }
@@ -3819,7 +3814,6 @@ async function handleSupportSubmit(event) {
         formData.append('userName', appState.currentUser.name);
         formData.append('userEmail', appState.currentUser.email);
         
-        // Add files if any
         if (supportFiles && supportFiles.length > 0) {
             for (let i = 0; i < supportFiles.length; i++) {
                 formData.append('attachments', supportFiles[i]);
@@ -3834,12 +3828,10 @@ async function handleSupportSubmit(event) {
             'success'
         );
         
-        // Reset form and files
         form.reset();
         supportFiles = [];
         renderSupportFileList();
 
-        // Refresh tickets list to show new ticket
         setTimeout(() => {
             loadSupportTickets();
         }, 1000);
@@ -3858,10 +3850,12 @@ function formatTicketStatus(status) {
         'open': 'Open',
         'in_progress': 'In Progress',
         'resolved': 'Resolved',
-        'closed': 'Closed'
+        'closed': 'Closed',
+        'waiting_admin_response': 'Awaiting Support'
     };
-    return statusMap[status] || status;
+    return statusMap[status] || status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
 }
+
 
 function formatTicketDate(dateString) {
     try {
@@ -3878,7 +3872,6 @@ function formatDetailedDate(date) {
         
         let dateObj;
         
-        // Handle Firestore timestamps
         if (date && typeof date === 'object' && date.seconds) {
             dateObj = new Date(date.seconds * 1000);
         } else if (date instanceof Date) {
@@ -3909,28 +3902,15 @@ function truncateText(text, maxLength) {
     return text.substring(0, maxLength) + '...';
 }
 
-// FAQ Toggle Function
 function toggleFAQ(faqItem) {
     const answer = faqItem.querySelector('.faq-answer');
     const icon = faqItem.querySelector('.fas');
     
-    // Close other open FAQs
-    document.querySelectorAll('.faq-item').forEach(item => {
+    document.querySelectorAll('.faq-item.active').forEach(item => {
         if (item !== faqItem) {
-            item.querySelector('.faq-answer').style.display = 'none';
-            item.querySelector('.fas').classList.remove('fa-chevron-up');
-            item.querySelector('.fas').classList.add('fa-chevron-down');
+            item.classList.remove('active');
         }
     });
     
-    // Toggle current FAQ
-    if (answer.style.display === 'block') {
-        answer.style.display = 'none';
-        icon.classList.remove('fa-chevron-up');
-        icon.classList.add('fa-chevron-down');
-    } else {
-        answer.style.display = 'block';
-        icon.classList.remove('fa-chevron-down');
-        icon.classList.add('fa-chevron-up');
-    }
+    faqItem.classList.toggle('active');
 }
