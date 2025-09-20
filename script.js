@@ -3025,7 +3025,7 @@ function getSettingsTemplate(user) {
 // NEW AND UPDATED FUNCTIONS
 // ===================================
 
-// FIXED TIMESTAMP FUNCTIONS
+// FIXED TIMESTAMP FUNCTIONS (REPLACE EXISTING ONES)
 function formatDetailedTimestamp(date) {
     try {
         if (!date) return 'Unknown time';
@@ -3226,6 +3226,7 @@ function formatMessageDate(date) {
     }
 }
 
+
 // ENHANCED SIDEBAR NAVIGATION WITH SUPPORT
 function buildSidebarNav() {
     const nav = document.getElementById('sidebar-nav-menu');
@@ -3297,7 +3298,9 @@ function buildSidebarNav() {
     });
 }
 
-// --- SUPPORT SECTION FUNCTIONS ---
+// --- SUPPORT SECTION FUNCTIONS (UPDATED) ---
+let supportFiles = []; // Global variable for support files
+
 function renderSupportSection() {
     const container = document.getElementById('app-container');
     
@@ -3342,17 +3345,17 @@ function renderSupportSection() {
                             <p>Use the Messages section to communicate directly with other users. Conversations are automatically created when quotes are submitted or approved.</p>
                         </div>
                     </div>
-                    
-                    <div class="faq-item" onclick="toggleFAQ(this)">
-                        <div class="faq-question">
-                            <h4>What file formats are supported?</h4>
-                            <i class="fas fa-chevron-down"></i>
-                        </div>
-                        <div class="faq-answer">
-                            <p>We support PDF, DWG, DOC, DOCX, JPG, PNG, XLS, XLSX, and TXT files. Maximum file size is 15MB per file.</p>
-                        </div>
-                    </div>
                 </div>
+            </div>
+
+            <div class="support-section">
+                <h3><i class="fas fa-history"></i> My Support Tickets</h3>
+                <div id="support-tickets-history" class="support-tickets-container">
+                    <div class="loading-spinner"><div class="spinner"></div><p>Loading your support tickets...</p></div>
+                </div>
+                <button class="btn btn-outline" onclick="loadSupportTickets()">
+                    <i class="fas fa-refresh"></i> Refresh
+                </button>
             </div>
             
             <div class="support-section">
@@ -3441,40 +3444,11 @@ function renderSupportSection() {
                     </form>
                 </div>
             </div>
-            
-            <div class="support-section">
-                <h3><i class="fas fa-book"></i> Resources</h3>
-                <div class="resources-grid">
-                    <div class="resource-card">
-                        <i class="fas fa-play-circle"></i>
-                        <h4>Video Tutorials</h4>
-                        <p>Watch step-by-step guides</p>
-                        <button class="btn btn-outline" onclick="showNotification('Video tutorials coming soon!', 'info')">
-                            Coming Soon
-                        </button>
-                    </div>
-                    
-                    <div class="resource-card">
-                        <i class="fas fa-download"></i>
-                        <h4>User Guide</h4>
-                        <p>Download comprehensive manual</p>
-                        <button class="btn btn-outline" onclick="showNotification('User guide coming soon!', 'info')">
-                            Coming Soon
-                        </button>
-                    </div>
-                    
-                    <div class="resource-card">
-                        <i class="fas fa-comments"></i>
-                        <h4>Community</h4>
-                        <p>Connect with other users</p>
-                        <button class="btn btn-outline" onclick="showNotification('Community forum coming soon!', 'info')">
-                            Coming Soon
-                        </button>
-                    </div>
-                </div>
-            </div>
         </div>
     `;
+    
+    // Load existing support tickets
+    loadSupportTickets();
     
     // Setup form submission
     document.getElementById('support-form').addEventListener('submit', handleSupportSubmit);
@@ -3483,9 +3457,247 @@ function renderSupportSection() {
     setupSupportFileDragDrop();
 }
 
-// Support file handling
-let supportFiles = [];
+// Load user's support tickets
+async function loadSupportTickets() {
+    const container = document.getElementById('support-tickets-history');
+    if (!container) return;
+    container.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Loading your support tickets...</p></div>';
 
+    try {
+        const response = await apiCall('/support/my-tickets', 'GET');
+        const tickets = response.tickets || [];
+        
+        if (tickets.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-ticket-alt"></i>
+                    <h3>No Support Tickets</h3>
+                    <p>You haven't submitted any support requests yet.</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = `
+            <div class="support-tickets-list">
+                ${tickets.map(ticket => `
+                    <div class="support-ticket-card ${ticket.ticketStatus}" data-ticket-id="${ticket.ticketId}">
+                        <div class="ticket-header">
+                            <div class="ticket-info">
+                                <h4 class="ticket-subject">${ticket.subject}</h4>
+                                <div class="ticket-meta">
+                                    <span class="ticket-id">ID: ${ticket.ticketId}</span>
+                                    <span class="priority-badge ${ticket.priority.toLowerCase()}">${ticket.priority}</span>
+                                    <span class="status-badge ${ticket.ticketStatus}">
+                                        ${formatTicketStatus(ticket.ticketStatus)}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="ticket-date">
+                                <small>Created: ${formatTicketDate(ticket.createdAt)}</small>
+                                ${ticket.lastResponseAt ? `<small>Last update: ${formatTicketDate(ticket.lastResponseAt)}</small>` : ''}
+                            </div>
+                        </div>
+                        <div class="ticket-preview">
+                            <p>${truncateText(ticket.message, 120)}</p>
+                        </div>
+                        ${ticket.attachments && ticket.attachments.length > 0 ? `
+                            <div class="ticket-attachments-indicator">
+                                <i class="fas fa-paperclip"></i>
+                                <span>${ticket.attachments.length} attachment${ticket.attachments.length > 1 ? 's' : ''}</span>
+                            </div>
+                        ` : ''}
+                        <div class="ticket-actions">
+                            <button class="btn btn-outline btn-sm" onclick="viewSupportTicketDetails('${ticket.ticketId}')">
+                                <i class="fas fa-eye"></i> View Details
+                            </button>
+                            ${ticket.responses && ticket.responses.length > 0 ? `
+                                <span class="responses-count">
+                                    <i class="fas fa-comments"></i>
+                                    ${ticket.responses.length} response${ticket.responses.length > 1 ? 's' : ''}
+                                </span>
+                            ` : ''}
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+
+    } catch (error) {
+        console.error('Error loading support tickets:', error);
+        container.innerHTML = `
+            <div class="error-state">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h3>Error Loading Tickets</h3>
+                <p>Please try again later.</p>
+                <button class="btn btn-primary" onclick="loadSupportTickets()">Try Again</button>
+            </div>
+        `;
+    }
+}
+
+// View detailed support ticket
+async function viewSupportTicketDetails(ticketId) {
+    try {
+        showNotification('Loading ticket details...', 'info');
+        const response = await apiCall(`/support/ticket/${ticketId}`, 'GET');
+        const ticket = response.ticket;
+
+        const modalContent = `
+            <div class="support-ticket-detail-modal">
+                <div class="modal-header">
+                    <h3><i class="fas fa-ticket-alt"></i> Support Ticket Details</h3>
+                    <div class="ticket-status-header">
+                        <span class="ticket-id">ID: ${ticket.ticketId}</span>
+                        <span class="priority-badge ${ticket.priority.toLowerCase()}">${ticket.priority} Priority</span>
+                        <span class="status-badge ${ticket.ticketStatus}">${formatTicketStatus(ticket.ticketStatus)}</span>
+                    </div>
+                </div>
+                
+                <div class="ticket-detail-content">
+                    <div class="ticket-info-section">
+                        <h4><i class="fas fa-info-circle"></i> Ticket Information</h4>
+                        <div class="info-grid">
+                            <div><label>Subject:</label><span>${ticket.subject}</span></div>
+                            <div><label>Priority:</label><span class="priority-${ticket.priority.toLowerCase()}">${ticket.priority}</span></div>
+                            <div><label>Status:</label><span class="status-${ticket.ticketStatus}">${formatTicketStatus(ticket.ticketStatus)}</span></div>
+                            <div><label>Created:</label><span>${formatDetailedDate(ticket.createdAt)}</span></div>
+                            ${ticket.updatedAt && ticket.updatedAt !== ticket.createdAt ? `
+                                <div><label>Last Updated:</label><span>${formatDetailedDate(ticket.updatedAt)}</span></div>
+                            ` : ''}
+                        </div>
+                    </div>
+
+                    <div class="ticket-message-section">
+                        <h4><i class="fas fa-comment"></i> Your Message</h4>
+                        <div class="ticket-message-content">
+                            <p>${ticket.message}</p>
+                        </div>
+                    </div>
+
+                    ${ticket.attachments && ticket.attachments.length > 0 ? `
+                        <div class="ticket-attachments-section">
+                            <h4><i class="fas fa-paperclip"></i> Your Attachments (${ticket.attachments.length})</h4>
+                            <div class="attachments-list">
+                                ${ticket.attachments.map(attachment => `
+                                    <div class="attachment-item">
+                                        <div class="attachment-info">
+                                            <i class="fas ${getSupportFileIcon({name: attachment.filename || attachment.name})}"></i>
+                                            <span>${attachment.filename || attachment.name}</span>
+                                        </div>
+                                        <a href="${attachment.url}" target="_blank" class="btn btn-xs btn-outline">
+                                            <i class="fas fa-external-link-alt"></i> View
+                                        </a>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    ${ticket.responses && ticket.responses.length > 0 ? `
+                        <div class="ticket-responses-section">
+                            <h4><i class="fas fa-comments"></i> Admin Responses (${ticket.responses.length})</h4>
+                            <div class="responses-timeline">
+                                ${ticket.responses.map(response => `
+                                    <div class="response-item ${response.responderType}">
+                                        <div class="response-header">
+                                            <div class="responder-info">
+                                                <strong>${response.responderName}</strong>
+                                                <span class="responder-type-badge ${response.responderType}">
+                                                    <i class="fas ${response.responderType === 'admin' ? 'fa-user-shield' : 'fa-user'}"></i>
+                                                    ${response.responderType === 'admin' ? 'Support Team' : 'You'}
+                                                </span>
+                                            </div>
+                                            <span class="response-time">${formatDetailedDate(response.createdAt)}</span>
+                                        </div>
+                                        <div class="response-content">
+                                            <p>${response.message}</p>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : `
+                        <div class="no-responses-section">
+                            <div class="empty-state">
+                                <i class="fas fa-comment-slash"></i>
+                                <h4>No Responses Yet</h4>
+                                <p>Our support team will respond to your ticket within 24 hours.</p>
+                            </div>
+                        </div>
+                    `}
+                    
+                    ${ticket.ticketStatus === 'open' || ticket.ticketStatus === 'in_progress' ? `
+                        <div class="add-response-section">
+                            <h4><i class="fas fa-reply"></i> Add Response</h4>
+                            <form id="ticket-response-form">
+                                <div class="form-group">
+                                    <textarea id="response-message" class="form-textarea" rows="4" placeholder="Add additional information or respond to admin..." required></textarea>
+                                </div>
+                                <div class="form-actions">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-paper-plane"></i> Send Response
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    ` : ''}
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+                </div>
+            </div>
+        `;
+        showGenericModal(modalContent, 'max-width: 800px;');
+
+        // Setup response form if it exists
+        const responseForm = document.getElementById('ticket-response-form');
+        if (responseForm) {
+            responseForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                submitTicketResponse(ticketId);
+            });
+        }
+
+    } catch (error) {
+        console.error('Error loading ticket details:', error);
+        showNotification('Failed to load ticket details', 'error');
+    }
+}
+
+// Submit response to existing ticket
+async function submitTicketResponse(ticketId) {
+    const messageInput = document.getElementById('response-message');
+    const message = messageInput.value.trim();
+    if (!message) {
+        showNotification('Please enter a response message', 'warning');
+        return;
+    }
+
+    const submitBtn = document.querySelector('#ticket-response-form button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+
+    try {
+        submitBtn.innerHTML = '<div class="btn-spinner"></div> Sending...';
+        submitBtn.disabled = true;
+
+        await apiCall(`/support/ticket/${ticketId}/respond`, 'POST', { message });
+
+        showNotification('Response sent successfully!', 'success');
+        closeModal();
+        loadSupportTickets(); // Refresh the tickets list
+
+    } catch (error) {
+        console.error('Error sending response:', error);
+        showNotification('Failed to send response. Please try again.', 'error');
+    } finally {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    }
+}
+
+
+// Support file handling functions
 function handleSupportFileChange(event) {
     const input = event.target;
     const files = Array.from(input.files);
@@ -3614,7 +3826,6 @@ async function handleSupportSubmit(event) {
             }
         }
         
-        // Send to support endpoint (this will create a message for admin)
         await apiCall('/support/submit', 'POST', formData, 'Support request submitted successfully!');
         
         addLocalNotification(
@@ -3627,6 +3838,11 @@ async function handleSupportSubmit(event) {
         form.reset();
         supportFiles = [];
         renderSupportFileList();
+
+        // Refresh tickets list to show new ticket
+        setTimeout(() => {
+            loadSupportTickets();
+        }, 1000);
         
     } catch (error) {
         addLocalNotification('Error', 'Failed to submit support request. Please try again.', 'error');
@@ -3634,6 +3850,63 @@ async function handleSupportSubmit(event) {
         submitBtn.innerHTML = originalText;
         submitBtn.disabled = false;
     }
+}
+
+// Utility functions for support
+function formatTicketStatus(status) {
+    const statusMap = {
+        'open': 'Open',
+        'in_progress': 'In Progress',
+        'resolved': 'Resolved',
+        'closed': 'Closed'
+    };
+    return statusMap[status] || status;
+}
+
+function formatTicketDate(dateString) {
+    try {
+        const date = new Date(dateString);
+        return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch {
+        return 'Invalid date';
+    }
+}
+
+function formatDetailedDate(date) {
+    try {
+        if (!date) return 'Unknown date';
+        
+        let dateObj;
+        
+        // Handle Firestore timestamps
+        if (date && typeof date === 'object' && date.seconds) {
+            dateObj = new Date(date.seconds * 1000);
+        } else if (date instanceof Date) {
+            dateObj = date;
+        } else if (typeof date === 'string') {
+            dateObj = new Date(date);
+        } else {
+            return 'Invalid date';
+        }
+        
+        if (isNaN(dateObj.getTime())) {
+            return 'Invalid date';
+        }
+        
+        return dateObj.toLocaleDateString() + ' at ' + dateObj.toLocaleTimeString([], { 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        });
+    } catch (error) {
+        console.error('Date formatting error:', error);
+        return 'Invalid date';
+    }
+}
+
+function truncateText(text, maxLength) {
+    if (!text) return '';
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + '...';
 }
 
 // FAQ Toggle Function
@@ -3661,17 +3934,3 @@ function toggleFAQ(faqItem) {
         icon.classList.add('fa-chevron-up');
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
