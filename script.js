@@ -520,17 +520,29 @@ async function fetchNotifications() {
         const response = await apiCall('/notifications?markSeen=true', 'GET');
         if (response.success) {
             const serverNotifications = response.notifications || [];
-            notificationState.notifications = serverNotifications;
-            appState.notifications = serverNotifications;
+            // Process notifications and ensure proper timestamps
+            const processedNotifications = serverNotifications.map(notification => ({
+                ...notification,
+                createdAt: notification.createdAt || new Date().toISOString(),
+                updatedAt: notification.updatedAt || notification.createdAt || new Date().toISOString(),
+                // Ensure boolean values
+                isRead: Boolean(notification.isRead || notification.read),
+                read: Boolean(notification.isRead || notification.read),
+                seen: Boolean(notification.seen)
+            }));
+            notificationState.notifications = processedNotifications;
+            appState.notifications = processedNotifications;
             notificationState.unreadCount = response.unreadCount || 0;
             notificationState.unseenCount = response.unseenCount || 0;
             notificationState.lastFetchTime = new Date();
             saveNotificationsToStorage();
             renderNotificationPanel();
             updateNotificationBadge();
+            console.log(`📬 Fetched ${processedNotifications.length} notifications`);
         }
     } catch (error) {
         console.error('Error fetching notifications:', error);
+        // Load from storage if server fetch fails
         loadStoredNotifications();
         if (notificationState.notifications.length > 0) {
             appState.notifications = notificationState.notifications;
@@ -597,7 +609,12 @@ function renderNotificationPanel() {
     if (!panelList) return;
     const notifications = notificationState.notifications || [];
     if (notifications.length === 0) {
-        panelList.innerHTML = `<div class="notification-empty-state"><i class="fas fa-bell-slash"></i><p>No notifications</p><small>You'll see updates here when things happen</small></div>`;
+        panelList.innerHTML = `
+            <div class="notification-empty-state">
+                <i class="fas fa-bell-slash"></i>
+                <p>No notifications</p>
+                <small>You'll see updates here when things happen</small>
+            </div>`;
         return;
     }
     try {
@@ -611,10 +628,20 @@ function renderNotificationPanel() {
                         const icon = getNotificationIcon(n.type);
                         const color = getNotificationColor(n.type);
                         const timeAgo = formatMessageTimestamp(n.createdAt);
-                        const metadataString = JSON.stringify(n.metadata || {}).replace(/"/g, '&quot;');
+                        // Safely handle metadata
+                        let metadataString = '{}';
+                        try {
+                            metadataString = JSON.stringify(n.metadata || {}).replace(/"/g, '&quot;');
+                        } catch (e) {
+                            console.warn('Error stringifying notification metadata:', e);
+                        }
                         return `
-                            <div class="notification-item ${n.isRead || n.read ? 'read' : 'unread'}" data-id="${n.id}" onclick="handleNotificationClick('${n.id}', '${n.type}', ${metadataString})">
-                                <div class="notification-item-icon" style="background-color: ${color}20; color: ${color}"><i class="fas ${icon}"></i></div>
+                            <div class="notification-item ${n.isRead || n.read ? 'read' : 'unread'}"
+                                  data-id="${n.id}"
+                                  onclick="handleNotificationClick('${n.id}', '${n.type}', ${metadataString})">
+                                <div class="notification-item-icon" style="background-color: ${color}20; color: ${color}">
+                                    <i class="fas ${icon}"></i>
+                                </div>
                                 <div class="notification-item-content">
                                     <div class="notification-item-header">
                                         <span class="notification-title">${n.title || 'Notification'}</span>
@@ -631,7 +658,12 @@ function renderNotificationPanel() {
         panelList.innerHTML = notificationsHTML;
     } catch (error) {
         console.error('Error rendering notifications:', error);
-        panelList.innerHTML = `<div class="notification-error-state"><i class="fas fa-exclamation-triangle"></i><p>Error loading notifications</p><button onclick="fetchNotifications()" class="btn btn-sm btn-outline">Retry</button></div>`;
+        panelList.innerHTML = `
+            <div class="notification-error-state">
+                <i class="fas fa-exclamation-triangle"></i>
+                <p>Error loading notifications</p>
+                <button onclick="fetchNotifications()" class="btn btn-sm btn-outline">Retry</button>
+            </div>`;
     }
 }
 
@@ -666,18 +698,26 @@ function getNotificationActionButtons(notification) {
     let buttons = '';
     switch (type) {
         case 'message':
-            buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); openConversation('${metadata?.jobId}', '${metadata?.senderId}')"><i class="fas fa-reply"></i> Reply</button>`;
+            if (metadata?.conversationId) {
+                buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); renderConversationView('${metadata.conversationId}')"><i class="fas fa-reply"></i> Reply</button>`;
+            } else if (metadata?.jobId && metadata?.senderId) {
+                buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); openConversation('${metadata.jobId}', '${metadata.senderId}')"><i class="fas fa-reply"></i> Reply</button>`;
+            } else {
+                buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); renderAppSection('messages')"><i class="fas fa-comments"></i> View Messages</button>`;
+            }
             break;
         case 'quote':
             if (metadata?.action === 'quote_submitted' && appState.currentUser?.type === 'contractor') {
                 buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); viewQuotes('${metadata?.jobId}')"><i class="fas fa-eye"></i> View Quote</button>`;
             } else if (metadata?.action === 'quote_approved' && appState.currentUser?.type === 'designer') {
                 buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); openConversation('${metadata?.jobId}', '${metadata?.contractorId}')"><i class="fas fa-comments"></i> Message Client</button>`;
+            } else {
+                buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); renderAppSection('my-quotes')"><i class="fas fa-file-invoice-dollar"></i> View Quotes</button>`;
             }
             break;
         case 'job':
             if (metadata?.action === 'job_created' && appState.currentUser?.type === 'designer') {
-                buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); renderAppSection('jobs')"><i class="fas fa-search"></i> View Job</button>`;
+                buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); renderAppSection('jobs')"><i class="fas fa-search"></i> View Jobs</button>`;
             }
             break;
         case 'estimation':
@@ -687,33 +727,48 @@ function getNotificationActionButtons(notification) {
             break;
         case 'profile':
             if (metadata?.action === 'profile_approved') {
-                buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); renderAppSection('dashboard')"><i class="fas fa-tachometer-alt"></i> Explore Features</button>`;
+                buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); renderAppSection('dashboard')"><i class="fas fa-tachometer-alt"></i> Dashboard</button>`;
             } else if (metadata?.action === 'profile_rejected') {
                 buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); renderAppSection('profile-completion')"><i class="fas fa-edit"></i> Update Profile</button>`;
             }
             break;
         case 'support':
-             if (metadata?.ticketId) {
+            if (metadata?.ticketId) {
                 buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); viewSupportTicketDetails('${metadata.ticketId}')"><i class="fas fa-eye"></i> View Ticket</button>`;
+            } else {
+                buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); renderAppSection('support')"><i class="fas fa-life-ring"></i> Support Center</button>`;
             }
+            break;
+        default:
+            buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); renderAppSection('dashboard')"><i class="fas fa-tachometer-alt"></i> Dashboard</button>`;
             break;
     }
     return buttons ? `<div class="notification-actions">${buttons}</div>` : '';
 }
 
-function handleNotificationClick(notificationId, type, metadata) {
+function handleNotificationClick(notificationId, type, metadata = {}) {
+    // Mark as read first
     markNotificationAsRead(notificationId);
+    // Handle navigation based on type
     switch (type) {
         case 'message':
-            if (metadata.conversationId) renderConversationView(metadata.conversationId);
-            else if (metadata.jobId && metadata.senderId) openConversation(metadata.jobId, metadata.senderId);
-            else renderAppSection('messages');
+            if (metadata.conversationId) {
+                renderConversationView(metadata.conversationId);
+            } else if (metadata.jobId && metadata.senderId) {
+                openConversation(metadata.jobId, metadata.senderId);
+            } else {
+                renderAppSection('messages');
+            }
             break;
         case 'quote':
             if (metadata.action === 'quote_submitted' && appState.currentUser.type === 'contractor') {
                 renderAppSection('jobs');
-                if (metadata.jobId) setTimeout(() => viewQuotes(metadata.jobId), 500);
-            } else if (appState.currentUser.type === 'designer') renderAppSection('my-quotes');
+                if (metadata.jobId) {
+                    setTimeout(() => viewQuotes(metadata.jobId), 500);
+                }
+            } else {
+                renderAppSection('my-quotes');
+            }
             break;
         case 'job':
             renderAppSection('jobs');
@@ -722,19 +777,27 @@ function handleNotificationClick(notificationId, type, metadata) {
             renderAppSection('my-estimations');
             break;
         case 'profile':
-            if (metadata.action === 'profile_rejected') renderAppSection('profile-completion');
-            else renderAppSection('settings');
+            if (metadata.action === 'profile_rejected') {
+                renderAppSection('profile-completion');
+            } else {
+                renderAppSection('settings');
+            }
             break;
         case 'support':
             renderAppSection('support');
-            if (metadata.ticketId) setTimeout(() => viewSupportTicketDetails(metadata.ticketId), 500);
+            if (metadata.ticketId) {
+                setTimeout(() => viewSupportTicketDetails(metadata.ticketId), 500);
+            }
             break;
         default:
             renderAppSection('dashboard');
             break;
     }
+    // Close notification panel
     const panel = document.getElementById('notification-panel');
-    if (panel) panel.classList.remove('active');
+    if (panel) {
+        panel.classList.remove('active');
+    }
 }
 
 async function markNotificationAsRead(notificationId) {
@@ -3018,74 +3081,50 @@ function getSettingsTemplate(user) {
 // NEW AND UPDATED FUNCTIONS
 // ===================================
 
-// FIXED TIMESTAMP FUNCTIONS (REPLACE EXISTING ONES)
+// FIXED TIMESTAMP FUNCTIONS
 function formatDetailedTimestamp(date) {
     try {
         if (!date) return 'Unknown time';
-        
         let msgDate;
-        
-        // Handle Firestore Timestamp objects
         if (date && typeof date === 'object' && typeof date.toDate === 'function') {
             msgDate = date.toDate();
-        }
-        // Handle Firestore-like objects with seconds
-        else if (date && typeof date === 'object' && typeof date.seconds === 'number') {
+        } else if (date && typeof date === 'object' && typeof date.seconds === 'number') {
             msgDate = new Date(date.seconds * 1000 + (date.nanoseconds || 0) / 1000000);
-        }
-        // Handle Date objects
-        else if (date instanceof Date) {
+        } else if (date instanceof Date) {
             msgDate = date;
-        }
-        // Handle ISO strings
-        else if (typeof date === 'string') {
+        } else if (typeof date === 'string') {
             msgDate = new Date(date);
-        }
-        // Handle timestamps (milliseconds)
-        else if (typeof date === 'number') {
-            // If number is too small, assume it's seconds and convert to milliseconds
+        } else if (typeof date === 'number') {
             msgDate = new Date(date < 10000000000 ? date * 1000 : date);
-        }
-        else {
+        } else {
             console.warn('Unknown date format:', date);
             return 'Invalid time';
         }
-
-        // Validate the date
         if (!msgDate || isNaN(msgDate.getTime())) {
             console.warn('Invalid date created from:', date);
             return 'Invalid date';
         }
-
         const now = new Date();
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         const msgDay = new Date(msgDate.getFullYear(), msgDate.getMonth(), msgDate.getDate());
-        
-        const time = msgDate.toLocaleTimeString([], { 
-            hour: '2-digit', 
-            minute: '2-digit', 
-            hour12: true 
+        const time = msgDate.toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
         });
-
-        // Today
         if (today.getTime() === msgDay.getTime()) {
             return time;
         }
-
-        // Yesterday
         const yesterday = new Date(today);
         yesterday.setDate(today.getDate() - 1);
         if (yesterday.getTime() === msgDay.getTime()) {
             return `Yesterday, ${time}`;
         }
-
-        // Older dates
         return `${msgDate.toLocaleDateString([], {
             month: 'short',
             day: 'numeric',
             year: msgDate.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
         })}, ${time}`;
-
     } catch (error) {
         console.error('formatDetailedTimestamp error:', error, 'Input:', date);
         return 'Invalid date';
@@ -3095,60 +3134,41 @@ function formatDetailedTimestamp(date) {
 function formatMessageTimestamp(date) {
     try {
         if (!date) return 'Unknown time';
-        
         let msgDate;
-        
-        // Handle Firestore Timestamp objects
         if (date && typeof date === 'object' && typeof date.toDate === 'function') {
             msgDate = date.toDate();
-        }
-        // Handle Firestore-like objects with seconds
-        else if (date && typeof date === 'object' && typeof date.seconds === 'number') {
+        } else if (date && typeof date === 'object' && typeof date.seconds === 'number') {
             msgDate = new Date(date.seconds * 1000 + (date.nanoseconds || 0) / 1000000);
-        }
-        // Handle Date objects
-        else if (date instanceof Date) {
+        } else if (date instanceof Date) {
             msgDate = date;
-        }
-        // Handle ISO strings
-        else if (typeof date === 'string') {
+        } else if (typeof date === 'string') {
             msgDate = new Date(date);
-        }
-        // Handle timestamps (milliseconds)
-        else if (typeof date === 'number') {
-            // If number is too small, assume it's seconds and convert to milliseconds
+        } else if (typeof date === 'number') {
             msgDate = new Date(date < 10000000000 ? date * 1000 : date);
-        }
-        else {
+        } else {
             console.warn('Unknown date format:', date);
             return 'Invalid time';
         }
-
-        // Validate the date
         if (!msgDate || isNaN(msgDate.getTime())) {
             console.warn('Invalid date created from:', date);
             return 'Invalid date';
         }
-
         const now = new Date();
         const diffMs = now - msgDate;
         const diffSeconds = Math.floor(diffMs / 1000);
         const diffMinutes = Math.floor(diffSeconds / 60);
         const diffHours = Math.floor(diffMinutes / 60);
         const diffDays = Math.floor(diffHours / 24);
-
         if (diffSeconds < 30) return 'Just now';
         if (diffMinutes < 60) return `${diffMinutes}m ago`;
         if (diffHours < 24) return `${diffHours}h ago`;
         if (diffDays === 1) return 'Yesterday';
         if (diffDays < 7) return `${diffDays}d ago`;
-        
         return msgDate.toLocaleDateString([], {
             month: 'short',
             day: 'numeric',
             year: msgDate.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
         });
-
     } catch (error) {
         console.error('formatMessageTimestamp error:', error, 'Input:', date);
         return 'Invalid date';
@@ -3158,61 +3178,41 @@ function formatMessageTimestamp(date) {
 function formatMessageDate(date) {
     try {
         if (!date) return 'Unknown Date';
-        
         let msgDate;
-        
-        // Handle Firestore Timestamp objects
         if (date && typeof date === 'object' && typeof date.toDate === 'function') {
             msgDate = date.toDate();
-        }
-        // Handle Firestore-like objects with seconds
-        else if (date && typeof date === 'object' && typeof date.seconds === 'number') {
+        } else if (date && typeof date === 'object' && typeof date.seconds === 'number') {
             msgDate = new Date(date.seconds * 1000 + (date.nanoseconds || 0) / 1000000);
-        }
-        // Handle Date objects
-        else if (date instanceof Date) {
+        } else if (date instanceof Date) {
             msgDate = date;
-        }
-        // Handle ISO strings
-        else if (typeof date === 'string') {
+        } else if (typeof date === 'string') {
             msgDate = new Date(date);
-        }
-        // Handle timestamps (milliseconds)
-        else if (typeof date === 'number') {
-            // If number is too small, assume it's seconds and convert to milliseconds
+        } else if (typeof date === 'number') {
             msgDate = new Date(date < 10000000000 ? date * 1000 : date);
-        }
-        else {
+        } else {
             console.warn('Unknown date format:', date);
             return 'Unknown Date';
         }
-
-        // Validate the date
         if (!msgDate || isNaN(msgDate.getTime())) {
             console.warn('Invalid date created from:', date);
             return 'Unknown Date';
         }
-
         const now = new Date();
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         const msgDay = new Date(msgDate.getFullYear(), msgDate.getMonth(), msgDate.getDate());
-
         if (today.getTime() === msgDay.getTime()) {
             return 'Today';
         }
-
         const yesterday = new Date(today);
         yesterday.setDate(today.getDate() - 1);
         if (yesterday.getTime() === msgDay.getTime()) {
             return 'Yesterday';
         }
-
-        return msgDate.toLocaleDateString([], { 
-            month: 'long', 
-            day: 'numeric', 
+        return msgDate.toLocaleDateString([], {
+            month: 'long',
+            day: 'numeric',
             year: msgDate.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
         });
-
     } catch (error) {
         console.error('formatMessageDate error:', error, 'Input:', date);
         return 'Unknown Date';
@@ -3455,11 +3455,9 @@ async function loadSupportTickets() {
     const container = document.getElementById('support-tickets-history');
     if (!container) return;
     container.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Loading your support tickets...</p></div>';
-
     try {
         const response = await apiCall('/support/my-tickets', 'GET');
         const tickets = response.tickets || [];
-        
         if (tickets.length === 0) {
             container.innerHTML = `
                 <div class="empty-state">
@@ -3470,52 +3468,70 @@ async function loadSupportTickets() {
             `;
             return;
         }
-
+        // Sort tickets by creation date (newest first)
+        tickets.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         container.innerHTML = `
             <div class="support-tickets-list">
-                ${tickets.map(ticket => `
-                    <div class="support-ticket-card ${ticket.ticketStatus}" data-ticket-id="${ticket.ticketId}">
-                        <div class="ticket-header">
-                            <div class="ticket-info">
-                                <h4 class="ticket-subject">${ticket.subject}</h4>
-                                <div class="ticket-meta">
-                                    <span class="ticket-id">ID: ${ticket.ticketId}</span>
-                                    <span class="priority-badge ${ticket.priority.toLowerCase()}">${ticket.priority}</span>
-                                    <span class="status-badge ${ticket.ticketStatus}">
-                                        ${formatTicketStatus(ticket.ticketStatus)}
-                                    </span>
+                ${tickets.map(ticket => {
+                    const hasResponses = ticket.responses && ticket.responses.length > 0;
+                    const lastAdminResponse = hasResponses ? ticket.responses.filter(r => r.responderType === 'admin').pop() : null;
+                    const hasUnreadAdminResponse = lastAdminResponse && !lastAdminResponse.isRead;
+                    return `
+                        <div class="support-ticket-card ${ticket.ticketStatus} ${hasUnreadAdminResponse ? 'has-unread' : ''}" data-ticket-id="${ticket.ticketId}">
+                            <div class="ticket-header">
+                                <div class="ticket-info">
+                                    <h4 class="ticket-subject">${ticket.subject}</h4>
+                                    <div class="ticket-meta">
+                                        <span class="ticket-id">ID: ${ticket.ticketId}</span>
+                                        <span class="priority-badge ${ticket.priority.toLowerCase()}">${ticket.priority}</span>
+                                        <span class="status-badge ${ticket.ticketStatus}">
+                                            ${formatTicketStatus(ticket.ticketStatus)}
+                                        </span>
+                                        ${hasUnreadAdminResponse ? '<span class="new-response-badge">New Response</span>' : ''}
+                                    </div>
+                                </div>
+                                <div class="ticket-date">
+                                    <small>Created: ${formatTicketDate(ticket.createdAt)}</small>
+                                    ${ticket.updatedAt && ticket.updatedAt !== ticket.createdAt ?
+                                         `<small>Updated: ${formatTicketDate(ticket.updatedAt)}</small>` : ''}
                                 </div>
                             </div>
-                            <div class="ticket-date">
-                                <small>Created: ${formatTicketDate(ticket.createdAt)}</small>
-                                ${ticket.lastResponseAt ? `<small>Last update: ${formatTicketDate(ticket.lastResponseAt)}</small>` : ''}
+                            <div class="ticket-preview">
+                                <p>${truncateText(ticket.message, 120)}</p>
                             </div>
-                        </div>
-                        <div class="ticket-preview">
-                            <p>${truncateText(ticket.message, 120)}</p>
-                        </div>
-                        ${ticket.attachments && ticket.attachments.length > 0 ? `
-                            <div class="ticket-attachments-indicator">
-                                <i class="fas fa-paperclip"></i>
-                                <span>${ticket.attachments.length} attachment${ticket.attachments.length > 1 ? 's' : ''}</span>
-                            </div>
-                        ` : ''}
-                        <div class="ticket-actions">
-                            <button class="btn btn-outline btn-sm" onclick="viewSupportTicketDetails('${ticket.ticketId}')">
-                                <i class="fas fa-eye"></i> View Details
-                            </button>
-                            ${ticket.responses && ticket.responses.length > 0 ? `
-                                <span class="responses-count">
-                                    <i class="fas fa-comments"></i>
-                                    ${ticket.responses.length} response${ticket.responses.length > 1 ? 's' : ''}
-                                </span>
+                            ${ticket.attachments && ticket.attachments.length > 0 ? `
+                                <div class="ticket-attachments-indicator">
+                                    <i class="fas fa-paperclip"></i>
+                                    <span>${ticket.attachments.length} attachment${ticket.attachments.length > 1 ? 's' : ''}</span>
+                                </div>
                             ` : ''}
+                            <div class="ticket-actions">
+                                <button class="btn ${hasUnreadAdminResponse ? 'btn-primary' : 'btn-outline'} btn-sm" onclick="viewSupportTicketDetails('${ticket.ticketId}')">
+                                    <i class="fas fa-eye"></i>
+                                     ${hasUnreadAdminResponse ? 'View New Response' : 'View Details'}
+                                </button>
+                                ${hasResponses ? `
+                                    <span class="responses-count">
+                                        <i class="fas fa-comments"></i>
+                                        ${ticket.responses.length} response${ticket.responses.length > 1 ? 's' : ''}
+                                    </span>
+                                ` : ''}
+                            </div>
                         </div>
-                    </div>
-                `).join('')}
+                    `;
+                }).join('')}
             </div>
         `;
-
+        // Show notification if there are unread admin responses
+        const unreadCount = tickets.filter(ticket => {
+            const hasResponses = ticket.responses && ticket.responses.length > 0;
+            if (!hasResponses) return false;
+            const lastAdminResponse = ticket.responses.filter(r => r.responderType === 'admin').pop();
+            return lastAdminResponse && !lastAdminResponse.isRead;
+        }).length;
+        if (unreadCount > 0) {
+            showNotification(`You have ${unreadCount} new support response${unreadCount > 1 ? 's' : ''}`, 'info', 6000);
+        }
     } catch (error) {
         console.error('Error loading support tickets:', error);
         container.innerHTML = `
@@ -3535,7 +3551,6 @@ async function viewSupportTicketDetails(ticketId) {
         showNotification('Loading ticket details...', 'info');
         const response = await apiCall(`/support/ticket/${ticketId}`, 'GET');
         const ticket = response.ticket;
-
         const modalContent = `
             <div class="support-ticket-detail-modal">
                 <div class="modal-header">
@@ -3546,7 +3561,6 @@ async function viewSupportTicketDetails(ticketId) {
                         <span class="status-badge ${ticket.ticketStatus}">${formatTicketStatus(ticket.ticketStatus)}</span>
                     </div>
                 </div>
-                
                 <div class="ticket-detail-content">
                     <div class="ticket-info-section">
                         <h4><i class="fas fa-info-circle"></i> Ticket Information</h4>
@@ -3560,33 +3574,48 @@ async function viewSupportTicketDetails(ticketId) {
                             ` : ''}
                         </div>
                     </div>
-
                     <div class="ticket-message-section">
                         <h4><i class="fas fa-comment"></i> Your Original Message</h4>
                         <div class="ticket-message-content">
                             <p>${ticket.message.replace(/\n/g, '<br>')}</p>
                         </div>
                     </div>
-
                     ${ticket.attachments && ticket.attachments.length > 0 ? `
                         <div class="ticket-attachments-section">
                             <h4><i class="fas fa-paperclip"></i> Your Attachments (${ticket.attachments.length})</h4>
                             <div class="attachments-list">
-                                ${ticket.attachments.map(attachment => `
+                                ${ticket.attachments.map((attachment, index) => `
                                     <div class="attachment-item">
                                         <div class="attachment-info">
-                                            <i class="fas ${getSupportFileIcon({name: attachment.filename || attachment.name})}"></i>
-                                            <span>${attachment.filename || attachment.name}</span>
+                                            <i class="fas ${getSupportFileIcon({name: attachment.originalName || attachment.filename || attachment.name})}"></i>
+                                            <div class="attachment-details">
+                                                <span class="attachment-name">${attachment.originalName || attachment.filename || attachment.name || `Attachment ${index + 1}`}</span>
+                                                <span class="attachment-meta">
+                                                    ${attachment.size ? formatFileSize(attachment.size) : ''}
+                                                    ${attachment.uploadedAt ? ` • Uploaded ${formatDetailedDate(attachment.uploadedAt)}` : ''}
+                                                </span>
+                                            </div>
                                         </div>
-                                        <a href="${attachment.url}" target="_blank" class="btn btn-xs btn-outline">
-                                            <i class="fas fa-external-link-alt"></i> View
-                                        </a>
+                                        <div class="attachment-actions">
+                                            <button class="btn btn-outline btn-sm" onclick="viewSupportAttachment('${attachment.url}', '${attachment.originalName || attachment.filename || attachment.name}')">
+                                                <i class="fas fa-eye"></i> View
+                                            </button>
+                                            <button class="btn btn-primary btn-sm" onclick="downloadSupportAttachment('${attachment.url}', '${attachment.originalName || attachment.filename || attachment.name}')">
+                                                <i class="fas fa-download"></i> Download
+                                            </button>
+                                        </div>
                                     </div>
                                 `).join('')}
                             </div>
+                            ${ticket.attachments.length > 1 ? `
+                                <div class="bulk-actions">
+                                    <button class="btn btn-outline" onclick="downloadAllSupportAttachments('${ticketId}')">
+                                        <i class="fas fa-download"></i> Download All
+                                    </button>
+                                </div>
+                            ` : ''}
                         </div>
                     ` : ''}
-
                     <div class="ticket-responses-section">
                         <h4><i class="fas fa-comments"></i> Conversation History</h4>
                         ${ticket.responses && ticket.responses.length > 0 ? `
@@ -3619,8 +3648,7 @@ async function viewSupportTicketDetails(ticketId) {
                             </div>
                         `}
                     </div>
-                    
-                    ${ticket.ticketStatus === 'open' || ticket.ticketStatus === 'in_progress' || ticket.ticketStatus === 'waiting_admin_response' ? `
+                    ${(ticket.ticketStatus === 'open' || ticket.ticketStatus === 'in_progress' || ticket.ticketStatus === 'waiting_admin_response') ? `
                         <div class="add-response-section">
                             <h4><i class="fas fa-reply"></i> Add to Conversation</h4>
                             <form id="ticket-response-form">
@@ -3641,8 +3669,7 @@ async function viewSupportTicketDetails(ticketId) {
                 </div>
             </div>
         `;
-        showGenericModal(modalContent, 'max-width: 800px;');
-
+        showGenericModal(modalContent, 'max-width: 900px;');
         // Setup response form if it exists
         const responseForm = document.getElementById('ticket-response-form');
         if (responseForm) {
@@ -3651,10 +3678,79 @@ async function viewSupportTicketDetails(ticketId) {
                 submitTicketResponse(ticketId);
             });
         }
-
     } catch (error) {
         console.error('Error loading ticket details:', error);
         showNotification('Failed to load ticket details', 'error');
+    }
+}
+
+// Functions to handle support attachment viewing and downloading
+function viewSupportAttachment(url, filename) {
+    if (!url) {
+        showNotification('File URL not available', 'error');
+        return;
+    }
+    // Open in new tab/window
+    try {
+        window.open(url, '_blank', 'noopener,noreferrer');
+        showNotification('Opening file in new tab...', 'info');
+    } catch (error) {
+        console.error('Error opening file:', error);
+        showNotification('Unable to open file. Try downloading instead.', 'error');
+    }
+}
+
+async function downloadSupportAttachment(url, filename) {
+    if (!url) {
+        showNotification('File URL not available', 'error');
+        return;
+    }
+    try {
+        showNotification('Preparing download...', 'info');
+        // Direct download approach
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename || 'support_attachment';
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showNotification('Download started', 'success');
+    } catch (error) {
+        console.error('Download error:', error);
+        showNotification('Download failed. Opening in new tab...', 'warning');
+        // Fallback to opening in new tab
+        try {
+            window.open(url, '_blank', 'noopener,noreferrer');
+        } catch (fallbackError) {
+            showNotification('Unable to access file', 'error');
+        }
+    }
+}
+
+async function downloadAllSupportAttachments(ticketId) {
+    try {
+        const response = await apiCall(`/support/ticket/${ticketId}`, 'GET');
+        const ticket = response.ticket;
+        const attachments = ticket.attachments || [];
+        if (attachments.length === 0) {
+            showNotification('No attachments to download', 'info');
+            return;
+        }
+        showNotification(`Downloading ${attachments.length} files...`, 'info');
+        // Download files with delay to prevent browser blocking
+        attachments.forEach((attachment, index) => {
+            setTimeout(() => {
+                downloadSupportAttachment(
+                    attachment.url,
+                    attachment.originalName || attachment.filename || attachment.name || `attachment_${index + 1}`
+                );
+            }, index * 500);
+        });
+    } catch (error) {
+        console.error('Error downloading all attachments:', error);
+        showNotification('Failed to download all files', 'error');
     }
 }
 
@@ -3869,26 +3965,33 @@ function formatTicketDate(dateString) {
 function formatDetailedDate(date) {
     try {
         if (!date) return 'Unknown date';
-        
         let dateObj;
-        
-        if (date && typeof date === 'object' && date.seconds) {
-            dateObj = new Date(date.seconds * 1000);
+        if (typeof date === 'string') {
+            dateObj = new Date(date);
         } else if (date instanceof Date) {
             dateObj = date;
-        } else if (typeof date === 'string') {
-            dateObj = new Date(date);
+        } else if (date && typeof date === 'object') {
+            if (date.seconds) {
+                dateObj = new Date(date.seconds * 1000);
+            } else if (date._seconds) {
+                dateObj = new Date(date._seconds * 1000);
+            } else if (date.toDate && typeof date.toDate === 'function') {
+                dateObj = date.toDate();
+            } else {
+                return 'Invalid date';
+            }
+        } else if (typeof date === 'number') {
+            dateObj = new Date(date < 10000000000 ? date * 1000 : date);
         } else {
             return 'Invalid date';
         }
-        
         if (isNaN(dateObj.getTime())) {
             return 'Invalid date';
         }
-        
-        return dateObj.toLocaleDateString() + ' at ' + dateObj.toLocaleTimeString([], { 
-            hour: '2-digit', 
-            minute: '2-digit' 
+        return dateObj.toLocaleDateString() + ' at ' + dateObj.toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
         });
     } catch (error) {
         console.error('Date formatting error:', error);
