@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -9,6 +10,40 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* Analytics CSS Variables - Add these to your style.css */
+        :root {
+            --analytics-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --production-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --sales-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+        
+        /* Critical styles for analytics to prevent conflicts */
+        .sidebar-divider {
+            border: none;
+            height: 1px;
+            background: rgba(0,0,0,0.1);
+            margin: 1rem 0;
+        }
+        
+        .sidebar-section-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin: 1rem 1rem 0.5rem 1rem;
+        }
+        
+        .nav-badge {
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            color: white;
+            font-size: 0.6rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            margin-left: 0.5rem;
+        }
+    </style>
 </head>
 <body>
     <div id="notification-container"></div>
@@ -247,9 +282,37 @@
         </main>
     </div>
 
+    <!-- Scripts in correct order -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
     <script src="script.js" defer></script>
-    <script src="analytics-integration.js" defer></script>
+    
+    <!-- Analytics Integration Script Inline to prevent conflicts -->
+    <script>
+        // Wait for main script to load, then add analytics
+        document.addEventListener('DOMContentLoaded', function() {
+            // Small delay to ensure script.js is fully loaded
+            setTimeout(function() {
+                if (typeof appState !== 'undefined' && typeof buildSidebarNav === 'function') {
+                    // Analytics integration will be added here
+                    const script = document.createElement('script');
+                    script.src = 'analytics-integration.js';
+                    script.onload = function() {
+                        console.log('Analytics integration loaded successfully');
+                        // If user is already logged in and is a contractor, refresh sidebar
+                        if (appState.currentUser && appState.currentUser.type === 'contractor') {
+                            buildSidebarNav();
+                        }
+                    };
+                    script.onerror = function() {
+                        console.log('Analytics integration failed to load - using fallback');
+                    };
+                    document.head.appendChild(script);
+                } else {
+                    console.log('Main app not ready yet, retrying...');
+                    setTimeout(arguments.callee, 1000);
+                }
+            }, 500);
+        });
+    </script>
 </body>
-
 </html>
