@@ -61,17 +61,21 @@ const appState = {
     profileFiles: {}, // For profile completion uploads
 };
 
-// === ANALYSIS PORTAL STATE ===
+// === ANALYSIS PORTAL STATE (Update existing) ===
 const analysisState = {
     dataTypes: ['Requirement Update', 'Production Update', 'Sales Update', 'Project Details', 'Description'],
     selectedType: 'Production Update',
     selectedFrequency: 'Daily',
     googleSheetUrl: '',
+    description: '',
     vercelHtmlUrl: '',
     isSyncing: false,
     lastSyncTime: null,
-    analysisData: []
+    analysisData: [],
+    requestId: null,
+    requestStatus: null
 };
+
 
 // Professional Features Header Data
 const headerFeatures = [
@@ -4042,244 +4046,341 @@ function toggleFAQ(faqItem) {
 
 
 // --- ANALYSIS PORTAL IMPLEMENTATION ---
+
+// === ENHANCED RENDER ANALYSIS PORTAL ===
 function renderAnalysisPortal() {
     const container = document.getElementById('app-container');
-
     container.innerHTML = `
         <div class="analysis-portal-container">
             <div class="section-header modern-header">
                 <div class="header-content">
                     <h2><i class="fas fa-chart-line"></i> Analysis Portal</h2>
-                    <p class="header-subtitle">Connect your Google Sheets and view comprehensive analytics reports</p>
+                    <p class="header-subtitle">Submit your data for comprehensive analytics and receive detailed reports</p>
                 </div>
             </div>
-
-            <div class="analysis-config-section">
-                <div class="config-card">
-                    <h3><i class="fas fa-cog"></i> Analysis Configuration</h3>
-
+            <div id="analysis-content">
+                <div class="loading-spinner"><div class="spinner"></div><p>Loading analysis portal...</p></div>
+            </div>
+        </div>
+    `;
+    // Load existing request or show form
+    loadAnalysisPortalContent();
+}
+async function loadAnalysisPortalContent() {
+    try {
+        const response = await apiCall('/analysis/my-request', 'GET');
+                if (response.success && response.request) {
+            // User has an existing request
+            analysisState.requestId = response.request._id;
+            analysisState.googleSheetUrl = response.request.googleSheetUrl;
+            analysisState.description = response.request.description;
+            analysisState.selectedType = response.request.dataType;
+            analysisState.selectedFrequency = response.request.frequency;
+            analysisState.vercelHtmlUrl = response.request.vercelUrl;
+            analysisState.requestStatus = response.request.status;
+                        if (response.request.vercelUrl) {
+                // Show the report
+                renderAnalysisReport();
+            } else {
+                // Show pending status
+                renderPendingAnalysis();
+            }
+        } else {
+            // Show submission form
+            renderAnalysisForm();
+        }
+    } catch (error) {
+        console.error('Error loading analysis portal:', error);
+        renderAnalysisForm();
+    }
+}
+function renderAnalysisForm() {
+    const container = document.getElementById('analysis-content');
+        container.innerHTML = `
+        <div class="analysis-config-section">
+            <div class="config-card">
+                <h3><i class="fas fa-cog"></i> Submit Analysis Request</h3>
+                <p class="config-description">Connect your Google Sheets data and describe your analysis requirements.</p>
+                <form id="analysis-request-form">
                     <div class="config-grid">
                         <div class="form-group">
                             <label class="form-label">
                                 <i class="fas fa-database"></i> Data Type
                             </label>
-                            <select class="form-select" id="analysis-data-type" onchange="updateAnalysisType(this.value)">
-                                <option value="Requirement Update" ${analysisState.selectedType === 'Requirement Update' ? 'selected' : ''}>Requirement Update</option>
-                                <option value="Production Update" ${analysisState.selectedType === 'Production Update' ? 'selected' : ''}>Production Update</option>
-                                <option value="Sales Update" ${analysisState.selectedType === 'Sales Update' ? 'selected' : ''}>Sales Update</option>
-                                <option value="Project Details" ${analysisState.selectedType === 'Project Details' ? 'selected' : ''}>Project Details</option>
-                                <option value="Description" ${analysisState.selectedType === 'Description' ? 'selected' : ''}>Description</option>
+                            <select class="form-select" id="analysis-data-type" required>
+                                ${analysisState.dataTypes.map(type =>
+                                     `<option value="${type}" ${analysisState.selectedType === type ? 'selected' : ''}>${type}</option>`
+                                ).join('')}
                             </select>
                         </div>
-
                         <div class="form-group">
                             <label class="form-label">
                                 <i class="fas fa-clock"></i> Analysis Frequency
                             </label>
                             <div class="frequency-selector">
                                 <label class="frequency-option">
-                                    <input type="radio" name="frequency" value="Daily" ${analysisState.selectedFrequency === 'Daily' ? 'checked' : ''} onchange="updateFrequency('Daily')">
+                                    <input type="radio" name="frequency" value="Daily" checked required>
                                     <span>Daily</span>
                                 </label>
                                 <label class="frequency-option">
-                                    <input type="radio" name="frequency" value="Weekly" ${analysisState.selectedFrequency === 'Weekly' ? 'checked' : ''} onchange="updateFrequency('Weekly')">
+                                    <input type="radio" name="frequency" value="Weekly">
                                     <span>Weekly</span>
                                 </label>
                                 <label class="frequency-option">
-                                    <input type="radio" name="frequency" value="Monthly" ${analysisState.selectedFrequency === 'Monthly' ? 'checked' : ''} onchange="updateFrequency('Monthly')">
+                                    <input type="radio" name="frequency" value="Monthly">
                                     <span>Monthly</span>
                                 </label>
                             </div>
                         </div>
                     </div>
-
                     <div class="sheets-integration-section">
-                        <h4><i class="fab fa-google-drive"></i> Google Sheets Integration</h4>
-                        <div class="sheets-input-group">
+                        <h4><i class="fab fa-google-drive"></i> Google Sheets URL</h4>
+                        <div class="form-group">
                             <input type="url"
                                     id="google-sheet-url"
                                     class="form-input"
                                     placeholder="https://docs.google.com/spreadsheets/d/..."
-                                    value="${analysisState.googleSheetUrl}">
-                            <button class="btn btn-primary" onclick="connectGoogleSheet()">
-                                <i class="fas fa-link"></i> Connect Sheet
-                            </button>
+                                    required
+                                    pattern="https://docs.google.com/spreadsheets/.*">
+                            <small class="form-help">Share your Google Sheet with view permissions and paste the URL here</small>
                         </div>
-                        <div id="sheet-status" class="sheet-status">
-                            ${analysisState.googleSheetUrl ?
-                                 `<span class="status-connected"><i class="fas fa-check-circle"></i> Sheet Connected</span>` :
-                                 `<span class="status-disconnected"><i class="fas fa-times-circle"></i> No Sheet Connected</span>`
-                            }
+                    </div>
+                    <div class="description-section">
+                        <h4><i class="fas fa-file-alt"></i> Analysis Description</h4>
+                        <div class="form-group">
+                            <textarea id="analysis-description"
+                                     class="form-textarea"
+                                     rows="5"
+                                     placeholder="Describe what kind of analysis you need, what metrics to focus on, and any specific requirements..."
+                                     required></textarea>
+                            <small class="form-help">Provide detailed requirements for the analysis you need</small>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary btn-large">
+                            <i class="fas fa-paper-plane"></i> Submit Analysis Request
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div class="analysis-info-section">
+            <div class="info-card">
+                <h4><i class="fas fa-info-circle"></i> How It Works</h4>
+                <ol class="process-steps">
+                    <li>Submit your Google Sheets URL with your data</li>
+                    <li>Describe your analysis requirements</li>
+                    <li>Our team will process your request</li>
+                    <li>Receive your interactive analytics dashboard</li>
+                </ol>
+            </div>
+        </div>
+    `;
+    // Setup form submission
+    document.getElementById('analysis-request-form').addEventListener('submit', handleAnalysisSubmission);
+}
+function renderPendingAnalysis() {
+    const container = document.getElementById('analysis-content');
+        container.innerHTML = `
+        <div class="analysis-status-section">
+            <div class="status-card pending">
+                <div class="status-icon">
+                    <i class="fas fa-clock fa-3x"></i>
+                </div>
+                <h3>Analysis Request Submitted</h3>
+                <p>Your analysis request is being processed by our team.</p>
+                                <div class="request-details-card">
+                    <h4>Request Details</h4>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <label>Data Type:</label>
+                            <span>${analysisState.selectedType}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Frequency:</label>
+                            <span>${analysisState.selectedFrequency}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Google Sheet:</label>
+                            <a href="${analysisState.googleSheetUrl}" target="_blank" class="sheet-link">
+                                <i class="fas fa-external-link-alt"></i> View Sheet
+                            </a>
+                        </div>
+                        <div class="detail-item full-width">
+                            <label>Description:</label>
+                            <p>${analysisState.description}</p>
                         </div>
                     </div>
                 </div>
-            </div>
-
-            <div class="analysis-report-section">
-                <div class="report-card">
-                    <div class="report-header">
-                        <h3><i class="fas fa-file-chart-line"></i> Analytics Report</h3>
-                        <div class="report-actions">
-                            <button class="btn btn-outline" onclick="refreshAnalysisReport()">
-                                <i class="fas fa-sync-alt"></i> Refresh
-                            </button>
-                            <button class="btn btn-outline" onclick="fullscreenReport()">
-                                <i class="fas fa-expand"></i> Fullscreen
-                            </button>
-                        </div>
-                    </div>
-
-                    <div id="analysis-report-container" class="report-container">
-                        <div class="report-placeholder">
-                            <i class="fas fa-chart-area"></i>
-                            <h4>No Report Available</h4>
-                            <p>Connect your Google Sheet and wait for admin to upload analytics report</p>
-                        </div>
-                    </div>
+                <div class="status-actions">
+                    <button class="btn btn-outline" onclick="updateAnalysisRequest()">
+                        <i class="fas fa-edit"></i> Update Request
+                    </button>
+                    <button class="btn btn-danger btn-outline" onclick="cancelAnalysisRequest()">
+                        <i class="fas fa-times"></i> Cancel Request
+                    </button>
                 </div>
             </div>
         </div>
     `;
-
-    // Load saved configuration
-    loadAnalysisConfiguration();
 }
-
-// Analysis Portal Functions
-async function connectGoogleSheet() {
-    const urlInput = document.getElementById('google-sheet-url');
-    const url = urlInput.value.trim();
-
-    if (!url) {
-        showNotification('Please enter a Google Sheets URL', 'warning');
-        return;
-    }
-
-    // Validate Google Sheets URL
-    if (!url.includes('docs.google.com/spreadsheets')) {
-        showNotification('Invalid Google Sheets URL', 'error');
-        return;
-    }
-
-    try {
-        const response = await apiCall('/analysis/connect-sheet', 'POST', {
-            sheetUrl: url,
-            dataType: analysisState.selectedType,
-            frequency: analysisState.selectedFrequency
-        });
-
-        if (response.success) {
-            analysisState.googleSheetUrl = url;
-            showNotification('Google Sheet connected successfully!', 'success');
-            updateSheetStatus(true);
-
-            // Check for Vercel report
-            checkForVercelReport();
-        }
-    } catch (error) {
-        showNotification('Failed to connect Google Sheet', 'error');
-    }
-}
-
-async function loadAnalysisConfiguration() {
-    try {
-        const response = await apiCall('/analysis/configuration', 'GET');
-        if (response.success && response.config) {
-            analysisState.googleSheetUrl = response.config.sheetUrl || '';
-            analysisState.selectedType = response.config.dataType || 'Production Update';
-            analysisState.selectedFrequency = response.config.frequency || 'Daily';
-            analysisState.vercelHtmlUrl = response.config.vercelHtmlUrl || '';
-            
-            // Update UI
-            if (document.getElementById('analysis-data-type')) {
-                document.getElementById('analysis-data-type').value = analysisState.selectedType;
-            }
-            if (document.querySelector(`input[name="frequency"][value="${analysisState.selectedFrequency}"]`)) {
-                document.querySelector(`input[name="frequency"][value="${analysisState.selectedFrequency}"]`).checked = true;
-            }
-            if (analysisState.googleSheetUrl) {
-                document.getElementById('google-sheet-url').value = analysisState.googleSheetUrl;
-                updateSheetStatus(true);
-            }
-
-            // Load Vercel report if available
-            if (analysisState.vercelHtmlUrl) {
-                loadVercelReport(analysisState.vercelHtmlUrl);
-            }
-        }
-    } catch (error) {
-        console.error('Error loading analysis configuration:', error);
-    }
-}
-
-async function checkForVercelReport() {
-    try {
-        const response = await apiCall('/analysis/report-url', 'GET');
-        if (response.success && response.vercelUrl) {
-            loadVercelReport(response.vercelUrl);
-        }
-    } catch (error) {
-        console.error('Error checking for Vercel report:', error);
-    }
-}
-
-function loadVercelReport(url) {
-    const container = document.getElementById('analysis-report-container');
-    if (!container) return;
-
-    container.innerHTML = `
-        <iframe
-             src="${url}"
-             class="analysis-report-iframe"
-            frameborder="0"
-            allowfullscreen
-            allow="fullscreen"
-            sandbox="allow-scripts allow-same-origin allow-popups">
-        </iframe>
+function renderAnalysisReport() {
+    const container = document.getElementById('analysis-content');
+        container.innerHTML = `
+        <div class="analysis-report-section">
+            <div class="report-header-card">
+                <div class="report-status-badge completed">
+                    <i class="fas fa-check-circle"></i> Report Ready
+                </div>
+                <h3>Your Analysis Report</h3>
+                <p>Your customized analytics dashboard is ready to view</p>
+                                <div class="report-actions">
+                    <button class="btn btn-primary" onclick="openFullscreenReport()">
+                        <i class="fas fa-expand"></i> View Fullscreen
+                    </button>
+                    <button class="btn btn-outline" onclick="refreshReport()">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                    <button class="btn btn-outline" onclick="showRequestDetails()">
+                        <i class="fas fa-info-circle"></i> Request Details
+                    </button>
+                </div>
+            </div>
+            <div class="report-container">
+                <iframe
+                     src="${analysisState.vercelHtmlUrl}"
+                     class="analysis-report-iframe"
+                    frameborder="0"
+                    allowfullscreen
+                    allow="fullscreen"
+                    sandbox="allow-scripts allow-same-origin allow-popups">
+                </iframe>
+            </div>
+            <div class="report-footer">
+                <button class="btn btn-outline" onclick="submitNewAnalysisRequest()">
+                    <i class="fas fa-plus"></i> Submit New Analysis Request
+                </button>
+            </div>
+        </div>
     `;
-
-    analysisState.vercelHtmlUrl = url;
 }
-
-function updateSheetStatus(connected) {
-    const statusElement = document.getElementById('sheet-status');
-    if (statusElement) {
-        statusElement.innerHTML = connected ?
-            `<span class="status-connected"><i class="fas fa-check-circle"></i> Sheet Connected - Last sync: ${new Date().toLocaleString()}</span>` :
-            `<span class="status-disconnected"><i class="fas fa-times-circle"></i> No Sheet Connected</span>`;
-    }
-}
-
-function updateAnalysisType(type) {
-    analysisState.selectedType = type;
-    saveAnalysisConfig();
-}
-
-function updateFrequency(frequency) {
-    analysisState.selectedFrequency = frequency;
-    saveAnalysisConfig();
-}
-
-async function saveAnalysisConfig() {
-    try {
-        await apiCall('/analysis/update-config', 'POST', {
-            dataType: analysisState.selectedType,
-            frequency: analysisState.selectedFrequency
-        });
+async function handleAnalysisSubmission(event) {
+    event.preventDefault();
+        const form = event.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<div class="btn-spinner"></div> Submitting...';
+    submitBtn.disabled = true;
+        try {
+        const requestData = {
+            dataType: document.getElementById('analysis-data-type').value,
+            frequency: document.querySelector('input[name="frequency"]:checked').value,
+            googleSheetUrl: document.getElementById('google-sheet-url').value,
+            description: document.getElementById('analysis-description').value
+        };
+                const response = await apiCall('/analysis/submit-request', 'POST', requestData);
+                if (response.success) {
+            showNotification('Analysis request submitted successfully!', 'success');
+            analysisState.requestId = response.requestId;
+            analysisState.googleSheetUrl = requestData.googleSheetUrl;
+            analysisState.description = requestData.description;
+            analysisState.selectedType = requestData.dataType;
+            analysisState.selectedFrequency = requestData.frequency;
+                        // Show pending status
+            renderPendingAnalysis();
+        }
     } catch (error) {
-        console.error('Error saving analysis config:', error);
+        console.error('Error submitting analysis request:', error);
+        showNotification('Failed to submit analysis request', 'error');
+    } finally {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
     }
 }
-
-async function refreshAnalysisReport() {
+async function updateAnalysisRequest() {
+    // Show form with existing data for editing
+    renderAnalysisForm();
+        // Pre-fill the form
+    document.getElementById('google-sheet-url').value = analysisState.googleSheetUrl;
+    document.getElementById('analysis-description').value = analysisState.description;
+    document.getElementById('analysis-data-type').value = analysisState.selectedType;
+    document.querySelector(`input[name="frequency"][value="${analysisState.selectedFrequency}"]`).checked = true;
+}
+async function cancelAnalysisRequest() {
+    if (!confirm('Are you sure you want to cancel this analysis request?')) return;
+        try {
+        await apiCall(`/analysis/request/${analysisState.requestId}`, 'DELETE');
+        showNotification('Analysis request cancelled', 'info');
+                // Reset state and show form
+        analysisState.requestId = null;
+        analysisState.vercelHtmlUrl = '';
+        analysisState.requestStatus = null;
+        renderAnalysisForm();
+    } catch (error) {
+        showNotification('Failed to cancel request', 'error');
+    }
+}
+async function submitNewAnalysisRequest() {
+    // Reset state for new request
+    analysisState.requestId = null;
+    analysisState.googleSheetUrl = '';
+    analysisState.description = '';
+    analysisState.vercelHtmlUrl = '';
+    analysisState.requestStatus = null;
+        renderAnalysisForm();
+}
+function showRequestDetails() {
+    const content = `
+        <div class="modal-header">
+            <h3><i class="fas fa-info-circle"></i> Analysis Request Details</h3>
+        </div>
+        <div class="modal-body">
+            <div class="detail-grid">
+                <div class="detail-item">
+                    <label>Data Type:</label>
+                    <span>${analysisState.selectedType}</span>
+                </div>
+                <div class="detail-item">
+                    <label>Frequency:</label>
+                    <span>${analysisState.selectedFrequency}</span>
+                </div>
+                <div class="detail-item">
+                    <label>Google Sheet:</label>
+                    <a href="${analysisState.googleSheetUrl}" target="_blank" class="sheet-link">
+                        <i class="fas fa-external-link-alt"></i> View Sheet
+                    </a>
+                </div>
+                <div class="detail-item full-width">
+                    <label>Description:</label>
+                    <p>${analysisState.description}</p>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+            </div>
+        </div>
+    `;
+        showGenericModal(content, 'max-width: 600px;');
+}
+function openFullscreenReport() {
+    const iframe = document.querySelector('.analysis-report-iframe');
+    if (iframe) {
+        // Try to open in new tab first
+        window.open(analysisState.vercelHtmlUrl, '_blank');
+    }
+}
+async function refreshReport() {
     const btn = event.target;
     const originalContent = btn.innerHTML;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Refreshing...';
     btn.disabled = true;
-
-    try {
-        await checkForVercelReport();
-        showNotification('Report refreshed successfully', 'success');
+        try {
+        // Reload the iframe
+        const iframe = document.querySelector('.analysis-report-iframe');
+        if (iframe) {
+            iframe.src = iframe.src;
+        }
+                showNotification('Report refreshed', 'success');
     } catch (error) {
         showNotification('Failed to refresh report', 'error');
     } finally {
@@ -4287,10 +4388,12 @@ async function refreshAnalysisReport() {
         btn.disabled = false;
     }
 }
-
-function fullscreenReport() {
-    const iframe = document.querySelector('.analysis-report-iframe');
-    if (iframe && iframe.requestFullscreen) {
-        iframe.requestFullscreen();
-    }
+// Add CSS styles for Analysis Portal
+const analysisPortalStyles = `<style>.analysis-portal-container {    padding: 20px;}.config-card, .status-card, .report-header-card {    background: white;    padding: 30px;    border-radius: 12px;    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);    margin-bottom: 20px;}.config-description {    color: #666;    margin-bottom: 30px;}.config-grid {    display: grid;    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));    gap: 20px;    margin-bottom: 30px;}.frequency-selector {    display: flex;    gap: 15px;}.frequency-option {    display: flex;    align-items: center;    padding: 10px 15px;    border: 2px solid #e0e0e0;    border-radius: 8px;    cursor: pointer;    transition: all 0.3s ease;}.frequency-option:hover {    border-color: #007bff;    background: #f8f9fa;}.frequency-option input[type="radio"] {    margin-right: 8px;}.frequency-option input[type="radio"]:checked + span {    color: #007bff;    font-weight: 600;}.sheets-integration-section, .description-section {    margin-bottom: 30px;}.sheets-integration-section h4, .description-section h4 {    display: flex;    align-items: center;    gap: 10px;    margin-bottom: 15px;    color: #333;}.sheet-link {    color: #007bff;    text-decoration: none;    display: inline-flex;    align-items: center;    gap: 5px;}.sheet-link:hover {    text-decoration: underline;}.status-card {    text-align: center;    padding: 40px;}.status-card.pending {    border-left: 4px solid #ffc107;}.status-icon {    color: #ffc107;    margin-bottom: 20px;}.request-details-card {    background: #f8f9fa;    padding: 20px;    border-radius: 8px;    margin: 30px 0;    text-align: left;}.detail-grid {    display: grid;    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));    gap: 20px;    margin-top: 15px;}.detail-item {    display: flex;    flex-direction: column;    gap: 5px;}.detail-item.full-width {    grid-column: 1 / -1;}.detail-item label {    font-weight: 600;    color: #666;    font-size: 14px;}.detail-item span, .detail-item p {    color: #333;}.status-actions {    display: flex;    gap: 15px;    justify-content: center;}.report-status-badge {    display: inline-flex;    align-items: center;    gap: 8px;    padding: 8px 16px;    border-radius: 20px;    font-size: 14px;    font-weight: 600;    margin-bottom: 20px;}.report-status-badge.completed {    background: #d4edda;    color: #155724;}.report-container {    background: white;    border-radius: 12px;    overflow: hidden;    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);    margin: 20px 0;}.analysis-report-iframe {    width: 100%;    height: 600px;    border: none;}.report-actions {    display: flex;    gap: 15px;    margin-top: 20px;}.report-footer {    text-align: center;    margin-top: 30px;}.info-card {    background: #f0f8ff;    border: 1px solid #b8daff;    padding: 20px;    border-radius: 8px;    margin-top: 20px;}.info-card h4 {    display: flex;    align-items: center;    gap: 10px;    margin-bottom: 15px;    color: #004085;}.process-steps {    margin: 0;    padding-left: 20px;    color: #004085;}.process-steps li {    margin: 10px 0;}.form-help {    display: block;    margin-top: 5px;    color: #666;    font-size: 13px;}.form-textarea {    width: 100%;    padding: 12px;    border: 1px solid #ddd;    border-radius: 8px;    font-size: 14px;    resize: vertical;    min-height: 100px;}@media (max-width: 768px) {    .config-grid {        grid-template-columns: 1fr;    }        .frequency-selector {        flex-direction: column;    }        .report-actions {        flex-direction: column;    }        .status-actions {        flex-direction: column;    }}</style>`;
+// Inject styles when the script loads
+if (!document.getElementById('analysis-portal-styles')) {
+    const styleElement = document.createElement('div');
+    styleElement.id = 'analysis-portal-styles';
+    styleElement.innerHTML = analysisPortalStyles;
+    document.head.appendChild(styleElement.firstElementChild);
 }
