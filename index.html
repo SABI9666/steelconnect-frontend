@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -281,40 +282,31 @@
         </main>
     </div>
 
+    <!-- Scripts in correct order -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
     <script src="script.js" defer></script>
     
+    <!-- Analytics Integration Script Inline to prevent conflicts -->
     <script>
         // Wait for main script to load, then add analytics
         document.addEventListener('DOMContentLoaded', function() {
             // Small delay to ensure script.js is fully loaded
             setTimeout(function() {
                 if (typeof appState !== 'undefined' && typeof buildSidebarNav === 'function') {
-                    
+                    // Analytics integration will be added here
                     const script = document.createElement('script');
                     script.src = 'analytics-integration.js';
-                    
-                    // This onload handler is the key to the fix
                     script.onload = function() {
                         console.log('Analytics integration loaded successfully');
-                        
-                        // 1. Explicitly run the initialization from the loaded script
-                        if (typeof window.initializeAnalyticsIntegration === 'function') {
-                            window.initializeAnalyticsIntegration(); // This overrides the sidebar function
-                            
-                            // 2. Then, rebuild the sidebar if the user is a contractor
-                            if (appState.currentUser && appState.currentUser.type === 'contractor') {
-                                buildSidebarNav(); // This will now correctly call the NEW analytics version
-                            }
+                        // If user is already logged in and is a contractor, refresh sidebar
+                        if (appState.currentUser && appState.currentUser.type === 'contractor') {
+                            buildSidebarNav();
                         }
                     };
-                    
                     script.onerror = function() {
                         console.log('Analytics integration failed to load - using fallback');
                     };
-                    
                     document.head.appendChild(script);
-                    
                 } else {
                     console.log('Main app not ready yet, retrying...');
                     setTimeout(arguments.callee, 1000);
