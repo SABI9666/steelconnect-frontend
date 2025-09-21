@@ -2252,26 +2252,23 @@ function addAnalyticsStyles() {
     document.head.appendChild(style);
 }
 
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    // Small delay to ensure main app is loaded
+    setTimeout(function() {
+        if (typeof window.appState !== 'undefined' && typeof window.buildSidebarNav === 'function') {
+            initializeAnalyticsIntegration();
+            
+            // If user is already logged in and is a contractor, refresh sidebar
+            if (window.appState.currentUser && window.appState.currentUser.type === 'contractor') {
+                buildSidebarNav();
+            }
+        } else {
+            console.log('Main app not ready yet, retrying...');
+            setTimeout(arguments.callee, 1000);
+        }
+    }, 500);
+});
+
 // Expose main function for manual initialization if needed
 window.initializeAnalyticsIntegration = initializeAnalyticsIntegration;
-
-// === CORRECTED INITIALIZATION LOGIC ===
-// Function to attempt initialization, retrying if the main app isn't ready.
-function attemptAnalyticsInit() {
-    if (typeof window.appState !== 'undefined' && typeof window.buildSidebarNav === 'function') {
-        // Main app is ready, so initialize the analytics module
-        initializeAnalyticsIntegration();
-
-        // If a contractor is logged in, rebuild the sidebar immediately to add the new menu item
-        if (window.appState.currentUser && window.appState.currentUser.type === 'contractor') {
-            buildSidebarNav(); // This now calls the new, overridden function
-        }
-    } else {
-        // If the main app is not ready, wait and try again
-        console.log('Main app not ready for analytics, retrying in 500ms...');
-        setTimeout(attemptAnalyticsInit, 500);
-    }
-}
-
-// Start the initialization check as soon as this script file is loaded.
-attemptAnalyticsInit();
