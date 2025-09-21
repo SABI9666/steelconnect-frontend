@@ -61,6 +61,17 @@ const appState = {
     profileFiles: {}, // For profile completion uploads
 };
 
+// === ANALYSIS PORTAL STATE ===
+const analysisState = {
+    dataTypes: ['Requirement Update', 'Production Update', 'Sales Update', 'Project Details', 'Description'],
+    selectedType: 'Production Update',
+    selectedFrequency: 'Daily',
+    googleSheetUrl: '',
+    vercelHtmlUrl: '',
+    isSyncing: false,
+    lastSyncTime: null,
+    analysisData: []
+};
 
 // Professional Features Header Data
 const headerFeatures = [
@@ -264,7 +275,7 @@ function initializeApp() {
             document.getElementById('user-info-dropdown').classList.remove('active');
         });
     }
-    
+
     const logoutLink = document.getElementById('user-logout-link');
     if (logoutLink) {
         logoutLink.addEventListener('click', (e) => {
@@ -2056,7 +2067,7 @@ async function viewQuoteAttachments(quoteId) {
                 </div>
                 <div class="attachments-list premium-attachments">
                     ${attachments.length === 0 ?
-                        `<div class="empty-state"><i class="fas fa-file"></i><p>No attachments found.</p></div>` :
+                        `<div class="empty-state"><i class="fas fa-file"></i><p>No files found.</p></div>` :
                         attachments.map(attachment => `
                             <div class="attachment-item">
                                 <div class="attachment-info">
@@ -2084,7 +2095,7 @@ async function viewQuoteAttachments(quoteId) {
                             <i class="fas fa-download"></i> Download All
                         </button>
                         <button class="btn btn-secondary" onclick="closeModal()">Close</button>
-                    </div>` : 
+                    </div>` :
                     `<div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Close</button></div>`
                 }
             `;
@@ -2586,7 +2597,7 @@ function renderAppSection(sectionId) {
     document.querySelectorAll('.sidebar-nav-link').forEach(link => link.classList.toggle('active', link.dataset.section === sectionId));
     const profileStatus = appState.currentUser.profileStatus;
     const isApproved = profileStatus === 'approved';
-    const restrictedSections = ['post-job', 'jobs', 'my-quotes', 'approved-jobs', 'estimation-tool', 'my-estimations', 'messages'];
+    const restrictedSections = ['post-job', 'jobs', 'my-quotes', 'approved-jobs', 'estimation-tool', 'my-estimations', 'messages', 'analysis-portal'];
     if (restrictedSections.includes(sectionId) && !isApproved) {
         container.innerHTML = getRestrictedAccessTemplate(sectionId, profileStatus);
         return;
@@ -2630,10 +2641,14 @@ function renderAppSection(sectionId) {
     else if (sectionId === 'support') {
         renderSupportSection();
     }
+    // NEW CASE FOR ANALYSIS PORTAL
+    else if (sectionId === 'analysis-portal') {
+        renderAnalysisPortal();
+    }
 }
 
 function getRestrictedAccessTemplate(sectionId, profileStatus) {
-    const sectionNames = { 'post-job': 'Post Projects', 'jobs': 'Browse Projects', 'my-quotes': 'My Quotes', 'approved-jobs': 'Approved Projects', 'estimation-tool': 'AI Estimation', 'my-estimations': 'My Estimations', 'messages': 'Messages' };
+    const sectionNames = { 'post-job': 'Post Projects', 'jobs': 'Browse Projects', 'my-quotes': 'My Quotes', 'approved-jobs': 'Approved Projects', 'estimation-tool': 'AI Estimation', 'my-estimations': 'My Estimations', 'messages': 'Messages', 'analysis-portal': 'Analysis Portal' };
     const sectionName = sectionNames[sectionId] || 'This Feature';
     let msg = '', btn = '', icon = 'fa-lock', color = '#f59e0b';
     if (profileStatus === 'incomplete') {
@@ -2929,7 +2944,7 @@ function showNotification(message, type = 'info', duration = 4000) {
     notif.className = `notification premium-notification notification-${type}`;
     notif.innerHTML = `<div class="notification-content"><i class="fas ${getNotificationIcon(type)}"></i><span>${message}</span></div><button class="notification-close" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>`;
     container.appendChild(notif);
-    
+
     if (duration > 0) {
         setTimeout(() => {
             if (notif.parentElement) {
@@ -3224,12 +3239,12 @@ function formatMessageDate(date) {
 function buildSidebarNav() {
     const nav = document.getElementById('sidebar-nav-menu');
     const role = appState.currentUser.type;
-    
+
     let links = `<a href="#" class="sidebar-nav-link" data-section="dashboard">
                     <i class="fas fa-tachometer-alt fa-fw"></i>
                     <span>Dashboard</span>
                  </a>`;
-    
+
     if (role === 'designer') {
         links += `
             <a href="#" class="sidebar-nav-link" data-section="jobs">
@@ -3261,9 +3276,16 @@ function buildSidebarNav() {
             <a href="#" class="sidebar-nav-link" data-section="my-estimations">
                 <i class="fas fa-file-invoice fa-fw"></i>
                 <span>My Estimations</span>
+            </a>
+            <hr class="sidebar-divider">
+            <div class="sidebar-section-title">Analytics & Reports</div>
+            <a href="#" class="sidebar-nav-link analysis-portal-link" data-section="analysis-portal">
+                <i class="fas fa-chart-line fa-fw"></i>
+                <span>Analysis Portal</span>
+                <span class="nav-badge">NEW</span>
             </a>`;
     }
-    
+
     // Common links for both user types
     links += `
         <a href="#" class="sidebar-nav-link" data-section="messages">
@@ -3279,9 +3301,9 @@ function buildSidebarNav() {
             <i class="fas fa-cog fa-fw"></i>
             <span>Settings</span>
         </a>`;
-        
+
     nav.innerHTML = links;
-    
+
     // Add event listeners
     nav.querySelectorAll('.sidebar-nav-link').forEach(link => {
         link.addEventListener('click', (e) => {
@@ -3296,7 +3318,7 @@ let supportFiles = []; // Global variable for support files
 
 function renderSupportSection() {
     const container = document.getElementById('app-container');
-    
+
     container.innerHTML = `
         <div class="section-header modern-header">
             <div class="header-content">
@@ -3304,7 +3326,7 @@ function renderSupportSection() {
                 <p class="header-subtitle">Get help and contact our support team</p>
             </div>
         </div>
-        
+
         <div class="support-container">
             <div class="support-section">
                 <h3><i class="fas fa-question-circle"></i> Frequently Asked Questions</h3>
@@ -3318,7 +3340,7 @@ function renderSupportSection() {
                             <p>Navigate to "Post Project" in the sidebar, fill out the project details, and click submit. Your project will be visible to designers once approved.</p>
                         </div>
                     </div>
-                    
+
                     <div class="faq-item" onclick="toggleFAQ(this)">
                         <div class="faq-question">
                             <h4>How does the AI estimation work?</h4>
@@ -3328,7 +3350,7 @@ function renderSupportSection() {
                             <p>Upload your project drawings and specifications. Our AI analyzes the documents and provides cost estimates based on current market rates and material costs.</p>
                         </div>
                     </div>
-                    
+
                     <div class="faq-item" onclick="toggleFAQ(this)">
                         <div class="faq-question">
                             <h4>How do I communicate with designers/clients?</h4>
@@ -3350,14 +3372,14 @@ function renderSupportSection() {
                     <i class="fas fa-sync-alt"></i> Refresh
                 </button>
             </div>
-            
+
             <div class="support-section">
                 <h3><i class="fas fa-envelope"></i> Contact Support</h3>
                 <div class="contact-support-card">
                     <div class="support-intro">
                         <p>Can't find what you're looking for? Send us a message and our support team will get back to you within 24 hours.</p>
                     </div>
-                    
+
                     <form id="support-form" class="premium-form support-form">
                         <div class="form-group">
                             <label class="form-label">
@@ -3375,7 +3397,7 @@ function renderSupportSection() {
                                 <option value="Other">Other</option>
                             </select>
                         </div>
-                        
+
                         <div class="form-group">
                             <label class="form-label">
                                 <i class="fas fa-exclamation-circle"></i> Priority
@@ -3388,7 +3410,7 @@ function renderSupportSection() {
                                 <option value="Critical">Critical - System down</option>
                             </select>
                         </div>
-                        
+
                         <div class="form-group">
                             <label class="form-label">
                                 <i class="fas fa-file-alt"></i> Description
@@ -3401,7 +3423,7 @@ function renderSupportSection() {
                                 placeholder="Please describe your issue or question in detail. Include any error messages, steps you tried, or specific information that might help us assist you better."
                             ></textarea>
                         </div>
-                        
+
                         <div class="form-group">
                             <label class="form-label">
                                 <i class="fas fa-paperclip"></i> Attachments (Optional)
@@ -3427,7 +3449,7 @@ function renderSupportSection() {
                                 Upload screenshots, error logs, or relevant files. Max 5 files, 10MB each.
                             </small>
                         </div>
-                        
+
                         <div class="form-actions">
                             <button type="submit" class="btn btn-primary btn-large">
                                 <i class="fas fa-paper-plane"></i>
@@ -3439,13 +3461,13 @@ function renderSupportSection() {
             </div>
         </div>
     `;
-    
+
     // Load existing support tickets
     loadSupportTickets();
-    
+
     // Setup form submission
     document.getElementById('support-form').addEventListener('submit', handleSupportSubmit);
-    
+
     // Setup file drag and drop
     setupSupportFileDragDrop();
 }
@@ -3773,7 +3795,7 @@ async function submitTicketResponse(ticketId) {
         await apiCall(`/support/ticket/${ticketId}/respond`, 'POST', { message });
 
         showNotification('Response sent successfully!', 'success');
-        
+
         // Refresh the modal content with the new response
         viewSupportTicketDetails(ticketId);
         // Refresh the main tickets list in the background
@@ -3792,13 +3814,13 @@ async function submitTicketResponse(ticketId) {
 function handleSupportFileChange(event) {
     const input = event.target;
     const files = Array.from(input.files);
-    
+
     // Validate file count
     if (supportFiles.length + files.length > 5) {
         showNotification('Maximum 5 files allowed for support requests', 'warning');
         return;
     }
-    
+
     // Validate file size (10MB limit)
     const maxSize = 10 * 1024 * 1024;
     const invalidFiles = files.filter(file => file.size > maxSize);
@@ -3806,7 +3828,7 @@ function handleSupportFileChange(event) {
         showNotification(`Some files exceed 10MB limit: ${invalidFiles.map(f => f.name).join(', ')}`, 'error');
         return;
     }
-    
+
     supportFiles.push(...files);
     renderSupportFileList();
 }
@@ -3819,15 +3841,15 @@ function removeSupportFile(index) {
 function renderSupportFileList() {
     const container = document.getElementById('support-attachments-list');
     const label = document.getElementById('support-attachments-label');
-    
+
     if (!container || !label) return;
-    
+
     if (supportFiles.length === 0) {
         container.innerHTML = '';
         label.textContent = 'Click to upload screenshots or files';
         return;
     }
-    
+
     container.innerHTML = supportFiles.map((file, index) => `
         <div class="file-list-item">
             <div class="file-list-item-info">
@@ -3840,7 +3862,7 @@ function renderSupportFileList() {
             </button>
         </div>
     `).join('');
-    
+
     label.textContent = `${supportFiles.length} file(s) selected`;
 }
 
@@ -3863,19 +3885,19 @@ function setupSupportFileDragDrop() {
     if (!wrapper) return;
     const customInput = wrapper.querySelector('.custom-file-input');
     const realInput = wrapper.querySelector('input[type="file"]');
-    
+
     if (customInput && realInput) {
         customInput.addEventListener('click', () => realInput.click());
-        
+
         customInput.addEventListener('dragover', (e) => {
             e.preventDefault();
             customInput.classList.add('drag-over');
         });
-        
+
         customInput.addEventListener('dragleave', () => {
             customInput.classList.remove('drag-over');
         });
-        
+
         customInput.addEventListener('drop', (e) => {
             e.preventDefault();
             customInput.classList.remove('drag-over');
@@ -3893,14 +3915,14 @@ function setupSupportFileDragDrop() {
 
 async function handleSupportSubmit(event) {
     event.preventDefault();
-    
+
     const form = event.target;
     const submitBtn = form.querySelector('button[type="submit"]');
     const originalText = submitBtn.innerHTML;
-    
+
     submitBtn.innerHTML = '<div class="btn-spinner"></div> Sending...';
     submitBtn.disabled = true;
-    
+
     try {
         const formData = new FormData();
         formData.append('subject', form.subject.value);
@@ -3909,21 +3931,21 @@ async function handleSupportSubmit(event) {
         formData.append('userType', appState.currentUser.type);
         formData.append('userName', appState.currentUser.name);
         formData.append('userEmail', appState.currentUser.email);
-        
+
         if (supportFiles && supportFiles.length > 0) {
             for (let i = 0; i < supportFiles.length; i++) {
                 formData.append('attachments', supportFiles[i]);
             }
         }
-        
+
         await apiCall('/support/submit', 'POST', formData, 'Support request submitted successfully!');
-        
+
         addLocalNotification(
-            'Support Request Sent', 
-            'Your support request has been submitted. We\'ll get back to you within 24 hours.', 
+            'Support Request Sent',
+            'Your support request has been submitted. We\'ll get back to you within 24 hours.',
             'success'
         );
-        
+
         form.reset();
         supportFiles = [];
         renderSupportFileList();
@@ -3931,7 +3953,7 @@ async function handleSupportSubmit(event) {
         setTimeout(() => {
             loadSupportTickets();
         }, 1000);
-        
+
     } catch (error) {
         addLocalNotification('Error', 'Failed to submit support request. Please try again.', 'error');
     } finally {
@@ -4008,12 +4030,267 @@ function truncateText(text, maxLength) {
 function toggleFAQ(faqItem) {
     const answer = faqItem.querySelector('.faq-answer');
     const icon = faqItem.querySelector('.fas');
-    
+
     document.querySelectorAll('.faq-item.active').forEach(item => {
         if (item !== faqItem) {
             item.classList.remove('active');
         }
     });
-    
+
     faqItem.classList.toggle('active');
+}
+
+
+// --- ANALYSIS PORTAL IMPLEMENTATION ---
+function renderAnalysisPortal() {
+    const container = document.getElementById('app-container');
+
+    container.innerHTML = `
+        <div class="analysis-portal-container">
+            <div class="section-header modern-header">
+                <div class="header-content">
+                    <h2><i class="fas fa-chart-line"></i> Analysis Portal</h2>
+                    <p class="header-subtitle">Connect your Google Sheets and view comprehensive analytics reports</p>
+                </div>
+            </div>
+
+            <div class="analysis-config-section">
+                <div class="config-card">
+                    <h3><i class="fas fa-cog"></i> Analysis Configuration</h3>
+
+                    <div class="config-grid">
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-database"></i> Data Type
+                            </label>
+                            <select class="form-select" id="analysis-data-type" onchange="updateAnalysisType(this.value)">
+                                <option value="Requirement Update" ${analysisState.selectedType === 'Requirement Update' ? 'selected' : ''}>Requirement Update</option>
+                                <option value="Production Update" ${analysisState.selectedType === 'Production Update' ? 'selected' : ''}>Production Update</option>
+                                <option value="Sales Update" ${analysisState.selectedType === 'Sales Update' ? 'selected' : ''}>Sales Update</option>
+                                <option value="Project Details" ${analysisState.selectedType === 'Project Details' ? 'selected' : ''}>Project Details</option>
+                                <option value="Description" ${analysisState.selectedType === 'Description' ? 'selected' : ''}>Description</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-clock"></i> Analysis Frequency
+                            </label>
+                            <div class="frequency-selector">
+                                <label class="frequency-option">
+                                    <input type="radio" name="frequency" value="Daily" ${analysisState.selectedFrequency === 'Daily' ? 'checked' : ''} onchange="updateFrequency('Daily')">
+                                    <span>Daily</span>
+                                </label>
+                                <label class="frequency-option">
+                                    <input type="radio" name="frequency" value="Weekly" ${analysisState.selectedFrequency === 'Weekly' ? 'checked' : ''} onchange="updateFrequency('Weekly')">
+                                    <span>Weekly</span>
+                                </label>
+                                <label class="frequency-option">
+                                    <input type="radio" name="frequency" value="Monthly" ${analysisState.selectedFrequency === 'Monthly' ? 'checked' : ''} onchange="updateFrequency('Monthly')">
+                                    <span>Monthly</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="sheets-integration-section">
+                        <h4><i class="fab fa-google-drive"></i> Google Sheets Integration</h4>
+                        <div class="sheets-input-group">
+                            <input type="url"
+                                    id="google-sheet-url"
+                                    class="form-input"
+                                    placeholder="https://docs.google.com/spreadsheets/d/..."
+                                    value="${analysisState.googleSheetUrl}">
+                            <button class="btn btn-primary" onclick="connectGoogleSheet()">
+                                <i class="fas fa-link"></i> Connect Sheet
+                            </button>
+                        </div>
+                        <div id="sheet-status" class="sheet-status">
+                            ${analysisState.googleSheetUrl ?
+                                 `<span class="status-connected"><i class="fas fa-check-circle"></i> Sheet Connected</span>` :
+                                 `<span class="status-disconnected"><i class="fas fa-times-circle"></i> No Sheet Connected</span>`
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-report-section">
+                <div class="report-card">
+                    <div class="report-header">
+                        <h3><i class="fas fa-file-chart-line"></i> Analytics Report</h3>
+                        <div class="report-actions">
+                            <button class="btn btn-outline" onclick="refreshAnalysisReport()">
+                                <i class="fas fa-sync-alt"></i> Refresh
+                            </button>
+                            <button class="btn btn-outline" onclick="fullscreenReport()">
+                                <i class="fas fa-expand"></i> Fullscreen
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="analysis-report-container" class="report-container">
+                        <div class="report-placeholder">
+                            <i class="fas fa-chart-area"></i>
+                            <h4>No Report Available</h4>
+                            <p>Connect your Google Sheet and wait for admin to upload analytics report</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Load saved configuration
+    loadAnalysisConfiguration();
+}
+
+// Analysis Portal Functions
+async function connectGoogleSheet() {
+    const urlInput = document.getElementById('google-sheet-url');
+    const url = urlInput.value.trim();
+
+    if (!url) {
+        showNotification('Please enter a Google Sheets URL', 'warning');
+        return;
+    }
+
+    // Validate Google Sheets URL
+    if (!url.includes('docs.google.com/spreadsheets')) {
+        showNotification('Invalid Google Sheets URL', 'error');
+        return;
+    }
+
+    try {
+        const response = await apiCall('/analysis/connect-sheet', 'POST', {
+            sheetUrl: url,
+            dataType: analysisState.selectedType,
+            frequency: analysisState.selectedFrequency
+        });
+
+        if (response.success) {
+            analysisState.googleSheetUrl = url;
+            showNotification('Google Sheet connected successfully!', 'success');
+            updateSheetStatus(true);
+
+            // Check for Vercel report
+            checkForVercelReport();
+        }
+    } catch (error) {
+        showNotification('Failed to connect Google Sheet', 'error');
+    }
+}
+
+async function loadAnalysisConfiguration() {
+    try {
+        const response = await apiCall('/analysis/configuration', 'GET');
+        if (response.success && response.config) {
+            analysisState.googleSheetUrl = response.config.sheetUrl || '';
+            analysisState.selectedType = response.config.dataType || 'Production Update';
+            analysisState.selectedFrequency = response.config.frequency || 'Daily';
+            analysisState.vercelHtmlUrl = response.config.vercelHtmlUrl || '';
+            
+            // Update UI
+            if (document.getElementById('analysis-data-type')) {
+                document.getElementById('analysis-data-type').value = analysisState.selectedType;
+            }
+            if (document.querySelector(`input[name="frequency"][value="${analysisState.selectedFrequency}"]`)) {
+                document.querySelector(`input[name="frequency"][value="${analysisState.selectedFrequency}"]`).checked = true;
+            }
+            if (analysisState.googleSheetUrl) {
+                document.getElementById('google-sheet-url').value = analysisState.googleSheetUrl;
+                updateSheetStatus(true);
+            }
+
+            // Load Vercel report if available
+            if (analysisState.vercelHtmlUrl) {
+                loadVercelReport(analysisState.vercelHtmlUrl);
+            }
+        }
+    } catch (error) {
+        console.error('Error loading analysis configuration:', error);
+    }
+}
+
+async function checkForVercelReport() {
+    try {
+        const response = await apiCall('/analysis/report-url', 'GET');
+        if (response.success && response.vercelUrl) {
+            loadVercelReport(response.vercelUrl);
+        }
+    } catch (error) {
+        console.error('Error checking for Vercel report:', error);
+    }
+}
+
+function loadVercelReport(url) {
+    const container = document.getElementById('analysis-report-container');
+    if (!container) return;
+
+    container.innerHTML = `
+        <iframe
+             src="${url}"
+             class="analysis-report-iframe"
+            frameborder="0"
+            allowfullscreen
+            allow="fullscreen"
+            sandbox="allow-scripts allow-same-origin allow-popups">
+        </iframe>
+    `;
+
+    analysisState.vercelHtmlUrl = url;
+}
+
+function updateSheetStatus(connected) {
+    const statusElement = document.getElementById('sheet-status');
+    if (statusElement) {
+        statusElement.innerHTML = connected ?
+            `<span class="status-connected"><i class="fas fa-check-circle"></i> Sheet Connected - Last sync: ${new Date().toLocaleString()}</span>` :
+            `<span class="status-disconnected"><i class="fas fa-times-circle"></i> No Sheet Connected</span>`;
+    }
+}
+
+function updateAnalysisType(type) {
+    analysisState.selectedType = type;
+    saveAnalysisConfig();
+}
+
+function updateFrequency(frequency) {
+    analysisState.selectedFrequency = frequency;
+    saveAnalysisConfig();
+}
+
+async function saveAnalysisConfig() {
+    try {
+        await apiCall('/analysis/update-config', 'POST', {
+            dataType: analysisState.selectedType,
+            frequency: analysisState.selectedFrequency
+        });
+    } catch (error) {
+        console.error('Error saving analysis config:', error);
+    }
+}
+
+async function refreshAnalysisReport() {
+    const btn = event.target;
+    const originalContent = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Refreshing...';
+    btn.disabled = true;
+
+    try {
+        await checkForVercelReport();
+        showNotification('Report refreshed successfully', 'success');
+    } catch (error) {
+        showNotification('Failed to refresh report', 'error');
+    } finally {
+        btn.innerHTML = originalContent;
+        btn.disabled = false;
+    }
+}
+
+function fullscreenReport() {
+    const iframe = document.querySelector('.analysis-report-iframe');
+    if (iframe && iframe.requestFullscreen) {
+        iframe.requestFullscreen();
+    }
 }
