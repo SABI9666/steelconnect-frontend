@@ -26,6 +26,10 @@
     --ai-gradient: linear-gradient(135deg, #8b5cf6, #ec4899, #f59e0b);
     --ai-light: #fdf4ff;
     --ai-purple: #8b5cf6;
+    /* --- ADDED VARIABLES --- */
+    --analytics-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --production-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    --sales-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
 }
 
 html { scroll-behavior: smooth; }
