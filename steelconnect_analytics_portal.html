@@ -1,0 +1,1440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SteelConnect Analytics Portal</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #f59e0b;
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+            --info-color: #3b82f6;
+            --dark-color: #1f2937;
+            --light-color: #f8fafc;
+            --border-color: #e5e7eb;
+            --text-primary: #111827;
+            --text-secondary: #6b7280;
+            --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --analytics-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --production-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --sales-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+            --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .analytics-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .analytics-header {
+            background: var(--analytics-gradient);
+            padding: 3rem 2rem;
+            border-radius: 20px;
+            color: white;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow-xl);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .analytics-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="white" opacity="0.1"/><circle cx="75" cy="75" r="1" fill="white" opacity="0.1"/><circle cx="50" cy="10" r="0.5" fill="white" opacity="0.15"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+            opacity: 0.3;
+        }
+
+        .analytics-header-content {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 2rem;
+        }
+
+        .analytics-title-section h1 {
+            font-size: 2.5rem;
+            font-weight: 900;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .analytics-title-section p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .analytics-actions {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .btn-primary {
+            background: white;
+            color: var(--primary-color);
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: white;
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+
+        .btn-outline:hover {
+            background: rgba(255,255,255,0.1);
+            border-color: rgba(255,255,255,0.5);
+        }
+
+        .analytics-nav {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            background: white;
+            padding: 1rem;
+            border-radius: 16px;
+            box-shadow: var(--shadow-md);
+            overflow-x: auto;
+        }
+
+        .nav-tab {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-weight: 600;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .nav-tab.active {
+            background: var(--primary-color);
+            color: white;
+            box-shadow: var(--shadow-md);
+        }
+
+        .nav-tab:hover:not(.active) {
+            background: var(--light-color);
+            color: var(--text-primary);
+        }
+
+        .analytics-content {
+            display: none;
+        }
+
+        .analytics-content.active {
+            display: block;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .metric-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: var(--shadow-md);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-xl);
+        }
+
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--primary-color);
+        }
+
+        .metric-card.production::before {
+            background: var(--production-gradient);
+        }
+
+        .metric-card.sales::before {
+            background: var(--sales-gradient);
+        }
+
+        .metric-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .metric-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .metric-icon.analytics {
+            background: var(--analytics-gradient);
+        }
+
+        .metric-icon.production {
+            background: var(--production-gradient);
+        }
+
+        .metric-icon.sales {
+            background: var(--sales-gradient);
+        }
+
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: 900;
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-label {
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .metric-change {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-top: 0.5rem;
+        }
+
+        .metric-change.positive {
+            color: var(--success-color);
+        }
+
+        .metric-change.negative {
+            color: var(--danger-color);
+        }
+
+        .chart-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: var(--shadow-md);
+            margin-bottom: 2rem;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .chart-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .chart-controls {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .form-select {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: white;
+            font-size: 0.875rem;
+        }
+
+        .data-table {
+            background: white;
+            border-radius: 16px;
+            box-shadow: var(--shadow-md);
+            overflow: hidden;
+        }
+
+        .table-header {
+            background: var(--light-color);
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .table-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .table-subtitle {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 1rem 2rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background: var(--light-color);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-active {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success-color);
+        }
+
+        .status-pending {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning-color);
+        }
+
+        .status-completed {
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--info-color);
+        }
+
+        .sheets-integration {
+            background: white;
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: var(--shadow-md);
+            margin-bottom: 2rem;
+        }
+
+        .integration-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .integration-icon {
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, #34a853 0%, #4285f4 100%);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 0.95rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            padding: 1rem;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+
+        .connection-status.connected {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success-color);
+        }
+
+        .connection-status.disconnected {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger-color);
+        }
+
+        .export-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .export-card {
+            background: var(--light-color);
+            padding: 1.5rem;
+            border-radius: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .export-card:hover {
+            background: var(--primary-color);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 16px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+
+        @media (max-width: 768px) {
+            .analytics-container {
+                padding: 1rem;
+            }
+
+            .analytics-header {
+                padding: 2rem 1rem;
+            }
+
+            .analytics-title-section h1 {
+                font-size: 2rem;
+            }
+
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .analytics-nav {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .nav-tab {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="analytics-container">
+        <!-- Analytics Header -->
+        <div class="analytics-header">
+            <div class="analytics-header-content">
+                <div class="analytics-title-section">
+                    <h1><i class="fas fa-chart-line"></i> SteelConnect Analytics</h1>
+                    <p>Advanced Production, Sales & Business Intelligence Dashboard</p>
+                </div>
+                <div class="analytics-actions">
+                    <button class="btn btn-primary" onclick="exportData()">
+                        <i class="fas fa-download"></i> Export Report
+                    </button>
+                    <button class="btn btn-outline" onclick="refreshData()">
+                        <i class="fas fa-sync-alt"></i> Refresh Data
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="analytics-nav">
+            <button class="nav-tab active" data-tab="overview" onclick="switchTab('overview')">
+                <i class="fas fa-tachometer-alt"></i> Overview
+            </button>
+            <button class="nav-tab" data-tab="production" onclick="switchTab('production')">
+                <i class="fas fa-industry"></i> Production Analysis
+            </button>
+            <button class="nav-tab" data-tab="sales" onclick="switchTab('sales')">
+                <i class="fas fa-chart-bar"></i> Sales Analysis
+            </button>
+            <button class="nav-tab" data-tab="integration" onclick="switchTab('integration')">
+                <i class="fab fa-google"></i> Google Sheets
+            </button>
+        </div>
+
+        <!-- Overview Tab -->
+        <div id="overview" class="analytics-content active">
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <div class="metric-icon analytics">
+                            <i class="fas fa-project-diagram"></i>
+                        </div>
+                        <div class="metric-change positive">
+                            <i class="fas fa-arrow-up"></i>
+                            12.5%
+                        </div>
+                    </div>
+                    <div class="metric-value" id="totalProjects">24</div>
+                    <div class="metric-label">Active Projects</div>
+                </div>
+
+                <div class="metric-card production">
+                    <div class="metric-header">
+                        <div class="metric-icon production">
+                            <i class="fas fa-cogs"></i>
+                        </div>
+                        <div class="metric-change positive">
+                            <i class="fas fa-arrow-up"></i>
+                            8.2%
+                        </div>
+                    </div>
+                    <div class="metric-value" id="productionOutput">1,250</div>
+                    <div class="metric-label">Tons Produced (Monthly)</div>
+                </div>
+
+                <div class="metric-card sales">
+                    <div class="metric-header">
+                        <div class="metric-icon sales">
+                            <i class="fas fa-dollar-sign"></i>
+                        </div>
+                        <div class="metric-change positive">
+                            <i class="fas fa-arrow-up"></i>
+                            15.7%
+                        </div>
+                    </div>
+                    <div class="metric-value" id="totalRevenue">$485K</div>
+                    <div class="metric-label">Monthly Revenue</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <div class="metric-icon analytics">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="metric-change positive">
+                            <i class="fas fa-arrow-up"></i>
+                            6.3%
+                        </div>
+                    </div>
+                    <div class="metric-value" id="clientCount">18</div>
+                    <div class="metric-label">Active Clients</div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h3 class="chart-title">Performance Overview</h3>
+                    <div class="chart-controls">
+                        <select class="form-select" onchange="updateOverviewChart(this.value)">
+                            <option value="7">Last 7 Days</option>
+                            <option value="30" selected>Last 30 Days</option>
+                            <option value="90">Last 3 Months</option>
+                        </select>
+                    </div>
+                </div>
+                <canvas id="overviewChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+
+        <!-- Production Analysis Tab -->
+        <div id="production" class="analytics-content">
+            <div class="metrics-grid">
+                <div class="metric-card production">
+                    <div class="metric-header">
+                        <div class="metric-icon production">
+                            <i class="fas fa-hammer"></i>
+                        </div>
+                        <div class="metric-change positive">
+                            <i class="fas fa-arrow-up"></i>
+                            5.2%
+                        </div>
+                    </div>
+                    <div class="metric-value" id="dailyOutput">42</div>
+                    <div class="metric-label">Daily Output (Tons)</div>
+                </div>
+
+                <div class="metric-card production">
+                    <div class="metric-header">
+                        <div class="metric-icon production">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="metric-change negative">
+                            <i class="fas fa-arrow-down"></i>
+                            2.1%
+                        </div>
+                    </div>
+                    <div class="metric-value" id="efficiency">87%</div>
+                    <div class="metric-label">Production Efficiency</div>
+                </div>
+
+                <div class="metric-card production">
+                    <div class="metric-header">
+                        <div class="metric-icon production">
+                            <i class="fas fa-tools"></i>
+                        </div>
+                        <div class="metric-change positive">
+                            <i class="fas fa-arrow-up"></i>
+                            3.8%
+                        </div>
+                    </div>
+                    <div class="metric-value" id="activeLines">6</div>
+                    <div class="metric-label">Active Production Lines</div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h3 class="chart-title">Production Trends</h3>
+                    <div class="chart-controls">
+                        <select class="form-select" onchange="updateProductionChart(this.value)">
+                            <option value="daily">Daily</option>
+                            <option value="weekly" selected>Weekly</option>
+                            <option value="monthly">Monthly</option>
+                        </select>
+                    </div>
+                </div>
+                <canvas id="productionChart" width="400" height="200"></canvas>
+            </div>
+
+            <div class="data-table">
+                <div class="table-header">
+                    <h3 class="table-title">Production Schedule</h3>
+                    <p class="table-subtitle">Current and upcoming production orders</p>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Client</th>
+                                <th>Product Type</th>
+                                <th>Quantity (Tons)</th>
+                                <th>Due Date</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="productionTable">
+                            <tr>
+                                <td>PO-2024-001</td>
+                                <td>Metro Construction</td>
+                                <td>H-Beams</td>
+                                <td>85</td>
+                                <td>2024-12-15</td>
+                                <td><span class="status-badge status-active">In Progress</span></td>
+                            </tr>
+                            <tr>
+                                <td>PO-2024-002</td>
+                                <td>Skyline Developers</td>
+                                <td>Rebar</td>
+                                <td>120</td>
+                                <td>2024-12-20</td>
+                                <td><span class="status-badge status-pending">Scheduled</span></td>
+                            </tr>
+                            <tr>
+                                <td>PO-2024-003</td>
+                                <td>Industrial Works Ltd</td>
+                                <td>Structural Steel</td>
+                                <td>200</td>
+                                <td>2024-12-25</td>
+                                <td><span class="status-badge status-completed">Completed</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sales Analysis Tab -->
+        <div id="sales" class="analytics-content">
+            <div class="metrics-grid">
+                <div class="metric-card sales">
+                    <div class="metric-header">
+                        <div class="metric-icon sales">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div class="metric-change positive">
+                            <i class="fas fa-arrow-up"></i>
+                            18.5%
+                        </div>
+                    </div>
+                    <div class="metric-value" id="monthlyRevenue">$485,200</div>
+                    <div class="metric-label">Monthly Revenue</div>
+                </div>
+
+                <div class="metric-card sales">
+                    <div class="metric-header">
+                        <div class="metric-icon sales">
+                            <i class="fas fa-handshake"></i>
+                        </div>
+                        <div class="metric-change positive">
+                            <i class="fas fa-arrow-up"></i>
+                            12.3%
+                        </div>
+                    </div>
+                    <div class="metric-value" id="newContracts">7</div>
+                    <div class="metric-label">New Contracts</div>
+                </div>
+
+                <div class="metric-card sales">
+                    <div class="metric-header">
+                        <div class="metric-icon sales">
+                            <i class="fas fa-percentage"></i>
+                        </div>
+                        <div class="metric-change positive">
+                            <i class="fas fa-arrow-up"></i>
+                            4.7%
+                        </div>
+                    </div>
+                    <div class="metric-value" id="conversionRate">65%</div>
+                    <div class="metric-label">Quote Conversion Rate</div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h3 class="chart-title">Sales Performance</h3>
+                    <div class="chart-controls">
+                        <select class="form-select" onchange="updateSalesChart(this.value)">
+                            <option value="revenue">Revenue</option>
+                            <option value="contracts" selected>Contracts</option>
+                            <option value="pipeline">Pipeline</option>
+                        </select>
+                    </div>
+                </div>
+                <canvas id="salesChart" width="400" height="200"></canvas>
+            </div>
+
+            <div class="data-table">
+                <div class="table-header">
+                    <h3 class="table-title">Recent Sales</h3>
+                    <p class="table-subtitle">Latest closed deals and contracts</p>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Contract ID</th>
+                                <th>Client</th>
+                                <th>Project Type</th>
+                                <th>Value</th>
+                                <th>Close Date</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="salesTable">
+                            <tr>
+                                <td>CON-2024-015</td>
+                                <td>Metro Construction</td>
+                                <td>Commercial Building</td>
+                                <td>$125,000</td>
+                                <td>2024-12-01</td>
+                                <td><span class="status-badge status-completed">Closed</span></td>
+                            </tr>
+                            <tr>
+                                <td>CON-2024-016</td>
+                                <td>Skyline Developers</td>
+                                <td>Residential Complex</td>
+                                <td>$89,500</td>
+                                <td>2024-12-03</td>
+                                <td><span class="status-badge status-active">Negotiating</span></td>
+                            </tr>
+                            <tr>
+                                <td>CON-2024-017</td>
+                                <td>Industrial Works Ltd</td>
+                                <td>Manufacturing Plant</td>
+                                <td>$275,000</td>
+                                <td>2024-12-05</td>
+                                <td><span class="status-badge status-pending">Proposal Sent</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Google Sheets Integration Tab -->
+        <div id="integration" class="analytics-content">
+            <div class="sheets-integration">
+                <div class="integration-header">
+                    <div class="integration-icon">
+                        <i class="fab fa-google"></i>
+                    </div>
+                    <div>
+                        <h3>Google Sheets Integration</h3>
+                        <p>Connect your analytics data to Google Sheets for advanced reporting and collaboration</p>
+                    </div>
+                </div>
+
+                <div class="connection-status disconnected" id="connectionStatus">
+                    <i class="fas fa-times-circle"></i>
+                    Not Connected - Configure your Google Sheets integration below
+                </div>
+
+                <form id="sheetsForm">
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fas fa-link"></i> Google Sheets URL
+                        </label>
+                        <input 
+                            type="url" 
+                            class="form-input" 
+                            id="sheetsUrl" 
+                            placeholder="https://docs.google.com/spreadsheets/d/your-sheet-id/edit"
+                            required
+                        >
+                        <small>Paste the sharing URL of your Google Sheet</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fas fa-key"></i> API Key (Optional)
+                        </label>
+                        <input 
+                            type="password" 
+                            class="form-input" 
+                            id="apiKey" 
+                            placeholder="Enter your Google Sheets API key"
+                        >
+                        <small>For advanced integration features</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fas fa-sync"></i> Auto-sync Frequency
+                        </label>
+                        <select class="form-select" id="syncFrequency">
+                            <option value="manual">Manual Only</option>
+                            <option value="hourly">Every Hour</option>
+                            <option value="daily" selected>Daily</option>
+                            <option value="weekly">Weekly</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-plug"></i> Connect to Google Sheets
+                    </button>
+                </form>
+
+                <div class="export-options">
+                    <div class="export-card" onclick="exportToSheets('production')">
+                        <i class="fas fa-industry" style="font-size: 2rem; margin-bottom: 1rem; color: var(--production-gradient);"></i>
+                        <h4>Production Data</h4>
+                        <p>Export production metrics and schedules</p>
+                    </div>
+                    <div class="export-card" onclick="exportToSheets('sales')">
+                        <i class="fas fa-chart-bar" style="font-size: 2rem; margin-bottom: 1rem; color: var(--sales-gradient);"></i>
+                        <h4>Sales Data</h4>
+                        <p>Export sales performance and contracts</p>
+                    </div>
+                    <div class="export-card" onclick="exportToSheets('overview')">
+                        <i class="fas fa-tachometer-alt" style="font-size: 2rem; margin-bottom: 1rem; color: var(--analytics-gradient);"></i>
+                        <h4>Overview Report</h4>
+                        <p>Export complete analytics summary</p>
+                    </div>
+                    <div class="export-card" onclick="showCustomExport()">
+                        <i class="fas fa-cog" style="font-size: 2rem; margin-bottom: 1rem; color: var(--text-secondary);"></i>
+                        <h4>Custom Export</h4>
+                        <p>Configure custom data export</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="data-table" style="margin-top: 2rem;">
+                <div class="table-header">
+                    <h3 class="table-title">Sync History</h3>
+                    <p class="table-subtitle">Recent data synchronization events</p>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Data Type</th>
+                                <th>Records</th>
+                                <th>Status</th>
+                                <th>Duration</th>
+                            </tr>
+                        </thead>
+                        <tbody id="syncHistory">
+                            <tr>
+                                <td>2024-12-10 14:30</td>
+                                <td>Production Data</td>
+                                <td>145 records</td>
+                                <td><span class="status-badge status-completed">Success</span></td>
+                                <td>2.3s</td>
+                            </tr>
+                            <tr>
+                                <td>2024-12-10 09:15</td>
+                                <td>Sales Report</td>
+                                <td>67 records</td>
+                                <td><span class="status-badge status-completed">Success</span></td>
+                                <td>1.8s</td>
+                            </tr>
+                            <tr>
+                                <td>2024-12-09 18:45</td>
+                                <td>Overview Summary</td>
+                                <td>28 records</td>
+                                <td><span class="status-badge status-pending">Pending</span></td>
+                                <td>-</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="customExportModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Custom Data Export</h3>
+                <button class="modal-close" onclick="closeModal('customExportModal')">&times;</button>
+            </div>
+            <form id="customExportForm">
+                <div class="form-group">
+                    <label class="form-label">Data Range</label>
+                    <select class="form-select" id="exportRange">
+                        <option value="week">Last Week</option>
+                        <option value="month" selected>Last Month</option>
+                        <option value="quarter">Last Quarter</option>
+                        <option value="year">Last Year</option>
+                        <option value="custom">Custom Range</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Data Types</label>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.5rem;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" checked> Production Metrics
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" checked> Sales Data
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox"> Client Information
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox"> Financial Reports
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Export Format</label>
+                    <select class="form-select" id="exportFormat">
+                        <option value="xlsx">Excel (.xlsx)</option>
+                        <option value="csv">CSV</option>
+                        <option value="pdf">PDF Report</option>
+                        <option value="sheets">Google Sheets</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">
+                    <i class="fas fa-download"></i> Generate Export
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Analytics data simulation
+        const analyticsData = {
+            production: {
+                daily: [35, 42, 38, 45, 41, 39, 44],
+                weekly: [280, 315, 298, 342, 325, 311, 336],
+                monthly: [1250, 1180, 1340, 1285, 1420, 1365]
+            },
+            sales: {
+                revenue: [125000, 89500, 275000, 156000, 198000, 142000],
+                contracts: [3, 5, 2, 4, 6, 3],
+                pipeline: [8, 12, 15, 11, 9, 14]
+            }
+        };
+
+        // Chart instances
+        let overviewChart, productionChart, salesChart;
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeCharts();
+            setupEventListeners();
+            updateMetrics();
+        });
+
+        // Tab switching functionality
+        function switchTab(tabName) {
+            // Update nav tabs
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+
+            // Update content
+            document.querySelectorAll('.analytics-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(tabName).classList.add('active');
+
+            // Initialize charts if needed
+            if (tabName === 'production' && !productionChart) {
+                initializeProductionChart();
+            } else if (tabName === 'sales' && !salesChart) {
+                initializeSalesChart();
+            }
+        }
+
+        // Initialize all charts
+        function initializeCharts() {
+            initializeOverviewChart();
+        }
+
+        // Overview chart
+        function initializeOverviewChart() {
+            const ctx = document.getElementById('overviewChart').getContext('2d');
+            overviewChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                    datasets: [{
+                        label: 'Production (Tons)',
+                        data: [280, 315, 298, 342],
+                        borderColor: '#f093fb',
+                        backgroundColor: 'rgba(240, 147, 251, 0.1)',
+                        tension: 0.4
+                    }, {
+                        label: 'Revenue ($K)',
+                        data: [125, 189, 275, 156],
+                        borderColor: '#4facfe',
+                        backgroundColor: 'rgba(79, 172, 254, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: '#f3f4f6'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: '#f3f4f6'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        }
+                    }
+                }
+            });
+        }
+
+        // Production chart
+        function initializeProductionChart() {
+            const ctx = document.getElementById('productionChart').getContext('2d');
+            productionChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    datasets: [{
+                        label: 'Daily Production (Tons)',
+                        data: analyticsData.production.daily,
+                        backgroundColor: 'rgba(240, 147, 251, 0.8)',
+                        borderColor: '#f093fb',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: '#f3f4f6'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: '#f3f4f6'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Sales chart
+        function initializeSalesChart() {
+            const ctx = document.getElementById('salesChart').getContext('2d');
+            salesChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Closed Deals', 'Negotiating', 'Proposals Sent', 'Lead Generation'],
+                    datasets: [{
+                        data: [40, 25, 20, 15],
+                        backgroundColor: [
+                            '#4facfe',
+                            '#00f2fe',
+                            '#667eea',
+                            '#764ba2'
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update chart data
+        function updateOverviewChart(period) {
+            // Simulate data update based on period
+            const newData = period === '7' ? 
+                [35, 42, 38, 45, 41, 39, 44] : 
+                period === '30' ? 
+                [280, 315, 298, 342] : 
+                [1250, 1180, 1340];
+            
+            overviewChart.data.datasets[0].data = newData;
+            overviewChart.update();
+        }
+
+        function updateProductionChart(period) {
+            if (!productionChart) return;
+            
+            const data = analyticsData.production[period];
+            const labels = period === 'daily' ? 
+                ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] :
+                period === 'weekly' ?
+                ['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5', 'Week 6', 'Week 7'] :
+                ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+            
+            productionChart.data.labels = labels;
+            productionChart.data.datasets[0].data = data;
+            productionChart.update();
+        }
+
+        function updateSalesChart(type) {
+            if (!salesChart) return;
+            
+            const data = analyticsData.sales[type];
+            salesChart.data.datasets[0].data = data;
+            salesChart.update();
+        }
+
+        // Google Sheets integration
+        function setupEventListeners() {
+            document.getElementById('sheetsForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                connectToSheets();
+            });
+
+            document.getElementById('customExportForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                processCustomExport();
+            });
+        }
+
+        function connectToSheets() {
+            const url = document.getElementById('sheetsUrl').value;
+            const apiKey = document.getElementById('apiKey').value;
+            const frequency = document.getElementById('syncFrequency').value;
+
+            // Simulate connection process
+            const statusElement = document.getElementById('connectionStatus');
+            statusElement.innerHTML = '<div class="loading-spinner"></div> Connecting to Google Sheets...';
+            statusElement.className = 'connection-status';
+
+            setTimeout(() => {
+                statusElement.innerHTML = '<i class="fas fa-check-circle"></i> Successfully connected to Google Sheets';
+                statusElement.className = 'connection-status connected';
+                
+                // Add to sync history
+                addSyncRecord('Google Sheets', 'Connection established', 'Success');
+                
+                showNotification('Google Sheets integration configured successfully!', 'success');
+            }, 2000);
+        }
+
+        function exportToSheets(dataType) {
+            showNotification(`Exporting ${dataType} data to Google Sheets...`, 'info');
+            
+            // Simulate export process
+            setTimeout(() => {
+                addSyncRecord(`${dataType.charAt(0).toUpperCase() + dataType.slice(1)} Export`, 
+                             Math.floor(Math.random() * 200) + 50 + ' records', 'Success');
+                showNotification(`${dataType} data exported successfully!`, 'success');
+            }, 1500);
+        }
+
+        function showCustomExport() {
+            document.getElementById('customExportModal').style.display = 'flex';
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        function processCustomExport() {
+            const range = document.getElementById('exportRange').value;
+            const format = document.getElementById('exportFormat').value;
+            
+            showNotification(`Generating ${format.toUpperCase()} export for ${range}...`, 'info');
+            
+            setTimeout(() => {
+                showNotification('Custom export generated successfully!', 'success');
+                closeModal('customExportModal');
+            }, 2000);
+        }
+
+        // Utility functions
+        function addSyncRecord(type, records, status) {
+            const tbody = document.getElementById('syncHistory');
+            const now = new Date();
+            const timestamp = now.toISOString().slice(0, 16).replace('T', ' ');
+            
+            const row = tbody.insertRow(0);
+            row.innerHTML = `
+                <td>${timestamp}</td>
+                <td>${type}</td>
+                <td>${records}</td>
+                <td><span class="status-badge status-${status.toLowerCase()}">${status}</span></td>
+                <td>${(Math.random() * 3 + 1).toFixed(1)}s</td>
+            `;
+        }
+
+        function updateMetrics() {
+            // Simulate real-time metric updates
+            setInterval(() => {
+                const elements = {
+                    totalProjects: document.getElementById('totalProjects'),
+                    productionOutput: document.getElementById('productionOutput'),
+                    totalRevenue: document.getElementById('totalRevenue'),
+                    clientCount: document.getElementById('clientCount'),
+                    dailyOutput: document.getElementById('dailyOutput'),
+                    efficiency: document.getElementById('efficiency'),
+                    activeLines: document.getElementById('activeLines'),
+                    monthlyRevenue: document.getElementById('monthlyRevenue'),
+                    newContracts: document.getElementById('newContracts'),
+                    conversionRate: document.getElementById('conversionRate')
+                };
+
+                // Add subtle animations for metric updates
+                Object.values(elements).forEach(el => {
+                    if (el && Math.random() > 0.95) { // 5% chance to update
+                        el.style.transform = 'scale(1.05)';
+                        setTimeout(() => {
+                            el.style.transform = 'scale(1)';
+                        }, 200);
+                    }
+                });
+            }, 5000);
+        }
+
+        function refreshData() {
+            showNotification('Refreshing analytics data...', 'info');
+            
+            // Simulate data refresh
+            setTimeout(() => {
+                showNotification('Data refreshed successfully!', 'success');
+                updateMetrics();
+            }, 1500);
+        }
+
+        function exportData() {
+            showNotification('Generating comprehensive analytics report...', 'info');
+            
+            setTimeout(() => {
+                showNotification('Report exported successfully!', 'success');
+            }, 2000);
+        }
+
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6'};
+                color: white;
+                padding: 1rem 1.5rem;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                z-index: 1001;
+                max-width: 300px;
+                animation: slideIn 0.3s ease;
+            `;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 300);
+            }, 3000);
+        }
+
+        // Add CSS animations
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
