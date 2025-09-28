@@ -10,21 +10,20 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <style>
-        /* Analytics CSS Variables - Add these to your style.css */
+        /* Base and Original Variables */
         :root {
             --analytics-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             --production-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
             --sales-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
         }
         
-        /* Critical styles for analytics to prevent conflicts */
+        /* Sidebar and Original Component Styles */
         .sidebar-divider {
             border: none;
             height: 1px;
             background: rgba(0,0,0,0.1);
             margin: 1rem 0;
         }
-        
         .sidebar-section-title {
             font-size: 0.75rem;
             font-weight: 600;
@@ -33,7 +32,6 @@
             letter-spacing: 0.5px;
             margin: 1rem 1rem 0.5rem 1rem;
         }
-        
         .nav-badge {
             background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
             color: white;
@@ -42,11 +40,11 @@
             border-radius: 4px;
             margin-left: 0.5rem;
         }
-        
-        /* Business Analytics Styles */
+
+        /* --- UPDATED & AESTHETIC BUSINESS ANALYTICS STYLES --- */
         .business-analytics-section {
-            padding: 80px 0;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 100px 0;
+            background: #f8f9ff;
             position: relative;
             overflow: hidden;
         }
@@ -57,11 +55,11 @@
             right: -10%;
             width: 500px;
             height: 500px;
-            background: radial-gradient(circle, rgba(99, 102, 241, 0.1) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.08) 0%, transparent 70%);
             border-radius: 50%;
         }
         .analytics-container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             padding: 0 20px;
             position: relative;
@@ -69,19 +67,19 @@
         }
         .analytics-header {
             text-align: center;
-            margin-bottom: 60px;
+            margin-bottom: 80px;
         }
         .analytics-title {
-            font-size: 48px;
-            font-weight: 800;
+            font-size: 56px;
+            font-weight: 900;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             margin-bottom: 20px;
-            animation: fadeInUp 0.8s ease;
+            line-height: 1.2;
         }
         .analytics-subtitle {
-            font-size: 20px;
+            font-size: 22px;
             color: #64748b;
             max-width: 800px;
             margin: 0 auto;
@@ -90,35 +88,19 @@
         .analytics-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-            gap: 30px;
+            gap: 40px;
             margin-bottom: 60px;
         }
         .analytics-card {
             background: white;
-            border-radius: 20px;
-            padding: 30px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
-        }
-        .analytics-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-            transform: scaleX(0);
-            transition: transform 0.3s ease;
+            border-radius: 24px;
+            padding: 30px 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .analytics-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12);
-        }
-        .analytics-card:hover::before {
-            transform: scaleX(1);
+            transform: translateY(-15px);
+            box-shadow: 0 30px 80px rgba(102, 126, 234, 0.2);
         }
         .analytics-card-header {
             display: flex;
@@ -135,21 +117,14 @@
             font-size: 24px;
             color: white;
             margin-right: 20px;
+            flex-shrink: 0;
         }
-        .analytics-icon.purple {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-        .analytics-icon.blue {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-        }
-        .analytics-icon.pink {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-        }
-        .analytics-icon.green {
-            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-        }
+        .analytics-icon.purple { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .analytics-icon.blue { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+        .analytics-icon.pink { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        .analytics-icon.green { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
         .analytics-card-title {
-            font-size: 22px;
+            font-size: 24px;
             font-weight: 700;
             color: #1e293b;
         }
@@ -160,19 +135,9 @@
             padding: 15px 0;
             border-bottom: 1px solid #f1f5f9;
         }
-        .analytics-metric:last-child {
-            border-bottom: none;
-        }
-        .metric-label {
-            color: #64748b;
-            font-size: 14px;
-            font-weight: 500;
-        }
-        .metric-value {
-            font-size: 24px;
-            font-weight: 700;
-            color: #1e293b;
-        }
+        .analytics-metric:last-child { border-bottom: none; }
+        .metric-label { color: #64748b; font-size: 14px; font-weight: 500; }
+        .metric-value { font-size: 24px; font-weight: 700; color: #1e293b; }
         .metric-badge {
             display: inline-flex;
             align-items: center;
@@ -182,166 +147,183 @@
             font-weight: 600;
             margin-left: 10px;
         }
-        .metric-badge.positive {
-            background: #dcfce7;
-            color: #16a34a;
-        }
-        .metric-badge.negative {
-            background: #fee2e2;
-            color: #dc2626;
-        }
+        .metric-badge.positive { background: #dcfce7; color: #16a34a; }
+        .metric-badge.negative { background: #fee2e2; color: #dc2626; }
         .analytics-dashboard-preview {
             background: white;
-            border-radius: 20px;
+            border-radius: 24px;
             padding: 40px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
-            margin-top: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .dashboard-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-            flex-wrap: wrap;
-            gap: 20px;
+         .analytics-dashboard-preview:hover {
+            transform: translateY(-15px);
+            box-shadow: 0 30px 80px rgba(102, 126, 234, 0.2);
         }
-        .dashboard-title {
-            font-size: 28px;
-            font-weight: 700;
-            color: #1e293b;
-        }
-        .dashboard-actions {
-            display: flex;
-            gap: 15px;
-        }
+        .dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; flex-wrap: wrap; gap: 20px; }
+        .dashboard-title { font-size: 28px; font-weight: 700; color: #1e293b; }
+        .dashboard-actions { display: flex; gap: 15px; }
         .dashboard-btn {
-            padding: 10px 20px;
-            border-radius: 10px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            border: none;
-            font-size: 14px;
+            padding: 10px 20px; border-radius: 10px; font-weight: 600; cursor: pointer;
+            transition: all 0.3s ease; border: none; font-size: 14px;
         }
-        .dashboard-btn.primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-        .dashboard-btn.secondary {
-            background: #f8fafc;
-            color: #64748b;
-            border: 2px solid #e2e8f0;
-        }
-        .dashboard-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
-        }
-        .chart-container {
-            background: #f8fafc;
-            border-radius: 16px;
-            padding: 30px;
-            margin-bottom: 30px;
-            position: relative;
-            height: 400px;
-        }
-        .kpi-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-top: 30px;
-        }
-        .kpi-card {
-            background: linear-gradient(135deg, #f8fafc 0%, #fff 100%);
-            border: 1px solid #e2e8f0;
-            border-radius: 16px;
-            padding: 20px;
-            transition: all 0.3s ease;
-        }
-        .kpi-card:hover {
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-            transform: translateY(-5px);
-        }
-        .kpi-label {
-            color: #64748b;
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 8px;
-        }
+        .dashboard-btn.primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .dashboard-btn.secondary { background: #f8fafc; color: #64748b; border: 2px solid #e2e8f0; }
+        .dashboard-btn:hover { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1); }
+        .chart-container { background: #f8fafc; border-radius: 16px; padding: 30px; margin-bottom: 30px; position: relative; height: 400px; }
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 30px; }
+        .kpi-card { background: linear-gradient(135deg, #f8fafc 0%, #fff 100%); border: 1px solid #e2e8f0; border-radius: 16px; padding: 20px; transition: all 0.3s ease; }
+        .kpi-card:hover { box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08); transform: translateY(-5px); }
+        .kpi-label { color: #64748b; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
         .kpi-value {
-            font-size: 32px;
-            font-weight: 800;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            font-size: 32px; font-weight: 800; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         }
-        .kpi-trend {
-            display: flex;
-            align-items: center;
-            margin-top: 10px;
-            font-size: 14px;
-        }
-        .kpi-trend.up {
-            color: #16a34a;
-        }
-        .kpi-trend.down {
-            color: #dc2626;
-        }
-        .kpi-trend i {
-            margin-right: 5px;
-        }
-        /* Update AI Estimation Section Title */
+        .kpi-trend { display: flex; align-items: center; margin-top: 10px; font-size: 14px; }
+        .kpi-trend.up { color: #16a34a; }
+        .kpi-trend.down { color: #dc2626; }
+        .kpi-trend i { margin-right: 5px; }
         .ai-estimation .ai-section-title {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+
+        /* --- NEW ATTRACTIVE CHARTS SECTION STYLES --- */
+        .charts-showcase-section {
+            padding: 100px 0;
+            background: linear-gradient(180deg, #ffffff 0%, #f8f9ff 100%);
+            position: relative;
+            overflow: hidden;
+        }
+        .charts-showcase-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200%;
+            height: 100%;
+            background: radial-gradient(ellipse at center top, rgba(102, 126, 234, 0.05) 0%, transparent 70%);
+        }
+        .charts-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 20px;
+            position: relative;
+            z-index: 1;
+        }
+        .charts-header {
+            text-align: center;
+            margin-bottom: 80px;
+            animation: fadeInUp 0.8s ease;
+        }
+        .charts-title {
+            font-size: 56px;
+            font-weight: 900;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+            line-height: 1.2;
         }
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        .charts-subtitle {
+            font-size: 22px;
+            color: #64748b;
+            max-width: 700px;
+            margin: 0 auto;
+            line-height: 1.6;
         }
-        .analytics-feature-list {
+        .charts-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-top: 40px;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            margin-bottom: 60px;
         }
-        .analytics-feature {
-            display: flex;
-            align-items: center;
-            padding: 15px;
+        @media (max-width: 968px) {
+            .charts-grid { grid-template-columns: 1fr; }
+        }
+        .chart-card {
             background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-            transition: all 0.3s ease;
+            border-radius: 24px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
         }
-        .analytics-feature:hover {
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
-            transform: translateX(5px);
+        .chart-card::before {
+            content: '';
+            position: absolute;
+            top: -2px; left: -2px; right: -2px; bottom: -2px;
+            background: linear-gradient(135deg, #667eea, #764ba2, #f093fb, #f5576c);
+            border-radius: 24px;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            z-index: -1;
         }
-        .analytics-feature-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        .chart-card:hover {
+            transform: translateY(-15px) scale(1.02);
+            box-shadow: 0 30px 80px rgba(102, 126, 234, 0.2);
+        }
+        .chart-card:hover::before { opacity: 0.3; }
+        .chart-header { margin-bottom: 30px; }
+        .chart-title {
+            font-size: 28px; font-weight: 800; color: #1e293b;
+            margin-bottom: 10px; display: flex; align-items: center; gap: 15px;
+        }
+        .chart-icon {
+            width: 48px; height: 48px; border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px; color: white;
+        }
+        .chart-description { color: #64748b; font-size: 16px; line-height: 1.5; }
+        .chart-wrapper { position: relative; height: 400px; margin: 30px 0; }
+        .chart-stats {
+            display: grid; grid-template-columns: repeat(3, 1fr);
+            gap: 20px; margin-top: 30px; padding-top: 30px; border-top: 2px solid #f1f5f9;
+        }
+        .chart-stat { text-align: center; transition: transform 0.3s ease; }
+        .chart-stat:hover { transform: scale(1.1); }
+        .stat-value {
+            font-size: 32px; font-weight: 800;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            margin-right: 15px;
-            flex-shrink: 0;
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            display: block; margin-bottom: 5px;
         }
-        .analytics-feature-text {
-            font-size: 14px;
-            color: #475569;
-            font-weight: 500;
+        .stat-label {
+            color: #64748b; font-size: 14px; font-weight: 500;
+            text-transform: uppercase; letter-spacing: 0.5px;
         }
+        .metrics-strip {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 20px; padding: 40px; color: white;
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 40px; margin: 60px 0; position: relative; overflow: hidden;
+        }
+        .metrics-strip::after {
+            content: ''; position: absolute; top: -50%; right: -10%;
+            width: 300px; height: 300px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+        .metric-item { text-align: center; position: relative; z-index: 1; }
+        .metric-item-value {
+            font-size: 48px; font-weight: 900; margin-bottom: 10px;
+            text-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+        .metric-item-label { font-size: 18px; opacity: 0.95; font-weight: 500; }
+        
+        /* Keyframes */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        .pulse-animation { animation: pulse 2s infinite; }
     </style>
 </head>
 <body>
@@ -462,8 +444,8 @@
 
             <section id="ai-estimation" class="ai-estimation">
                 <div class="ai-section-container">
-                    <h2 class="ai-section-title">AI-Powered Steel Estimation</h2>
-                    <p class="ai-section-subtitle">Get instant, accurate cost estimates for your steel construction projects by providing a few key details. Our AI analyzes the data to give you a preliminary budget and timeline.</p>
+                    <h2 class="ai-section-title">AI-Powered Estimation</h2>
+                    <p class="ai-section-subtitle">Get instant, accurate cost estimates for your construction projects by providing a few key details. Our AI analyzes the data to give you a preliminary budget and timeline.</p>
                     
                     <div class="ai-content">
                         <div style="display: flex; flex-direction: column; gap: 32px;">
@@ -494,7 +476,7 @@
                             </div>
                             
                             <div class="ai-input-group">
-                                <label>Estimated Steel Tonnage (tons)</label>
+                                <label>Estimated Material Tonnage (tons)</label>
                                 <input type="number" id="preview-steel-tonnage" class="ai-input" placeholder="e.g., 150" min="1">
                             </div>
                                                         
@@ -531,124 +513,62 @@
                     <div class="analytics-header">
                         <h2 class="analytics-title">Business Analytics Dashboard</h2>
                         <p class="analytics-subtitle">
-                            Gain powerful insights into your projects, performance metrics, and business growth with our comprehensive analytics suite
+                            Gain powerful insights into your projects, performance metrics, and business growth with our comprehensive analytics suite.
                         </p>
                     </div>
                     <div class="analytics-grid">
                         <div class="analytics-card">
                             <div class="analytics-card-header">
-                                <div class="analytics-icon purple">
-                                    <i class="fas fa-chart-line"></i>
-                                </div>
+                                <div class="analytics-icon purple"><i class="fas fa-chart-line"></i></div>
                                 <h3 class="analytics-card-title">Performance Metrics</h3>
                             </div>
                             <div class="analytics-metric">
-                                <span class="metric-label">Project Completion Rate</span>
-                                <div>
-                                    <span class="metric-value">98.5%</span>
-                                    <span class="metric-badge positive">+2.3%</span>
-                                </div>
+                                <span class="metric-label">Completion Rate</span>
+                                <div><span class="metric-value">98.5%</span><span class="metric-badge positive">+2.3%</span></div>
                             </div>
                             <div class="analytics-metric">
-                                <span class="metric-label">Average Project Value</span>
-                                <div>
-                                    <span class="metric-value">$284K</span>
-                                    <span class="metric-badge positive">+15%</span>
-                                </div>
+                                <span class="metric-label">Avg. Project Value</span>
+                                <div><span class="metric-value">$284K</span><span class="metric-badge positive">+15%</span></div>
                             </div>
                             <div class="analytics-metric">
                                 <span class="metric-label">Client Satisfaction</span>
-                                <div>
-                                    <span class="metric-value">4.9/5</span>
-                                    <span class="metric-badge positive">+0.2</span>
-                                </div>
+                                <div><span class="metric-value">4.9/5</span><span class="metric-badge positive">+0.2</span></div>
                             </div>
                         </div>
                         <div class="analytics-card">
                             <div class="analytics-card-header">
-                                <div class="analytics-icon blue">
-                                    <i class="fas fa-users"></i>
-                                </div>
+                                <div class="analytics-icon blue"><i class="fas fa-users"></i></div>
                                 <h3 class="analytics-card-title">Team Analytics</h3>
                             </div>
                             <div class="analytics-metric">
                                 <span class="metric-label">Active Professionals</span>
-                                <div>
-                                    <span class="metric-value">2,547</span>
-                                    <span class="metric-badge positive">+124</span>
-                                </div>
+                                <div><span class="metric-value">2,547</span><span class="metric-badge positive">+124</span></div>
                             </div>
                             <div class="analytics-metric">
                                 <span class="metric-label">Utilization Rate</span>
-                                <div>
-                                    <span class="metric-value">87%</span>
-                                    <span class="metric-badge positive">+5%</span>
-                                </div>
+                                <div><span class="metric-value">87%</span><span class="metric-badge positive">+5%</span></div>
                             </div>
                             <div class="analytics-metric">
                                 <span class="metric-label">Response Time</span>
-                                <div>
-                                    <span class="metric-value">2.4h</span>
-                                    <span class="metric-badge positive">-0.6h</span>
-                                </div>
+                                <div><span class="metric-value">2.4h</span><span class="metric-badge positive">-0.6h</span></div>
                             </div>
                         </div>
                         <div class="analytics-card">
                             <div class="analytics-card-header">
-                                <div class="analytics-icon pink">
-                                    <i class="fas fa-dollar-sign"></i>
-                                </div>
+                                <div class="analytics-icon pink"><i class="fas fa-dollar-sign"></i></div>
                                 <h3 class="analytics-card-title">Financial Overview</h3>
                             </div>
                             <div class="analytics-metric">
                                 <span class="metric-label">Monthly Revenue</span>
-                                <div>
-                                    <span class="metric-value">$1.8M</span>
-                                    <span class="metric-badge positive">+22%</span>
-                                </div>
+                                <div><span class="metric-value">$1.8M</span><span class="metric-badge positive">+22%</span></div>
                             </div>
                             <div class="analytics-metric">
                                 <span class="metric-label">Profit Margin</span>
-                                <div>
-                                    <span class="metric-value">34%</span>
-                                    <span class="metric-badge positive">+3%</span>
-                                </div>
+                                <div><span class="metric-value">34%</span><span class="metric-badge positive">+3%</span></div>
                             </div>
                             <div class="analytics-metric">
                                 <span class="metric-label">ROI</span>
-                                <div>
-                                    <span class="metric-value">186%</span>
-                                    <span class="metric-badge positive">+28%</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="analytics-card">
-                            <div class="analytics-card-header">
-                                <div class="analytics-icon green">
-                                    <i class="fas fa-rocket"></i>
-                                </div>
-                                <h3 class="analytics-card-title">Growth Indicators</h3>
-                            </div>
-                            <div class="analytics-metric">
-                                <span class="metric-label">New Clients</span>
-                                <div>
-                                    <span class="metric-value">342</span>
-                                    <span class="metric-badge positive">+45</span>
-                                </div>
-                            </div>
-                            <div class="analytics-metric">
-                                <span class="metric-label">Market Share</span>
-                                <div>
-                                    <span class="metric-value">18.2%</span>
-                                    <span class="metric-badge positive">+2.1%</span>
-                                </div>
-                            </div>
-                            <div class="analytics-metric">
-                                <span class="metric-label">YoY Growth</span>
-                                <div>
-                                    <span class="metric-value">47%</span>
-                                    <span class="metric-badge positive">+12%</span>
-                                </div>
+                                <div><span class="metric-value">186%</span><span class="metric-badge positive">+28%</span></div>
                             </div>
                         </div>
                     </div>
@@ -656,99 +576,86 @@
                         <div class="dashboard-header">
                             <h3 class="dashboard-title">Real-Time Dashboard Preview</h3>
                             <div class="dashboard-actions">
-                                <button class="dashboard-btn secondary">
-                                    <i class="fas fa-download"></i> Export Report
-                                </button>
-                                <button class="dashboard-btn primary">
-                                    <i class="fas fa-expand"></i> View Full Dashboard
-                                </button>
+                                <button class="dashboard-btn secondary"><i class="fas fa-download"></i> Export Report</button>
+                                <button class="dashboard-btn primary"><i class="fas fa-expand"></i> View Full Dashboard</button>
                             </div>
                         </div>
-                        <div class="chart-container">
-                            <canvas id="analytics-chart"></canvas>
-                        </div>
+                        <div class="chart-container"><canvas id="analytics-chart"></canvas></div>
                         <div class="kpi-grid">
                             <div class="kpi-card">
-                                <div class="kpi-label">Total Projects</div>
-                                <div class="kpi-value">1,284</div>
-                                <div class="kpi-trend up">
-                                    <i class="fas fa-arrow-up"></i>
-                                    12% from last month
-                                </div>
+                                <div class="kpi-label">Total Projects</div><div class="kpi-value">1,284</div>
+                                <div class="kpi-trend up"><i class="fas fa-arrow-up"></i> 12% from last month</div>
                             </div>
                             <div class="kpi-card">
-                                <div class="kpi-label">Active Users</div>
-                                <div class="kpi-value">8.4K</div>
-                                <div class="kpi-trend up">
-                                    <i class="fas fa-arrow-up"></i>
-                                    23% increase
-                                </div>
+                                <div class="kpi-label">Active Users</div><div class="kpi-value">8.4K</div>
+                                <div class="kpi-trend up"><i class="fas fa-arrow-up"></i> 23% increase</div>
                             </div>
                             <div class="kpi-card">
-                                <div class="kpi-label">Avg. Deal Size</div>
-                                <div class="kpi-value">$125K</div>
-                                <div class="kpi-trend up">
-                                    <i class="fas fa-arrow-up"></i>
-                                    8% growth
-                                </div>
+                                <div class="kpi-label">Avg. Deal Size</div><div class="kpi-value">$125K</div>
+                                <div class="kpi-trend up"><i class="fas fa-arrow-up"></i> 8% growth</div>
                             </div>
                             <div class="kpi-card">
-                                <div class="kpi-label">Success Rate</div>
-                                <div class="kpi-value">94.2%</div>
-                                <div class="kpi-trend up">
-                                    <i class="fas fa-arrow-up"></i>
-                                    3.5% improvement
-                                </div>
+                                <div class="kpi-label">Success Rate</div><div class="kpi-value">94.2%</div>
+                                <div class="kpi-trend up"><i class="fas fa-arrow-up"></i> 3.5% improvement</div>
                             </div>
-                        </div>
-                    </div>
-                    <div class="analytics-feature-list">
-                        <div class="analytics-feature">
-                            <div class="analytics-feature-icon">
-                                <i class="fas fa-brain"></i>
-                            </div>
-                            <span class="analytics-feature-text">AI-Powered Predictive Analytics</span>
-                        </div>
-                        <div class="analytics-feature">
-                            <div class="analytics-feature-icon">
-                                <i class="fas fa-clock"></i>
-                            </div>
-                            <span class="analytics-feature-text">Real-Time Data Updates</span>
-                        </div>
-                        <div class="analytics-feature">
-                            <div class="analytics-feature-icon">
-                                <i class="fas fa-chart-pie"></i>
-                            </div>
-                            <span class="analytics-feature-text">Custom Report Generation</span>
-                        </div>
-                        <div class="analytics-feature">
-                            <div class="analytics-feature-icon">
-                                <i class="fas fa-bell"></i>
-                            </div>
-                            <span class="analytics-feature-text">Smart Alert System</span>
-                        </div>
-                        <div class="analytics-feature">
-                            <div class="analytics-feature-icon">
-                                <i class="fas fa-shield-alt"></i>
-                            </div>
-                            <span class="analytics-feature-text">Secure Data Management</span>
-                        </div>
-                        <div class="analytics-feature">
-                            <div class="analytics-feature-icon">
-                                <i class="fas fa-mobile-alt"></i>
-                            </div>
-                            <span class="analytics-feature-text">Mobile Dashboard Access</span>
                         </div>
                     </div>
                 </div>
             </section>
 
+            <section class="charts-showcase-section">
+                <div class="charts-container">
+                    <div class="charts-header">
+                        <h2 class="charts-title">Visualize Your Success</h2>
+                        <p class="charts-subtitle">Interactive analytics that transform your data into actionable insights.</p>
+                    </div>
+                    <div class="charts-grid">
+                        <div class="chart-card">
+                            <div class="chart-header">
+                                <div class="chart-title">
+                                    <div class="chart-icon" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);"><i class="fas fa-chart-pie"></i></div>
+                                    Market Distribution
+                                </div>
+                                <p class="chart-description">Real-time breakdown of project categories and market segments.</p>
+                            </div>
+                            <div class="chart-wrapper"><canvas id="attractive-pie-chart"></canvas></div>
+                            <div class="chart-stats">
+                                <div class="chart-stat"><span class="stat-value">42%</span><span class="stat-label">Growth</span></div>
+                                <div class="chart-stat"><span class="stat-value">8.5K</span><span class="stat-label">Projects</span></div>
+                                <div class="chart-stat"><span class="stat-value">$2.8M</span><span class="stat-label">Revenue</span></div>
+                            </div>
+                        </div>
+                        <div class="chart-card">
+                            <div class="chart-header">
+                                <div class="chart-title">
+                                    <div class="chart-icon" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);"><i class="fas fa-chart-bar"></i></div>
+                                    Performance Trends
+                                </div>
+                                <p class="chart-description">Monthly performance metrics and growth trajectory analysis.</p>
+                            </div>
+                            <div class="chart-wrapper"><canvas id="attractive-bar-chart"></canvas></div>
+                            <div class="chart-stats">
+                                <div class="chart-stat"><span class="stat-value">186%</span><span class="stat-label">ROI</span></div>
+                                <div class="chart-stat"><span class="stat-value">94.2%</span><span class="stat-label">Success</span></div>
+                                <div class="chart-stat"><span class="stat-value">4.9★</span><span class="stat-label">Rating</span></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="metrics-strip">
+                        <div class="metric-item pulse-animation"><div class="metric-item-value">250K+</div><div class="metric-item-label">Active Users</div></div>
+                        <div class="metric-item"><div class="metric-item-value">99.8%</div><div class="metric-item-label">Uptime</div></div>
+                        <div class="metric-item"><div class="metric-item-value">50+</div><div class="metric-item-label">Countries</div></div>
+                        <div class="metric-item"><div class="metric-item-value">24/7</div><div class="metric-item-label">Support</div></div>
+                    </div>
+                </div>
+            </section>
+            
             <section id="how-it-works" class="how-it-works">
                 <div class="section-container">
                     <h2 class="section-title">How It Works</h2>
-                    <p class="section-subtitle">Simple steps to connect with the right professionals for your steel construction needs</p>
+                    <p class="section-subtitle">Simple steps to connect with the right professionals for your construction needs.</p>
                     <div class="steps-container">
-                        <div class="step-card"><div class="step-number">1</div><h3>Post Your Project</h3><p>Describe your steel construction needs, set your budget, and specify required skills. Upload drawings or specifications for better quotes.</p></div>
+                        <div class="step-card"><div class="step-number">1</div><h3>Post Your Project</h3><p>Describe your needs, set your budget, and specify required skills. Upload drawings or specifications for better quotes.</p></div>
                         <div class="step-card"><div class="step-number">2</div><h3>Receive Quotes</h3><p>Licensed professionals and certified engineers submit detailed proposals with timelines, costs, and their approach to your project.</p></div>
                         <div class="step-card"><div class="step-number">3</div><h3>Collaborate & Deliver</h3><p>Choose the best fit, communicate directly through our platform, and track progress from design to completion.</p></div>
                     </div>
@@ -760,7 +667,7 @@
                     <h2 class="section-title">Why SteelConnect?</h2>
                     <div class="slider-container">
                         <div class="slider-wrapper" id="slider-wrapper">
-                            <div class="slide"><div class="slide-content"><h3>Global Network of Experts</h3><p>Connect with a worldwide community of freelance steel designers, structural engineers, and certified professionals ready to tackle your most challenging projects.</p><ul class="slide-features"><li><i class="fas fa-check"></i> PE-licensed engineers across multiple jurisdictions</li><li><i class="fas fa-check"></i> Specialized expertise in seismic and wind engineering</li><li><i class="fas fa-check"></i> Multi-language support for international projects</li><li><i class="fas fa-check"></i> 24/7 availability across time zones</li></ul></div><div class="slide-visual"><img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=2940&auto=format&fit=crop" alt="Global network" onerror="this.onerror=null;this.src='https://placehold.co/600x400/0f766e/ffffff?text=Expert';"></div></div>
+                            <div class="slide"><div class="slide-content"><h3>Global Network of Experts</h3><p>Connect with a worldwide community of freelance designers, structural engineers, and certified professionals ready to tackle your most challenging projects.</p><ul class="slide-features"><li><i class="fas fa-check"></i> PE-licensed engineers across multiple jurisdictions</li><li><i class="fas fa-check"></i> Specialized expertise in seismic and wind engineering</li><li><i class="fas fa-check"></i> Multi-language support for international projects</li><li><i class="fas fa-check"></i> 24/7 availability across time zones</li></ul></div><div class="slide-visual"><img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=2940&auto=format&fit=crop" alt="Global network" onerror="this.onerror=null;this.src='https://placehold.co/600x400/0f766e/ffffff?text=Expert';"></div></div>
                             <div class="slide"><div class="slide-content"><h3>Advanced Engineering Solutions</h3><p>From initial concept to final construction drawings, our professionals use cutting-edge technology and industry-leading software to deliver precision engineering.</p><ul class="slide-features"><li><i class="fas fa-check"></i> Latest BIM and 3D modeling capabilities</li><li><i class="fas fa-check"></i> Advanced structural analysis software</li><li><i class="fas fa-check"></i> Code compliance across all major standards</li><li><i class="fas fa-check"></i> Sustainable design practices</li></ul></div><div class="slide-visual"><img src="https://images.unsplash.com/photo-1581094794329-c8112a89af12?q=80&w=2940&auto=format&fit=crop" alt="Engineering solutions" onerror="this.onerror=null;this.src='https://placehold.co/600x400/0891b2/ffffff?text=Engineer';"></div></div>
                             <div class="slide"><div class="slide-content"><h3>Proven Track Record</h3><p>Our platform has facilitated thousands of successful projects, from residential developments to major infrastructure, with verified reviews and portfolio showcases.</p><ul class="slide-features"><li><i class="fas fa-check"></i> Verified professional credentials and licenses</li><li><i class="fas fa-check"></i> Comprehensive project portfolios</li><li><i class="fas fa-check"></i> Client reviews and ratings system</li><li><i class="fas fa-check"></i> Quality assurance and project insurance</li></ul></div><div class="slide-visual"><img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2940&auto=format&fit=crop" alt="Proven results" onerror="this.onerror=null;this.src='https://placehold.co/600x400/1e40af/ffffff?text=Success';"></div></div>
                         </div>
@@ -775,9 +682,9 @@
                 <div class="section-container">
                     <h2 class="section-title">Industry Excellence Showcase</h2>
                     <div class="showcase-grid">
-                        <div class="showcase-card"><img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2940&auto=format&fit=crop" alt="Modern skyscraper" class="showcase-image" onerror="this.onerror=null;this.src='https://placehold.co/400x240/1e293b/ffffff?text=High-Rise';"><div class="showcase-content"><h3>High-Rise Construction</h3><p>Structural steel design for towers and commercial buildings with advanced seismic engineering and wind load analysis.</p></div></div>
+                        <div class="showcase-card"><img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2940&auto=format&fit=crop" alt="Modern skyscraper" class="showcase-image" onerror="this.onerror=null;this.src='https://placehold.co/400x240/1e293b/ffffff?text=High-Rise';"><div class="showcase-content"><h3>High-Rise Construction</h3><p>Structural design for towers and commercial buildings with advanced seismic engineering and wind load analysis.</p></div></div>
                         <div class="showcase-card"><img src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?q=80&w=2940&auto=format&fit=crop" alt="Steel bridge" class="showcase-image" onerror="this.onerror=null;this.src='https://placehold.co/400x240/1e293b/ffffff?text=Bridge';"><div class="showcase-content"><h3>Infrastructure Projects</h3><p>Complex bridge design, highway infrastructure, and transportation networks engineered for safety and longevity.</p></div></div>
-                        <div class="showcase-card"><img src="https://images.unsplash.com/photo-1565008447742-97f6f38c985c?q=80&w=2940&auto=format&fit=crop" alt="Industrial facility" class="showcase-image" onerror="this.onerror=null;this.src='https://placehold.co/400x240/1e293b/ffffff?text=Industrial';"><div class="showcase-content"><h3>Industrial Facilities</h3><p>Manufacturing plants, warehouses, and industrial complexes with specialized steel frame solutions and heavy load engineering.</p></div></div>
+                        <div class="showcase-card"><img src="https://images.unsplash.com/photo-1565008447742-97f6f38c985c?q=80&w=2940&auto=format&fit=crop" alt="Industrial facility" class="showcase-image" onerror="this.onerror=null;this.src='https://placehold.co/400x240/1e293b/ffffff?text=Industrial';"><div class="showcase-content"><h3>Industrial Facilities</h3><p>Manufacturing plants, warehouses, and industrial complexes with specialized frame solutions and heavy load engineering.</p></div></div>
                     </div>
                 </div>
             </section>
@@ -802,34 +709,25 @@
     <script src="script.js" defer></script>
     
     <script>
-        // Wait for main script to load, then add analytics
+        // Analytics Integration Script
         document.addEventListener('DOMContentLoaded', function() {
-            // Small delay to ensure script.js is fully loaded
             setTimeout(function() {
                 if (typeof appState !== 'undefined' && typeof buildSidebarNav === 'function') {
-                    // Analytics integration will be added here
                     const script = document.createElement('script');
                     script.src = 'analytics-integration.js';
                     script.onload = function() {
-                        console.log('Analytics integration loaded successfully');
-                        // If user is already logged in and is a contractor, refresh sidebar
                         if (appState.currentUser && appState.currentUser.type === 'contractor') {
                             buildSidebarNav();
                         }
                     };
-                    script.onerror = function() {
-                        console.log('Analytics integration failed to load - using fallback');
-                    };
                     document.head.appendChild(script);
                 } else {
-                    console.log('Main app not ready yet, retrying...');
                     setTimeout(arguments.callee, 1000);
                 }
             }, 500);
         });
-    </script>
-    <script>
-        // Initialize Chart.js for the analytics dashboard
+
+        // Business Analytics Chart Script
         document.addEventListener('DOMContentLoaded', function() {
             const ctx = document.getElementById('analytics-chart');
             if (ctx) {
@@ -838,103 +736,134 @@
                     data: {
                         labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
                         datasets: [{
-                            label: 'Revenue',
-                            data: [1.2, 1.3, 1.5, 1.4, 1.7, 1.8, 1.9, 2.1, 2.2, 2.4, 2.5, 2.8],
-                            borderColor: '#667eea',
-                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                            borderWidth: 3,
-                            tension: 0.4,
-                            fill: true
+                            label: 'Revenue', data: [1.2, 1.3, 1.5, 1.4, 1.7, 1.8, 1.9, 2.1, 2.2, 2.4, 2.5, 2.8],
+                            borderColor: '#667eea', backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            borderWidth: 3, tension: 0.4, fill: true
                         }, {
-                            label: 'Projects',
-                            data: [85, 92, 88, 95, 102, 108, 115, 124, 128, 135, 142, 158],
-                            borderColor: '#764ba2',
-                            backgroundColor: 'rgba(118, 75, 162, 0.1)',
-                            borderWidth: 3,
-                            tension: 0.4,
-                            fill: true
+                            label: 'Projects', data: [85, 92, 88, 95, 102, 108, 115, 124, 128, 135, 142, 158],
+                            borderColor: '#764ba2', backgroundColor: 'rgba(118, 75, 162, 0.1)',
+                            borderWidth: 3, tension: 0.4, fill: true
                         }]
                     },
                     options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
+                        responsive: true, maintainAspectRatio: false,
                         plugins: {
-                            legend: {
-                                display: true,
-                                position: 'top',
-                                labels: {
-                                    usePointStyle: true,
-                                    padding: 20
-                                }
-                            },
+                            legend: { display: true, position: 'top', labels: { usePointStyle: true, padding: 20 }},
                             tooltip: {
-                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                                padding: 12,
-                                cornerRadius: 8,
-                                titleFont: {
-                                    size: 14,
-                                    weight: '600'
-                                },
+                                backgroundColor: 'rgba(0, 0, 0, 0.8)', padding: 12, cornerRadius: 8,
+                                titleFont: { size: 14, weight: '600' },
                                 callbacks: {
                                     label: function(context) {
                                         let label = context.dataset.label || '';
-                                        if (label) {
-                                            label += ': ';
-                                        }
-                                        if (context.dataset.label === 'Revenue') {
-                                            label += '$' + context.parsed.y + 'M';
-                                        } else {
-                                            label += context.parsed.y;
-                                        }
+                                        if (label) { label += ': '; }
+                                        if (context.dataset.label === 'Revenue') { label += '$' + context.parsed.y + 'M'; }
+                                        else { label += context.parsed.y; }
                                         return label;
                                     }
                                 }
                             }
                         },
                         scales: {
-                            y: {
-                                beginAtZero: true,
-                                grid: {
-                                    borderDash: [3, 3],
-                                    color: 'rgba(0, 0, 0, 0.05)'
-                                }
-                            },
-                            x: {
-                                grid: {
-                                    display: false
-                                }
-                            }
+                            y: { beginAtZero: true, grid: { borderDash: [3, 3], color: 'rgba(0, 0, 0, 0.05)' }},
+                            x: { grid: { display: false }}
                         }
                     }
                 });
             }
         });
-        // Update navigation menu to include Business Analytics
+
+        // Navigation Menu Update Script
         document.addEventListener('DOMContentLoaded', function() {
-            // Add Business Analytics to the main navigation
             const navMenu = document.getElementById('main-nav-menu');
             if (navMenu) {
                 const analyticsLink = document.createElement('a');
                 analyticsLink.href = '#business-analytics';
                 analyticsLink.className = 'nav-link';
                 analyticsLink.textContent = 'Business Analytics';
-                // Insert after AI Estimation link
                 const aiLink = navMenu.querySelector('a[href="#ai-estimation"]');
                 if (aiLink && aiLink.nextSibling) {
                     navMenu.insertBefore(analyticsLink, aiLink.nextSibling);
                 }
             }
         });
+
+        // Attractive Charts Script
+        document.addEventListener('DOMContentLoaded', function() {
+            const pieCtx = document.getElementById('attractive-pie-chart');
+            if (pieCtx) {
+                new Chart(pieCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Commercial', 'Residential', 'Industrial', 'Infrastructure', 'Institutional'],
+                        datasets: [{
+                            data: [35, 25, 20, 15, 5],
+                            backgroundColor: ['rgba(102, 126, 234, 0.9)', 'rgba(118, 75, 162, 0.9)', 'rgba(240, 147, 251, 0.9)', 'rgba(245, 87, 108, 0.9)', 'rgba(79, 172, 254, 0.9)'],
+                            borderColor: ['#ffffff', '#ffffff', '#ffffff', '#ffffff', '#ffffff'],
+                            borderWidth: 4, hoverOffset: 20
+                        }]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false, cutout: '60%',
+                        plugins: {
+                            legend: { display: true, position: 'bottom', labels: { padding: 20, usePointStyle: true, font: { size: 14, weight: '500' }}},
+                            tooltip: {
+                                backgroundColor: 'rgba(0, 0, 0, 0.9)', padding: 15, titleFont: { size: 16, weight: 'bold' }, bodyFont: { size: 14 },
+                                cornerRadius: 10, displayColors: true,
+                                callbacks: { label: function(context) { return context.label + ': ' + context.parsed + '%'; } }
+                            }
+                        },
+                        animation: { animateRotate: true, animateScale: true, duration: 2000, easing: 'easeInOutQuart' }
+                    }
+                });
+            }
+            const barCtx = document.getElementById('attractive-bar-chart');
+            if (barCtx) {
+                const gradient1 = barCtx.getContext('2d').createLinearGradient(0, 0, 0, 400);
+                gradient1.addColorStop(0, 'rgba(102, 126, 234, 0.9)'); gradient1.addColorStop(1, 'rgba(102, 126, 234, 0.3)');
+                const gradient2 = barCtx.getContext('2d').createLinearGradient(0, 0, 0, 400);
+                gradient2.addColorStop(0, 'rgba(240, 147, 251, 0.9)'); gradient2.addColorStop(1, 'rgba(240, 147, 251, 0.3)');
+                new Chart(barCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Q1', 'Q2', 'Q3', 'Q4'],
+                        datasets: [{
+                            label: 'Revenue ($M)', data: [1.8, 2.3, 2.9, 3.5], backgroundColor: gradient1,
+                            borderColor: 'rgba(102, 126, 234, 1)', borderWidth: 2, borderRadius: 10, borderSkipped: false
+                        }, {
+                            label: 'Projects', data: [245, 312, 389, 425], backgroundColor: gradient2,
+                            borderColor: 'rgba(240, 147, 251, 1)', borderWidth: 2, borderRadius: 10, borderSkipped: false
+                        }]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: true, position: 'top', labels: { padding: 20, usePointStyle: true, font: { size: 14, weight: '500' }}},
+                            tooltip: {
+                                backgroundColor: 'rgba(0, 0, 0, 0.9)', padding: 15, titleFont: { size: 16, weight: 'bold' }, bodyFont: { size: 14 },
+                                cornerRadius: 10, displayColors: true,
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.dataset.label || '';
+                                        if (label) { label += ': '; }
+                                        if (context.dataset.label === 'Revenue ($M)') { label += '$' + context.parsed.y + 'M'; }
+                                        else { label += context.parsed.y; }
+                                        return label;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: { beginAtZero: true, grid: { borderDash: [5, 5], color: 'rgba(0, 0, 0, 0.05)', drawBorder: false }},
+                            x: { grid: { display: false, drawBorder: false }}
+                        },
+                        animation: {
+                            duration: 2000, easing: 'easeInOutQuart',
+                            delay: (context) => context.dataIndex * 100 + context.datasetIndex * 100
+                        }
+                    }
+                });
+            }
+        });
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
