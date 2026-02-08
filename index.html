@@ -344,6 +344,7 @@
             </a>
             <nav id="main-nav-menu" class="nav-menu">
                 <a href="#ai-estimation" class="nav-link">AI Estimation</a>
+                <a href="#business-analytics" class="nav-link">AI Analytics</a>
                 <a href="#how-it-works" class="nav-link">How It Works</a>
                 <a href="#why-steelconnect" class="nav-link">Why Choose Us</a>
                 <a href="#showcase" class="nav-link">Showcase</a>
@@ -389,20 +390,29 @@
         <main>
             <section class="hero">
                 <div class="hero-background"></div>
+                <div class="hero-mesh-gradient"></div>
                 <div class="hero-particles">
+                    <div class="particle"></div><div class="particle"></div><div class="particle"></div><div class="particle"></div>
                     <div class="particle"></div><div class="particle"></div><div class="particle"></div><div class="particle"></div>
                     <div class="particle"></div><div class="particle"></div><div class="particle"></div><div class="particle"></div>
                 </div>
                 <div class="hero-content">
                     <div class="hero-text">
-                        <h1>SteelConnect: The <span class="highlight">Premier Platform</span> with <span class="ai-highlight">AI-Powered Estimation</span></h1>
-                        <p>Join the leading marketplace where steel designers, structural engineers, and contractors collaborate seamlessly. Get instant AI estimates, build your professional network, and deliver exceptional projects together.</p>
+                        <div class="hero-badge">
+                            <span class="hero-badge-dot"></span>
+                            <span>The #1 AI-Powered Construction Platform</span>
+                        </div>
+                        <h1>SteelConnect: The <span class="highlight">Premier Platform</span> with <span class="ai-highlight">AI-Powered Estimation</span> &amp; <span class="analytics-highlight">AI Analytics</span></h1>
+                        <p>The future of construction management. Get instant AI cost estimates, unlock predictive analytics dashboards, and collaborate with elite engineers worldwide. One platform for estimation, analytics, and project excellence.</p>
                         <div class="hero-cta">
                             <button id="get-started-btn" class="btn btn-primary">
                                 Start Building Today <i class="fas fa-rocket"></i>
                             </button>
-                             <a href="#ai-estimation" class="btn btn-ai">
+                            <a href="#ai-estimation" class="btn btn-ai">
                                 Try AI Estimation <i class="fas fa-brain"></i>
+                            </a>
+                            <a href="#business-analytics" class="btn btn-analytics-hero">
+                                AI Analytics <i class="fas fa-chart-line"></i>
                             </a>
                         </div>
                         <div class="hero-stats">
@@ -415,6 +425,10 @@
                                 <span class="hero-stat-label">Projects</span>
                             </div>
                             <div class="hero-stat">
+                                <span class="hero-stat-number">12,000+</span>
+                                <span class="hero-stat-label">AI Estimates</span>
+                            </div>
+                            <div class="hero-stat">
                                 <span class="hero-stat-number">50+</span>
                                 <span class="hero-stat-label">Countries</span>
                             </div>
@@ -422,30 +436,31 @@
                     </div>
                     <div class="hero-visual">
                         <div class="hero-image-container">
-                            <img src="https://images.unsplash.com/photo-1504307651254-35680f356dfd?q=80&w=2940&auto=format&fit=crop" alt="Steel construction professionals at work" class="hero-image" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2940&auto=format&fit=crop';">
+                            <img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2940&auto=format&fit=crop" alt="Modern steel skyscraper architecture" class="hero-image" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1541888946425-d81bb19240f5?q=80&w=2940&auto=format&fit=crop';">
                             <div class="hero-image-overlay">
-                                <h3>Professional Excellence</h3>
-                                <p>Connecting top-tier engineers and contractors worldwide</p>
+                                <div class="hero-overlay-badge"><i class="fas fa-shield-alt"></i> Enterprise Grade</div>
+                                <h3>AI-Driven Construction Intelligence</h3>
+                                <p>Estimation, analytics, and collaboration — all in one platform</p>
                             </div>
                         </div>
                         <div class="floating-cards">
-                            <div class="floating-card">
-                                <div class="floating-card-icon"><i class="fas fa-handshake"></i></div>
-                                <h4>Active Connections</h4>
-                                <span class="floating-card-number">1,200+</span>
-                                <p>Designer-contractor partnerships</p>
+                            <div class="floating-card ai-card">
+                                <div class="floating-card-icon" style="background: linear-gradient(135deg, #8b5cf6, #6366f1);"><i class="fas fa-brain"></i></div>
+                                <h4>AI Estimation</h4>
+                                <span class="floating-card-number" style="color: #8b5cf6;">95%+</span>
+                                <p>Cost prediction accuracy</p>
                             </div>
                             <div class="floating-card connection-card">
-                                <div class="floating-card-icon"><i class="fas fa-network-wired"></i></div>
-                                <h4>SteelConnect Network</h4>
+                                <div class="floating-card-icon"><i class="fas fa-chart-pie"></i></div>
+                                <h4>AI Analytics</h4>
                                 <span class="floating-card-number">Live</span>
-                                <p>Real-time collaboration platform</p>
+                                <p>Predictive business intelligence</p>
                             </div>
-                            <div class="floating-card">
-                                <div class="floating-card-icon"><i class="fas fa-award"></i></div>
-                                <h4>Success Rate</h4>
-                                <span class="floating-card-number">99.8%</span>
-                                <p>Completed project satisfaction</p>
+                            <div class="floating-card dashboard-card">
+                                <div class="floating-card-icon" style="background: linear-gradient(135deg, #10b981, #059669);"><i class="fas fa-tachometer-alt"></i></div>
+                                <h4>Smart Dashboard</h4>
+                                <span class="floating-card-number" style="color: #10b981;">186%</span>
+                                <p>Average ROI boost</p>
                             </div>
                         </div>
                     </div>
@@ -1052,21 +1067,6 @@
                         }
                     }
                 });
-            }
-        });
-
-        // Navigation Menu Update Script
-        document.addEventListener('DOMContentLoaded', function() {
-            const navMenu = document.getElementById('main-nav-menu');
-            if (navMenu) {
-                const analyticsLink = document.createElement('a');
-                analyticsLink.href = '#business-analytics';
-                analyticsLink.className = 'nav-link';
-                analyticsLink.textContent = 'Business Analytics';
-                const aiLink = navMenu.querySelector('a[href="#ai-estimation"]');
-                if (aiLink && aiLink.nextSibling) {
-                    navMenu.insertBefore(analyticsLink, aiLink.nextSibling);
-                }
             }
         });
 
