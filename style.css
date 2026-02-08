@@ -2243,10 +2243,11 @@ body {
 
 /* Animated progress bars for metrics */
 .metric-progress {
-    height: 4px;
-    background: #f1f5f9;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.06);
     border-radius: 2px;
     margin-top: 8px;
+    margin-bottom: 4px;
     overflow: hidden;
 }
 .metric-progress-bar {
@@ -2276,40 +2277,7 @@ body {
     border: 1px solid rgba(255, 255, 255, 0.4);
 }
 
-/* Interactive dashboard mockup frame */
-.dashboard-mockup {
-    position: relative;
-    border-radius: 20px;
-    overflow: hidden;
-    box-shadow: 0 40px 100px rgba(0, 0, 0, 0.12);
-    border: 1px solid rgba(0, 0, 0, 0.06);
-}
-.mockup-toolbar {
-    background: #f8fafc;
-    padding: 12px 20px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    border-bottom: 1px solid #e2e8f0;
-}
-.mockup-dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-}
-.mockup-dot.red { background: #ef4444; }
-.mockup-dot.yellow { background: #f59e0b; }
-.mockup-dot.green { background: #22c55e; }
-.mockup-url {
-    flex: 1;
-    background: white;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 6px 14px;
-    font-size: 12px;
-    color: var(--text-gray);
-    margin-left: 12px;
-}
+/* Interactive dashboard mockup frame - styled in inline <style> */
 
 /* AI Feature slide responsive */
 @media (max-width: 768px) {
