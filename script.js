@@ -1074,7 +1074,9 @@ function getEstimationProgress(status) {
 }
 
 function formatEstimationDate(date) {
-    return new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    const d = parseDate(date);
+    if (!d) return 'Unknown date';
+    return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 function showEstimatesLoading(show) {
@@ -2340,14 +2342,16 @@ async function fetchAndRenderConversations() {
 }
 
 function getTimeAgo(timestamp) {
+    const time = parseDate(timestamp);
+    if (!time) return 'Just now';
     const now = new Date();
-    const time = timestamp?.toDate ? timestamp.toDate() : new Date(timestamp);
     const diff = Math.floor((now - time) / (1000 * 60));
     if (diff < 1) return 'Just now';
     if (diff < 60) return `${diff}m ago`;
     if (diff < 1440) return `${Math.floor(diff / 60)}h ago`;
     if (diff < 10080) return `${Math.floor(diff / 1440)}d ago`;
-    return time.toLocaleDateString();
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return `${months[time.getMonth()]} ${time.getDate()}`;
 }
 
 function getAvatarColor(name) {
@@ -3121,75 +3125,61 @@ function getSettingsTemplate(user) {
 // FIXED TIMESTAMP FUNCTIONS
 function formatDetailedTimestamp(date) {
     try {
-        if (!date) return 'Unknown time';
-        let msgDate;
-        if (date && typeof date === 'object' && typeof date.toDate === 'function') {
-            msgDate = date.toDate();
-        } else if (date && typeof date === 'object' && typeof date.seconds === 'number') {
-            msgDate = new Date(date.seconds * 1000 + (date.nanoseconds || 0) / 1000000);
-        } else if (date instanceof Date) {
-            msgDate = date;
-        } else if (typeof date === 'string') {
-            msgDate = new Date(date);
-        } else if (typeof date === 'number') {
-            msgDate = new Date(date < 10000000000 ? date * 1000 : date);
-        } else {
-            console.warn('Unknown date format:', date);
-            return 'Invalid time';
-        }
-        if (!msgDate || isNaN(msgDate.getTime())) {
-            console.warn('Invalid date created from:', date);
-            return 'Invalid date';
-        }
+        const msgDate = parseDate(date);
+        if (!msgDate) return 'Just now';
         const now = new Date();
+        const diffMs = now - msgDate;
+        if (diffMs < 60000) return 'Just now';
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         const msgDay = new Date(msgDate.getFullYear(), msgDate.getMonth(), msgDate.getDate());
-        const time = msgDate.toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true
-        });
-        if (today.getTime() === msgDay.getTime()) {
-            return time;
-        }
+        const hours = msgDate.getHours();
+        const minutes = msgDate.getMinutes();
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        const h = hours % 12 || 12;
+        const m = minutes < 10 ? '0' + minutes : minutes;
+        const time = `${h}:${m} ${ampm}`;
+        if (today.getTime() === msgDay.getTime()) return time;
         const yesterday = new Date(today);
         yesterday.setDate(today.getDate() - 1);
-        if (yesterday.getTime() === msgDay.getTime()) {
-            return `Yesterday, ${time}`;
-        }
-        return `${msgDate.toLocaleDateString([], {
-            month: 'short',
-            day: 'numeric',
-            year: msgDate.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
-        })}, ${time}`;
+        if (yesterday.getTime() === msgDay.getTime()) return `Yesterday, ${time}`;
+        const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        const dateStr = `${months[msgDate.getMonth()]} ${msgDate.getDate()}`;
+        if (msgDate.getFullYear() !== now.getFullYear()) return `${dateStr}, ${msgDate.getFullYear()}, ${time}`;
+        return `${dateStr}, ${time}`;
     } catch (error) {
-        console.error('formatDetailedTimestamp error:', error, 'Input:', date);
-        return 'Invalid date';
+        return 'Just now';
     }
+}
+
+function parseDate(date) {
+    if (!date) return null;
+    let d;
+    if (date && typeof date === 'object' && typeof date.toDate === 'function') {
+        d = date.toDate();
+    } else if (date && typeof date === 'object' && typeof date.seconds === 'number') {
+        d = new Date(date.seconds * 1000 + (date.nanoseconds || 0) / 1000000);
+    } else if (date && typeof date === 'object' && typeof date._seconds === 'number') {
+        d = new Date(date._seconds * 1000 + (date._nanoseconds || 0) / 1000000);
+    } else if (date && typeof date === 'object' && date.$date) {
+        d = new Date(date.$date);
+    } else if (date instanceof Date) {
+        d = date;
+    } else if (typeof date === 'string') {
+        d = new Date(date);
+    } else if (typeof date === 'number') {
+        d = new Date(date < 10000000000 ? date * 1000 : date);
+    } else if (date && typeof date === 'object') {
+        d = new Date(String(date));
+    } else {
+        return null;
+    }
+    return (d && !isNaN(d.getTime())) ? d : null;
 }
 
 function formatMessageTimestamp(date) {
     try {
-        if (!date) return 'Unknown time';
-        let msgDate;
-        if (date && typeof date === 'object' && typeof date.toDate === 'function') {
-            msgDate = date.toDate();
-        } else if (date && typeof date === 'object' && typeof date.seconds === 'number') {
-            msgDate = new Date(date.seconds * 1000 + (date.nanoseconds || 0) / 1000000);
-        } else if (date instanceof Date) {
-            msgDate = date;
-        } else if (typeof date === 'string') {
-            msgDate = new Date(date);
-        } else if (typeof date === 'number') {
-            msgDate = new Date(date < 10000000000 ? date * 1000 : date);
-        } else {
-            console.warn('Unknown date format:', date);
-            return 'Invalid time';
-        }
-        if (!msgDate || isNaN(msgDate.getTime())) {
-            console.warn('Invalid date created from:', date);
-            return 'Invalid date';
-        }
+        const msgDate = parseDate(date);
+        if (!msgDate) return 'Just now';
         const now = new Date();
         const diffMs = now - msgDate;
         const diffSeconds = Math.floor(diffMs / 1000);
@@ -3201,58 +3191,32 @@ function formatMessageTimestamp(date) {
         if (diffHours < 24) return `${diffHours}h ago`;
         if (diffDays === 1) return 'Yesterday';
         if (diffDays < 7) return `${diffDays}d ago`;
-        return msgDate.toLocaleDateString([], {
-            month: 'short',
-            day: 'numeric',
-            year: msgDate.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
-        });
+        const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        const dateStr = `${months[msgDate.getMonth()]} ${msgDate.getDate()}`;
+        if (msgDate.getFullYear() !== now.getFullYear()) return `${dateStr}, ${msgDate.getFullYear()}`;
+        return dateStr;
     } catch (error) {
-        console.error('formatMessageTimestamp error:', error, 'Input:', date);
-        return 'Invalid date';
+        return 'Just now';
     }
 }
 
 function formatMessageDate(date) {
     try {
-        if (!date) return 'Unknown Date';
-        let msgDate;
-        if (date && typeof date === 'object' && typeof date.toDate === 'function') {
-            msgDate = date.toDate();
-        } else if (date && typeof date === 'object' && typeof date.seconds === 'number') {
-            msgDate = new Date(date.seconds * 1000 + (date.nanoseconds || 0) / 1000000);
-        } else if (date instanceof Date) {
-            msgDate = date;
-        } else if (typeof date === 'string') {
-            msgDate = new Date(date);
-        } else if (typeof date === 'number') {
-            msgDate = new Date(date < 10000000000 ? date * 1000 : date);
-        } else {
-            console.warn('Unknown date format:', date);
-            return 'Unknown Date';
-        }
-        if (!msgDate || isNaN(msgDate.getTime())) {
-            console.warn('Invalid date created from:', date);
-            return 'Unknown Date';
-        }
+        const msgDate = parseDate(date);
+        if (!msgDate) return 'Today';
         const now = new Date();
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         const msgDay = new Date(msgDate.getFullYear(), msgDate.getMonth(), msgDate.getDate());
-        if (today.getTime() === msgDay.getTime()) {
-            return 'Today';
-        }
+        if (today.getTime() === msgDay.getTime()) return 'Today';
         const yesterday = new Date(today);
         yesterday.setDate(today.getDate() - 1);
-        if (yesterday.getTime() === msgDay.getTime()) {
-            return 'Yesterday';
-        }
-        return msgDate.toLocaleDateString([], {
-            month: 'long',
-            day: 'numeric',
-            year: msgDate.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
-        });
+        if (yesterday.getTime() === msgDay.getTime()) return 'Yesterday';
+        const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+        const dateStr = `${months[msgDate.getMonth()]} ${msgDate.getDate()}`;
+        if (msgDate.getFullYear() !== now.getFullYear()) return `${dateStr}, ${msgDate.getFullYear()}`;
+        return dateStr;
     } catch (error) {
-        console.error('formatMessageDate error:', error, 'Input:', date);
-        return 'Unknown Date';
+        return 'Today';
     }
 }
 
@@ -3994,49 +3958,21 @@ function formatTicketStatus(status) {
 
 
 function formatTicketDate(dateString) {
-    try {
-        const date = new Date(dateString);
-        return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } catch {
-        return 'Invalid date';
-    }
+    const d = parseDate(dateString);
+    if (!d) return 'Unknown date';
+    return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
 function formatDetailedDate(date) {
-    try {
-        if (!date) return 'Unknown date';
-        let dateObj;
-        if (typeof date === 'string') {
-            dateObj = new Date(date);
-        } else if (date instanceof Date) {
-            dateObj = date;
-        } else if (date && typeof date === 'object') {
-            if (date.seconds) {
-                dateObj = new Date(date.seconds * 1000);
-            } else if (date._seconds) {
-                dateObj = new Date(date._seconds * 1000);
-            } else if (date.toDate && typeof date.toDate === 'function') {
-                dateObj = date.toDate();
-            } else {
-                return 'Invalid date';
-            }
-        } else if (typeof date === 'number') {
-            dateObj = new Date(date < 10000000000 ? date * 1000 : date);
-        } else {
-            return 'Invalid date';
-        }
-        if (isNaN(dateObj.getTime())) {
-            return 'Invalid date';
-        }
-        return dateObj.toLocaleDateString() + ' at ' + dateObj.toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true
-        });
-    } catch (error) {
-        console.error('Date formatting error:', error);
-        return 'Invalid date';
-    }
+    const d = parseDate(date);
+    if (!d) return 'Unknown date';
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const hours = d.getHours();
+    const minutes = d.getMinutes();
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const h = hours % 12 || 12;
+    const m = minutes < 10 ? '0' + minutes : minutes;
+    return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()} at ${h}:${m} ${ampm}`;
 }
 
 function truncateText(text, maxLength) {
