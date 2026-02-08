@@ -327,6 +327,9 @@
             100% { transform: scale(1); }
         }
         .pulse-animation { animation: pulse 2s infinite; }
+        @keyframes rippleEffect {
+            to { transform: scale(4); opacity: 0; }
+        }
     </style>
 </head>
 <body>
@@ -475,6 +478,45 @@
                 </div>
             </section>
 
+            <!-- Animated Features Strip -->
+            <div class="features-strip">
+                <div class="features-strip-track">
+                    <div class="feature-strip-item"><i class="fas fa-brain"></i> AI-Powered Estimation</div>
+                    <div class="feature-strip-divider"></div>
+                    <div class="feature-strip-item"><i class="fas fa-chart-line"></i> Business Analytics</div>
+                    <div class="feature-strip-divider"></div>
+                    <div class="feature-strip-item"><i class="fas fa-shield-alt"></i> Secure Platform</div>
+                    <div class="feature-strip-divider"></div>
+                    <div class="feature-strip-item"><i class="fas fa-globe"></i> Global Network</div>
+                    <div class="feature-strip-divider"></div>
+                    <div class="feature-strip-item"><i class="fas fa-bolt"></i> Instant Quotes</div>
+                    <div class="feature-strip-divider"></div>
+                    <div class="feature-strip-item"><i class="fas fa-comments"></i> Real-Time Chat</div>
+                    <div class="feature-strip-divider"></div>
+                    <div class="feature-strip-item"><i class="fas fa-file-pdf"></i> PDF Analysis</div>
+                    <div class="feature-strip-divider"></div>
+                    <div class="feature-strip-item"><i class="fas fa-award"></i> Verified Professionals</div>
+                    <div class="feature-strip-divider"></div>
+                    <!-- Duplicate for seamless loop -->
+                    <div class="feature-strip-item"><i class="fas fa-brain"></i> AI-Powered Estimation</div>
+                    <div class="feature-strip-divider"></div>
+                    <div class="feature-strip-item"><i class="fas fa-chart-line"></i> Business Analytics</div>
+                    <div class="feature-strip-divider"></div>
+                    <div class="feature-strip-item"><i class="fas fa-shield-alt"></i> Secure Platform</div>
+                    <div class="feature-strip-divider"></div>
+                    <div class="feature-strip-item"><i class="fas fa-globe"></i> Global Network</div>
+                    <div class="feature-strip-divider"></div>
+                    <div class="feature-strip-item"><i class="fas fa-bolt"></i> Instant Quotes</div>
+                    <div class="feature-strip-divider"></div>
+                    <div class="feature-strip-item"><i class="fas fa-comments"></i> Real-Time Chat</div>
+                    <div class="feature-strip-divider"></div>
+                    <div class="feature-strip-item"><i class="fas fa-file-pdf"></i> PDF Analysis</div>
+                    <div class="feature-strip-divider"></div>
+                    <div class="feature-strip-item"><i class="fas fa-award"></i> Verified Professionals</div>
+                    <div class="feature-strip-divider"></div>
+                </div>
+            </div>
+
             <section id="ai-estimation" class="ai-estimation">
                 <div class="ai-section-container">
                     <h2 class="ai-section-title reveal">AI-Powered Estimation</h2>
@@ -541,7 +583,94 @@
                 </div>
             </section>
 
+            <!-- AI Features Showcase Carousel -->
+            <section class="ai-features-section">
+                <div class="animated-blob blob-1"></div>
+                <div class="animated-blob blob-2"></div>
+                <div class="animated-blob blob-3"></div>
+                <div class="ai-features-container">
+                    <div style="text-align: center; margin-bottom: 60px;">
+                        <h2 class="analytics-title reveal" style="font-size: 48px;">Powered by Artificial Intelligence</h2>
+                        <p class="analytics-subtitle reveal reveal-delay-1">Experience the future of construction management with our AI-driven tools</p>
+                    </div>
+                    <div class="ai-features-carousel" id="ai-features-carousel">
+                        <div class="ai-features-track" id="ai-features-track">
+                            <!-- Slide 1: AI Estimation -->
+                            <div class="ai-feature-slide">
+                                <div class="ai-feature-content">
+                                    <div class="ai-feature-badge purple"><i class="fas fa-brain"></i> AI Estimation</div>
+                                    <h3 class="ai-feature-title">Instant AI-Powered Cost Estimation</h3>
+                                    <p class="ai-feature-description">Upload your structural drawings or enter project details and get accurate cost estimates in seconds. Our machine learning models are trained on thousands of real projects.</p>
+                                    <div class="ai-feature-highlights">
+                                        <div class="ai-feature-highlight"><i class="fas fa-check"></i> 95%+ accuracy on cost predictions</div>
+                                        <div class="ai-feature-highlight"><i class="fas fa-check"></i> PDF drawing analysis &amp; extraction</div>
+                                        <div class="ai-feature-highlight"><i class="fas fa-check"></i> Material quantity auto-calculation</div>
+                                        <div class="ai-feature-highlight"><i class="fas fa-check"></i> Timeline &amp; milestone forecasting</div>
+                                    </div>
+                                </div>
+                                <div class="ai-feature-visual">
+                                    <i class="fas fa-calculator ai-visual-icon"></i>
+                                    <div class="ai-visual-stats">
+                                        <div class="ai-visual-stat"><span class="ai-visual-stat-value">$2.4B</span><span class="ai-visual-stat-label">Estimated Value</span></div>
+                                        <div class="ai-visual-stat"><span class="ai-visual-stat-value">12K+</span><span class="ai-visual-stat-label">Estimates Made</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Slide 2: AI Analytics -->
+                            <div class="ai-feature-slide">
+                                <div class="ai-feature-content">
+                                    <div class="ai-feature-badge blue"><i class="fas fa-chart-pie"></i> AI Analytics</div>
+                                    <h3 class="ai-feature-title">Intelligent Business Analytics</h3>
+                                    <p class="ai-feature-description">Gain deep insights into your project portfolio with AI-driven analytics. Predict trends, identify bottlenecks, and optimize your operations with smart dashboards.</p>
+                                    <div class="ai-feature-highlights">
+                                        <div class="ai-feature-highlight"><i class="fas fa-check"></i> Predictive revenue forecasting</div>
+                                        <div class="ai-feature-highlight"><i class="fas fa-check"></i> Smart resource allocation suggestions</div>
+                                        <div class="ai-feature-highlight"><i class="fas fa-check"></i> Real-time KPI monitoring</div>
+                                        <div class="ai-feature-highlight"><i class="fas fa-check"></i> Automated performance reports</div>
+                                    </div>
+                                </div>
+                                <div class="ai-feature-visual blue-gradient">
+                                    <i class="fas fa-chart-line ai-visual-icon"></i>
+                                    <div class="ai-visual-stats">
+                                        <div class="ai-visual-stat"><span class="ai-visual-stat-value">186%</span><span class="ai-visual-stat-label">Avg. ROI Boost</span></div>
+                                        <div class="ai-visual-stat"><span class="ai-visual-stat-value">40%</span><span class="ai-visual-stat-label">Time Saved</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Slide 3: Business Dashboard -->
+                            <div class="ai-feature-slide">
+                                <div class="ai-feature-content">
+                                    <div class="ai-feature-badge gold"><i class="fas fa-tachometer-alt"></i> Dashboard</div>
+                                    <h3 class="ai-feature-title">World-Class Business Dashboard</h3>
+                                    <p class="ai-feature-description">Monitor every aspect of your construction business from a single command center. Beautiful visualizations, exportable reports, and team collaboration tools.</p>
+                                    <div class="ai-feature-highlights">
+                                        <div class="ai-feature-highlight"><i class="fas fa-check"></i> Interactive charts &amp; visualizations</div>
+                                        <div class="ai-feature-highlight"><i class="fas fa-check"></i> One-click PDF/Excel report export</div>
+                                        <div class="ai-feature-highlight"><i class="fas fa-check"></i> Team performance scorecards</div>
+                                        <div class="ai-feature-highlight"><i class="fas fa-check"></i> Custom KPI dashboards</div>
+                                    </div>
+                                </div>
+                                <div class="ai-feature-visual gold-gradient">
+                                    <i class="fas fa-th-large ai-visual-icon"></i>
+                                    <div class="ai-visual-stats">
+                                        <div class="ai-visual-stat"><span class="ai-visual-stat-value">98.5%</span><span class="ai-visual-stat-label">Completion Rate</span></div>
+                                        <div class="ai-visual-stat"><span class="ai-visual-stat-value">$1.8M</span><span class="ai-visual-stat-label">Monthly Revenue</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ai-features-nav" id="ai-features-nav">
+                        <button class="ai-feature-dot active" onclick="goToAIFeature(0)"></button>
+                        <button class="ai-feature-dot" onclick="goToAIFeature(1)"></button>
+                        <button class="ai-feature-dot" onclick="goToAIFeature(2)"></button>
+                    </div>
+                </div>
+            </section>
+
             <section id="business-analytics" class="business-analytics-section">
+                <div class="animated-blob blob-1"></div>
+                <div class="animated-blob blob-2"></div>
                 <div class="analytics-container">
                     <div class="analytics-header">
                         <h2 class="analytics-title reveal">Business Analytics Dashboard</h2>
@@ -550,7 +679,7 @@
                         </p>
                     </div>
                     <div class="analytics-grid">
-                        <div class="analytics-card">
+                        <div class="analytics-card tilt-card reveal-left">
                             <div class="analytics-card-header">
                                 <div class="analytics-icon purple"><i class="fas fa-chart-line"></i></div>
                                 <h3 class="analytics-card-title">Performance Metrics</h3>
@@ -559,16 +688,19 @@
                                 <span class="metric-label">Completion Rate</span>
                                 <div><span class="metric-value">98.5%</span><span class="metric-badge positive">+2.3%</span></div>
                             </div>
+                            <div class="metric-progress"><div class="metric-progress-bar purple" style="--progress: 98.5%"></div></div>
                             <div class="analytics-metric">
                                 <span class="metric-label">Avg. Project Value</span>
                                 <div><span class="metric-value">$284K</span><span class="metric-badge positive">+15%</span></div>
                             </div>
+                            <div class="metric-progress"><div class="metric-progress-bar purple" style="--progress: 75%"></div></div>
                             <div class="analytics-metric">
                                 <span class="metric-label">Client Satisfaction</span>
                                 <div><span class="metric-value">4.9/5</span><span class="metric-badge positive">+0.2</span></div>
                             </div>
+                            <div class="metric-progress"><div class="metric-progress-bar purple" style="--progress: 98%"></div></div>
                         </div>
-                        <div class="analytics-card">
+                        <div class="analytics-card tilt-card reveal-right" style="transition-delay: 0.15s;">
                             <div class="analytics-card-header">
                                 <div class="analytics-icon blue"><i class="fas fa-users"></i></div>
                                 <h3 class="analytics-card-title">Team Analytics</h3>
@@ -577,16 +709,19 @@
                                 <span class="metric-label">Active Professionals</span>
                                 <div><span class="metric-value">2,547</span><span class="metric-badge positive">+124</span></div>
                             </div>
+                            <div class="metric-progress"><div class="metric-progress-bar blue" style="--progress: 85%"></div></div>
                             <div class="analytics-metric">
                                 <span class="metric-label">Utilization Rate</span>
                                 <div><span class="metric-value">87%</span><span class="metric-badge positive">+5%</span></div>
                             </div>
+                            <div class="metric-progress"><div class="metric-progress-bar blue" style="--progress: 87%"></div></div>
                             <div class="analytics-metric">
                                 <span class="metric-label">Response Time</span>
                                 <div><span class="metric-value">2.4h</span><span class="metric-badge positive">-0.6h</span></div>
                             </div>
+                            <div class="metric-progress"><div class="metric-progress-bar blue" style="--progress: 76%"></div></div>
                         </div>
-                        <div class="analytics-card">
+                        <div class="analytics-card tilt-card reveal-left" style="transition-delay: 0.3s;">
                             <div class="analytics-card-header">
                                 <div class="analytics-icon pink"><i class="fas fa-dollar-sign"></i></div>
                                 <h3 class="analytics-card-title">Financial Overview</h3>
@@ -595,41 +730,52 @@
                                 <span class="metric-label">Monthly Revenue</span>
                                 <div><span class="metric-value">$1.8M</span><span class="metric-badge positive">+22%</span></div>
                             </div>
+                            <div class="metric-progress"><div class="metric-progress-bar pink" style="--progress: 82%"></div></div>
                             <div class="analytics-metric">
                                 <span class="metric-label">Profit Margin</span>
                                 <div><span class="metric-value">34%</span><span class="metric-badge positive">+3%</span></div>
                             </div>
+                            <div class="metric-progress"><div class="metric-progress-bar pink" style="--progress: 34%"></div></div>
                             <div class="analytics-metric">
                                 <span class="metric-label">ROI</span>
                                 <div><span class="metric-value">186%</span><span class="metric-badge positive">+28%</span></div>
                             </div>
+                            <div class="metric-progress"><div class="metric-progress-bar pink" style="--progress: 93%"></div></div>
                         </div>
                     </div>
-                    <div class="analytics-dashboard-preview">
-                        <div class="dashboard-header">
-                            <h3 class="dashboard-title">Real-Time Dashboard Preview</h3>
-                            <div class="dashboard-actions">
-                                <button class="dashboard-btn secondary"><i class="fas fa-download"></i> Export Report</button>
-                                <button class="dashboard-btn primary"><i class="fas fa-expand"></i> View Full Dashboard</button>
-                            </div>
+                    <div class="dashboard-mockup reveal-scale">
+                        <div class="mockup-toolbar">
+                            <div class="mockup-dot red"></div>
+                            <div class="mockup-dot yellow"></div>
+                            <div class="mockup-dot green"></div>
+                            <div class="mockup-url">steelconnect.app/dashboard/analytics</div>
                         </div>
-                        <div class="chart-container"><canvas id="analytics-chart"></canvas></div>
-                        <div class="kpi-grid">
-                            <div class="kpi-card">
-                                <div class="kpi-label">Total Projects</div><div class="kpi-value">1,284</div>
-                                <div class="kpi-trend up"><i class="fas fa-arrow-up"></i> 12% from last month</div>
+                        <div class="analytics-dashboard-preview">
+                            <div class="dashboard-header">
+                                <h3 class="dashboard-title">Real-Time Dashboard Preview</h3>
+                                <div class="dashboard-actions">
+                                    <button class="dashboard-btn secondary"><i class="fas fa-download"></i> Export Report</button>
+                                    <button class="dashboard-btn primary"><i class="fas fa-expand"></i> View Full Dashboard</button>
+                                </div>
                             </div>
-                            <div class="kpi-card">
-                                <div class="kpi-label">Active Users</div><div class="kpi-value">8.4K</div>
-                                <div class="kpi-trend up"><i class="fas fa-arrow-up"></i> 23% increase</div>
-                            </div>
-                            <div class="kpi-card">
-                                <div class="kpi-label">Avg. Deal Size</div><div class="kpi-value">$125K</div>
-                                <div class="kpi-trend up"><i class="fas fa-arrow-up"></i> 8% growth</div>
-                            </div>
-                            <div class="kpi-card">
-                                <div class="kpi-label">Success Rate</div><div class="kpi-value">94.2%</div>
-                                <div class="kpi-trend up"><i class="fas fa-arrow-up"></i> 3.5% improvement</div>
+                            <div class="chart-container"><canvas id="analytics-chart"></canvas></div>
+                            <div class="kpi-grid">
+                                <div class="kpi-card tilt-card">
+                                    <div class="kpi-label">Total Projects</div><div class="kpi-value">1,284</div>
+                                    <div class="kpi-trend up"><i class="fas fa-arrow-up"></i> 12% from last month</div>
+                                </div>
+                                <div class="kpi-card tilt-card">
+                                    <div class="kpi-label">Active Users</div><div class="kpi-value">8.4K</div>
+                                    <div class="kpi-trend up"><i class="fas fa-arrow-up"></i> 23% increase</div>
+                                </div>
+                                <div class="kpi-card tilt-card">
+                                    <div class="kpi-label">Avg. Deal Size</div><div class="kpi-value">$125K</div>
+                                    <div class="kpi-trend up"><i class="fas fa-arrow-up"></i> 8% growth</div>
+                                </div>
+                                <div class="kpi-card tilt-card">
+                                    <div class="kpi-label">Success Rate</div><div class="kpi-value">94.2%</div>
+                                    <div class="kpi-trend up"><i class="fas fa-arrow-up"></i> 3.5% improvement</div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -643,7 +789,7 @@
                         <p class="charts-subtitle reveal reveal-delay-1">Interactive analytics that transform your data into actionable insights.</p>
                     </div>
                     <div class="charts-grid">
-                        <div class="chart-card">
+                        <div class="chart-card tilt-card reveal-left">
                             <div class="chart-header">
                                 <div class="chart-title">
                                     <div class="chart-icon" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);"><i class="fas fa-chart-pie"></i></div>
@@ -658,7 +804,7 @@
                                 <div class="chart-stat"><span class="stat-value">$2.8M</span><span class="stat-label">Revenue</span></div>
                             </div>
                         </div>
-                        <div class="chart-card">
+                        <div class="chart-card tilt-card reveal-right">
                             <div class="chart-header">
                                 <div class="chart-title">
                                     <div class="chart-icon" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);"><i class="fas fa-chart-bar"></i></div>
@@ -1041,6 +1187,72 @@
                     }
                 }, { passive: true });
             }
+        });
+
+        // AI Features Showcase Carousel Auto-Play
+        let currentAIFeature = 0;
+        const totalAIFeatures = 3;
+        let aiFeatureInterval;
+        function goToAIFeature(index) {
+            currentAIFeature = index;
+            const track = document.getElementById('ai-features-track');
+            if (track) track.style.transform = 'translateX(-' + (index * 100) + '%)';
+            document.querySelectorAll('.ai-feature-dot').forEach((dot, i) => {
+                dot.classList.toggle('active', i === index);
+            });
+        }
+        function startAIFeatureAutoPlay() {
+            aiFeatureInterval = setInterval(() => {
+                currentAIFeature = (currentAIFeature + 1) % totalAIFeatures;
+                goToAIFeature(currentAIFeature);
+            }, 5000);
+        }
+        document.addEventListener('DOMContentLoaded', function() {
+            startAIFeatureAutoPlay();
+            const aiCarousel = document.getElementById('ai-features-carousel');
+            if (aiCarousel) {
+                aiCarousel.addEventListener('mouseenter', () => clearInterval(aiFeatureInterval));
+                aiCarousel.addEventListener('mouseleave', startAIFeatureAutoPlay);
+            }
+        });
+
+        // Ripple Effect on Buttons
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.btn, .dashboard-btn, .cta-btn-primary, .cta-btn-secondary').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    const ripple = document.createElement('span');
+                    const rect = this.getBoundingClientRect();
+                    const size = Math.max(rect.width, rect.height);
+                    ripple.style.cssText = 'position:absolute;border-radius:50%;background:rgba(255,255,255,0.3);pointer-events:none;transform:scale(0);animation:rippleEffect 0.6s ease-out;width:' + size + 'px;height:' + size + 'px;left:' + (e.clientX - rect.left - size/2) + 'px;top:' + (e.clientY - rect.top - size/2) + 'px;';
+                    this.style.position = this.style.position || 'relative';
+                    this.style.overflow = 'hidden';
+                    this.appendChild(ripple);
+                    setTimeout(() => ripple.remove(), 600);
+                });
+            });
+        });
+
+        // Animate KPI values when they come into view
+        document.addEventListener('DOMContentLoaded', function() {
+            const kpiObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting && !entry.target.dataset.animated) {
+                        entry.target.dataset.animated = 'true';
+                        const kpiValues = entry.target.querySelectorAll('.kpi-value');
+                        kpiValues.forEach((el, i) => {
+                            el.style.opacity = '0';
+                            el.style.transform = 'translateY(20px)';
+                            el.style.transition = 'all 0.6s cubic-bezier(0.16, 1, 0.3, 1)';
+                            setTimeout(() => {
+                                el.style.opacity = '1';
+                                el.style.transform = 'translateY(0)';
+                            }, i * 150);
+                        });
+                    }
+                });
+            }, { threshold: 0.3 });
+            const kpiGrid = document.querySelector('.kpi-grid');
+            if (kpiGrid) kpiObserver.observe(kpiGrid);
         });
 
         // Attractive Charts Script
