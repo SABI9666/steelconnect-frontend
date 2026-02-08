@@ -1166,19 +1166,36 @@ function getEstimationStatusConfig(status) {
 }
 
 // --- FILE DOWNLOAD FUNCTIONS ---
+function escapeAttr(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g, '&amp;').replace(/'/g, '&#39;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 async function downloadFileDirect(url, filename) {
     try {
         if (!url) {
             throw new Error('Download URL not provided');
         }
+        // Ensure URL is properly encoded (handle spaces and special chars)
+        let safeUrl = url;
+        try {
+            const urlObj = new URL(url);
+            safeUrl = urlObj.href;
+        } catch (_) {
+            // If URL parsing fails, try encoding the path portion
+            safeUrl = encodeURI(url);
+        }
         showNotification('Preparing download...', 'info');
-        const response = await fetch(url, {
+        const response = await fetch(safeUrl, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${appState.jwtToken}`
             }
         });
         if (!response.ok) {
+            if (response.status === 404) {
+                throw new Error('File not found on server. It may have been moved or deleted.');
+            }
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         const blob = await response.blob();
@@ -1201,11 +1218,13 @@ async function downloadFileDirect(url, filename) {
                 if (newTab) {
                     showNotification('Opening file in new tab...', 'info');
                 } else {
-                    showNotification('Please allow popups and try again', 'warning');
+                    showNotification(`Download failed: ${error.message}`, 'error');
                 }
             } catch (fallbackError) {
                 showNotification(`Download failed: ${error.message}`, 'error');
             }
+        } else {
+            showNotification(`Download failed: ${error.message}`, 'error');
         }
     }
 }
@@ -1277,7 +1296,7 @@ async function viewEstimationFiles(estimationId) {
                                     <span class="file-date">Uploaded: ${new Date(file.uploadedAt).toLocaleDateString()}</span>
                                 </div>
                             </div>
-                            <button class="btn btn-outline btn-sm" onclick="downloadFileDirect('${file.url}', '${file.name}')">
+                            <button class="btn btn-outline btn-sm" onclick="downloadFileDirect('${escapeAttr(file.url)}', '${escapeAttr(file.name)}')">
                                 <i class="fas fa-download"></i> Download
                             </button>
                         </div>
@@ -2085,7 +2104,7 @@ async function viewQuoteAttachments(quoteId) {
                                     </div>
                                 </div>
                                 <div class="attachment-actions">
-                                    <button class="btn btn-primary btn-sm" onclick="downloadQuoteAttachment('${quoteId}', ${attachment.index}, '${attachment.name}')">
+                                    <button class="btn btn-primary btn-sm" onclick="downloadQuoteAttachment('${quoteId}', ${attachment.index}, '${escapeAttr(attachment.name)}')">
                                         <i class="fas fa-download"></i> Download
                                     </button>
                                 </div>
@@ -3618,10 +3637,10 @@ async function viewSupportTicketDetails(ticketId) {
                                             </div>
                                         </div>
                                         <div class="attachment-actions">
-                                            <button class="btn btn-outline btn-sm" onclick="viewSupportAttachment('${attachment.url}', '${attachment.originalName || attachment.filename || attachment.name}')">
+                                            <button class="btn btn-outline btn-sm" onclick="viewSupportAttachment('${escapeAttr(attachment.url)}', '${escapeAttr(attachment.originalName || attachment.filename || attachment.name)}')">
                                                 <i class="fas fa-eye"></i> View
                                             </button>
-                                            <button class="btn btn-primary btn-sm" onclick="downloadSupportAttachment('${attachment.url}', '${attachment.originalName || attachment.filename || attachment.name}')">
+                                            <button class="btn btn-primary btn-sm" onclick="downloadSupportAttachment('${escapeAttr(attachment.url)}', '${escapeAttr(attachment.originalName || attachment.filename || attachment.name)}')">
                                                 <i class="fas fa-download"></i> Download
                                             </button>
                                         </div>
@@ -4212,7 +4231,7 @@ function getBusinessAnalyticsCompletedTemplate(request) {
                 <a href="${request.vercelUrl}" target="_blank" class="btn btn-primary">
                     <i class="fas fa-expand"></i> Open Full Report
                 </a>
-                <button class="btn btn-outline" onclick="downloadBusinessAnalyticsReport('${request.vercelUrl}', '${request._id}')">
+                <button class="btn btn-outline" onclick="downloadBusinessAnalyticsReport('${escapeAttr(request.vercelUrl)}', '${escapeAttr(request._id)}')">
                     <i class="fas fa-download"></i> Download Report
                 </button>
             </div>
