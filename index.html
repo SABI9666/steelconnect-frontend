@@ -552,30 +552,79 @@
             </div>
 
             <section id="ai-estimation" class="ai-estimation">
+                <div class="ai-est-orb ai-est-orb-1"></div>
+                <div class="ai-est-orb ai-est-orb-2"></div>
+                <div class="ai-est-orb ai-est-orb-3"></div>
+                <div class="ai-est-grid-bg"></div>
                 <div class="ai-section-container">
-                    <h2 class="ai-section-title reveal">AI-Powered Estimation</h2>
-                    <p class="ai-section-subtitle reveal reveal-delay-1">Get instant, accurate cost estimates for your construction projects by providing a few key details. Our AI analyzes the data to give you a preliminary budget and timeline.</p>
-                    
+                    <div class="ai-est-header reveal">
+                        <span class="ai-est-badge"><i class="fas fa-sparkles"></i> AI-Powered Technology</span>
+                        <h2 class="ai-section-title">AI-Powered Estimation</h2>
+                        <p class="ai-section-subtitle">Get instant, accurate cost estimates for your construction projects by providing a few key details. Our AI analyzes the data to give you a preliminary budget and timeline.</p>
+                    </div>
+
                     <div class="ai-content">
-                        <div style="display: flex; flex-direction: column; gap: 32px;">
-                            <div style="display: flex; align-items: flex-start; gap: 20px; padding: 24px; background: var(--bg-white); border-radius: 16px; box-shadow: var(--shadow-lg);">
-                                <div style="width: 48px; height: 48px; background: var(--ai-gradient); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; flex-shrink: 0;"><i class="fas fa-bolt"></i></div>
-                                <div><h3 style="margin-bottom: 4px;">Instant Analysis</h3><p style="color: var(--text-gray); margin:0;">Our AI provides preliminary cost and timeline estimates in seconds, helping you make quicker decisions.</p></div>
+                        <div class="ai-features-left">
+                            <div class="ai-feature-card reveal reveal-delay-1">
+                                <div class="ai-feature-icon-wrap">
+                                    <div class="ai-feature-icon"><i class="fas fa-bolt"></i></div>
+                                    <div class="ai-feature-icon-glow"></div>
+                                </div>
+                                <div class="ai-feature-info">
+                                    <h3>Instant Analysis</h3>
+                                    <p>Our AI provides preliminary cost and timeline estimates in seconds, helping you make quicker decisions.</p>
+                                </div>
                             </div>
-                             <div style="display: flex; align-items: flex-start; gap: 20px; padding: 24px; background: var(--bg-white); border-radius: 16px; box-shadow: var(--shadow-lg);">
-                                <div style="width: 48px; height: 48px; background: var(--ai-gradient); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; flex-shrink: 0;"><i class="fas fa-file-upload"></i></div>
-                                <div><h3 style="margin-bottom: 4px;">PDF Uploads for Pros</h3><p style="color: var(--text-gray); margin:0;">Registered users can upload structural drawings directly for a more detailed and accurate AI-powered cost breakdown.</p></div>
+                            <div class="ai-feature-card reveal reveal-delay-2">
+                                <div class="ai-feature-icon-wrap">
+                                    <div class="ai-feature-icon ai-feature-icon-cyan"><i class="fas fa-file-upload"></i></div>
+                                    <div class="ai-feature-icon-glow ai-feature-glow-cyan"></div>
+                                </div>
+                                <div class="ai-feature-info">
+                                    <h3>PDF Uploads for Pros</h3>
+                                    <p>Registered users can upload structural drawings directly for a more detailed and accurate AI-powered cost breakdown.</p>
+                                </div>
+                            </div>
+                            <div class="ai-feature-card reveal reveal-delay-3">
+                                <div class="ai-feature-icon-wrap">
+                                    <div class="ai-feature-icon ai-feature-icon-emerald"><i class="fas fa-chart-bar"></i></div>
+                                    <div class="ai-feature-icon-glow ai-feature-glow-emerald"></div>
+                                </div>
+                                <div class="ai-feature-info">
+                                    <h3>Smart Breakdown</h3>
+                                    <p>Get detailed material, labor, and timeline breakdowns powered by machine learning models trained on thousands of projects.</p>
+                                </div>
+                            </div>
+                            <div class="ai-est-trust-strip">
+                                <div class="ai-est-trust-item">
+                                    <span class="ai-est-trust-number">95%+</span>
+                                    <span class="ai-est-trust-label">Accuracy</span>
+                                </div>
+                                <div class="ai-est-trust-divider"></div>
+                                <div class="ai-est-trust-item">
+                                    <span class="ai-est-trust-number">12K+</span>
+                                    <span class="ai-est-trust-label">Estimates</span>
+                                </div>
+                                <div class="ai-est-trust-divider"></div>
+                                <div class="ai-est-trust-item">
+                                    <span class="ai-est-trust-number">&lt;3s</span>
+                                    <span class="ai-est-trust-label">Results</span>
+                                </div>
                             </div>
                         </div>
-                        
-                        <div class="ai-demo">
-                            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border-color);">
-                                <div style="width: 40px; height: 40px; background: var(--ai-gradient); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white;"><i class="fas fa-calculator"></i></div>
-                                <div style="font-size: 18px; font-weight: 700;">Quick Project Estimator</div>
+
+                        <div class="ai-demo reveal reveal-delay-2">
+                            <div class="ai-demo-header">
+                                <div class="ai-demo-icon"><i class="fas fa-calculator"></i></div>
+                                <div>
+                                    <div class="ai-demo-title">Quick Project Estimator</div>
+                                    <div class="ai-demo-subtitle">Powered by AI</div>
+                                </div>
+                                <div class="ai-demo-live-badge"><span class="ai-demo-live-dot"></span> Live</div>
                             </div>
-                            
+
                             <div class="ai-input-group">
-                                <label>Project Type</label>
+                                <label><i class="fas fa-building"></i> Project Type</label>
                                 <select id="preview-project-type" class="ai-input">
                                     <option value="">Select project type</option>
                                     <option value="residential">Residential Building</option>
@@ -583,33 +632,34 @@
                                     <option value="industrial">Industrial Facility</option>
                                 </select>
                             </div>
-                            
+
                             <div class="ai-input-group">
-                                <label>Estimated Material Tonnage (tons)</label>
+                                <label><i class="fas fa-weight-hanging"></i> Estimated Material Tonnage (tons)</label>
                                 <input type="number" id="preview-steel-tonnage" class="ai-input" placeholder="e.g., 150" min="1">
                             </div>
-                                                        
+
                             <button class="ai-estimate-btn" id="preview-generate-btn">
-                                <i class="fas fa-brain"></i> Generate AI Preview
+                                <span class="ai-estimate-btn-content"><i class="fas fa-brain"></i> Generate AI Preview</span>
+                                <span class="ai-estimate-btn-shine"></span>
                             </button>
-                            
+
                             <div id="preview-ai-result" class="ai-result">
                                 <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
-                                    <i class="fas fa-check-circle" style="color: var(--ai-purple);"></i>
-                                    <h4>AI Analysis Complete</h4>
+                                    <i class="fas fa-check-circle" style="color: #8b5cf6;"></i>
+                                    <h4 style="color: #1e293b; font-weight: 700;">AI Analysis Complete</h4>
                                 </div>
                                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                                    <div style="text-align: center; padding: 12px; background: var(--bg-white); border-radius: 8px;">
-                                        <span id="preview-estimated-cost" style="font-size: 24px; font-weight: 900; background: var(--ai-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: block;">$0</span>
-                                        <span style="font-size: 12px; color: var(--text-gray);">Estimated Cost</span>
+                                    <div class="ai-result-stat">
+                                        <span id="preview-estimated-cost" class="ai-result-number">$0</span>
+                                        <span class="ai-result-label">Estimated Cost</span>
                                     </div>
-                                    <div style="text-align: center; padding: 12px; background: var(--bg-white); border-radius: 8px;">
-                                        <span id="preview-timeline-estimate" style="font-size: 24px; font-weight: 900; background: var(--ai-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: block;">0 weeks</span>
-                                        <span style="font-size: 12px; color: var(--text-gray);">Timeline</span>
+                                    <div class="ai-result-stat">
+                                        <span id="preview-timeline-estimate" class="ai-result-number">0 weeks</span>
+                                        <span class="ai-result-label">Timeline</span>
                                     </div>
                                 </div>
                                 <p style="font-size: 12px; color: var(--text-gray); margin-top: 16px; text-align: center;">
-                                    *This is a preview. <a href="#" id="signup-link" style="color: var(--primary-color);">Sign up</a> for the full tool with PDF uploads.
+                                    *This is a preview. <a href="#" id="signup-link" style="color: #8b5cf6; font-weight: 600;">Sign up</a> for the full tool with PDF uploads.
                                 </p>
                             </div>
                         </div>
