@@ -389,7 +389,13 @@
     <div id="landing-page-content">
         <main>
             <section class="hero">
-                <div class="hero-background"></div>
+                <div class="hero-background">
+                    <div class="hero-bg-slide active" style="background-image: url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2940&auto=format&fit=crop')"></div>
+                    <div class="hero-bg-slide" style="background-image: url('https://images.unsplash.com/photo-1504307651254-35680f356dfd?q=80&w=2940&auto=format&fit=crop')"></div>
+                    <div class="hero-bg-slide" style="background-image: url('https://images.unsplash.com/photo-1541888946425-d81bb19240f5?q=80&w=2940&auto=format&fit=crop')"></div>
+                    <div class="hero-bg-slide" style="background-image: url('https://images.unsplash.com/photo-1503387762-592deb58ef4e?q=80&w=2940&auto=format&fit=crop')"></div>
+                    <div class="hero-bg-slide" style="background-image: url('https://images.unsplash.com/photo-1590674899484-d5640e854abe?q=80&w=2940&auto=format&fit=crop')"></div>
+                </div>
                 <div class="hero-mesh-gradient"></div>
                 <div class="hero-particles">
                     <div class="particle"></div><div class="particle"></div><div class="particle"></div><div class="particle"></div>
@@ -436,7 +442,20 @@
                     </div>
                     <div class="hero-visual">
                         <div class="hero-image-container">
-                            <img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2940&auto=format&fit=crop" alt="Modern steel skyscraper architecture" class="hero-image" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1541888946425-d81bb19240f5?q=80&w=2940&auto=format&fit=crop';">
+                            <div class="hero-image-slider">
+                                <img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2940&auto=format&fit=crop" alt="Modern steel skyscraper architecture" class="hero-slide active">
+                                <img src="https://images.unsplash.com/photo-1504307651254-35680f356dfd?q=80&w=2940&auto=format&fit=crop" alt="Construction site with cranes at sunset" class="hero-slide">
+                                <img src="https://images.unsplash.com/photo-1541888946425-d81bb19240f5?q=80&w=2940&auto=format&fit=crop" alt="Aerial view of modern construction project" class="hero-slide">
+                                <img src="https://images.unsplash.com/photo-1503387762-592deb58ef4e?q=80&w=2940&auto=format&fit=crop" alt="Architectural blueprint and modern building" class="hero-slide">
+                                <img src="https://images.unsplash.com/photo-1590674899484-d5640e854abe?q=80&w=2940&auto=format&fit=crop" alt="Steel structure engineering at dusk" class="hero-slide">
+                            </div>
+                            <div class="hero-slide-progress">
+                                <span class="hero-slide-dot active" data-slide="0"></span>
+                                <span class="hero-slide-dot" data-slide="1"></span>
+                                <span class="hero-slide-dot" data-slide="2"></span>
+                                <span class="hero-slide-dot" data-slide="3"></span>
+                                <span class="hero-slide-dot" data-slide="4"></span>
+                            </div>
                             <div class="hero-image-overlay">
                                 <div class="hero-overlay-badge"><i class="fas fa-shield-alt"></i> Enterprise Grade</div>
                                 <h3>AI-Driven Construction Intelligence</h3>
@@ -1187,6 +1206,65 @@
                     }
                 }, { passive: true });
             }
+        });
+
+        // Hero Image Rotation - cycles every 5 seconds with crossfade
+        document.addEventListener('DOMContentLoaded', function() {
+            const heroSlides = document.querySelectorAll('.hero-slide');
+            const heroBgSlides = document.querySelectorAll('.hero-bg-slide');
+            const heroDots = document.querySelectorAll('.hero-slide-dot');
+            if (heroSlides.length === 0) return;
+
+            let currentSlide = 0;
+            let heroInterval = null;
+            const SLIDE_DURATION = 5000;
+
+            function goToSlide(index) {
+                heroSlides.forEach(function(s) { s.classList.remove('active'); });
+                heroBgSlides.forEach(function(s) { s.classList.remove('active'); });
+                heroDots.forEach(function(d) { d.classList.remove('active'); });
+
+                currentSlide = index;
+                heroSlides[currentSlide].classList.add('active');
+                if (heroBgSlides[currentSlide]) heroBgSlides[currentSlide].classList.add('active');
+                heroDots[currentSlide].classList.add('active');
+            }
+
+            function nextSlide() {
+                var next = (currentSlide + 1) % heroSlides.length;
+                goToSlide(next);
+            }
+
+            function startAutoplay() {
+                if (heroInterval) clearInterval(heroInterval);
+                heroInterval = setInterval(nextSlide, SLIDE_DURATION);
+            }
+
+            function resetAutoplay() {
+                clearInterval(heroInterval);
+                startAutoplay();
+            }
+
+            heroDots.forEach(function(dot) {
+                dot.addEventListener('click', function() {
+                    var slideIndex = parseInt(this.getAttribute('data-slide'));
+                    goToSlide(slideIndex);
+                    resetAutoplay();
+                });
+            });
+
+            // Pause on hover for better UX
+            var heroContainer = document.querySelector('.hero-image-container');
+            if (heroContainer) {
+                heroContainer.addEventListener('mouseenter', function() {
+                    clearInterval(heroInterval);
+                });
+                heroContainer.addEventListener('mouseleave', function() {
+                    startAutoplay();
+                });
+            }
+
+            startAutoplay();
         });
 
         // AI Features Showcase Carousel Auto-Play
