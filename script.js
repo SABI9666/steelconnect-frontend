@@ -59,6 +59,10 @@ const appState = {
     currentHeaderSlide: 0,
     notifications: [],
     profileFiles: {}, // For profile completion uploads
+    communityPosts: [],
+    communityPage: 1,
+    communityHasMore: true,
+    newPostImages: [],
 };
 
 // === BUSINESS ANALYTICS STATE ===
@@ -2738,7 +2742,7 @@ function renderAppSection(sectionId) {
     document.querySelectorAll('.sidebar-nav-link').forEach(link => link.classList.toggle('active', link.dataset.section === sectionId));
     const profileStatus = appState.currentUser.profileStatus;
     const isApproved = profileStatus === 'approved';
-    const restrictedSections = ['post-job', 'jobs', 'my-quotes', 'approved-jobs', 'estimation-tool', 'my-estimations', 'messages', 'business-analytics', 'project-tracking', 'quote-analysis'];
+    const restrictedSections = ['post-job', 'jobs', 'my-quotes', 'approved-jobs', 'estimation-tool', 'my-estimations', 'messages', 'business-analytics', 'project-tracking', 'community-feed', 'quote-analysis'];
     if (restrictedSections.includes(sectionId) && !isApproved) {
         container.innerHTML = getRestrictedAccessTemplate(sectionId, profileStatus);
         return;
@@ -2785,6 +2789,9 @@ function renderAppSection(sectionId) {
     else if (sectionId === 'project-tracking') {
         renderProjectTrackingDashboard();
     }
+    else if (sectionId === 'community-feed') {
+        renderCommunityFeed();
+    }
     else if (sectionId === 'business-analytics') {
         renderBusinessAnalyticsPortal();
     }
@@ -2794,7 +2801,7 @@ function renderAppSection(sectionId) {
 }
 
 function getRestrictedAccessTemplate(sectionId, profileStatus) {
-    const sectionNames = { 'post-job': 'Post Projects', 'jobs': 'Browse Projects', 'my-quotes': 'My Quotes', 'approved-jobs': 'Approved Projects', 'estimation-tool': 'AI Estimation', 'my-estimations': 'My Estimations', 'messages': 'Messages', 'business-analytics': 'Business Analytics', 'project-tracking': 'Project Tracking', 'quote-analysis': 'Quote Analysis' };
+    const sectionNames = { 'post-job': 'Post Projects', 'jobs': 'Browse Projects', 'my-quotes': 'My Quotes', 'approved-jobs': 'Approved Projects', 'estimation-tool': 'AI Estimation', 'my-estimations': 'My Estimations', 'messages': 'Messages', 'business-analytics': 'Business Analytics', 'project-tracking': 'Project Tracking', 'community-feed': 'Community Feed', 'quote-analysis': 'Quote Analysis' };
     const sectionName = sectionNames[sectionId] || 'This Feature';
     let msg = '', btn = '', icon = 'fa-lock', color = '#f59e0b';
     if (profileStatus === 'incomplete') {
@@ -3805,6 +3812,13 @@ function buildSidebarNav() {
             <span>Messages</span>
         </a>
         <hr class="sidebar-divider">
+        <div class="sidebar-section-title">Community</div>
+        <a href="#" class="sidebar-nav-link" data-section="community-feed">
+            <i class="fas fa-newspaper fa-fw"></i>
+            <span>Community Feed</span>
+            <span class="nav-badge">NEW</span>
+        </a>
+        <hr class="sidebar-divider">
         <a href="#" class="sidebar-nav-link" data-section="support">
             <i class="fas fa-life-ring fa-fw"></i>
             <span>Support</span>
@@ -3821,6 +3835,816 @@ function buildSidebarNav() {
             renderAppSection(link.dataset.section);
         });
     });
+}
+
+
+// ============================================
+// COMMUNITY FEED (LINKEDIN-STYLE)
+// ============================================
+
+async function renderCommunityFeed() {
+    const container = document.getElementById('app-container');
+    const isDesigner = appState.currentUser.type === 'designer';
+    const user = appState.currentUser;
+    const avatarColor = getAvatarColor(user.name || 'U');
+    const initial = (user.name || 'U').charAt(0).toUpperCase();
+
+    container.innerHTML = `
+        <div class="cf-layout">
+            <!-- Left Sidebar - Profile Card -->
+            <aside class="cf-sidebar-left">
+                <div class="cf-profile-card">
+                    <div class="cf-profile-banner"></div>
+                    <div class="cf-profile-info">
+                        <div class="cf-profile-avatar" style="background-color: ${avatarColor}">${initial}</div>
+                        <h3>${user.name || 'User'}</h3>
+                        <span class="cf-profile-role ${user.type}">${user.type === 'designer' ? 'Designer' : 'Contractor'}</span>
+                        <p class="cf-profile-tagline">${isDesigner ? 'Steel & Rebar Design Professional' : 'Steel Construction Contractor'}</p>
+                    </div>
+                    <div class="cf-profile-stats">
+                        <div class="cf-profile-stat">
+                            <span class="cf-stat-num" id="cf-my-posts-count">0</span>
+                            <span class="cf-stat-txt">Posts</span>
+                        </div>
+                        <div class="cf-profile-stat">
+                            <span class="cf-stat-num" id="cf-my-likes-count">0</span>
+                            <span class="cf-stat-txt">Likes</span>
+                        </div>
+                        <div class="cf-profile-stat">
+                            <span class="cf-stat-num" id="cf-my-comments-count">0</span>
+                            <span class="cf-stat-txt">Comments</span>
+                        </div>
+                    </div>
+                </div>
+                ${isDesigner ? `
+                <div class="cf-sidebar-cta">
+                    <h4><i class="fas fa-lightbulb"></i> Grow Your Reach</h4>
+                    <p>Share your technical expertise to attract more clients and project opportunities.</p>
+                </div>` : `
+                <div class="cf-sidebar-cta">
+                    <h4><i class="fas fa-search"></i> Discover Talent</h4>
+                    <p>Browse posts from skilled designers. Find the right expert for your next project.</p>
+                </div>`}
+            </aside>
+
+            <!-- Main Feed -->
+            <main class="cf-main">
+                ${isDesigner ? `
+                <!-- Create Post Box -->
+                <div class="cf-create-post-box" onclick="openCreatePostModal()">
+                    <div class="cf-create-avatar" style="background-color: ${avatarColor}">${initial}</div>
+                    <div class="cf-create-prompt">
+                        <span>Share your work, insights, or technical expertise...</span>
+                    </div>
+                </div>
+                <div class="cf-create-actions-bar">
+                    <button class="cf-create-action-btn" onclick="openCreatePostModal()">
+                        <i class="fas fa-image" style="color: #2563eb;"></i> Photo
+                    </button>
+                    <button class="cf-create-action-btn" onclick="openCreatePostModal()">
+                        <i class="fas fa-pen-fancy" style="color: #059669;"></i> Article
+                    </button>
+                    <button class="cf-create-action-btn" onclick="openCreatePostModal()">
+                        <i class="fas fa-project-diagram" style="color: #d97706;"></i> Project Showcase
+                    </button>
+                </div>` : ''}
+
+                <!-- Feed Filter Tabs -->
+                <div class="cf-feed-tabs">
+                    <button class="cf-tab active" data-tab="all" onclick="filterCommunityFeed('all')">
+                        <i class="fas fa-stream"></i> All Posts
+                    </button>
+                    <button class="cf-tab" data-tab="trending" onclick="filterCommunityFeed('trending')">
+                        <i class="fas fa-fire"></i> Trending
+                    </button>
+                    <button class="cf-tab" data-tab="following" onclick="filterCommunityFeed('following')">
+                        <i class="fas fa-user-friends"></i> My Posts
+                    </button>
+                </div>
+
+                <!-- Posts Container -->
+                <div id="cf-posts-container" class="cf-posts-container">
+                    <div class="loading-spinner"><div class="spinner"></div><p>Loading feed...</p></div>
+                </div>
+
+                <div id="cf-load-more" class="cf-load-more"></div>
+            </main>
+
+            <!-- Right Sidebar - Trending / Suggestions -->
+            <aside class="cf-sidebar-right">
+                <div class="cf-trending-card">
+                    <h4><i class="fas fa-fire-alt"></i> Trending Topics</h4>
+                    <div class="cf-trending-list">
+                        <div class="cf-trending-item" onclick="searchCommunityPosts('#SteelDesign')">
+                            <span class="cf-trending-tag">#SteelDesign</span>
+                            <span class="cf-trending-count">Popular</span>
+                        </div>
+                        <div class="cf-trending-item" onclick="searchCommunityPosts('#RebarDetailing')">
+                            <span class="cf-trending-tag">#RebarDetailing</span>
+                            <span class="cf-trending-count">Trending</span>
+                        </div>
+                        <div class="cf-trending-item" onclick="searchCommunityPosts('#StructuralEngineering')">
+                            <span class="cf-trending-tag">#StructuralEngineering</span>
+                            <span class="cf-trending-count">Active</span>
+                        </div>
+                        <div class="cf-trending-item" onclick="searchCommunityPosts('#ProjectShowcase')">
+                            <span class="cf-trending-tag">#ProjectShowcase</span>
+                            <span class="cf-trending-count">New</span>
+                        </div>
+                        <div class="cf-trending-item" onclick="searchCommunityPosts('#AIEstimation')">
+                            <span class="cf-trending-tag">#AIEstimation</span>
+                            <span class="cf-trending-count">Hot</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="cf-suggestions-card">
+                    <h4><i class="fas fa-user-plus"></i> Platform Highlights</h4>
+                    <p class="cf-suggestion-text">Post technical content, share project showcases, and connect with professionals in the steel construction industry.</p>
+                    <button class="btn btn-outline btn-sm" onclick="renderAppSection('jobs')" style="width:100%; margin-top: 8px;">
+                        <i class="fas fa-briefcase"></i> ${isDesigner ? 'Find Projects' : 'Post a Project'}
+                    </button>
+                </div>
+            </aside>
+        </div>`;
+
+    appState.communityPosts = [];
+    appState.communityPage = 1;
+    appState.communityHasMore = true;
+    await loadCommunityPosts();
+}
+
+let communityFeedFilter = 'all';
+
+function filterCommunityFeed(tab) {
+    communityFeedFilter = tab;
+    document.querySelectorAll('.cf-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+    renderCommunityPostsList();
+}
+
+function searchCommunityPosts(tag) {
+    communityFeedFilter = 'all';
+    document.querySelectorAll('.cf-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'all'));
+    renderCommunityPostsList(tag);
+}
+
+async function loadCommunityPosts(loadMore = false) {
+    const postsContainer = document.getElementById('cf-posts-container');
+    const loadMoreContainer = document.getElementById('cf-load-more');
+    if (!loadMore) {
+        appState.communityPosts = [];
+        appState.communityPage = 1;
+        appState.communityHasMore = true;
+    }
+    try {
+        const response = await apiCall(`/community/posts?page=${appState.communityPage}&limit=10`, 'GET');
+        const newPosts = response.data || [];
+        appState.communityPosts.push(...newPosts);
+        appState.communityHasMore = response.pagination ? response.pagination.hasNext : false;
+        appState.communityPage += 1;
+        renderCommunityPostsList();
+        updateCommunityProfileStats();
+    } catch (error) {
+        // API may not exist yet — show empty state with demo posts
+        if (appState.communityPosts.length === 0) {
+            appState.communityPosts = generateDemoPosts();
+            renderCommunityPostsList();
+            updateCommunityProfileStats();
+        }
+    }
+    if (loadMoreContainer) {
+        if (appState.communityHasMore) {
+            loadMoreContainer.innerHTML = `<button class="btn btn-outline cf-load-more-btn" onclick="loadCommunityPosts(true)"><i class="fas fa-chevron-down"></i> Load More Posts</button>`;
+        } else {
+            loadMoreContainer.innerHTML = '';
+        }
+    }
+}
+
+function generateDemoPosts() {
+    const now = new Date();
+    return [
+        {
+            id: 'demo-1',
+            authorName: 'Sarah Mitchell',
+            authorType: 'designer',
+            authorAvatar: null,
+            content: 'Just completed a complex steel connection design for a 12-story commercial building. The moment analysis required careful consideration of seismic loads and wind forces. Sharing my approach to the base plate design which achieved 23% material savings.\n\n#SteelDesign #StructuralEngineering #ProjectShowcase',
+            images: [],
+            likes: 47,
+            comments: [
+                { id: 'c1', authorName: 'James Cooper', authorType: 'contractor', text: 'Impressive work Sarah! How did you handle the lateral bracing at the connection points?', createdAt: new Date(now - 3600000).toISOString() },
+                { id: 'c2', authorName: 'Sarah Mitchell', authorType: 'designer', text: 'Thanks James! I used a chevron brace configuration with gusset plate connections. Happy to discuss further.', createdAt: new Date(now - 1800000).toISOString() }
+            ],
+            likedBy: [],
+            createdAt: new Date(now - 7200000).toISOString()
+        },
+        {
+            id: 'demo-2',
+            authorName: 'Ahmed Al-Rashid',
+            authorType: 'designer',
+            content: 'Rebar detailing tip: When working with high-density reinforcement zones (beam-column joints), always verify bar spacing meets minimum clear distance requirements per ACI 318. I created a quick reference chart for common scenarios.\n\nThis has saved me hours on recent projects and eliminated RFIs during construction.\n\n#RebarDetailing #Tips #StructuralEngineering',
+            images: [],
+            likes: 82,
+            comments: [
+                { id: 'c3', authorName: 'Maria Chen', authorType: 'contractor', text: 'This is exactly what we needed on our current project. Would you be open to consulting on a complex foundation design?', createdAt: new Date(now - 86400000).toISOString() },
+                { id: 'c4', authorName: 'Ahmed Al-Rashid', authorType: 'designer', text: 'Absolutely Maria! Feel free to send me the project details through the messaging system.', createdAt: new Date(now - 82800000).toISOString() },
+                { id: 'c5', authorName: 'Robert Park', authorType: 'contractor', text: 'Great resource Ahmed. Bookmarked this for our team review.', createdAt: new Date(now - 43200000).toISOString() }
+            ],
+            likedBy: [],
+            createdAt: new Date(now - 172800000).toISOString()
+        },
+        {
+            id: 'demo-3',
+            authorName: 'Elena Rodriguez',
+            authorType: 'designer',
+            content: 'Excited to share our latest project: A 200-meter steel pedestrian bridge with a unique cable-stayed design. The project involved 450 tonnes of structural steel and used advanced parametric modeling for the curved deck geometry.\n\nKey challenges solved:\n- Wind vibration damping with TMDs\n- Thermal expansion joints for 60°C range\n- Fatigue-resistant weld details for 100-year design life\n\n#ProjectShowcase #BridgeDesign #SteelDesign',
+            images: [],
+            likes: 156,
+            comments: [
+                { id: 'c6', authorName: 'David Thompson', authorType: 'contractor', text: 'Stunning design Elena! We would love to collaborate on future bridge projects. Your parametric approach is exactly what we need.', createdAt: new Date(now - 259200000).toISOString() }
+            ],
+            likedBy: [],
+            createdAt: new Date(now - 345600000).toISOString()
+        },
+        {
+            id: 'demo-4',
+            authorName: 'Michael Chen',
+            authorType: 'designer',
+            content: 'AI-powered cost estimation is transforming how we bid on steel projects. Just ran our latest warehouse design through the SteelConnect AI estimator — the results were within 3% of our manual takeoff!\n\nFor anyone who hasn\'t tried it yet, the platform\'s estimation tool handles:\n- Structural steel weight calculations\n- Connection material quantities\n- Fabrication complexity factors\n\nHighly recommended for quick preliminary estimates.\n\n#AIEstimation #Technology #SteelDesign',
+            images: [],
+            likes: 93,
+            comments: [
+                { id: 'c7', authorName: 'Lisa Wang', authorType: 'contractor', text: 'We have been using the AI estimation tool for 3 months now. Game changer for early-stage project budgeting!', createdAt: new Date(now - 432000000).toISOString() },
+                { id: 'c8', authorName: 'Michael Chen', authorType: 'designer', text: 'Agreed Lisa! The time savings alone make it worthwhile. Plus clients love getting quick ballpark figures.', createdAt: new Date(now - 428400000).toISOString() }
+            ],
+            likedBy: [],
+            createdAt: new Date(now - 518400000).toISOString()
+        },
+        {
+            id: 'demo-5',
+            authorName: 'Priya Sharma',
+            authorType: 'designer',
+            content: 'Material selection matters: We recently switched from A36 to A992 steel for a 8-story office building and reduced the total steel tonnage by 18% while maintaining all structural requirements.\n\nThe higher yield strength (50 ksi vs 36 ksi) allowed us to use lighter W-sections throughout, particularly in the gravity columns and floor beams. Net project savings: $340,000.\n\n#SteelDesign #Engineering #CostOptimization',
+            images: [],
+            likes: 128,
+            comments: [],
+            likedBy: [],
+            createdAt: new Date(now - 604800000).toISOString()
+        }
+    ];
+}
+
+function updateCommunityProfileStats() {
+    const userId = appState.currentUser.id;
+    const posts = appState.communityPosts;
+    const myPosts = posts.filter(p => p.authorId === userId);
+    const myLikes = myPosts.reduce((sum, p) => sum + (p.likes || 0), 0);
+    const myComments = posts.reduce((sum, p) => {
+        return sum + (p.comments || []).filter(c => c.authorId === userId).length;
+    }, 0);
+    const postsEl = document.getElementById('cf-my-posts-count');
+    const likesEl = document.getElementById('cf-my-likes-count');
+    const commentsEl = document.getElementById('cf-my-comments-count');
+    if (postsEl) postsEl.textContent = myPosts.length || posts.length;
+    if (likesEl) likesEl.textContent = myLikes || posts.reduce((s, p) => s + (p.likes || 0), 0);
+    if (commentsEl) commentsEl.textContent = myComments || posts.reduce((s, p) => s + (p.comments || []).length, 0);
+}
+
+function renderCommunityPostsList(searchTag = null) {
+    const container = document.getElementById('cf-posts-container');
+    if (!container) return;
+    let posts = [...appState.communityPosts];
+
+    if (searchTag) {
+        posts = posts.filter(p => p.content && p.content.toLowerCase().includes(searchTag.toLowerCase()));
+    }
+
+    if (communityFeedFilter === 'trending') {
+        posts = posts.sort((a, b) => (b.likes || 0) - (a.likes || 0));
+    } else if (communityFeedFilter === 'following') {
+        posts = posts.filter(p => p.authorId === appState.currentUser.id);
+    }
+
+    if (posts.length === 0) {
+        container.innerHTML = `
+            <div class="cf-empty-feed">
+                <i class="fas fa-newspaper"></i>
+                <h3>${communityFeedFilter === 'following' ? 'You haven\'t posted yet' : 'No posts found'}</h3>
+                <p>${appState.currentUser.type === 'designer' ? 'Share your first post to showcase your work and attract clients!' : 'The community feed will populate as designers share their work.'}</p>
+                ${appState.currentUser.type === 'designer' ? '<button class="btn btn-primary" onclick="openCreatePostModal()"><i class="fas fa-plus"></i> Create Your First Post</button>' : ''}
+            </div>`;
+        return;
+    }
+
+    container.innerHTML = posts.map(post => renderPostCard(post)).join('');
+}
+
+function renderPostCard(post) {
+    const avatarColor = getAvatarColor(post.authorName || 'U');
+    const initial = (post.authorName || 'U').charAt(0).toUpperCase();
+    const timeAgo = getTimeAgo(post.createdAt);
+    const isLiked = (post.likedBy || []).includes(appState.currentUser.id);
+    const commentsCount = (post.comments || []).length;
+    const contentHTML = formatPostContent(post.content || '');
+
+    let imagesHTML = '';
+    if (post.images && post.images.length > 0) {
+        if (post.images.length === 1) {
+            imagesHTML = `<div class="cf-post-images single"><img src="${post.images[0]}" alt="Post image" onclick="openPostImageViewer('${post.images[0]}')" loading="lazy"></div>`;
+        } else {
+            const extra = post.images.length > 4 ? post.images.length - 4 : 0;
+            const displayImages = post.images.slice(0, 4);
+            imagesHTML = `<div class="cf-post-images grid-${Math.min(post.images.length, 4)}">
+                ${displayImages.map((img, i) => `
+                    <div class="cf-post-img-wrapper ${i === 3 && extra > 0 ? 'has-more' : ''}" onclick="openPostImageViewer('${img}')">
+                        <img src="${img}" alt="Post image" loading="lazy">
+                        ${i === 3 && extra > 0 ? `<div class="cf-img-overlay">+${extra}</div>` : ''}
+                    </div>`).join('')}
+            </div>`;
+        }
+    }
+
+    const previewComments = (post.comments || []).slice(-2);
+    let commentsPreviewHTML = '';
+    if (previewComments.length > 0) {
+        commentsPreviewHTML = `
+            <div class="cf-comments-preview">
+                ${commentsCount > 2 ? `<button class="cf-view-all-comments" onclick="openPostDetailView('${post.id}')">View all ${commentsCount} comments</button>` : ''}
+                ${previewComments.map(c => {
+                    const cColor = getAvatarColor(c.authorName || 'U');
+                    const cInitial = (c.authorName || 'U').charAt(0).toUpperCase();
+                    return `
+                    <div class="cf-comment-item">
+                        <div class="cf-comment-avatar" style="background-color: ${cColor}">${cInitial}</div>
+                        <div class="cf-comment-body">
+                            <div class="cf-comment-header">
+                                <strong>${c.authorName || 'Unknown'}</strong>
+                                <span class="cf-comment-role ${c.authorType || ''}">${c.authorType || 'user'}</span>
+                                <span class="cf-comment-time">${getTimeAgo(c.createdAt)}</span>
+                            </div>
+                            <p>${c.text || ''}</p>
+                        </div>
+                    </div>`;
+                }).join('')}
+            </div>`;
+    }
+
+    return `
+        <article class="cf-post-card" data-post-id="${post.id}">
+            <div class="cf-post-header">
+                <div class="cf-post-avatar" style="background-color: ${avatarColor}">${initial}</div>
+                <div class="cf-post-author-info">
+                    <h4>${post.authorName || 'Unknown User'}</h4>
+                    <span class="cf-post-author-role ${post.authorType || ''}">${post.authorType === 'designer' ? 'Designer' : 'Contractor'}</span>
+                    <span class="cf-post-time">${timeAgo}</span>
+                </div>
+                ${post.authorId === appState.currentUser.id ? `
+                <div class="cf-post-menu">
+                    <button class="cf-post-menu-btn" onclick="togglePostMenu('${post.id}')"><i class="fas fa-ellipsis-h"></i></button>
+                    <div class="cf-post-dropdown" id="cf-menu-${post.id}">
+                        <button onclick="editCommunityPost('${post.id}')"><i class="fas fa-edit"></i> Edit Post</button>
+                        <button onclick="deleteCommunityPost('${post.id}')" class="danger"><i class="fas fa-trash"></i> Delete Post</button>
+                    </div>
+                </div>` : ''}
+            </div>
+            <div class="cf-post-content">${contentHTML}</div>
+            ${imagesHTML}
+            <div class="cf-post-stats">
+                <span class="cf-like-count">${post.likes || 0} likes</span>
+                <span class="cf-comment-count" onclick="openPostDetailView('${post.id}')">${commentsCount} comments</span>
+            </div>
+            <div class="cf-post-actions">
+                <button class="cf-action-btn ${isLiked ? 'liked' : ''}" onclick="toggleLikePost('${post.id}')">
+                    <i class="fas fa-thumbs-up"></i> Like
+                </button>
+                <button class="cf-action-btn" onclick="focusCommentInput('${post.id}')">
+                    <i class="fas fa-comment"></i> Comment
+                </button>
+                <button class="cf-action-btn" onclick="sharePost('${post.id}')">
+                    <i class="fas fa-share"></i> Share
+                </button>
+            </div>
+            ${commentsPreviewHTML}
+            <div class="cf-add-comment" id="cf-comment-box-${post.id}">
+                <div class="cf-comment-input-avatar" style="background-color: ${getAvatarColor(appState.currentUser.name || 'U')}">${(appState.currentUser.name || 'U').charAt(0).toUpperCase()}</div>
+                <form class="cf-comment-form" onsubmit="event.preventDefault(); submitComment('${post.id}')">
+                    <input type="text" id="cf-comment-input-${post.id}" placeholder="Add a comment..." autocomplete="off">
+                    <button type="submit" class="cf-comment-send"><i class="fas fa-paper-plane"></i></button>
+                </form>
+            </div>
+        </article>`;
+}
+
+function formatPostContent(content) {
+    // Convert hashtags to styled spans
+    let html = content.replace(/#(\w+)/g, '<span class="cf-hashtag">#$1</span>');
+    // Convert URLs to links
+    html = html.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" class="cf-link">$1</a>');
+    // Convert newlines to br
+    html = html.replace(/\n/g, '<br>');
+    return html;
+}
+
+function togglePostMenu(postId) {
+    const menu = document.getElementById(`cf-menu-${postId}`);
+    if (menu) {
+        document.querySelectorAll('.cf-post-dropdown.visible').forEach(m => {
+            if (m !== menu) m.classList.remove('visible');
+        });
+        menu.classList.toggle('visible');
+    }
+}
+
+// Close menus on outside click
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.cf-post-menu')) {
+        document.querySelectorAll('.cf-post-dropdown.visible').forEach(m => m.classList.remove('visible'));
+    }
+});
+
+async function toggleLikePost(postId) {
+    const post = appState.communityPosts.find(p => p.id === postId);
+    if (!post) return;
+    const userId = appState.currentUser.id;
+    const likedBy = post.likedBy || [];
+    const isLiked = likedBy.includes(userId);
+
+    if (isLiked) {
+        post.likedBy = likedBy.filter(id => id !== userId);
+        post.likes = Math.max(0, (post.likes || 1) - 1);
+    } else {
+        post.likedBy = [...likedBy, userId];
+        post.likes = (post.likes || 0) + 1;
+    }
+
+    try {
+        await apiCall(`/community/posts/${postId}/like`, 'POST');
+    } catch (e) { /* API may not exist yet */ }
+
+    // Re-render just the post card
+    const postEl = document.querySelector(`.cf-post-card[data-post-id="${postId}"]`);
+    if (postEl) {
+        postEl.outerHTML = renderPostCard(post);
+    }
+}
+
+function focusCommentInput(postId) {
+    const input = document.getElementById(`cf-comment-input-${postId}`);
+    if (input) {
+        input.focus();
+        input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
+
+async function submitComment(postId) {
+    const input = document.getElementById(`cf-comment-input-${postId}`);
+    if (!input) return;
+    const text = input.value.trim();
+    if (!text) return;
+
+    const user = appState.currentUser;
+    const newComment = {
+        id: 'c-' + Date.now(),
+        authorId: user.id,
+        authorName: user.name,
+        authorType: user.type,
+        text: text,
+        createdAt: new Date().toISOString()
+    };
+
+    const post = appState.communityPosts.find(p => p.id === postId);
+    if (post) {
+        if (!post.comments) post.comments = [];
+        post.comments.push(newComment);
+    }
+
+    try {
+        await apiCall(`/community/posts/${postId}/comments`, 'POST', { text });
+    } catch (e) { /* API may not exist */ }
+
+    input.value = '';
+
+    const postEl = document.querySelector(`.cf-post-card[data-post-id="${postId}"]`);
+    if (postEl) {
+        postEl.outerHTML = renderPostCard(post);
+    }
+    showNotification('Comment added!', 'success');
+}
+
+function sharePost(postId) {
+    const post = appState.communityPosts.find(p => p.id === postId);
+    if (!post) return;
+    const shareText = `Check out this post by ${post.authorName} on SteelConnect:\n\n${(post.content || '').substring(0, 200)}...`;
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(shareText).then(() => {
+            showNotification('Post link copied to clipboard!', 'success');
+        });
+    } else {
+        showNotification('Share functionality requires clipboard access.', 'info');
+    }
+}
+
+// --- CREATE POST MODAL ---
+function openCreatePostModal(editPost = null) {
+    const isEdit = !!editPost;
+    const user = appState.currentUser;
+    const avatarColor = getAvatarColor(user.name || 'U');
+    const initial = (user.name || 'U').charAt(0).toUpperCase();
+    appState.newPostImages = [];
+
+    if (isEdit && editPost.images) {
+        appState.newPostImages = [...editPost.images];
+    }
+
+    const content = `
+        <div class="cf-create-modal">
+            <div class="cf-create-header">
+                <div class="cf-create-header-info">
+                    <div class="cf-create-avatar-modal" style="background-color: ${avatarColor}">${initial}</div>
+                    <div>
+                        <strong>${user.name || 'User'}</strong>
+                        <span class="cf-create-role ${user.type}">${user.type === 'designer' ? 'Designer' : 'Contractor'}</span>
+                    </div>
+                </div>
+                <h3>${isEdit ? 'Edit Post' : 'Create a Post'}</h3>
+            </div>
+            <div class="cf-create-body">
+                <textarea id="cf-post-content-input" class="cf-post-textarea" placeholder="Share your technical expertise, project highlights, or industry insights...">${isEdit ? editPost.content : ''}</textarea>
+                <div id="cf-post-image-preview" class="cf-image-preview-grid">
+                    ${isEdit && editPost.images ? editPost.images.map((img, i) => `
+                        <div class="cf-preview-img-item">
+                            <img src="${img}" alt="Preview">
+                            <button class="cf-remove-img" onclick="removePostImage(${i})"><i class="fas fa-times"></i></button>
+                        </div>`).join('') : ''}
+                </div>
+            </div>
+            <div class="cf-create-toolbar">
+                <label class="cf-toolbar-btn" title="Add Images">
+                    <i class="fas fa-image"></i> Photo
+                    <input type="file" id="cf-post-image-input" accept="image/*" multiple onchange="handlePostImageSelect(event)" style="display:none;">
+                </label>
+                <div class="cf-hashtag-suggestions">
+                    <button type="button" class="cf-tag-btn" onclick="insertHashtag('#SteelDesign')">#SteelDesign</button>
+                    <button type="button" class="cf-tag-btn" onclick="insertHashtag('#RebarDetailing')">#RebarDetailing</button>
+                    <button type="button" class="cf-tag-btn" onclick="insertHashtag('#ProjectShowcase')">#ProjectShowcase</button>
+                </div>
+            </div>
+            <div class="cf-create-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" id="cf-submit-post-btn" onclick="${isEdit ? `updateCommunityPost('${editPost.id}')` : 'submitNewPost()'}">
+                    <i class="fas ${isEdit ? 'fa-save' : 'fa-paper-plane'}"></i> ${isEdit ? 'Save Changes' : 'Publish Post'}
+                </button>
+            </div>
+        </div>`;
+    showGenericModal(content, 'max-width: 640px; padding: 0; border-radius: 16px; overflow: hidden;');
+}
+
+function handlePostImageSelect(event) {
+    const files = Array.from(event.target.files);
+    if (files.length + appState.newPostImages.length > 6) {
+        showNotification('Maximum 6 images allowed per post.', 'warning');
+        return;
+    }
+    files.forEach(file => {
+        if (file.size > 10 * 1024 * 1024) {
+            showNotification(`File ${file.name} is too large. Max 10MB.`, 'warning');
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            appState.newPostImages.push(e.target.result);
+            renderPostImagePreviews();
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+function renderPostImagePreviews() {
+    const container = document.getElementById('cf-post-image-preview');
+    if (!container) return;
+    container.innerHTML = appState.newPostImages.map((img, i) => `
+        <div class="cf-preview-img-item">
+            <img src="${img}" alt="Preview">
+            <button class="cf-remove-img" onclick="removePostImage(${i})"><i class="fas fa-times"></i></button>
+        </div>`).join('');
+}
+
+function removePostImage(index) {
+    appState.newPostImages.splice(index, 1);
+    renderPostImagePreviews();
+}
+
+function insertHashtag(tag) {
+    const textarea = document.getElementById('cf-post-content-input');
+    if (textarea) {
+        const val = textarea.value;
+        textarea.value = val + (val.endsWith(' ') || val === '' ? '' : ' ') + tag + ' ';
+        textarea.focus();
+    }
+}
+
+async function submitNewPost() {
+    const textarea = document.getElementById('cf-post-content-input');
+    const submitBtn = document.getElementById('cf-submit-post-btn');
+    if (!textarea) return;
+    const content = textarea.value.trim();
+    if (!content) {
+        showNotification('Please write something to post.', 'warning');
+        return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<div class="btn-spinner"></div> Publishing...';
+
+    const user = appState.currentUser;
+    const newPost = {
+        id: 'post-' + Date.now(),
+        authorId: user.id,
+        authorName: user.name,
+        authorType: user.type,
+        content: content,
+        images: [...appState.newPostImages],
+        likes: 0,
+        comments: [],
+        likedBy: [],
+        createdAt: new Date().toISOString()
+    };
+
+    try {
+        const formData = new FormData();
+        formData.append('content', content);
+        // If real images are files, they would be appended here
+        const response = await apiCall('/community/posts', 'POST', { content, images: appState.newPostImages });
+        if (response.data) {
+            newPost.id = response.data.id || newPost.id;
+        }
+    } catch (e) { /* API may not exist yet - post locally */ }
+
+    appState.communityPosts.unshift(newPost);
+    appState.newPostImages = [];
+    closeModal();
+    renderCommunityPostsList();
+    updateCommunityProfileStats();
+    showNotification('Post published successfully!', 'success');
+}
+
+function editCommunityPost(postId) {
+    const post = appState.communityPosts.find(p => p.id === postId);
+    if (!post) return;
+    openCreatePostModal(post);
+}
+
+async function updateCommunityPost(postId) {
+    const textarea = document.getElementById('cf-post-content-input');
+    const submitBtn = document.getElementById('cf-submit-post-btn');
+    if (!textarea) return;
+    const content = textarea.value.trim();
+    if (!content) {
+        showNotification('Post content cannot be empty.', 'warning');
+        return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<div class="btn-spinner"></div> Saving...';
+
+    const post = appState.communityPosts.find(p => p.id === postId);
+    if (post) {
+        post.content = content;
+        post.images = [...appState.newPostImages];
+    }
+
+    try {
+        await apiCall(`/community/posts/${postId}`, 'PUT', { content, images: appState.newPostImages });
+    } catch (e) { /* API may not exist */ }
+
+    closeModal();
+    renderCommunityPostsList();
+    showNotification('Post updated!', 'success');
+}
+
+async function deleteCommunityPost(postId) {
+    if (!confirm('Are you sure you want to delete this post?')) return;
+    appState.communityPosts = appState.communityPosts.filter(p => p.id !== postId);
+    try {
+        await apiCall(`/community/posts/${postId}`, 'DELETE');
+    } catch (e) { /* API may not exist */ }
+    renderCommunityPostsList();
+    updateCommunityProfileStats();
+    showNotification('Post deleted.', 'info');
+}
+
+// --- POST DETAIL VIEW (FULL COMMENT THREAD) ---
+function openPostDetailView(postId) {
+    const post = appState.communityPosts.find(p => p.id === postId);
+    if (!post) return;
+    const avatarColor = getAvatarColor(post.authorName || 'U');
+    const initial = (post.authorName || 'U').charAt(0).toUpperCase();
+    const timeAgo = getTimeAgo(post.createdAt);
+    const contentHTML = formatPostContent(post.content || '');
+    const user = appState.currentUser;
+    const userAvatarColor = getAvatarColor(user.name || 'U');
+    const userInitial = (user.name || 'U').charAt(0).toUpperCase();
+
+    let imagesHTML = '';
+    if (post.images && post.images.length > 0) {
+        imagesHTML = `<div class="cf-detail-images">
+            ${post.images.map(img => `<img src="${img}" alt="Post image" class="cf-detail-img" onclick="openPostImageViewer('${img}')">`).join('')}
+        </div>`;
+    }
+
+    const commentsHTML = (post.comments || []).map(c => {
+        const cColor = getAvatarColor(c.authorName || 'U');
+        const cInitial = (c.authorName || 'U').charAt(0).toUpperCase();
+        return `
+            <div class="cf-detail-comment">
+                <div class="cf-detail-comment-avatar" style="background-color: ${cColor}">${cInitial}</div>
+                <div class="cf-detail-comment-body">
+                    <div class="cf-detail-comment-header">
+                        <strong>${c.authorName || 'Unknown'}</strong>
+                        <span class="cf-comment-role ${c.authorType || ''}">${c.authorType || 'user'}</span>
+                    </div>
+                    <p>${c.text || ''}</p>
+                    <span class="cf-detail-comment-time">${getTimeAgo(c.createdAt)}</span>
+                </div>
+            </div>`;
+    }).join('');
+
+    const modalContent = `
+        <div class="cf-detail-modal">
+            <div class="cf-detail-post-header">
+                <div class="cf-post-avatar" style="background-color: ${avatarColor}">${initial}</div>
+                <div class="cf-post-author-info">
+                    <h4>${post.authorName || 'Unknown User'}</h4>
+                    <span class="cf-post-author-role ${post.authorType || ''}">${post.authorType === 'designer' ? 'Designer' : 'Contractor'}</span>
+                    <span class="cf-post-time">${timeAgo}</span>
+                </div>
+            </div>
+            <div class="cf-detail-content">${contentHTML}</div>
+            ${imagesHTML}
+            <div class="cf-detail-stats">
+                <span><i class="fas fa-thumbs-up"></i> ${post.likes || 0} likes</span>
+                <span><i class="fas fa-comment"></i> ${(post.comments || []).length} comments</span>
+            </div>
+            <div class="cf-detail-divider"></div>
+            <div class="cf-detail-comments-section">
+                <h4>Comments</h4>
+                <div class="cf-detail-comments-list">
+                    ${commentsHTML || '<p class="cf-no-comments">No comments yet. Be the first to comment!</p>'}
+                </div>
+            </div>
+            <div class="cf-detail-comment-input">
+                <div class="cf-comment-input-avatar" style="background-color: ${userAvatarColor}">${userInitial}</div>
+                <form class="cf-comment-form" onsubmit="event.preventDefault(); submitCommentFromDetail('${post.id}')">
+                    <input type="text" id="cf-detail-comment-input" placeholder="Write a comment..." autocomplete="off">
+                    <button type="submit" class="cf-comment-send"><i class="fas fa-paper-plane"></i></button>
+                </form>
+            </div>
+        </div>`;
+    showGenericModal(modalContent, 'max-width: 680px; padding: 0; border-radius: 16px; overflow: hidden; max-height: 85vh; overflow-y: auto;');
+}
+
+async function submitCommentFromDetail(postId) {
+    const input = document.getElementById('cf-detail-comment-input');
+    if (!input) return;
+    const text = input.value.trim();
+    if (!text) return;
+
+    const user = appState.currentUser;
+    const newComment = {
+        id: 'c-' + Date.now(),
+        authorId: user.id,
+        authorName: user.name,
+        authorType: user.type,
+        text: text,
+        createdAt: new Date().toISOString()
+    };
+
+    const post = appState.communityPosts.find(p => p.id === postId);
+    if (post) {
+        if (!post.comments) post.comments = [];
+        post.comments.push(newComment);
+    }
+
+    try {
+        await apiCall(`/community/posts/${postId}/comments`, 'POST', { text });
+    } catch (e) { /* API may not exist */ }
+
+    closeModal();
+    openPostDetailView(postId);
+    // Also update the feed card
+    const postEl = document.querySelector(`.cf-post-card[data-post-id="${postId}"]`);
+    if (postEl) {
+        postEl.outerHTML = renderPostCard(post);
+    }
+    showNotification('Comment added!', 'success');
+}
+
+function openPostImageViewer(imageUrl) {
+    const content = `
+        <div class="cf-image-viewer">
+            <img src="${imageUrl}" alt="Full size image">
+        </div>`;
+    showGenericModal(content, 'max-width: 900px; padding: 0; background: transparent; box-shadow: none;');
 }
 
 
