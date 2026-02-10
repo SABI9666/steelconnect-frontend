@@ -3791,6 +3791,11 @@ function buildSidebarNav() {
                 <i class="fas fa-chart-line fa-fw"></i>
                 <span>Business Analytics</span>
                 <span class="nav-badge">NEW</span>
+            </a>
+            <a href="#" class="sidebar-nav-link" data-section="quote-analysis">
+                <i class="fas fa-poll fa-fw"></i>
+                <span>Quote Analysis</span>
+                <span class="nav-badge">NEW</span>
             </a>`;
     }
     // Common links for both user types
