@@ -2306,19 +2306,27 @@ async function loadDesignerProfileIntoCard(designerId, designerName) {
             if (card) {
                 const bodyEl = card.querySelector('.dp-body');
                 if (bodyEl) {
-                    const hasData = dp.skills?.length > 0 || dp.experience || dp.bio || dp.education || dp.resume;
-                    if (hasData) {
+                    const hasDetailedData = dp.skills?.length > 0 || dp.experience || dp.bio || dp.education || dp.resume || dp.hourlyRate || dp.linkedinProfile || dp.specializations?.length > 0;
+                    if (hasDetailedData) {
                         bodyEl.innerHTML = buildDesignerProfileBodyHTML(dp);
                     } else {
-                        bodyEl.innerHTML = `<p class="dp-no-details">Designer has not yet completed their detailed profile.</p>`;
+                        // Show basic info even without detailed profile
+                        bodyEl.innerHTML = `
+                            <div class="dp-basic-info">
+                                <div class="dp-details-grid">
+                                    ${dp.name ? `<div class="dp-detail"><i class="fas fa-user"></i><div><span class="dp-detail-label">Name</span><span class="dp-detail-value">${dp.name}</span></div></div>` : ''}
+                                    ${dp.email ? `<div class="dp-detail"><i class="fas fa-envelope"></i><div><span class="dp-detail-label">Email</span><span class="dp-detail-value">${dp.email}</span></div></div>` : ''}
+                                    ${dp.profileStatus ? `<div class="dp-detail"><i class="fas fa-shield-alt"></i><div><span class="dp-detail-label">Profile Status</span><span class="dp-detail-value dp-status-${dp.profileStatus}">${dp.profileStatus.charAt(0).toUpperCase() + dp.profileStatus.slice(1)}</span></div></div>` : ''}
+                                </div>
+                                <p class="dp-no-details" style="margin-top:10px;">Designer has not yet completed their detailed profile.</p>
+                            </div>`;
                     }
                 }
             }
         }
     } catch (error) {
-        // Silently fail - profile card will show loading state that we replace
         const loadingEl = document.getElementById(`dp-loading-${designerId}`);
-        if (loadingEl) loadingEl.innerHTML = `<p class="dp-no-details">Designer has not yet completed their detailed profile.</p>`;
+        if (loadingEl) loadingEl.innerHTML = `<p class="dp-no-details">Could not load designer profile details.</p>`;
     }
 }
 
@@ -2806,20 +2814,73 @@ async function renderProfileCompletionView() {
     const container = document.getElementById('app-container');
     container.innerHTML = `<div class="loading-spinner"><div class="spinner"></div><p>Loading profile form...</p></div>`;
     appState.profileFiles = {};
+    appState.existingProfileData = null;
     try {
-        const response = await apiCall('/profile/form-fields', 'GET');
-        const { fields, userType } = response.data;
+        // Fetch form fields AND existing profile data in parallel
+        const [fieldsResponse, profileResponse] = await Promise.all([
+            apiCall('/profile/form-fields', 'GET'),
+            apiCall('/profile/data', 'GET').catch(() => null)
+        ]);
+        const { fields, userType } = fieldsResponse.data;
+        const savedData = profileResponse?.data || {};
+        appState.existingProfileData = savedData;
+        const isResubmit = savedData.profileCompleted || savedData.profileStatus === 'pending' || savedData.profileStatus === 'rejected' || savedData.profileStatus === 'approved';
+
         const formFieldsHTML = fields.map(field => {
-            if (field.type === 'textarea') return `<div class="form-group"><label class="form-label">${field.label} ${field.required ? '<span style="color:red">*</span>' : ''}</label><textarea class="form-textarea premium-input" name="${field.name}" ${field.required ? 'required' : ''} placeholder="${field.placeholder || ''}"></textarea></div>`;
-            else if (field.type === 'file') return `<div class="form-group"><label class="form-label">${field.label} ${field.required ? '<span style="color:red">*</span>' : ''}</label><div class="custom-file-input-wrapper"><input type="file" name="${field.name}" data-field-name="${field.name}" onchange="handleProfileFileChange(event)" accept="${field.accept || ''}" ${field.multiple ? 'multiple' : ''} ${field.required ? 'required' : ''}><div class="custom-file-input"><span class="custom-file-input-label"><i class="fas fa-upload"></i> <span id="label-${field.name}">Click to upload</span></span></div></div><div id="file-list-${field.name}" class="file-list-container"></div></div>`;
-            else if (field.type === 'select') {
-                const options = (field.options || []).map(opt => `<option value="${opt}">${opt}</option>`).join('');
-                return `<div class="form-group"><label class="form-label">${field.label} ${field.required ? '*' : ''}</label><select name="${field.name}" class="form-select premium-select" ${field.required ? 'required' : ''}><option value="" disabled selected>Select...</option>${options}</select></div>`;
-            } else return `<div class="form-group"><label class="form-label">${field.label} ${field.required ? '*' : ''}</label><input type="${field.type}" class="form-input premium-input" name="${field.name}" ${field.required ? 'required' : ''} placeholder="${field.placeholder || ''}"></div>`;
+            // Get saved value for this field
+            let savedValue = savedData[field.name] || '';
+            if (Array.isArray(savedValue)) savedValue = savedValue.join(', ');
+            if (savedValue && typeof savedValue === 'number') savedValue = savedValue.toString();
+
+            if (field.type === 'textarea') {
+                return `<div class="form-group"><label class="form-label">${field.label} ${field.required ? '<span style="color:red">*</span>' : ''}</label><textarea class="form-textarea premium-input" name="${field.name}" ${field.required ? 'required' : ''} placeholder="${field.placeholder || ''}">${savedValue}</textarea></div>`;
+            } else if (field.type === 'file') {
+                // Check for existing uploaded files
+                const existingFile = savedData[field.name];
+                const hasExisting = field.name === 'resume' ? (existingFile && existingFile.filename) : (Array.isArray(existingFile) && existingFile.length > 0);
+                const isRequired = field.required && !hasExisting;
+                let existingHTML = '';
+                if (field.name === 'resume' && existingFile && existingFile.filename) {
+                    existingHTML = `<div class="existing-files-section" id="existing-${field.name}">
+                        <div class="existing-file-item">
+                            <div class="existing-file-info"><i class="fas fa-file-pdf"></i><div><span class="existing-file-name">${existingFile.filename}</span><span class="existing-file-meta">${existingFile.size ? formatFileSize(existingFile.size) : ''} ${existingFile.uploadedAt ? '• Uploaded ' + new Date(existingFile.uploadedAt).toLocaleDateString() : ''}</span></div></div>
+                            <div class="existing-file-actions">
+                                ${existingFile.url ? `<a href="${existingFile.url}" target="_blank" class="btn btn-outline btn-xs"><i class="fas fa-eye"></i> View</a>` : ''}
+                                <button type="button" class="btn btn-danger btn-xs" onclick="deleteExistingProfileFile('resume')"><i class="fas fa-trash"></i> Delete</button>
+                            </div>
+                        </div>
+                        <p class="existing-file-hint"><i class="fas fa-info-circle"></i> Upload a new file to replace the existing one, or keep it.</p>
+                    </div>`;
+                } else if (field.name === 'certificates' && Array.isArray(existingFile) && existingFile.length > 0) {
+                    existingHTML = `<div class="existing-files-section" id="existing-${field.name}">
+                        ${existingFile.map((cert, idx) => `<div class="existing-file-item" id="existing-cert-${idx}">
+                            <div class="existing-file-info"><i class="fas fa-certificate"></i><div><span class="existing-file-name">${cert.filename || 'Certificate ' + (idx + 1)}</span><span class="existing-file-meta">${cert.size ? formatFileSize(cert.size) : ''} ${cert.uploadedAt ? '• Uploaded ' + new Date(cert.uploadedAt).toLocaleDateString() : ''}</span></div></div>
+                            <div class="existing-file-actions">
+                                ${cert.url ? `<a href="${cert.url}" target="_blank" class="btn btn-outline btn-xs"><i class="fas fa-eye"></i> View</a>` : ''}
+                                <button type="button" class="btn btn-danger btn-xs" onclick="deleteExistingProfileFile('certificate', ${idx})"><i class="fas fa-trash"></i> Delete</button>
+                            </div>
+                        </div>`).join('')}
+                        <p class="existing-file-hint"><i class="fas fa-info-circle"></i> Upload new certificates to add more, or delete existing ones.</p>
+                    </div>`;
+                }
+                return `<div class="form-group"><label class="form-label">${field.label} ${isRequired ? '<span style="color:red">*</span>' : ''} ${hasExisting ? '<span class="existing-badge">Current file on record</span>' : ''}</label>${existingHTML}<div class="custom-file-input-wrapper"><input type="file" name="${field.name}" data-field-name="${field.name}" onchange="handleProfileFileChange(event)" accept="${field.accept || ''}" ${field.multiple ? 'multiple' : ''} ${isRequired ? 'required' : ''}><div class="custom-file-input"><span class="custom-file-input-label"><i class="fas fa-upload"></i> <span id="label-${field.name}">${hasExisting ? 'Upload new file to replace' : 'Click to upload'}</span></span></div></div><div id="file-list-${field.name}" class="file-list-container"></div></div>`;
+            } else if (field.type === 'select') {
+                const options = (field.options || []).map(opt => `<option value="${opt}" ${savedValue === opt ? 'selected' : ''}>${opt}</option>`).join('');
+                return `<div class="form-group"><label class="form-label">${field.label} ${field.required ? '*' : ''}</label><select name="${field.name}" class="form-select premium-select" ${field.required ? 'required' : ''}><option value="" disabled ${!savedValue ? 'selected' : ''}>Select...</option>${options}</select></div>`;
+            } else {
+                return `<div class="form-group"><label class="form-label">${field.label} ${field.required ? '*' : ''}</label><input type="${field.type}" class="form-input premium-input" name="${field.name}" ${field.required ? 'required' : ''} placeholder="${field.placeholder || ''}" value="${savedValue}"></div>`;
+            }
         }).join('');
+
+        const headerText = isResubmit ? 'Update Your Profile' : 'Complete Your Profile';
+        const headerSubtext = isResubmit ? 'Update your profile information below. Your changes will be submitted for review.' : `We require all ${userType}s to complete their profile for review.`;
+        const submitText = isResubmit ? 'Update & Resubmit for Review' : 'Submit for Review';
+        const statusBanner = savedData.profileStatus && savedData.profileStatus !== 'incomplete' ? `<div class="profile-status-banner profile-status-${savedData.profileStatus}"><i class="fas ${savedData.profileStatus === 'approved' ? 'fa-check-circle' : savedData.profileStatus === 'rejected' ? 'fa-times-circle' : 'fa-clock'}"></i> Profile Status: <strong>${savedData.profileStatus.charAt(0).toUpperCase() + savedData.profileStatus.slice(1)}</strong>${savedData.rejectionReason ? ` — ${savedData.rejectionReason}` : ''}</div>` : '';
+
         container.innerHTML = `
-            <div class="section-header modern-header"><div class="header-content"><h2><i class="fas fa-user-check"></i> Complete Your Profile</h2><p class="header-subtitle">We require all ${userType}s to complete their profile for review.</p></div></div>
-            <div class="profile-completion-container"><form id="profile-completion-form" class="profile-completion-form"><div class="form-section"><h3><i class="fas fa-user-circle"></i> Profile Information</h3><div class="profile-form-grid">${formFieldsHTML}</div></div><div class="form-actions" style="text-align:center;"><button type="submit" class="btn btn-primary btn-large"><i class="fas fa-paper-plane"></i> Submit for Review</button></div></form></div>`;
+            <div class="section-header modern-header"><div class="header-content"><h2><i class="fas fa-user-check"></i> ${headerText}</h2><p class="header-subtitle">${headerSubtext}</p></div></div>
+            ${statusBanner}
+            <div class="profile-completion-container"><form id="profile-completion-form" class="profile-completion-form"><div class="form-section"><h3><i class="fas fa-user-circle"></i> Profile Information</h3><div class="profile-form-grid">${formFieldsHTML}</div></div><div class="form-actions" style="text-align:center;"><button type="submit" class="btn btn-primary btn-large"><i class="fas fa-paper-plane"></i> ${submitText}</button></div></form></div>`;
         document.querySelectorAll('.custom-file-input-wrapper').forEach(wrapper => {
             const custom = wrapper.querySelector('.custom-file-input');
             const real = wrapper.querySelector('input[type="file"]');
@@ -2875,6 +2936,36 @@ function renderProfileFileList(fieldName) {
     }
     container.innerHTML = files.map((file, index) => `<div class="file-list-item"><div class="file-list-item-info"><i class="fas fa-file-alt"></i><span>${file.name}</span></div><button type="button" class="remove-file-button" onclick="removeProfileFile('${fieldName}', ${index})"><i class="fas fa-times"></i></button></div>`).join('');
     label.textContent = `${files.length} file(s) selected`;
+}
+
+async function deleteExistingProfileFile(type, index) {
+    const confirmMsg = type === 'resume' ? 'Are you sure you want to delete your resume?' : 'Are you sure you want to delete this certificate?';
+    if (!confirm(confirmMsg)) return;
+    try {
+        const endpoint = type === 'certificate' ? `/profile/attachment/certificate?index=${index}` : `/profile/attachment/resume`;
+        await apiCall(endpoint, 'DELETE');
+        showNotification(`${type === 'resume' ? 'Resume' : 'Certificate'} deleted successfully`, 'success');
+        if (type === 'resume') {
+            const section = document.getElementById('existing-resume');
+            if (section) section.remove();
+            // Re-add required to resume input if needed
+            const resumeInput = document.querySelector('input[data-field-name="resume"]');
+            if (resumeInput) resumeInput.setAttribute('required', 'true');
+            if (appState.existingProfileData) appState.existingProfileData.resume = null;
+        } else {
+            const certItem = document.getElementById(`existing-cert-${index}`);
+            if (certItem) certItem.remove();
+            if (appState.existingProfileData?.certificates) {
+                appState.existingProfileData.certificates.splice(index, 1);
+                if (appState.existingProfileData.certificates.length === 0) {
+                    const section = document.getElementById('existing-certificates');
+                    if (section) section.remove();
+                }
+            }
+        }
+    } catch (error) {
+        showNotification('Failed to delete file. Please try again.', 'error');
+    }
 }
 
 async function handleProfileCompletionSubmit(event) {
