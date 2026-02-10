@@ -2190,7 +2190,7 @@ async function viewQuotes(jobId) {
         } else {
             const job = appState.jobs.find(j => j.id === jobId);
             quotesHTML += `<div class="quotes-list premium-quotes">`;
-            quotes.forEach(quote => {
+            for (const quote of quotes) {
                 const attachments = quote.attachments || [];
                 const hasAttachments = attachments.length > 0;
                 let attachmentSection = '';
@@ -2217,37 +2217,9 @@ async function viewQuotes(jobId) {
                 const statusClass = quote.status;
                 const statusIcon = {'submitted': 'fa-clock', 'approved': 'fa-check-circle', 'rejected': 'fa-times-circle'}[quote.status] || 'fa-question-circle';
 
-                // Designer profile section - always show
+                // Build designer profile - use enriched data or placeholder for lazy load
                 const dp = quote.designerProfile || {};
-                const hasDetailedProfile = dp.skills?.length > 0 || dp.experience || dp.bio || dp.education || dp.hourlyRate || dp.linkedinProfile || dp.specializations?.length > 0;
-                const skillsHTML = dp.skills && dp.skills.length > 0
-                    ? `<div class="dp-skills">${dp.skills.slice(0, 6).map(s => `<span class="dp-skill-tag">${s}</span>`).join('')}${dp.skills.length > 6 ? `<span class="dp-skill-more">+${dp.skills.length - 6} more</span>` : ''}</div>` : '';
-                const specsHTML = dp.specializations && dp.specializations.length > 0
-                    ? `<div class="dp-specs"><i class="fas fa-star"></i> ${dp.specializations.slice(0, 3).join(', ')}</div>` : '';
-                const profileBodyContent = hasDetailedProfile ? `
-                    ${dp.bio ? `<div class="dp-bio"><p>${dp.bio}</p></div>` : ''}
-                    <div class="dp-details-grid">
-                        ${dp.experience ? `<div class="dp-detail"><i class="fas fa-briefcase"></i><div><span class="dp-detail-label">Experience</span><span class="dp-detail-value">${dp.experience}</span></div></div>` : ''}
-                        ${dp.education ? `<div class="dp-detail"><i class="fas fa-graduation-cap"></i><div><span class="dp-detail-label">Education</span><span class="dp-detail-value">${dp.education}</span></div></div>` : ''}
-                        ${dp.hourlyRate ? `<div class="dp-detail"><i class="fas fa-dollar-sign"></i><div><span class="dp-detail-label">Hourly Rate</span><span class="dp-detail-value">$${dp.hourlyRate}/hr</span></div></div>` : ''}
-                        ${dp.linkedinProfile ? `<div class="dp-detail"><i class="fab fa-linkedin"></i><div><span class="dp-detail-label">LinkedIn</span><a href="${dp.linkedinProfile}" target="_blank" class="dp-detail-link">View Profile</a></div></div>` : ''}
-                    </div>
-                    ${skillsHTML}
-                    ${specsHTML}
-                ` : `<p class="dp-no-details">Designer has not yet completed their detailed profile.</p>`;
-                const designerProfileSection = `
-                    <div class="designer-profile-card">
-                        <div class="dp-header" onclick="this.parentElement.classList.toggle('expanded')">
-                            <div class="dp-header-left">
-                                <i class="fas fa-user-circle"></i>
-                                <span>Designer Profile - ${quote.designerName}</span>
-                            </div>
-                            <i class="fas fa-chevron-down dp-toggle-icon"></i>
-                        </div>
-                        <div class="dp-body">
-                            ${profileBodyContent}
-                        </div>
-                    </div>`;
+                const designerProfileSection = buildDesignerProfileHTML(dp, quote.designerName, quote.designerId);
 
                 quotesHTML += `
                     <div class="quote-item premium-quote-item quote-status-${statusClass}">
@@ -2266,14 +2238,114 @@ async function viewQuotes(jobId) {
                         </div>
                         <div class="quote-actions">${actionButtons}</div>
                     </div>`;
-            });
+            }
             quotesHTML += `</div>`;
         }
         showGenericModal(quotesHTML, 'max-width: 900px;');
+
+        // After rendering, lazy-load designer profiles that weren't enriched by the backend
+        quotes.forEach(quote => {
+            if (!quote.designerProfile || (!quote.designerProfile.skills?.length && !quote.designerProfile.bio && !quote.designerProfile.experience)) {
+                loadDesignerProfileIntoCard(quote.designerId, quote.designerName);
+            }
+        });
     } catch (error) {
         console.error('Error viewing quotes:', error);
         showGenericModal(`<div class="modal-header premium-modal-header"><h3><i class="fas fa-exclamation-triangle"></i> Error</h3></div><div class="error-state premium-error"><p>Could not load quotes. Please try again.</p><button class="btn btn-primary" onclick="closeModal()">Close</button></div>`);
     }
+}
+
+function buildDesignerProfileHTML(dp, designerName, designerId) {
+    const hasDetailedProfile = dp.skills?.length > 0 || dp.experience || dp.bio || dp.education || dp.hourlyRate || dp.linkedinProfile || dp.specializations?.length > 0 || dp.resume;
+    const skillsHTML = dp.skills && dp.skills.length > 0
+        ? `<div class="dp-skills">${dp.skills.slice(0, 8).map(s => `<span class="dp-skill-tag">${s}</span>`).join('')}${dp.skills.length > 8 ? `<span class="dp-skill-more">+${dp.skills.length - 8} more</span>` : ''}</div>` : '';
+    const specsHTML = dp.specializations && dp.specializations.length > 0
+        ? `<div class="dp-specs"><i class="fas fa-star"></i> <strong>Specializations:</strong> ${dp.specializations.join(', ')}</div>` : '';
+    const resumeHTML = dp.resume && dp.resume.url
+        ? `<div class="dp-resume"><a href="${dp.resume.url}" target="_blank" class="dp-resume-link"><i class="fas fa-file-pdf"></i> <span>View Resume</span> <small>(${dp.resume.filename || 'Resume'})</small></a></div>` : '';
+    const certsHTML = dp.certificates && dp.certificates.length > 0
+        ? `<div class="dp-certs"><span class="dp-certs-label"><i class="fas fa-certificate"></i> Certificates (${dp.certificates.length}):</span>${dp.certificates.map(c => `<a href="${c.url || '#'}" target="_blank" class="dp-cert-link">${c.filename || 'Certificate'}</a>`).join('')}</div>` : '';
+
+    const profileBodyContent = hasDetailedProfile ? `
+        ${dp.bio ? `<div class="dp-bio"><p>${dp.bio}</p></div>` : ''}
+        <div class="dp-details-grid">
+            ${dp.experience ? `<div class="dp-detail"><i class="fas fa-briefcase"></i><div><span class="dp-detail-label">Experience</span><span class="dp-detail-value">${dp.experience}</span></div></div>` : ''}
+            ${dp.education ? `<div class="dp-detail"><i class="fas fa-graduation-cap"></i><div><span class="dp-detail-label">Education</span><span class="dp-detail-value">${dp.education}</span></div></div>` : ''}
+            ${dp.hourlyRate ? `<div class="dp-detail"><i class="fas fa-dollar-sign"></i><div><span class="dp-detail-label">Hourly Rate</span><span class="dp-detail-value">$${dp.hourlyRate}/hr</span></div></div>` : ''}
+            ${dp.email ? `<div class="dp-detail"><i class="fas fa-envelope"></i><div><span class="dp-detail-label">Email</span><span class="dp-detail-value">${dp.email}</span></div></div>` : ''}
+            ${dp.linkedinProfile ? `<div class="dp-detail"><i class="fab fa-linkedin"></i><div><span class="dp-detail-label">LinkedIn</span><a href="${dp.linkedinProfile}" target="_blank" class="dp-detail-link">View Profile</a></div></div>` : ''}
+            ${dp.profileStatus ? `<div class="dp-detail"><i class="fas fa-shield-alt"></i><div><span class="dp-detail-label">Profile Status</span><span class="dp-detail-value dp-status-${dp.profileStatus}">${dp.profileStatus.charAt(0).toUpperCase() + dp.profileStatus.slice(1)}</span></div></div>` : ''}
+        </div>
+        ${skillsHTML}
+        ${specsHTML}
+        ${resumeHTML}
+        ${certsHTML}
+    ` : `<div class="dp-loading" id="dp-loading-${designerId}"><div class="spinner" style="width:20px;height:20px;border-width:2px;"></div> <span>Loading profile...</span></div>`;
+
+    return `
+        <div class="designer-profile-card expanded" id="dp-card-${designerId}">
+            <div class="dp-header" onclick="this.parentElement.classList.toggle('expanded')">
+                <div class="dp-header-left">
+                    <i class="fas fa-user-circle"></i>
+                    <span>Designer Profile - ${designerName}</span>
+                </div>
+                <i class="fas fa-chevron-down dp-toggle-icon"></i>
+            </div>
+            <div class="dp-body">
+                ${profileBodyContent}
+            </div>
+        </div>`;
+}
+
+async function loadDesignerProfileIntoCard(designerId, designerName) {
+    try {
+        const response = await apiCall(`/quotes/designer-profile/${designerId}`, 'GET');
+        if (response.success && response.data) {
+            const dp = response.data;
+            const card = document.getElementById(`dp-card-${designerId}`);
+            if (card) {
+                const bodyEl = card.querySelector('.dp-body');
+                if (bodyEl) {
+                    const hasData = dp.skills?.length > 0 || dp.experience || dp.bio || dp.education || dp.resume;
+                    if (hasData) {
+                        bodyEl.innerHTML = buildDesignerProfileBodyHTML(dp);
+                    } else {
+                        bodyEl.innerHTML = `<p class="dp-no-details">Designer has not yet completed their detailed profile.</p>`;
+                    }
+                }
+            }
+        }
+    } catch (error) {
+        // Silently fail - profile card will show loading state that we replace
+        const loadingEl = document.getElementById(`dp-loading-${designerId}`);
+        if (loadingEl) loadingEl.innerHTML = `<p class="dp-no-details">Designer has not yet completed their detailed profile.</p>`;
+    }
+}
+
+function buildDesignerProfileBodyHTML(dp) {
+    const skillsHTML = dp.skills && dp.skills.length > 0
+        ? `<div class="dp-skills">${dp.skills.slice(0, 8).map(s => `<span class="dp-skill-tag">${s}</span>`).join('')}${dp.skills.length > 8 ? `<span class="dp-skill-more">+${dp.skills.length - 8} more</span>` : ''}</div>` : '';
+    const specsHTML = dp.specializations && dp.specializations.length > 0
+        ? `<div class="dp-specs"><i class="fas fa-star"></i> <strong>Specializations:</strong> ${dp.specializations.join(', ')}</div>` : '';
+    const resumeHTML = dp.resume && dp.resume.url
+        ? `<div class="dp-resume"><a href="${dp.resume.url}" target="_blank" class="dp-resume-link"><i class="fas fa-file-pdf"></i> <span>View Resume</span> <small>(${dp.resume.filename || 'Resume'})</small></a></div>` : '';
+    const certsHTML = dp.certificates && dp.certificates.length > 0
+        ? `<div class="dp-certs"><span class="dp-certs-label"><i class="fas fa-certificate"></i> Certificates (${dp.certificates.length}):</span>${dp.certificates.map(c => `<a href="${c.url || '#'}" target="_blank" class="dp-cert-link">${c.filename || 'Certificate'}</a>`).join('')}</div>` : '';
+    return `
+        ${dp.bio ? `<div class="dp-bio"><p>${dp.bio}</p></div>` : ''}
+        <div class="dp-details-grid">
+            ${dp.experience ? `<div class="dp-detail"><i class="fas fa-briefcase"></i><div><span class="dp-detail-label">Experience</span><span class="dp-detail-value">${dp.experience}</span></div></div>` : ''}
+            ${dp.education ? `<div class="dp-detail"><i class="fas fa-graduation-cap"></i><div><span class="dp-detail-label">Education</span><span class="dp-detail-value">${dp.education}</span></div></div>` : ''}
+            ${dp.hourlyRate ? `<div class="dp-detail"><i class="fas fa-dollar-sign"></i><div><span class="dp-detail-label">Hourly Rate</span><span class="dp-detail-value">$${dp.hourlyRate}/hr</span></div></div>` : ''}
+            ${dp.email ? `<div class="dp-detail"><i class="fas fa-envelope"></i><div><span class="dp-detail-label">Email</span><span class="dp-detail-value">${dp.email}</span></div></div>` : ''}
+            ${dp.linkedinProfile ? `<div class="dp-detail"><i class="fab fa-linkedin"></i><div><span class="dp-detail-label">LinkedIn</span><a href="${dp.linkedinProfile}" target="_blank" class="dp-detail-link">View Profile</a></div></div>` : ''}
+            ${dp.profileStatus ? `<div class="dp-detail"><i class="fas fa-shield-alt"></i><div><span class="dp-detail-label">Profile Status</span><span class="dp-detail-value dp-status-${dp.profileStatus}">${dp.profileStatus.charAt(0).toUpperCase() + dp.profileStatus.slice(1)}</span></div></div>` : ''}
+        </div>
+        ${skillsHTML}
+        ${specsHTML}
+        ${resumeHTML}
+        ${certsHTML}
+    `;
 }
 
 // Helper functions for files
@@ -3216,6 +3288,27 @@ async function initDashboardCharts() {
             monthlyActivity: []
         };
 
+        // Build 6-month buckets
+        const now = new Date();
+        const monthBuckets = [];
+        for (let i = 5; i >= 0; i--) {
+            const start = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const end = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59);
+            monthBuckets.push({
+                month: start.toLocaleString('default', { month: 'short' }),
+                start, end, projects: 0, quotes: 0, approved: 0
+            });
+        }
+
+        // Helper to parse Firestore timestamps
+        function parseTimestamp(ts) {
+            if (!ts) return null;
+            if (ts._seconds) return new Date(ts._seconds * 1000);
+            if (ts.seconds) return new Date(ts.seconds * 1000);
+            const d = new Date(ts);
+            return isNaN(d.getTime()) ? null : d;
+        }
+
         try {
             if (isContractor) {
                 const jobsResponse = await apiCall(`/jobs/user/${appState.currentUser.id}`, 'GET');
@@ -3225,6 +3318,19 @@ async function initDashboardCharts() {
                 stats.projects.assigned = jobs.filter(j => j.status === 'assigned').length;
                 stats.projects.completed = jobs.filter(j => j.status === 'completed').length;
                 stats.quotes.total = jobs.reduce((sum, j) => sum + (j.quotesCount || 0), 0);
+
+                // Compute monthly project breakdown
+                jobs.forEach(job => {
+                    const created = parseTimestamp(job.createdAt);
+                    if (created) {
+                        for (const bucket of monthBuckets) {
+                            if (created >= bucket.start && created <= bucket.end) {
+                                bucket.projects++;
+                                break;
+                            }
+                        }
+                    }
+                });
             } else {
                 const quotesResponse = await apiCall(`/quotes/user/${appState.currentUser.id}`, 'GET');
                 const quotes = quotesResponse.data || [];
@@ -3232,20 +3338,28 @@ async function initDashboardCharts() {
                 stats.quotes.submitted = quotes.filter(q => q.status === 'submitted').length;
                 stats.quotes.approved = quotes.filter(q => q.status === 'approved').length;
                 stats.quotes.rejected = quotes.filter(q => q.status === 'rejected').length;
+
+                // Compute monthly quote breakdown
+                quotes.forEach(quote => {
+                    const created = parseTimestamp(quote.createdAt);
+                    if (created) {
+                        for (const bucket of monthBuckets) {
+                            if (created >= bucket.start && created <= bucket.end) {
+                                bucket.quotes++;
+                                if (quote.status === 'approved') bucket.approved++;
+                                break;
+                            }
+                        }
+                    }
+                });
             }
         } catch (e) {
             console.error('Fallback data fetch failed:', e);
         }
 
-        // Build 6 month labels even without monthly breakdown
-        const now = new Date();
-        for (let i = 5; i >= 0; i--) {
-            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-            stats.monthlyActivity.push({
-                month: d.toLocaleString('default', { month: 'short' }),
-                projects: 0, quotes: 0, approved: 0
-            });
-        }
+        stats.monthlyActivity = monthBuckets.map(b => ({
+            month: b.month, projects: b.projects, quotes: b.quotes, approved: b.approved
+        }));
     }
 
     // Update KPI cards
