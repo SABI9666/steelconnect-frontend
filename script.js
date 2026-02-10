@@ -2738,7 +2738,7 @@ function renderAppSection(sectionId) {
     document.querySelectorAll('.sidebar-nav-link').forEach(link => link.classList.toggle('active', link.dataset.section === sectionId));
     const profileStatus = appState.currentUser.profileStatus;
     const isApproved = profileStatus === 'approved';
-    const restrictedSections = ['post-job', 'jobs', 'my-quotes', 'approved-jobs', 'estimation-tool', 'my-estimations', 'messages', 'business-analytics', 'project-tracking'];
+    const restrictedSections = ['post-job', 'jobs', 'my-quotes', 'approved-jobs', 'estimation-tool', 'my-estimations', 'messages', 'business-analytics', 'project-tracking', 'quote-analysis'];
     if (restrictedSections.includes(sectionId) && !isApproved) {
         container.innerHTML = getRestrictedAccessTemplate(sectionId, profileStatus);
         return;
@@ -2788,10 +2788,13 @@ function renderAppSection(sectionId) {
     else if (sectionId === 'business-analytics') {
         renderBusinessAnalyticsPortal();
     }
+    else if (sectionId === 'quote-analysis') {
+        renderQuoteAnalysisSection();
+    }
 }
 
 function getRestrictedAccessTemplate(sectionId, profileStatus) {
-    const sectionNames = { 'post-job': 'Post Projects', 'jobs': 'Browse Projects', 'my-quotes': 'My Quotes', 'approved-jobs': 'Approved Projects', 'estimation-tool': 'AI Estimation', 'my-estimations': 'My Estimations', 'messages': 'Messages', 'business-analytics': 'Business Analytics', 'project-tracking': 'Project Tracking' };
+    const sectionNames = { 'post-job': 'Post Projects', 'jobs': 'Browse Projects', 'my-quotes': 'My Quotes', 'approved-jobs': 'Approved Projects', 'estimation-tool': 'AI Estimation', 'my-estimations': 'My Estimations', 'messages': 'Messages', 'business-analytics': 'Business Analytics', 'project-tracking': 'Project Tracking', 'quote-analysis': 'Quote Analysis' };
     const sectionName = sectionNames[sectionId] || 'This Feature';
     let msg = '', btn = '', icon = 'fa-lock', color = '#f59e0b';
     if (profileStatus === 'incomplete') {
@@ -3292,7 +3295,8 @@ function getDashboardTemplate(user) {
         <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'jobs\')' : 'showRestrictedFeature(\'jobs\')'}"><div class="card-icon"><i class="fas fa-tasks"></i></div><h3>My Projects</h3><p>Manage your listings</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>
         <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'estimation-tool\')' : 'showRestrictedFeature(\'estimation-tool\')'}"><div class="card-icon"><i class="fas fa-calculator"></i></div><h3>AI Estimation</h3><p>Get instant cost estimates</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>
         <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'approved-jobs\')' : 'showRestrictedFeature(\'approved-jobs\')'}"><div class="card-icon"><i class="fas fa-check-circle"></i></div><h3>Approved</h3><p>Track assigned work</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>
-        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'project-tracking\')' : 'showRestrictedFeature(\'project-tracking\')'}"><div class="card-icon"><i class="fas fa-project-diagram"></i></div><h3>Project Tracking</h3><p>Dashboard & status</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>`;
+        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'project-tracking\')' : 'showRestrictedFeature(\'project-tracking\')'}"><div class="card-icon"><i class="fas fa-project-diagram"></i></div><h3>Project Tracking</h3><p>Dashboard & status</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>
+        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'quote-analysis\')' : 'showRestrictedFeature(\'quote-analysis\')'}"><div class="card-icon"><i class="fas fa-chart-line"></i></div><h3>Quote Analysis</h3><p>Compare & analyze quotes</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>`;
 
     const contractorWidgets = `
         <div class="widget-card"><h3><i class="fas fa-history"></i> Recent Projects</h3><div id="recent-projects-widget" class="widget-content">${!isApproved ? '<p class="widget-empty-text">Complete your profile to post projects.</p>' : ''}</div></div>`;
@@ -5005,6 +5009,195 @@ function toggleFAQ(faqItem) {
 /**
  * Main function to render the Business Analytics Portal.
  */
+// --- QUOTE ANALYSIS SECTION ---
+async function renderQuoteAnalysisSection() {
+    const container = document.getElementById('app-container');
+    container.innerHTML = `
+        <div class="section-header modern-header">
+            <div class="header-content">
+                <h2><i class="fas fa-chart-line"></i> Quote Analysis</h2>
+                <p class="header-subtitle">Compare, analyze, and evaluate quotes across your projects</p>
+            </div>
+        </div>
+        <div class="qa-container">
+            <div class="qa-project-selector">
+                <h3><i class="fas fa-folder-open"></i> Select a Project to Analyze</h3>
+                <div id="qa-projects-list" class="qa-projects-grid"><div class="loading-spinner"><div class="spinner"></div><p>Loading projects...</p></div></div>
+            </div>
+            <div id="qa-analysis-result" class="qa-analysis-result"></div>
+        </div>`;
+    try {
+        const response = await apiCall(`/jobs/user/${appState.currentUser.id}`, 'GET');
+        const jobs = response.data || [];
+        const projectsList = document.getElementById('qa-projects-list');
+        if (jobs.length === 0) {
+            projectsList.innerHTML = '<div class="empty-state premium-empty"><div class="empty-icon"><i class="fas fa-folder-open"></i></div><h3>No Projects</h3><p>Create a project first to receive and analyze quotes.</p></div>';
+            return;
+        }
+        projectsList.innerHTML = jobs.map(job => {
+            const statusColors = { open: '#10b981', assigned: '#3b82f6', completed: '#8b5cf6', closed: '#6b7280' };
+            const color = statusColors[job.status] || '#6b7280';
+            return `<div class="qa-project-card" onclick="analyzeProjectQuotes('${job.id}', '${(job.title || '').replace(/'/g, "\\'")}')">
+                <div class="qa-project-card-top">
+                    <span class="qa-project-status" style="background:${color}20;color:${color};border:1px solid ${color}40">${job.status}</span>
+                    <span class="qa-project-budget">${job.budget || 'N/A'}</span>
+                </div>
+                <h4>${job.title}</h4>
+                <p class="qa-project-desc">${(job.description || '').substring(0, 80)}${(job.description || '').length > 80 ? '...' : ''}</p>
+                <div class="qa-project-footer"><i class="fas fa-arrow-right"></i> Analyze Quotes</div>
+            </div>`;
+        }).join('');
+    } catch (error) {
+        document.getElementById('qa-projects-list').innerHTML = '<p class="widget-empty-text">Could not load projects.</p>';
+    }
+}
+window.renderQuoteAnalysisSection = renderQuoteAnalysisSection;
+
+async function analyzeProjectQuotes(jobId, jobTitle) {
+    const resultContainer = document.getElementById('qa-analysis-result');
+    resultContainer.innerHTML = `<div class="loading-spinner"><div class="spinner"></div><p>Analyzing quotes for "${jobTitle}"...</p></div>`;
+    resultContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    try {
+        const response = await apiCall(`/quotes/analyze/${jobId}`, 'GET');
+        if (!response.success) throw new Error(response.message);
+        const { job, analysis } = response.data;
+
+        if (!analysis) {
+            resultContainer.innerHTML = `<div class="qa-no-quotes"><i class="fas fa-inbox"></i><h3>No Quotes Yet</h3><p>No quotes have been submitted for this project yet.</p></div>`;
+            return;
+        }
+
+        const { totalQuotes, priceStats, timelineStats, scoredQuotes, recommendations, summary } = analysis;
+
+        // Build recommendation cards
+        const recCards = [];
+        if (recommendations.bestValue) recCards.push(`<div class="qa-rec-card qa-rec-best"><div class="qa-rec-icon"><i class="fas fa-trophy"></i></div><div class="qa-rec-content"><span class="qa-rec-label">Best Overall Value</span><strong>${recommendations.bestValue.designerName}</strong><p>Score: ${recommendations.bestValue.score}/100 &bull; $${recommendations.bestValue.amount.toLocaleString()}</p></div></div>`);
+        if (recommendations.cheapest) recCards.push(`<div class="qa-rec-card qa-rec-cheap"><div class="qa-rec-icon"><i class="fas fa-dollar-sign"></i></div><div class="qa-rec-content"><span class="qa-rec-label">Most Affordable</span><strong>${recommendations.cheapest.designerName}</strong><p>$${recommendations.cheapest.amount.toLocaleString()}</p></div></div>`);
+        if (recommendations.fastest) recCards.push(`<div class="qa-rec-card qa-rec-fast"><div class="qa-rec-icon"><i class="fas fa-bolt"></i></div><div class="qa-rec-content"><span class="qa-rec-label">Fastest Delivery</span><strong>${recommendations.fastest.designerName}</strong><p>${recommendations.fastest.timeline} days</p></div></div>`);
+        if (recommendations.mostExperienced) recCards.push(`<div class="qa-rec-card qa-rec-exp"><div class="qa-rec-icon"><i class="fas fa-star"></i></div><div class="qa-rec-content"><span class="qa-rec-label">Most Experienced</span><strong>${recommendations.mostExperienced.designerName}</strong><p>Profile Score: ${recommendations.mostExperienced.profileScore}/25</p></div></div>`);
+
+        // Build stats overview
+        const statsHTML = `
+            <div class="qa-stats-row">
+                <div class="qa-stat-card"><div class="qa-stat-icon" style="background:#dbeafe;color:#2563eb"><i class="fas fa-file-invoice-dollar"></i></div><div><span class="qa-stat-value">${totalQuotes}</span><span class="qa-stat-label">Total Quotes</span></div></div>
+                <div class="qa-stat-card"><div class="qa-stat-icon" style="background:#d1fae5;color:#059669"><i class="fas fa-arrow-down"></i></div><div><span class="qa-stat-value">$${priceStats.min.toLocaleString()}</span><span class="qa-stat-label">Lowest Price</span></div></div>
+                <div class="qa-stat-card"><div class="qa-stat-icon" style="background:#fef3c7;color:#d97706"><i class="fas fa-balance-scale"></i></div><div><span class="qa-stat-value">$${priceStats.avg.toLocaleString()}</span><span class="qa-stat-label">Average Price</span></div></div>
+                <div class="qa-stat-card"><div class="qa-stat-icon" style="background:#fce7f3;color:#db2777"><i class="fas fa-arrow-up"></i></div><div><span class="qa-stat-value">$${priceStats.max.toLocaleString()}</span><span class="qa-stat-label">Highest Price</span></div></div>
+                ${timelineStats.count > 0 ? `<div class="qa-stat-card"><div class="qa-stat-icon" style="background:#ede9fe;color:#7c3aed"><i class="fas fa-clock"></i></div><div><span class="qa-stat-value">${timelineStats.avg} days</span><span class="qa-stat-label">Avg Timeline</span></div></div>` : ''}
+            </div>`;
+
+        // Build scored quote cards
+        const quoteCardsHTML = scoredQuotes.map((sq, idx) => {
+            const rank = idx + 1;
+            const medal = rank === 1 ? '<span class="qa-medal qa-gold"><i class="fas fa-medal"></i> #1</span>' : rank === 2 ? '<span class="qa-medal qa-silver"><i class="fas fa-medal"></i> #2</span>' : rank === 3 ? '<span class="qa-medal qa-bronze"><i class="fas fa-medal"></i> #3</span>' : `<span class="qa-medal">#${rank}</span>`;
+            const dp = sq.designerProfile || {};
+            const skillsHTML = dp.skills && dp.skills.length > 0 ? `<div class="qa-quote-skills">${dp.skills.slice(0, 5).map(s => `<span class="qa-skill-tag">${s}</span>`).join('')}${dp.skills.length > 5 ? `<span class="qa-skill-more">+${dp.skills.length - 5}</span>` : ''}</div>` : '';
+            const attachHTML = sq.attachmentAnalysis.length > 0 ? `<div class="qa-attachments-list"><span class="qa-attach-label"><i class="fas fa-paperclip"></i> ${sq.totalAttachments} file${sq.totalAttachments > 1 ? 's' : ''} ${sq.pdfCount > 0 ? `(${sq.pdfCount} PDF)` : ''}</span>${sq.attachmentAnalysis.map(a => `<div class="qa-attach-item"><i class="fas ${a.isPdf ? 'fa-file-pdf' : 'fa-file'}"></i><span>${a.name}</span><small>${a.sizeFormatted}</small></div>`).join('')}</div>` : '<span class="qa-no-attach"><i class="fas fa-times-circle"></i> No attachments</span>';
+
+            // Score bar breakdown
+            const scoreBar = `<div class="qa-score-breakdown">
+                <div class="qa-score-bar-row"><span class="qa-score-bar-label">Price</span><div class="qa-score-bar"><div class="qa-score-fill qa-fill-price" style="width:${(sq.scores.price / 35) * 100}%"></div></div><span class="qa-score-bar-val">${sq.scores.price}/35</span></div>
+                <div class="qa-score-bar-row"><span class="qa-score-bar-label">Timeline</span><div class="qa-score-bar"><div class="qa-score-fill qa-fill-timeline" style="width:${(sq.scores.timeline / 25) * 100}%"></div></div><span class="qa-score-bar-val">${sq.scores.timeline}/25</span></div>
+                <div class="qa-score-bar-row"><span class="qa-score-bar-label">Profile</span><div class="qa-score-bar"><div class="qa-score-fill qa-fill-profile" style="width:${(sq.scores.profile / 25) * 100}%"></div></div><span class="qa-score-bar-val">${sq.scores.profile}/25</span></div>
+                <div class="qa-score-bar-row"><span class="qa-score-bar-label">Documents</span><div class="qa-score-bar"><div class="qa-score-fill qa-fill-attach" style="width:${(sq.scores.attachment / 15) * 100}%"></div></div><span class="qa-score-bar-val">${sq.scores.attachment}/15</span></div>
+            </div>`;
+
+            return `<div class="qa-quote-card ${rank === 1 ? 'qa-top-ranked' : ''}">
+                <div class="qa-quote-header">
+                    <div class="qa-quote-designer">
+                        <div class="qa-designer-avatar">${sq.designerName.charAt(0).toUpperCase()}</div>
+                        <div><strong>${sq.designerName}</strong>${dp.experience ? `<span class="qa-exp-tag">${dp.experience.substring(0, 40)}</span>` : ''}</div>
+                    </div>
+                    <div class="qa-quote-rank">${medal}<div class="qa-total-score"><span class="qa-score-num">${sq.scores.total}</span><span class="qa-score-max">/100</span></div></div>
+                </div>
+                <div class="qa-quote-metrics">
+                    <div class="qa-metric"><span class="qa-metric-label">Price</span><span class="qa-metric-value">$${sq.amount.toLocaleString()}</span></div>
+                    <div class="qa-metric"><span class="qa-metric-label">Timeline</span><span class="qa-metric-value">${sq.timeline ? sq.timeline + ' days' : 'Not specified'}</span></div>
+                    <div class="qa-metric"><span class="qa-metric-label">Status</span><span class="qa-metric-value qa-status-${sq.status}">${sq.status.charAt(0).toUpperCase() + sq.status.slice(1)}</span></div>
+                </div>
+                ${skillsHTML}
+                <div class="qa-quote-desc"><p>${sq.description.substring(0, 200)}${sq.description.length > 200 ? '...' : ''}</p></div>
+                ${scoreBar}
+                ${attachHTML}
+                <div class="qa-quote-actions">
+                    <button class="btn btn-outline btn-sm" onclick="viewQuotes('${jobId}')"><i class="fas fa-eye"></i> View Full Quote</button>
+                    <button class="btn btn-outline btn-sm" onclick="openConversation('${jobId}', '${sq.designerId}')"><i class="fas fa-comments"></i> Message</button>
+                </div>
+            </div>`;
+        }).join('');
+
+        // Build price comparison chart canvas
+        const chartId = 'qa-price-chart-' + jobId.substring(0, 8);
+        const timelineChartId = 'qa-timeline-chart-' + jobId.substring(0, 8);
+
+        resultContainer.innerHTML = `
+            <div class="qa-result-header">
+                <h3><i class="fas fa-poll"></i> Analysis: ${job.title || 'Project'}</h3>
+                <p class="qa-summary">${summary}</p>
+            </div>
+            ${recCards.length > 0 ? `<div class="qa-recommendations"><h4><i class="fas fa-lightbulb"></i> Recommendations</h4><div class="qa-rec-grid">${recCards.join('')}</div></div>` : ''}
+            ${statsHTML}
+            <div class="qa-charts-row">
+                <div class="qa-chart-card"><h4><i class="fas fa-chart-bar"></i> Price Comparison</h4><div class="qa-chart-wrapper"><canvas id="${chartId}"></canvas></div></div>
+                ${timelineStats.count > 1 ? `<div class="qa-chart-card"><h4><i class="fas fa-chart-bar"></i> Timeline Comparison</h4><div class="qa-chart-wrapper"><canvas id="${timelineChartId}"></canvas></div></div>` : ''}
+            </div>
+            <div class="qa-quotes-section"><h4><i class="fas fa-list-ol"></i> Ranked Quotes (${totalQuotes})</h4>${quoteCardsHTML}</div>`;
+
+        // Render price comparison chart
+        const priceCtx = document.getElementById(chartId);
+        if (priceCtx && typeof Chart !== 'undefined') {
+            new Chart(priceCtx.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: scoredQuotes.map(q => q.designerName.split(' ')[0]),
+                    datasets: [{
+                        label: 'Quote Amount ($)',
+                        data: scoredQuotes.map(q => q.amount),
+                        backgroundColor: scoredQuotes.map((q, i) => i === 0 ? 'rgba(16, 185, 129, 0.8)' : 'rgba(59, 130, 246, 0.6)'),
+                        borderColor: scoredQuotes.map((q, i) => i === 0 ? '#059669' : '#2563eb'),
+                        borderWidth: 2,
+                        borderRadius: 6
+                    }, {
+                        label: 'Average',
+                        data: scoredQuotes.map(() => priceStats.avg),
+                        type: 'line',
+                        borderColor: '#f59e0b',
+                        borderWidth: 2,
+                        borderDash: [6, 3],
+                        pointRadius: 0,
+                        fill: false
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'top' } }, scales: { y: { beginAtZero: true, ticks: { callback: v => '$' + v.toLocaleString() } } } }
+            });
+        }
+
+        // Render timeline chart if enough data
+        const tlCtx = document.getElementById(timelineChartId);
+        if (tlCtx && typeof Chart !== 'undefined' && timelineStats.count > 1) {
+            new Chart(tlCtx.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: scoredQuotes.filter(q => q.timeline > 0).map(q => q.designerName.split(' ')[0]),
+                    datasets: [{
+                        label: 'Timeline (days)',
+                        data: scoredQuotes.filter(q => q.timeline > 0).map(q => q.timeline),
+                        backgroundColor: scoredQuotes.filter(q => q.timeline > 0).map((q, i) => { const sorted = [...scoredQuotes].filter(sq => sq.timeline > 0).sort((a, b) => a.timeline - b.timeline); return sorted[0]?.quoteId === q.quoteId ? 'rgba(16, 185, 129, 0.8)' : 'rgba(139, 92, 246, 0.6)'; }),
+                        borderColor: scoredQuotes.filter(q => q.timeline > 0).map((q, i) => { const sorted = [...scoredQuotes].filter(sq => sq.timeline > 0).sort((a, b) => a.timeline - b.timeline); return sorted[0]?.quoteId === q.quoteId ? '#059669' : '#7c3aed'; }),
+                        borderWidth: 2,
+                        borderRadius: 6
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: v => v + ' days' } } } }
+            });
+        }
+    } catch (error) {
+        console.error('Quote analysis error:', error);
+        resultContainer.innerHTML = `<div class="qa-no-quotes"><i class="fas fa-exclamation-triangle"></i><h3>Analysis Error</h3><p>Could not analyze quotes. ${error.message || 'Please try again.'}</p></div>`;
+    }
+}
+window.analyzeProjectQuotes = analyzeProjectQuotes;
+
 async function renderBusinessAnalyticsPortal() {
     const container = document.getElementById('app-container');
     container.innerHTML = `
