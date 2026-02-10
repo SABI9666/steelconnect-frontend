@@ -2624,7 +2624,7 @@ function renderAppSection(sectionId) {
     document.querySelectorAll('.sidebar-nav-link').forEach(link => link.classList.toggle('active', link.dataset.section === sectionId));
     const profileStatus = appState.currentUser.profileStatus;
     const isApproved = profileStatus === 'approved';
-    const restrictedSections = ['post-job', 'jobs', 'my-quotes', 'approved-jobs', 'estimation-tool', 'my-estimations', 'messages', 'business-analytics'];
+    const restrictedSections = ['post-job', 'jobs', 'my-quotes', 'approved-jobs', 'estimation-tool', 'my-estimations', 'messages', 'business-analytics', 'project-tracking'];
     if (restrictedSections.includes(sectionId) && !isApproved) {
         container.innerHTML = getRestrictedAccessTemplate(sectionId, profileStatus);
         return;
@@ -2668,13 +2668,16 @@ function renderAppSection(sectionId) {
     else if (sectionId === 'support') {
         renderSupportSection();
     }
+    else if (sectionId === 'project-tracking') {
+        renderProjectTrackingDashboard();
+    }
     else if (sectionId === 'business-analytics') {
         renderBusinessAnalyticsPortal();
     }
 }
 
 function getRestrictedAccessTemplate(sectionId, profileStatus) {
-    const sectionNames = { 'post-job': 'Post Projects', 'jobs': 'Browse Projects', 'my-quotes': 'My Quotes', 'approved-jobs': 'Approved Projects', 'estimation-tool': 'AI Estimation', 'my-estimations': 'My Estimations', 'messages': 'Messages', 'business-analytics': 'Business Analytics' };
+    const sectionNames = { 'post-job': 'Post Projects', 'jobs': 'Browse Projects', 'my-quotes': 'My Quotes', 'approved-jobs': 'Approved Projects', 'estimation-tool': 'AI Estimation', 'my-estimations': 'My Estimations', 'messages': 'Messages', 'business-analytics': 'Business Analytics', 'project-tracking': 'Project Tracking' };
     const sectionName = sectionNames[sectionId] || 'This Feature';
     let msg = '', btn = '', icon = 'fa-lock', color = '#f59e0b';
     if (profileStatus === 'incomplete') {
@@ -3085,7 +3088,8 @@ function getDashboardTemplate(user) {
         <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'post-job\')' : 'showRestrictedFeature(\'post-job\')'}"><div class="card-icon"><i class="fas fa-plus-circle"></i></div><h3>Create Project</h3><p>Post a new listing</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>
         <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'jobs\')' : 'showRestrictedFeature(\'jobs\')'}"><div class="card-icon"><i class="fas fa-tasks"></i></div><h3>My Projects</h3><p>Manage your listings</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>
         <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'estimation-tool\')' : 'showRestrictedFeature(\'estimation-tool\')'}"><div class="card-icon"><i class="fas fa-calculator"></i></div><h3>AI Estimation</h3><p>Get instant cost estimates</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>
-        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'approved-jobs\')' : 'showRestrictedFeature(\'approved-jobs\')'}"><div class="card-icon"><i class="fas fa-check-circle"></i></div><h3>Approved</h3><p>Track assigned work</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>`;
+        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'approved-jobs\')' : 'showRestrictedFeature(\'approved-jobs\')'}"><div class="card-icon"><i class="fas fa-check-circle"></i></div><h3>Approved</h3><p>Track assigned work</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>
+        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'project-tracking\')' : 'showRestrictedFeature(\'project-tracking\')'}"><div class="card-icon"><i class="fas fa-project-diagram"></i></div><h3>Project Tracking</h3><p>Dashboard & status</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>`;
     const contractorWidgets = `<div class="widget-card"><h3><i class="fas fa-history"></i> Recent Projects</h3><div id="recent-projects-widget" class="widget-content">${!isApproved ? '<p class="widget-empty-text">Complete your profile to post projects.</p>' : ''}</div></div>`;
     const designerQuickActions = `
         <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'jobs\')' : 'showRestrictedFeature(\'jobs\')'}"><div class="card-icon"><i class="fas fa-search"></i></div><h3>Browse Projects</h3><p>Find new opportunities</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>
@@ -3249,6 +3253,11 @@ function buildSidebarNav() {
                 <i class="fas fa-check-circle fa-fw"></i>
                 <span>Approved Projects</span>
             </a>
+            <a href="#" class="sidebar-nav-link" data-section="project-tracking">
+                <i class="fas fa-project-diagram fa-fw"></i>
+                <span>Project Tracking</span>
+                <span class="nav-badge">NEW</span>
+            </a>
             <a href="#" class="sidebar-nav-link" data-section="post-job">
                 <i class="fas fa-plus-circle fa-fw"></i>
                 <span>Post Project</span>
@@ -3292,6 +3301,489 @@ function buildSidebarNav() {
             renderAppSection(link.dataset.section);
         });
     });
+}
+
+
+// --- PROJECT TRACKING DASHBOARD ---
+let projectTrackingFilter = 'all';
+
+async function renderProjectTrackingDashboard() {
+    const container = document.getElementById('app-container');
+    container.innerHTML = `
+        <div class="section-header modern-header">
+            <div class="header-content">
+                <h2><i class="fas fa-project-diagram"></i> Project Tracking</h2>
+                <p class="header-subtitle">Monitor all your projects, statuses, and communications in one place</p>
+            </div>
+        </div>
+        <div class="pt-dashboard">
+            <div class="pt-stats-row" id="pt-stats-row"></div>
+            <div class="pt-controls">
+                <div class="pt-filter-group">
+                    <button class="pt-filter-btn active" data-filter="all" onclick="filterProjectTracking('all')">All Projects</button>
+                    <button class="pt-filter-btn" data-filter="open" onclick="filterProjectTracking('open')">Open</button>
+                    <button class="pt-filter-btn" data-filter="assigned" onclick="filterProjectTracking('assigned')">In Progress</button>
+                    <button class="pt-filter-btn" data-filter="completed" onclick="filterProjectTracking('completed')">Completed</button>
+                </div>
+                <div class="pt-search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="pt-search-input" placeholder="Search projects..." oninput="searchProjectTracking(this.value)">
+                </div>
+            </div>
+            <div class="pt-project-list" id="pt-project-list">
+                <div class="loading-spinner"><div class="spinner"></div><p>Loading projects...</p></div>
+            </div>
+        </div>`;
+    await loadProjectTrackingData();
+}
+
+async function loadProjectTrackingData() {
+    const statsRow = document.getElementById('pt-stats-row');
+    const listContainer = document.getElementById('pt-project-list');
+    try {
+        const response = await apiCall(`/jobs/user/${appState.currentUser.id}`, 'GET');
+        const allJobs = response.data || [];
+        appState.trackingProjects = allJobs;
+
+        const totalProjects = allJobs.length;
+        const openProjects = allJobs.filter(j => j.status === 'open').length;
+        const assignedProjects = allJobs.filter(j => j.status === 'assigned').length;
+        const completedProjects = allJobs.filter(j => j.status === 'completed').length;
+        const totalQuotes = allJobs.reduce((sum, j) => sum + (j.quotesCount || 0), 0);
+
+        statsRow.innerHTML = `
+            <div class="pt-stat-card" onclick="filterProjectTracking('all')">
+                <div class="pt-stat-icon total"><i class="fas fa-folder-open"></i></div>
+                <div class="pt-stat-info">
+                    <span class="pt-stat-number">${totalProjects}</span>
+                    <span class="pt-stat-label">Total Projects</span>
+                </div>
+            </div>
+            <div class="pt-stat-card" onclick="filterProjectTracking('open')">
+                <div class="pt-stat-icon open"><i class="fas fa-door-open"></i></div>
+                <div class="pt-stat-info">
+                    <span class="pt-stat-number">${openProjects}</span>
+                    <span class="pt-stat-label">Open</span>
+                </div>
+            </div>
+            <div class="pt-stat-card" onclick="filterProjectTracking('assigned')">
+                <div class="pt-stat-icon assigned"><i class="fas fa-spinner"></i></div>
+                <div class="pt-stat-info">
+                    <span class="pt-stat-number">${assignedProjects}</span>
+                    <span class="pt-stat-label">In Progress</span>
+                </div>
+            </div>
+            <div class="pt-stat-card" onclick="filterProjectTracking('completed')">
+                <div class="pt-stat-icon completed"><i class="fas fa-check-double"></i></div>
+                <div class="pt-stat-info">
+                    <span class="pt-stat-number">${completedProjects}</span>
+                    <span class="pt-stat-label">Completed</span>
+                </div>
+            </div>
+            <div class="pt-stat-card">
+                <div class="pt-stat-icon quotes"><i class="fas fa-file-invoice-dollar"></i></div>
+                <div class="pt-stat-info">
+                    <span class="pt-stat-number">${totalQuotes}</span>
+                    <span class="pt-stat-label">Total Quotes</span>
+                </div>
+            </div>`;
+
+        renderProjectTrackingList(allJobs);
+    } catch (error) {
+        listContainer.innerHTML = `<div class="error-state premium-error"><div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div><h3>Error Loading Projects</h3><p>Please try again.</p><button class="btn btn-primary" onclick="renderProjectTrackingDashboard()">Retry</button></div>`;
+    }
+}
+
+function filterProjectTracking(status) {
+    projectTrackingFilter = status;
+    document.querySelectorAll('.pt-filter-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.filter === status));
+    const searchVal = document.getElementById('pt-search-input')?.value || '';
+    let filtered = appState.trackingProjects || [];
+    if (status !== 'all') filtered = filtered.filter(j => j.status === status);
+    if (searchVal.trim()) filtered = filtered.filter(j => j.title.toLowerCase().includes(searchVal.toLowerCase()));
+    renderProjectTrackingList(filtered);
+}
+
+function searchProjectTracking(query) {
+    let filtered = appState.trackingProjects || [];
+    if (projectTrackingFilter !== 'all') filtered = filtered.filter(j => j.status === projectTrackingFilter);
+    if (query.trim()) filtered = filtered.filter(j => j.title.toLowerCase().includes(query.toLowerCase()) || (j.description && j.description.toLowerCase().includes(query.toLowerCase())));
+    renderProjectTrackingList(filtered);
+}
+
+function renderProjectTrackingList(projects) {
+    const listContainer = document.getElementById('pt-project-list');
+    if (!projects || projects.length === 0) {
+        listContainer.innerHTML = `<div class="empty-state premium-empty"><div class="empty-icon"><i class="fas fa-clipboard-list"></i></div><h3>No Projects Found</h3><p>No projects match your current filter.</p></div>`;
+        return;
+    }
+    listContainer.innerHTML = projects.map(job => {
+        const progress = getProjectProgress(job);
+        const statusConfig = getStatusConfig(job.status);
+        const deadlineStr = job.deadline ? new Date(job.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'No deadline';
+        const createdStr = job.createdAt ? new Date(job.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+        const isOverdue = job.deadline && new Date(job.deadline) < new Date() && job.status !== 'completed';
+        return `
+            <div class="pt-project-card" onclick="renderProjectDetailView('${job.id}')">
+                <div class="pt-project-header">
+                    <div class="pt-project-title-row">
+                        <h3 class="pt-project-title">${job.title}</h3>
+                        <span class="pt-status-badge ${job.status}">
+                            <i class="fas ${statusConfig.icon}"></i> ${statusConfig.label}
+                        </span>
+                    </div>
+                    <p class="pt-project-desc">${job.description ? (job.description.length > 120 ? job.description.substring(0, 120) + '...' : job.description) : 'No description'}</p>
+                </div>
+                <div class="pt-progress-section">
+                    <div class="pt-progress-header">
+                        <span class="pt-progress-label">Progress</span>
+                        <span class="pt-progress-value">${progress}%</span>
+                    </div>
+                    <div class="pt-progress-bar">
+                        <div class="pt-progress-fill ${job.status}" style="width: ${progress}%"></div>
+                    </div>
+                </div>
+                <div class="pt-project-meta">
+                    <div class="pt-meta-item">
+                        <i class="fas fa-dollar-sign"></i>
+                        <span>${job.budget || 'N/A'}</span>
+                    </div>
+                    <div class="pt-meta-item ${isOverdue ? 'overdue' : ''}">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span>${deadlineStr}${isOverdue ? ' (Overdue)' : ''}</span>
+                    </div>
+                    <div class="pt-meta-item">
+                        <i class="fas fa-file-invoice-dollar"></i>
+                        <span>${job.quotesCount || 0} Quotes</span>
+                    </div>
+                    ${job.assignedToName ? `<div class="pt-meta-item"><i class="fas fa-user-check"></i><span>${job.assignedToName}</span></div>` : ''}
+                </div>
+                <div class="pt-project-footer">
+                    <span class="pt-created">${createdStr ? 'Created ' + createdStr : ''}</span>
+                    <span class="pt-view-details"><i class="fas fa-arrow-right"></i> View Details</span>
+                </div>
+            </div>`;
+    }).join('');
+}
+
+function getProjectProgress(job) {
+    if (job.status === 'completed') return 100;
+    if (job.status === 'assigned') return 60;
+    if (job.status === 'open' && (job.quotesCount || 0) > 0) return 30;
+    if (job.status === 'open') return 10;
+    return 0;
+}
+
+function getStatusConfig(status) {
+    const configs = {
+        'open': { label: 'Open', icon: 'fa-door-open', color: '#3b82f6' },
+        'assigned': { label: 'In Progress', icon: 'fa-spinner', color: '#f59e0b' },
+        'completed': { label: 'Completed', icon: 'fa-check-double', color: '#10b981' }
+    };
+    return configs[status] || { label: status, icon: 'fa-question-circle', color: '#94a3b8' };
+}
+
+// --- PROJECT DETAIL VIEW WITH TIMELINE & CHAT ---
+async function renderProjectDetailView(jobId) {
+    const container = document.getElementById('app-container');
+    container.innerHTML = `<div class="loading-spinner"><div class="spinner"></div><p>Loading project details...</p></div>`;
+    try {
+        const jobResponse = await apiCall(`/jobs/${jobId}`, 'GET');
+        const job = jobResponse.data;
+        if (!job) throw new Error('Project not found');
+
+        const progress = getProjectProgress(job);
+        const statusConfig = getStatusConfig(job.status);
+        const deadlineStr = job.deadline ? new Date(job.deadline).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : 'No deadline set';
+        const createdStr = job.createdAt ? new Date(job.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'N/A';
+        const isOverdue = job.deadline && new Date(job.deadline) < new Date() && job.status !== 'completed';
+
+        const milestones = buildProjectMilestones(job);
+
+        const skillsHTML = job.skills?.length > 0 ? `<div class="pt-detail-skills">${job.skills.map(s => `<span class="pt-skill-tag">${s}</span>`).join('')}</div>` : '';
+
+        const attachmentsHTML = job.attachments?.length > 0 ? `
+            <div class="pt-detail-section">
+                <h3><i class="fas fa-paperclip"></i> Attachments</h3>
+                <div class="pt-attachments-list">
+                    ${job.attachments.map((att, i) => `
+                        <a href="${att.url}" target="_blank" rel="noopener noreferrer" class="pt-attachment-item">
+                            <i class="fas fa-file"></i>
+                            <span>${att.name || 'File ' + (i + 1)}</span>
+                            <i class="fas fa-external-link-alt"></i>
+                        </a>`).join('')}
+                </div>
+            </div>` : '';
+
+        container.innerHTML = `
+            <div class="pt-detail-container">
+                <div class="pt-detail-topbar">
+                    <button class="back-btn premium-back-btn" onclick="renderProjectTrackingDashboard()">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                    <div class="pt-detail-breadcrumb">
+                        <span onclick="renderProjectTrackingDashboard()" class="pt-breadcrumb-link">Project Tracking</span>
+                        <i class="fas fa-chevron-right"></i>
+                        <span class="pt-breadcrumb-current">${job.title}</span>
+                    </div>
+                </div>
+
+                <div class="pt-detail-hero">
+                    <div class="pt-detail-hero-info">
+                        <div class="pt-detail-title-row">
+                            <h2>${job.title}</h2>
+                            <span class="pt-status-badge large ${job.status}">
+                                <i class="fas ${statusConfig.icon}"></i> ${statusConfig.label}
+                            </span>
+                        </div>
+                        <p class="pt-detail-desc">${job.description || 'No description provided.'}</p>
+                        ${skillsHTML}
+                    </div>
+                    <div class="pt-detail-hero-stats">
+                        <div class="pt-hero-stat">
+                            <span class="pt-hero-stat-label">Budget</span>
+                            <span class="pt-hero-stat-value">${job.budget || 'N/A'}</span>
+                        </div>
+                        <div class="pt-hero-stat">
+                            <span class="pt-hero-stat-label">Deadline</span>
+                            <span class="pt-hero-stat-value ${isOverdue ? 'overdue' : ''}">${deadlineStr}${isOverdue ? ' (Overdue)' : ''}</span>
+                        </div>
+                        <div class="pt-hero-stat">
+                            <span class="pt-hero-stat-label">Created</span>
+                            <span class="pt-hero-stat-value">${createdStr}</span>
+                        </div>
+                        ${job.assignedToName ? `<div class="pt-hero-stat"><span class="pt-hero-stat-label">Assigned To</span><span class="pt-hero-stat-value">${job.assignedToName}</span></div>` : ''}
+                        ${job.approvedAmount ? `<div class="pt-hero-stat"><span class="pt-hero-stat-label">Approved Amount</span><span class="pt-hero-stat-value">${job.approvedAmount}</span></div>` : ''}
+                    </div>
+                </div>
+
+                <div class="pt-detail-grid">
+                    <div class="pt-detail-main">
+                        <div class="pt-detail-section">
+                            <h3><i class="fas fa-tasks"></i> Project Progress</h3>
+                            <div class="pt-detail-progress">
+                                <div class="pt-detail-progress-bar">
+                                    <div class="pt-progress-fill ${job.status}" style="width: ${progress}%"></div>
+                                </div>
+                                <span class="pt-detail-progress-text">${progress}% Complete</span>
+                            </div>
+                        </div>
+
+                        <div class="pt-detail-section">
+                            <h3><i class="fas fa-stream"></i> Project Timeline</h3>
+                            <div class="pt-timeline">
+                                ${milestones.map(m => `
+                                    <div class="pt-timeline-item ${m.status}">
+                                        <div class="pt-timeline-marker">
+                                            <i class="fas ${m.icon}"></i>
+                                        </div>
+                                        <div class="pt-timeline-content">
+                                            <h4>${m.title}</h4>
+                                            <p>${m.description}</p>
+                                            <span class="pt-timeline-date">${m.date}</span>
+                                        </div>
+                                    </div>`).join('')}
+                            </div>
+                        </div>
+
+                        ${attachmentsHTML}
+
+                        <div class="pt-detail-section">
+                            <h3><i class="fas fa-comments"></i> Chat History</h3>
+                            <div id="pt-chat-history" class="pt-chat-history">
+                                <div class="loading-spinner"><div class="spinner"></div><p>Loading conversations...</p></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-detail-sidebar">
+                        <div class="pt-sidebar-card">
+                            <h4><i class="fas fa-info-circle"></i> Quick Info</h4>
+                            <div class="pt-quick-info">
+                                <div class="pt-info-row"><span class="pt-info-label">Status</span><span class="pt-status-badge small ${job.status}"><i class="fas ${statusConfig.icon}"></i> ${statusConfig.label}</span></div>
+                                <div class="pt-info-row"><span class="pt-info-label">Quotes</span><span class="pt-info-value">${job.quotesCount || 0}</span></div>
+                                <div class="pt-info-row"><span class="pt-info-label">Budget</span><span class="pt-info-value">${job.budget || 'N/A'}</span></div>
+                                ${job.link ? `<div class="pt-info-row"><span class="pt-info-label">Link</span><a href="${job.link}" target="_blank" class="pt-info-link"><i class="fas fa-external-link-alt"></i> View</a></div>` : ''}
+                            </div>
+                        </div>
+
+                        <div class="pt-sidebar-card">
+                            <h4><i class="fas fa-bolt"></i> Quick Actions</h4>
+                            <div class="pt-sidebar-actions">
+                                ${job.status === 'open' ? `<button class="btn btn-primary btn-block" onclick="renderAppSection('jobs')"><i class="fas fa-eye"></i> View Quotes</button>` : ''}
+                                ${job.status === 'assigned' && job.assignedTo ? `<button class="btn btn-primary btn-block" onclick="openConversation('${job.id}', '${job.assignedTo}')"><i class="fas fa-comments"></i> Message Designer</button>` : ''}
+                                ${job.status === 'assigned' ? `<button class="btn btn-success btn-block" onclick="markJobCompleted('${job.id}')"><i class="fas fa-check-double"></i> Mark Completed</button>` : ''}
+                                <button class="btn btn-outline btn-block" onclick="renderProjectTrackingDashboard()"><i class="fas fa-arrow-left"></i> Back to Tracking</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+
+        loadProjectChatHistory(jobId);
+    } catch (error) {
+        container.innerHTML = `<div class="error-state premium-error"><div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div><h3>Error Loading Project</h3><p>Could not load project details. Please try again.</p><button class="btn btn-primary" onclick="renderProjectTrackingDashboard()">Back to Tracking</button></div>`;
+    }
+}
+
+function buildProjectMilestones(job) {
+    const milestones = [];
+    const created = job.createdAt ? new Date(job.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A';
+    milestones.push({
+        title: 'Project Created',
+        description: 'Project was posted and is open for quotes.',
+        date: created,
+        icon: 'fa-plus-circle',
+        status: 'completed'
+    });
+
+    if ((job.quotesCount || 0) > 0) {
+        milestones.push({
+            title: 'Quotes Received',
+            description: `${job.quotesCount} quote(s) have been submitted by designers.`,
+            date: '',
+            icon: 'fa-file-invoice-dollar',
+            status: 'completed'
+        });
+    } else if (job.status === 'open') {
+        milestones.push({
+            title: 'Awaiting Quotes',
+            description: 'Waiting for designers to submit quotes.',
+            date: '',
+            icon: 'fa-clock',
+            status: 'active'
+        });
+    }
+
+    if (job.status === 'assigned' || job.status === 'completed') {
+        milestones.push({
+            title: 'Designer Assigned',
+            description: `${job.assignedToName || 'A designer'} has been assigned to this project.`,
+            date: '',
+            icon: 'fa-user-check',
+            status: 'completed'
+        });
+        milestones.push({
+            title: 'Work In Progress',
+            description: 'The project is actively being worked on.',
+            date: '',
+            icon: 'fa-hammer',
+            status: job.status === 'completed' ? 'completed' : 'active'
+        });
+    } else {
+        milestones.push({
+            title: 'Assign Designer',
+            description: 'Review and approve a quote to assign a designer.',
+            date: '',
+            icon: 'fa-user-plus',
+            status: 'pending'
+        });
+        milestones.push({
+            title: 'Work In Progress',
+            description: 'Designer will begin working once assigned.',
+            date: '',
+            icon: 'fa-hammer',
+            status: 'pending'
+        });
+    }
+
+    if (job.status === 'completed') {
+        milestones.push({
+            title: 'Project Completed',
+            description: 'This project has been completed successfully.',
+            date: '',
+            icon: 'fa-trophy',
+            status: 'completed'
+        });
+    } else {
+        const deadlineStr = job.deadline ? new Date(job.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+        milestones.push({
+            title: 'Project Completion',
+            description: deadlineStr ? `Target deadline: ${deadlineStr}` : 'Pending completion.',
+            date: '',
+            icon: 'fa-flag-checkered',
+            status: 'pending'
+        });
+    }
+    return milestones;
+}
+
+async function loadProjectChatHistory(jobId) {
+    const chatContainer = document.getElementById('pt-chat-history');
+    if (!chatContainer) return;
+    try {
+        const response = await apiCall('/messages', 'GET');
+        const allConversations = response.data || [];
+        const projectConversations = allConversations.filter(c => c.jobId === jobId);
+
+        if (projectConversations.length === 0) {
+            chatContainer.innerHTML = `
+                <div class="pt-no-chat">
+                    <i class="fas fa-comment-slash"></i>
+                    <p>No conversations yet for this project.</p>
+                    <span>Conversations will appear here once a quote is approved and messaging begins.</span>
+                </div>`;
+            return;
+        }
+
+        let chatHTML = '';
+        for (const convo of projectConversations) {
+            const other = convo.participants ? convo.participants.find(p => p.id !== appState.currentUser.id) : null;
+            const otherName = other ? other.name : 'Unknown User';
+            const avatarColor = getAvatarColor(otherName);
+
+            let messagesHTML = '';
+            try {
+                const msgResponse = await apiCall(`/messages/${convo.id}/messages`, 'GET');
+                const messages = (msgResponse.data || []).slice(-10);
+                if (messages.length > 0) {
+                    messagesHTML = messages.map(msg => {
+                        const isMine = msg.senderId === appState.currentUser.id;
+                        const timestamp = formatDetailedTimestamp(msg.createdAt);
+                        const senderColor = getAvatarColor(msg.senderName || 'U');
+                        return `
+                            <div class="pt-chat-message ${isMine ? 'me' : 'them'}">
+                                ${!isMine ? `<div class="pt-chat-avatar" style="background-color: ${senderColor}">${(msg.senderName || 'U').charAt(0).toUpperCase()}</div>` : ''}
+                                <div class="pt-chat-bubble ${isMine ? 'me' : 'them'}">
+                                    ${!isMine ? `<span class="pt-chat-sender">${msg.senderName || 'Unknown'}</span>` : ''}
+                                    <p>${msg.text || ''}</p>
+                                    <span class="pt-chat-time">${timestamp}</span>
+                                </div>
+                            </div>`;
+                    }).join('');
+                }
+            } catch (e) {
+                messagesHTML = '<p class="pt-chat-error">Could not load messages.</p>';
+            }
+
+            chatHTML += `
+                <div class="pt-chat-thread">
+                    <div class="pt-chat-thread-header">
+                        <div class="pt-chat-participant">
+                            <div class="pt-chat-avatar" style="background-color: ${avatarColor}">${otherName.charAt(0).toUpperCase()}</div>
+                            <div class="pt-chat-participant-info">
+                                <strong>${otherName}</strong>
+                                <span class="participant-type ${other?.type || ''}">${other?.type || 'user'}</span>
+                            </div>
+                        </div>
+                        <button class="btn btn-outline btn-sm" onclick="renderConversationView('${convo.id}')">
+                            <i class="fas fa-expand-alt"></i> Open Full Chat
+                        </button>
+                    </div>
+                    <div class="pt-chat-messages-preview">
+                        ${messagesHTML || '<p class="pt-chat-empty">No messages yet.</p>'}
+                    </div>
+                </div>`;
+        }
+        chatContainer.innerHTML = chatHTML;
+    } catch (error) {
+        chatContainer.innerHTML = `
+            <div class="pt-no-chat">
+                <i class="fas fa-exclamation-triangle"></i>
+                <p>Could not load chat history.</p>
+                <button class="btn btn-outline btn-sm" onclick="loadProjectChatHistory('${jobId}')">Retry</button>
+            </div>`;
+    }
 }
 
 
