@@ -2216,6 +2216,39 @@ async function viewQuotes(jobId) {
                 }
                 const statusClass = quote.status;
                 const statusIcon = {'submitted': 'fa-clock', 'approved': 'fa-check-circle', 'rejected': 'fa-times-circle'}[quote.status] || 'fa-question-circle';
+
+                // Designer profile section
+                const dp = quote.designerProfile || {};
+                const hasProfile = dp && (dp.skills?.length > 0 || dp.experience || dp.bio);
+                let designerProfileSection = '';
+                if (hasProfile) {
+                    const skillsHTML = dp.skills && dp.skills.length > 0
+                        ? `<div class="dp-skills">${dp.skills.slice(0, 6).map(s => `<span class="dp-skill-tag">${s}</span>`).join('')}${dp.skills.length > 6 ? `<span class="dp-skill-more">+${dp.skills.length - 6} more</span>` : ''}</div>` : '';
+                    const specsHTML = dp.specializations && dp.specializations.length > 0
+                        ? `<div class="dp-specs"><i class="fas fa-star"></i> ${dp.specializations.slice(0, 3).join(', ')}</div>` : '';
+                    designerProfileSection = `
+                        <div class="designer-profile-card">
+                            <div class="dp-header" onclick="this.parentElement.classList.toggle('expanded')">
+                                <div class="dp-header-left">
+                                    <i class="fas fa-user-circle"></i>
+                                    <span>Designer Profile</span>
+                                </div>
+                                <i class="fas fa-chevron-down dp-toggle-icon"></i>
+                            </div>
+                            <div class="dp-body">
+                                ${dp.bio ? `<div class="dp-bio"><p>${dp.bio}</p></div>` : ''}
+                                <div class="dp-details-grid">
+                                    ${dp.experience ? `<div class="dp-detail"><i class="fas fa-briefcase"></i><div><span class="dp-detail-label">Experience</span><span class="dp-detail-value">${dp.experience}</span></div></div>` : ''}
+                                    ${dp.education ? `<div class="dp-detail"><i class="fas fa-graduation-cap"></i><div><span class="dp-detail-label">Education</span><span class="dp-detail-value">${dp.education}</span></div></div>` : ''}
+                                    ${dp.hourlyRate ? `<div class="dp-detail"><i class="fas fa-dollar-sign"></i><div><span class="dp-detail-label">Hourly Rate</span><span class="dp-detail-value">$${dp.hourlyRate}/hr</span></div></div>` : ''}
+                                    ${dp.linkedinProfile ? `<div class="dp-detail"><i class="fab fa-linkedin"></i><div><span class="dp-detail-label">LinkedIn</span><a href="${dp.linkedinProfile}" target="_blank" class="dp-detail-link">View Profile</a></div></div>` : ''}
+                                </div>
+                                ${skillsHTML}
+                                ${specsHTML}
+                            </div>
+                        </div>`;
+                }
+
                 quotesHTML += `
                     <div class="quote-item premium-quote-item quote-status-${statusClass}">
                         <div class="quote-item-header">
@@ -2225,6 +2258,7 @@ async function viewQuotes(jobId) {
                             </div>
                             <div class="quote-amount"><span class="amount-label">Quote</span><span class="amount-value">${quote.quoteAmount}</span></div>
                         </div>
+                        ${designerProfileSection}
                         <div class="quote-details">
                             ${quote.timeline ? `<div class="quote-meta-item"><i class="fas fa-calendar-alt"></i><span>Timeline: <strong>${quote.timeline} days</strong></span></div>` : ''}
                             <div class="quote-description"><p>${quote.description}</p></div>
@@ -2633,7 +2667,7 @@ function renderAppSection(sectionId) {
     if (sectionId === 'settings') { container.innerHTML = getSettingsTemplate(appState.currentUser); return; }
     if (sectionId === 'dashboard') {
         container.innerHTML = getDashboardTemplate(appState.currentUser);
-        if (isApproved) renderRecentActivityWidgets();
+        if (isApproved) { renderRecentActivityWidgets(); initDashboardCharts(); }
     } else if (sectionId === 'jobs') {
         const role = appState.currentUser.type;
         const title = role === 'designer' ? 'Available Projects' : 'My Posted Projects';
@@ -3084,26 +3118,250 @@ function getDashboardTemplate(user) {
     else if (profileStatus === 'pending') profileStatusCard = `<div class="dashboard-profile-status-card"><h3><i class="fas fa-clock"></i> Profile Under Review</h3><p>Your profile is under review. You'll get full access once approved.</p></div>`;
     else if (profileStatus === 'rejected') profileStatusCard = `<div class="dashboard-profile-status-card"><h3><i class="fas fa-times-circle"></i> Profile Needs Update</h3><p>Your profile needs updates. ${user.rejectionReason ? `<strong>Reason:</strong> ${user.rejectionReason}` : ''}</p><button class="btn btn-primary" onclick="renderAppSection('profile-completion')"><i class="fas fa-edit"></i> Update Profile</button></div>`;
     else if (profileStatus === 'approved') profileStatusCard = `<div class="dashboard-profile-status-card" style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border-color: #10b981;"><h3 style="color: #059669;"><i class="fas fa-check-circle"></i> Profile Approved</h3><p style="color: #059669;">You have full access to all platform features.</p></div>`;
+
     const contractorQuickActions = `
         <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'post-job\')' : 'showRestrictedFeature(\'post-job\')'}"><div class="card-icon"><i class="fas fa-plus-circle"></i></div><h3>Create Project</h3><p>Post a new listing</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>
         <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'jobs\')' : 'showRestrictedFeature(\'jobs\')'}"><div class="card-icon"><i class="fas fa-tasks"></i></div><h3>My Projects</h3><p>Manage your listings</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>
         <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'estimation-tool\')' : 'showRestrictedFeature(\'estimation-tool\')'}"><div class="card-icon"><i class="fas fa-calculator"></i></div><h3>AI Estimation</h3><p>Get instant cost estimates</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>
         <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'approved-jobs\')' : 'showRestrictedFeature(\'approved-jobs\')'}"><div class="card-icon"><i class="fas fa-check-circle"></i></div><h3>Approved</h3><p>Track assigned work</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>
         <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'project-tracking\')' : 'showRestrictedFeature(\'project-tracking\')'}"><div class="card-icon"><i class="fas fa-project-diagram"></i></div><h3>Project Tracking</h3><p>Dashboard & status</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>`;
-    const contractorWidgets = `<div class="widget-card"><h3><i class="fas fa-history"></i> Recent Projects</h3><div id="recent-projects-widget" class="widget-content">${!isApproved ? '<p class="widget-empty-text">Complete your profile to post projects.</p>' : ''}</div></div>`;
+
+    const contractorWidgets = `
+        <div class="widget-card"><h3><i class="fas fa-history"></i> Recent Projects</h3><div id="recent-projects-widget" class="widget-content">${!isApproved ? '<p class="widget-empty-text">Complete your profile to post projects.</p>' : ''}</div></div>`;
+
     const designerQuickActions = `
         <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'jobs\')' : 'showRestrictedFeature(\'jobs\')'}"><div class="card-icon"><i class="fas fa-search"></i></div><h3>Browse Projects</h3><p>Find new opportunities</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>
         <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'my-quotes\')' : 'showRestrictedFeature(\'my-quotes\')'}"><div class="card-icon"><i class="fas fa-file-invoice-dollar"></i></div><h3>My Quotes</h3><p>Track your submissions</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>
         <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'messages\')' : 'showRestrictedFeature(\'messages\')'}"><div class="card-icon"><i class="fas fa-comments"></i></div><h3>Messages</h3><p>Communicate with clients</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>`;
-    const designerWidgets = `<div class="widget-card"><h3><i class="fas fa-history"></i> Recent Quotes</h3><div id="recent-quotes-widget" class="widget-content">${!isApproved ? '<p class="widget-empty-text">Complete your profile to submit quotes.</p>' : ''}</div></div>`;
+
+    const designerWidgets = `
+        <div class="widget-card"><h3><i class="fas fa-history"></i> Recent Quotes</h3><div id="recent-quotes-widget" class="widget-content">${!isApproved ? '<p class="widget-empty-text">Complete your profile to submit quotes.</p>' : ''}</div></div>`;
+
+    // Charts section (only for approved users)
+    const chartsSection = isApproved ? `
+        <h3 class="dashboard-section-title"><i class="fas fa-chart-bar"></i> Performance Overview</h3>
+        <div class="dashboard-charts-row">
+            <div class="dashboard-chart-card">
+                <div class="chart-card-header">
+                    <h4><i class="fas fa-chart-bar"></i> ${isContractor ? 'Projects & Quotes Activity' : 'Quotes Activity'}</h4>
+                    <span class="chart-badge">Last 6 Months</span>
+                </div>
+                <div class="chart-canvas-wrapper">
+                    <canvas id="dashboard-bar-chart"></canvas>
+                </div>
+            </div>
+            <div class="dashboard-chart-card">
+                <div class="chart-card-header">
+                    <h4><i class="fas fa-chart-pie"></i> ${isContractor ? 'Project Status' : 'Quote Status'} Distribution</h4>
+                    <span class="chart-badge">Current</span>
+                </div>
+                <div class="chart-canvas-wrapper">
+                    <canvas id="dashboard-pie-chart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard-stats-row" id="dashboard-kpi-stats">
+            <div class="kpi-card kpi-blue">
+                <div class="kpi-icon"><i class="fas ${isContractor ? 'fa-folder-open' : 'fa-file-invoice-dollar'}"></i></div>
+                <div class="kpi-info"><span class="kpi-value" id="kpi-total">--</span><span class="kpi-label">${isContractor ? 'Total Projects' : 'Total Quotes'}</span></div>
+            </div>
+            <div class="kpi-card kpi-green">
+                <div class="kpi-icon"><i class="fas ${isContractor ? 'fa-check-circle' : 'fa-thumbs-up'}"></i></div>
+                <div class="kpi-info"><span class="kpi-value" id="kpi-approved">--</span><span class="kpi-label">${isContractor ? 'Approved Quotes' : 'Approved'}</span></div>
+            </div>
+            <div class="kpi-card kpi-amber">
+                <div class="kpi-icon"><i class="fas ${isContractor ? 'fa-clock' : 'fa-hourglass-half'}"></i></div>
+                <div class="kpi-info"><span class="kpi-value" id="kpi-pending">--</span><span class="kpi-label">${isContractor ? 'Pending Quotes' : 'Submitted'}</span></div>
+            </div>
+            <div class="kpi-card kpi-purple">
+                <div class="kpi-icon"><i class="fas ${isContractor ? 'fa-spinner' : 'fa-briefcase'}"></i></div>
+                <div class="kpi-info"><span class="kpi-value" id="kpi-active">--</span><span class="kpi-label">${isContractor ? 'In Progress' : 'Active Projects'}</span></div>
+            </div>
+        </div>` : '';
+
     return `
         <div class="dashboard-container">
             <div class="dashboard-hero"><div><h2>Welcome back, ${name}</h2><p>You are logged in to your <strong>${isContractor ? 'Contractor' : 'Designer'} Portal</strong>.</p></div></div>
             ${profileStatusCard}
+            ${chartsSection}
             <h3 class="dashboard-section-title">Quick Actions</h3>
             <div class="dashboard-grid">${isContractor ? contractorQuickActions : designerQuickActions}</div>
             <div class="dashboard-columns">${isContractor ? contractorWidgets : designerWidgets}</div>
         </div>`;
+}
+
+// Dashboard charts initialization
+let dashboardBarChart = null;
+let dashboardPieChart = null;
+
+async function initDashboardCharts() {
+    try {
+        const response = await apiCall('/profile/dashboard-stats', 'GET');
+        if (!response.success || !response.data) return;
+
+        const stats = response.data;
+        const isContractor = stats.userType === 'contractor';
+
+        // Update KPI cards
+        const kpiTotal = document.getElementById('kpi-total');
+        const kpiApproved = document.getElementById('kpi-approved');
+        const kpiPending = document.getElementById('kpi-pending');
+        const kpiActive = document.getElementById('kpi-active');
+
+        if (isContractor) {
+            if (kpiTotal) kpiTotal.textContent = stats.projects.total;
+            if (kpiApproved) kpiApproved.textContent = stats.quotes.approved;
+            if (kpiPending) kpiPending.textContent = stats.quotes.submitted;
+            if (kpiActive) kpiActive.textContent = stats.projects.assigned;
+        } else {
+            if (kpiTotal) kpiTotal.textContent = stats.quotes.total;
+            if (kpiApproved) kpiApproved.textContent = stats.quotes.approved;
+            if (kpiPending) kpiPending.textContent = stats.quotes.submitted;
+            if (kpiActive) kpiActive.textContent = stats.projects.assigned;
+        }
+
+        // Bar chart
+        const barCanvas = document.getElementById('dashboard-bar-chart');
+        if (barCanvas && stats.monthlyActivity.length > 0) {
+            const barCtx = barCanvas.getContext('2d');
+            if (dashboardBarChart) dashboardBarChart.destroy();
+
+            const labels = stats.monthlyActivity.map(m => m.month);
+
+            const datasets = isContractor ? [
+                {
+                    label: 'Projects Posted',
+                    data: stats.monthlyActivity.map(m => m.projects),
+                    backgroundColor: 'rgba(37, 99, 235, 0.8)',
+                    borderColor: 'rgba(37, 99, 235, 1)',
+                    borderWidth: 2,
+                    borderRadius: 8,
+                    borderSkipped: false
+                },
+                {
+                    label: 'Quotes Received',
+                    data: stats.monthlyActivity.map(m => m.quotes),
+                    backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                    borderColor: 'rgba(16, 185, 129, 1)',
+                    borderWidth: 2,
+                    borderRadius: 8,
+                    borderSkipped: false
+                }
+            ] : [
+                {
+                    label: 'Quotes Submitted',
+                    data: stats.monthlyActivity.map(m => m.quotes),
+                    backgroundColor: 'rgba(99, 102, 241, 0.8)',
+                    borderColor: 'rgba(99, 102, 241, 1)',
+                    borderWidth: 2,
+                    borderRadius: 8,
+                    borderSkipped: false
+                },
+                {
+                    label: 'Approved',
+                    data: stats.monthlyActivity.map(m => m.approved || 0),
+                    backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                    borderColor: 'rgba(16, 185, 129, 1)',
+                    borderWidth: 2,
+                    borderRadius: 8,
+                    borderSkipped: false
+                }
+            ];
+
+            dashboardBarChart = new Chart(barCtx, {
+                type: 'bar',
+                data: { labels, datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top', labels: { usePointStyle: true, padding: 20, font: { family: 'Inter', size: 12, weight: '500' } } },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                            titleFont: { family: 'Inter', size: 13, weight: '600' },
+                            bodyFont: { family: 'Inter', size: 12 },
+                            padding: 12,
+                            cornerRadius: 8,
+                            displayColors: true
+                        }
+                    },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { font: { family: 'Inter', size: 12 } } },
+                        y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { family: 'Inter', size: 12 }, stepSize: 1 } }
+                    }
+                }
+            });
+        }
+
+        // Pie chart
+        const pieCanvas = document.getElementById('dashboard-pie-chart');
+        if (pieCanvas) {
+            const pieCtx = pieCanvas.getContext('2d');
+            if (dashboardPieChart) dashboardPieChart.destroy();
+
+            let pieLabels, pieData, pieColors;
+            if (isContractor) {
+                pieLabels = ['Open', 'In Progress', 'Completed'];
+                pieData = [stats.projects.open, stats.projects.assigned, stats.projects.completed];
+                pieColors = ['rgba(37, 99, 235, 0.85)', 'rgba(245, 158, 11, 0.85)', 'rgba(16, 185, 129, 0.85)'];
+            } else {
+                pieLabels = ['Submitted', 'Approved', 'Rejected'];
+                pieData = [stats.quotes.submitted, stats.quotes.approved, stats.quotes.rejected];
+                pieColors = ['rgba(99, 102, 241, 0.85)', 'rgba(16, 185, 129, 0.85)', 'rgba(239, 68, 68, 0.85)'];
+            }
+
+            // If all zeros, show placeholder
+            const hasData = pieData.some(v => v > 0);
+            if (!hasData) {
+                pieData = [1];
+                pieLabels = ['No Data Yet'];
+                pieColors = ['rgba(203, 213, 225, 0.5)'];
+            }
+
+            dashboardPieChart = new Chart(pieCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: pieLabels,
+                    datasets: [{
+                        data: pieData,
+                        backgroundColor: pieColors,
+                        borderColor: '#ffffff',
+                        borderWidth: 3,
+                        hoverBorderWidth: 0,
+                        hoverOffset: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '65%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { usePointStyle: true, padding: 16, font: { family: 'Inter', size: 12, weight: '500' } }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                            titleFont: { family: 'Inter', size: 13, weight: '600' },
+                            bodyFont: { family: 'Inter', size: 12 },
+                            padding: 12,
+                            cornerRadius: 8,
+                            callbacks: {
+                                label: function(context) {
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const value = context.parsed;
+                                    const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+                                    return ` ${context.label}: ${value} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Error loading dashboard charts:', error);
+    }
 }
 
 function getSettingsTemplate(user) {
