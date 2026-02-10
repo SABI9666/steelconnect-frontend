@@ -8732,6 +8732,120 @@ textarea:focus-visible {
 .dp-status-rejected { color: #dc2626; font-weight: 600; }
 .dp-status-incomplete { color: var(--text-light); font-weight: 600; }
 
+/* ===== Profile Form: Existing Files & Status ===== */
+.existing-files-section {
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 10px;
+}
+.existing-file-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: white;
+    border-radius: 6px;
+    margin-bottom: 6px;
+    border: 1px solid #e2e8f0;
+}
+.existing-file-item:last-of-type {
+    margin-bottom: 0;
+}
+.existing-file-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
+}
+.existing-file-info > i {
+    font-size: 1.3rem;
+    color: #2563eb;
+    flex-shrink: 0;
+}
+.existing-file-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #1e293b;
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.existing-file-meta {
+    font-size: 0.75rem;
+    color: #64748b;
+    display: block;
+}
+.existing-file-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+    margin-left: 12px;
+}
+.btn-xs {
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    border-radius: 4px;
+}
+.btn-danger {
+    background: #dc2626;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+.btn-danger:hover {
+    background: #b91c1c;
+}
+.existing-file-hint {
+    font-size: 0.78rem;
+    color: #64748b;
+    margin: 8px 0 0;
+    padding: 0;
+}
+.existing-file-hint i {
+    color: #2563eb;
+    margin-right: 4px;
+}
+.existing-badge {
+    background: #dbeafe;
+    color: #1d4ed8;
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 500;
+    margin-left: 6px;
+}
+.profile-status-banner {
+    padding: 14px 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.profile-status-banner i {
+    font-size: 1.2rem;
+}
+.profile-status-approved {
+    background: #d1fae5;
+    color: #065f46;
+    border: 1px solid #6ee7b7;
+}
+.profile-status-pending {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fcd34d;
+}
+.profile-status-rejected {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fca5a5;
+}
+
 /* ===== RESPONSIVE: Charts & KPIs ===== */
 @media (max-width: 1024px) {
     .dashboard-charts-row {
