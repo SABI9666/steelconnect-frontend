@@ -2194,7 +2194,7 @@ async function viewQuotes(jobId) {
         } else {
             const job = appState.jobs.find(j => j.id === jobId);
             quotesHTML += `<div class="quotes-list premium-quotes">`;
-            quotes.forEach(quote => {
+            for (const quote of quotes) {
                 const attachments = quote.attachments || [];
                 const hasAttachments = attachments.length > 0;
                 let attachmentSection = '';
@@ -2220,6 +2220,11 @@ async function viewQuotes(jobId) {
                 }
                 const statusClass = quote.status;
                 const statusIcon = {'submitted': 'fa-clock', 'approved': 'fa-check-circle', 'rejected': 'fa-times-circle'}[quote.status] || 'fa-question-circle';
+
+                // Build designer profile - use enriched data or placeholder for lazy load
+                const dp = quote.designerProfile || {};
+                const designerProfileSection = buildDesignerProfileHTML(dp, quote.designerName, quote.designerId);
+
                 quotesHTML += `
                     <div class="quote-item premium-quote-item quote-status-${statusClass}">
                         <div class="quote-item-header">
@@ -2229,6 +2234,7 @@ async function viewQuotes(jobId) {
                             </div>
                             <div class="quote-amount"><span class="amount-label">Quote</span><span class="amount-value">${quote.quoteAmount}</span></div>
                         </div>
+                        ${designerProfileSection}
                         <div class="quote-details">
                             ${quote.timeline ? `<div class="quote-meta-item"><i class="fas fa-calendar-alt"></i><span>Timeline: <strong>${quote.timeline} days</strong></span></div>` : ''}
                             <div class="quote-description"><p>${quote.description}</p></div>
@@ -2236,14 +2242,122 @@ async function viewQuotes(jobId) {
                         </div>
                         <div class="quote-actions">${actionButtons}</div>
                     </div>`;
-            });
+            }
             quotesHTML += `</div>`;
         }
         showGenericModal(quotesHTML, 'max-width: 900px;');
+
+        // After rendering, lazy-load designer profiles that weren't enriched by the backend
+        quotes.forEach(quote => {
+            if (!quote.designerProfile || (!quote.designerProfile.skills?.length && !quote.designerProfile.bio && !quote.designerProfile.experience)) {
+                loadDesignerProfileIntoCard(quote.designerId, quote.designerName);
+            }
+        });
     } catch (error) {
         console.error('Error viewing quotes:', error);
         showGenericModal(`<div class="modal-header premium-modal-header"><h3><i class="fas fa-exclamation-triangle"></i> Error</h3></div><div class="error-state premium-error"><p>Could not load quotes. Please try again.</p><button class="btn btn-primary" onclick="closeModal()">Close</button></div>`);
     }
+}
+
+function buildDesignerProfileHTML(dp, designerName, designerId) {
+    const hasDetailedProfile = dp.skills?.length > 0 || dp.experience || dp.bio || dp.education || dp.hourlyRate || dp.linkedinProfile || dp.specializations?.length > 0 || dp.resume;
+    const skillsHTML = dp.skills && dp.skills.length > 0
+        ? `<div class="dp-skills">${dp.skills.slice(0, 8).map(s => `<span class="dp-skill-tag">${s}</span>`).join('')}${dp.skills.length > 8 ? `<span class="dp-skill-more">+${dp.skills.length - 8} more</span>` : ''}</div>` : '';
+    const specsHTML = dp.specializations && dp.specializations.length > 0
+        ? `<div class="dp-specs"><i class="fas fa-star"></i> <strong>Specializations:</strong> ${dp.specializations.join(', ')}</div>` : '';
+    const resumeHTML = dp.resume && dp.resume.url
+        ? `<div class="dp-resume"><a href="${dp.resume.url}" target="_blank" class="dp-resume-link"><i class="fas fa-file-pdf"></i> <span>View Resume</span> <small>(${dp.resume.filename || 'Resume'})</small></a></div>` : '';
+    const certsHTML = dp.certificates && dp.certificates.length > 0
+        ? `<div class="dp-certs"><span class="dp-certs-label"><i class="fas fa-certificate"></i> Certificates (${dp.certificates.length}):</span>${dp.certificates.map(c => `<a href="${c.url || '#'}" target="_blank" class="dp-cert-link">${c.filename || 'Certificate'}</a>`).join('')}</div>` : '';
+
+    const profileBodyContent = hasDetailedProfile ? `
+        ${dp.bio ? `<div class="dp-bio"><p>${dp.bio}</p></div>` : ''}
+        <div class="dp-details-grid">
+            ${dp.experience ? `<div class="dp-detail"><i class="fas fa-briefcase"></i><div><span class="dp-detail-label">Experience</span><span class="dp-detail-value">${dp.experience}</span></div></div>` : ''}
+            ${dp.education ? `<div class="dp-detail"><i class="fas fa-graduation-cap"></i><div><span class="dp-detail-label">Education</span><span class="dp-detail-value">${dp.education}</span></div></div>` : ''}
+            ${dp.hourlyRate ? `<div class="dp-detail"><i class="fas fa-dollar-sign"></i><div><span class="dp-detail-label">Hourly Rate</span><span class="dp-detail-value">$${dp.hourlyRate}/hr</span></div></div>` : ''}
+            ${dp.email ? `<div class="dp-detail"><i class="fas fa-envelope"></i><div><span class="dp-detail-label">Email</span><span class="dp-detail-value">${dp.email}</span></div></div>` : ''}
+            ${dp.linkedinProfile ? `<div class="dp-detail"><i class="fab fa-linkedin"></i><div><span class="dp-detail-label">LinkedIn</span><a href="${dp.linkedinProfile}" target="_blank" class="dp-detail-link">View Profile</a></div></div>` : ''}
+            ${dp.profileStatus ? `<div class="dp-detail"><i class="fas fa-shield-alt"></i><div><span class="dp-detail-label">Profile Status</span><span class="dp-detail-value dp-status-${dp.profileStatus}">${dp.profileStatus.charAt(0).toUpperCase() + dp.profileStatus.slice(1)}</span></div></div>` : ''}
+        </div>
+        ${skillsHTML}
+        ${specsHTML}
+        ${resumeHTML}
+        ${certsHTML}
+    ` : `<div class="dp-loading" id="dp-loading-${designerId}"><div class="spinner" style="width:20px;height:20px;border-width:2px;"></div> <span>Loading profile...</span></div>`;
+
+    return `
+        <div class="designer-profile-card expanded" id="dp-card-${designerId}">
+            <div class="dp-header" onclick="this.parentElement.classList.toggle('expanded')">
+                <div class="dp-header-left">
+                    <i class="fas fa-user-circle"></i>
+                    <span>Designer Profile - ${designerName}</span>
+                </div>
+                <i class="fas fa-chevron-down dp-toggle-icon"></i>
+            </div>
+            <div class="dp-body">
+                ${profileBodyContent}
+            </div>
+        </div>`;
+}
+
+async function loadDesignerProfileIntoCard(designerId, designerName) {
+    try {
+        const response = await apiCall(`/quotes/designer-profile/${designerId}`, 'GET');
+        if (response.success && response.data) {
+            const dp = response.data;
+            const card = document.getElementById(`dp-card-${designerId}`);
+            if (card) {
+                const bodyEl = card.querySelector('.dp-body');
+                if (bodyEl) {
+                    const hasDetailedData = dp.skills?.length > 0 || dp.experience || dp.bio || dp.education || dp.resume || dp.hourlyRate || dp.linkedinProfile || dp.specializations?.length > 0;
+                    if (hasDetailedData) {
+                        bodyEl.innerHTML = buildDesignerProfileBodyHTML(dp);
+                    } else {
+                        // Show basic info even without detailed profile
+                        bodyEl.innerHTML = `
+                            <div class="dp-basic-info">
+                                <div class="dp-details-grid">
+                                    ${dp.name ? `<div class="dp-detail"><i class="fas fa-user"></i><div><span class="dp-detail-label">Name</span><span class="dp-detail-value">${dp.name}</span></div></div>` : ''}
+                                    ${dp.email ? `<div class="dp-detail"><i class="fas fa-envelope"></i><div><span class="dp-detail-label">Email</span><span class="dp-detail-value">${dp.email}</span></div></div>` : ''}
+                                    ${dp.profileStatus ? `<div class="dp-detail"><i class="fas fa-shield-alt"></i><div><span class="dp-detail-label">Profile Status</span><span class="dp-detail-value dp-status-${dp.profileStatus}">${dp.profileStatus.charAt(0).toUpperCase() + dp.profileStatus.slice(1)}</span></div></div>` : ''}
+                                </div>
+                                <p class="dp-no-details" style="margin-top:10px;">Designer has not yet completed their detailed profile.</p>
+                            </div>`;
+                    }
+                }
+            }
+        }
+    } catch (error) {
+        const loadingEl = document.getElementById(`dp-loading-${designerId}`);
+        if (loadingEl) loadingEl.innerHTML = `<p class="dp-no-details">Could not load designer profile details.</p>`;
+    }
+}
+
+function buildDesignerProfileBodyHTML(dp) {
+    const skillsHTML = dp.skills && dp.skills.length > 0
+        ? `<div class="dp-skills">${dp.skills.slice(0, 8).map(s => `<span class="dp-skill-tag">${s}</span>`).join('')}${dp.skills.length > 8 ? `<span class="dp-skill-more">+${dp.skills.length - 8} more</span>` : ''}</div>` : '';
+    const specsHTML = dp.specializations && dp.specializations.length > 0
+        ? `<div class="dp-specs"><i class="fas fa-star"></i> <strong>Specializations:</strong> ${dp.specializations.join(', ')}</div>` : '';
+    const resumeHTML = dp.resume && dp.resume.url
+        ? `<div class="dp-resume"><a href="${dp.resume.url}" target="_blank" class="dp-resume-link"><i class="fas fa-file-pdf"></i> <span>View Resume</span> <small>(${dp.resume.filename || 'Resume'})</small></a></div>` : '';
+    const certsHTML = dp.certificates && dp.certificates.length > 0
+        ? `<div class="dp-certs"><span class="dp-certs-label"><i class="fas fa-certificate"></i> Certificates (${dp.certificates.length}):</span>${dp.certificates.map(c => `<a href="${c.url || '#'}" target="_blank" class="dp-cert-link">${c.filename || 'Certificate'}</a>`).join('')}</div>` : '';
+    return `
+        ${dp.bio ? `<div class="dp-bio"><p>${dp.bio}</p></div>` : ''}
+        <div class="dp-details-grid">
+            ${dp.experience ? `<div class="dp-detail"><i class="fas fa-briefcase"></i><div><span class="dp-detail-label">Experience</span><span class="dp-detail-value">${dp.experience}</span></div></div>` : ''}
+            ${dp.education ? `<div class="dp-detail"><i class="fas fa-graduation-cap"></i><div><span class="dp-detail-label">Education</span><span class="dp-detail-value">${dp.education}</span></div></div>` : ''}
+            ${dp.hourlyRate ? `<div class="dp-detail"><i class="fas fa-dollar-sign"></i><div><span class="dp-detail-label">Hourly Rate</span><span class="dp-detail-value">$${dp.hourlyRate}/hr</span></div></div>` : ''}
+            ${dp.email ? `<div class="dp-detail"><i class="fas fa-envelope"></i><div><span class="dp-detail-label">Email</span><span class="dp-detail-value">${dp.email}</span></div></div>` : ''}
+            ${dp.linkedinProfile ? `<div class="dp-detail"><i class="fab fa-linkedin"></i><div><span class="dp-detail-label">LinkedIn</span><a href="${dp.linkedinProfile}" target="_blank" class="dp-detail-link">View Profile</a></div></div>` : ''}
+            ${dp.profileStatus ? `<div class="dp-detail"><i class="fas fa-shield-alt"></i><div><span class="dp-detail-label">Profile Status</span><span class="dp-detail-value dp-status-${dp.profileStatus}">${dp.profileStatus.charAt(0).toUpperCase() + dp.profileStatus.slice(1)}</span></div></div>` : ''}
+        </div>
+        ${skillsHTML}
+        ${specsHTML}
+        ${resumeHTML}
+        ${certsHTML}
+    `;
 }
 
 // Helper functions for files
@@ -2628,7 +2742,7 @@ function renderAppSection(sectionId) {
     document.querySelectorAll('.sidebar-nav-link').forEach(link => link.classList.toggle('active', link.dataset.section === sectionId));
     const profileStatus = appState.currentUser.profileStatus;
     const isApproved = profileStatus === 'approved';
-    const restrictedSections = ['post-job', 'jobs', 'my-quotes', 'approved-jobs', 'estimation-tool', 'my-estimations', 'messages', 'business-analytics', 'project-tracking', 'community-feed'];
+    const restrictedSections = ['post-job', 'jobs', 'my-quotes', 'approved-jobs', 'estimation-tool', 'my-estimations', 'messages', 'business-analytics', 'project-tracking', 'community-feed', 'quote-analysis'];
     if (restrictedSections.includes(sectionId) && !isApproved) {
         container.innerHTML = getRestrictedAccessTemplate(sectionId, profileStatus);
         return;
@@ -2637,7 +2751,7 @@ function renderAppSection(sectionId) {
     if (sectionId === 'settings') { container.innerHTML = getSettingsTemplate(appState.currentUser); return; }
     if (sectionId === 'dashboard') {
         container.innerHTML = getDashboardTemplate(appState.currentUser);
-        if (isApproved) renderRecentActivityWidgets();
+        if (isApproved) { renderRecentActivityWidgets(); initDashboardCharts(); }
     } else if (sectionId === 'jobs') {
         const role = appState.currentUser.type;
         const title = role === 'designer' ? 'Available Projects' : 'My Posted Projects';
@@ -2681,10 +2795,13 @@ function renderAppSection(sectionId) {
     else if (sectionId === 'business-analytics') {
         renderBusinessAnalyticsPortal();
     }
+    else if (sectionId === 'quote-analysis') {
+        renderQuoteAnalysisSection();
+    }
 }
 
 function getRestrictedAccessTemplate(sectionId, profileStatus) {
-    const sectionNames = { 'post-job': 'Post Projects', 'jobs': 'Browse Projects', 'my-quotes': 'My Quotes', 'approved-jobs': 'Approved Projects', 'estimation-tool': 'AI Estimation', 'my-estimations': 'My Estimations', 'messages': 'Messages', 'business-analytics': 'Business Analytics', 'project-tracking': 'Project Tracking', 'community-feed': 'Community Feed' };
+    const sectionNames = { 'post-job': 'Post Projects', 'jobs': 'Browse Projects', 'my-quotes': 'My Quotes', 'approved-jobs': 'Approved Projects', 'estimation-tool': 'AI Estimation', 'my-estimations': 'My Estimations', 'messages': 'Messages', 'business-analytics': 'Business Analytics', 'project-tracking': 'Project Tracking', 'community-feed': 'Community Feed', 'quote-analysis': 'Quote Analysis' };
     const sectionName = sectionNames[sectionId] || 'This Feature';
     let msg = '', btn = '', icon = 'fa-lock', color = '#f59e0b';
     if (profileStatus === 'incomplete') {
@@ -2707,20 +2824,73 @@ async function renderProfileCompletionView() {
     const container = document.getElementById('app-container');
     container.innerHTML = `<div class="loading-spinner"><div class="spinner"></div><p>Loading profile form...</p></div>`;
     appState.profileFiles = {};
+    appState.existingProfileData = null;
     try {
-        const response = await apiCall('/profile/form-fields', 'GET');
-        const { fields, userType } = response.data;
+        // Fetch form fields AND existing profile data in parallel
+        const [fieldsResponse, profileResponse] = await Promise.all([
+            apiCall('/profile/form-fields', 'GET'),
+            apiCall('/profile/data', 'GET').catch(() => null)
+        ]);
+        const { fields, userType } = fieldsResponse.data;
+        const savedData = profileResponse?.data || {};
+        appState.existingProfileData = savedData;
+        const isResubmit = savedData.profileCompleted || savedData.profileStatus === 'pending' || savedData.profileStatus === 'rejected' || savedData.profileStatus === 'approved';
+
         const formFieldsHTML = fields.map(field => {
-            if (field.type === 'textarea') return `<div class="form-group"><label class="form-label">${field.label} ${field.required ? '<span style="color:red">*</span>' : ''}</label><textarea class="form-textarea premium-input" name="${field.name}" ${field.required ? 'required' : ''} placeholder="${field.placeholder || ''}"></textarea></div>`;
-            else if (field.type === 'file') return `<div class="form-group"><label class="form-label">${field.label} ${field.required ? '<span style="color:red">*</span>' : ''}</label><div class="custom-file-input-wrapper"><input type="file" name="${field.name}" data-field-name="${field.name}" onchange="handleProfileFileChange(event)" accept="${field.accept || ''}" ${field.multiple ? 'multiple' : ''} ${field.required ? 'required' : ''}><div class="custom-file-input"><span class="custom-file-input-label"><i class="fas fa-upload"></i> <span id="label-${field.name}">Click to upload</span></span></div></div><div id="file-list-${field.name}" class="file-list-container"></div></div>`;
-            else if (field.type === 'select') {
-                const options = (field.options || []).map(opt => `<option value="${opt}">${opt}</option>`).join('');
-                return `<div class="form-group"><label class="form-label">${field.label} ${field.required ? '*' : ''}</label><select name="${field.name}" class="form-select premium-select" ${field.required ? 'required' : ''}><option value="" disabled selected>Select...</option>${options}</select></div>`;
-            } else return `<div class="form-group"><label class="form-label">${field.label} ${field.required ? '*' : ''}</label><input type="${field.type}" class="form-input premium-input" name="${field.name}" ${field.required ? 'required' : ''} placeholder="${field.placeholder || ''}"></div>`;
+            // Get saved value for this field
+            let savedValue = savedData[field.name] || '';
+            if (Array.isArray(savedValue)) savedValue = savedValue.join(', ');
+            if (savedValue && typeof savedValue === 'number') savedValue = savedValue.toString();
+
+            if (field.type === 'textarea') {
+                return `<div class="form-group"><label class="form-label">${field.label} ${field.required ? '<span style="color:red">*</span>' : ''}</label><textarea class="form-textarea premium-input" name="${field.name}" ${field.required ? 'required' : ''} placeholder="${field.placeholder || ''}">${savedValue}</textarea></div>`;
+            } else if (field.type === 'file') {
+                // Check for existing uploaded files
+                const existingFile = savedData[field.name];
+                const hasExisting = field.name === 'resume' ? (existingFile && existingFile.filename) : (Array.isArray(existingFile) && existingFile.length > 0);
+                const isRequired = field.required && !hasExisting;
+                let existingHTML = '';
+                if (field.name === 'resume' && existingFile && existingFile.filename) {
+                    existingHTML = `<div class="existing-files-section" id="existing-${field.name}">
+                        <div class="existing-file-item">
+                            <div class="existing-file-info"><i class="fas fa-file-pdf"></i><div><span class="existing-file-name">${existingFile.filename}</span><span class="existing-file-meta">${existingFile.size ? formatFileSize(existingFile.size) : ''} ${existingFile.uploadedAt ? '• Uploaded ' + new Date(existingFile.uploadedAt).toLocaleDateString() : ''}</span></div></div>
+                            <div class="existing-file-actions">
+                                ${existingFile.url ? `<a href="${existingFile.url}" target="_blank" class="btn btn-outline btn-xs"><i class="fas fa-eye"></i> View</a>` : ''}
+                                <button type="button" class="btn btn-danger btn-xs" onclick="deleteExistingProfileFile('resume')"><i class="fas fa-trash"></i> Delete</button>
+                            </div>
+                        </div>
+                        <p class="existing-file-hint"><i class="fas fa-info-circle"></i> Upload a new file to replace the existing one, or keep it.</p>
+                    </div>`;
+                } else if (field.name === 'certificates' && Array.isArray(existingFile) && existingFile.length > 0) {
+                    existingHTML = `<div class="existing-files-section" id="existing-${field.name}">
+                        ${existingFile.map((cert, idx) => `<div class="existing-file-item" id="existing-cert-${idx}">
+                            <div class="existing-file-info"><i class="fas fa-certificate"></i><div><span class="existing-file-name">${cert.filename || 'Certificate ' + (idx + 1)}</span><span class="existing-file-meta">${cert.size ? formatFileSize(cert.size) : ''} ${cert.uploadedAt ? '• Uploaded ' + new Date(cert.uploadedAt).toLocaleDateString() : ''}</span></div></div>
+                            <div class="existing-file-actions">
+                                ${cert.url ? `<a href="${cert.url}" target="_blank" class="btn btn-outline btn-xs"><i class="fas fa-eye"></i> View</a>` : ''}
+                                <button type="button" class="btn btn-danger btn-xs" onclick="deleteExistingProfileFile('certificate', ${idx})"><i class="fas fa-trash"></i> Delete</button>
+                            </div>
+                        </div>`).join('')}
+                        <p class="existing-file-hint"><i class="fas fa-info-circle"></i> Upload new certificates to add more, or delete existing ones.</p>
+                    </div>`;
+                }
+                return `<div class="form-group"><label class="form-label">${field.label} ${isRequired ? '<span style="color:red">*</span>' : ''} ${hasExisting ? '<span class="existing-badge">Current file on record</span>' : ''}</label>${existingHTML}<div class="custom-file-input-wrapper"><input type="file" name="${field.name}" data-field-name="${field.name}" onchange="handleProfileFileChange(event)" accept="${field.accept || ''}" ${field.multiple ? 'multiple' : ''} ${isRequired ? 'required' : ''}><div class="custom-file-input"><span class="custom-file-input-label"><i class="fas fa-upload"></i> <span id="label-${field.name}">${hasExisting ? 'Upload new file to replace' : 'Click to upload'}</span></span></div></div><div id="file-list-${field.name}" class="file-list-container"></div></div>`;
+            } else if (field.type === 'select') {
+                const options = (field.options || []).map(opt => `<option value="${opt}" ${savedValue === opt ? 'selected' : ''}>${opt}</option>`).join('');
+                return `<div class="form-group"><label class="form-label">${field.label} ${field.required ? '*' : ''}</label><select name="${field.name}" class="form-select premium-select" ${field.required ? 'required' : ''}><option value="" disabled ${!savedValue ? 'selected' : ''}>Select...</option>${options}</select></div>`;
+            } else {
+                return `<div class="form-group"><label class="form-label">${field.label} ${field.required ? '*' : ''}</label><input type="${field.type}" class="form-input premium-input" name="${field.name}" ${field.required ? 'required' : ''} placeholder="${field.placeholder || ''}" value="${savedValue}"></div>`;
+            }
         }).join('');
+
+        const headerText = isResubmit ? 'Update Your Profile' : 'Complete Your Profile';
+        const headerSubtext = isResubmit ? 'Update your profile information below. Your changes will be submitted for review.' : `We require all ${userType}s to complete their profile for review.`;
+        const submitText = isResubmit ? 'Update & Resubmit for Review' : 'Submit for Review';
+        const statusBanner = savedData.profileStatus && savedData.profileStatus !== 'incomplete' ? `<div class="profile-status-banner profile-status-${savedData.profileStatus}"><i class="fas ${savedData.profileStatus === 'approved' ? 'fa-check-circle' : savedData.profileStatus === 'rejected' ? 'fa-times-circle' : 'fa-clock'}"></i> Profile Status: <strong>${savedData.profileStatus.charAt(0).toUpperCase() + savedData.profileStatus.slice(1)}</strong>${savedData.rejectionReason ? ` — ${savedData.rejectionReason}` : ''}</div>` : '';
+
         container.innerHTML = `
-            <div class="section-header modern-header"><div class="header-content"><h2><i class="fas fa-user-check"></i> Complete Your Profile</h2><p class="header-subtitle">We require all ${userType}s to complete their profile for review.</p></div></div>
-            <div class="profile-completion-container"><form id="profile-completion-form" class="profile-completion-form"><div class="form-section"><h3><i class="fas fa-user-circle"></i> Profile Information</h3><div class="profile-form-grid">${formFieldsHTML}</div></div><div class="form-actions" style="text-align:center;"><button type="submit" class="btn btn-primary btn-large"><i class="fas fa-paper-plane"></i> Submit for Review</button></div></form></div>`;
+            <div class="section-header modern-header"><div class="header-content"><h2><i class="fas fa-user-check"></i> ${headerText}</h2><p class="header-subtitle">${headerSubtext}</p></div></div>
+            ${statusBanner}
+            <div class="profile-completion-container"><form id="profile-completion-form" class="profile-completion-form"><div class="form-section"><h3><i class="fas fa-user-circle"></i> Profile Information</h3><div class="profile-form-grid">${formFieldsHTML}</div></div><div class="form-actions" style="text-align:center;"><button type="submit" class="btn btn-primary btn-large"><i class="fas fa-paper-plane"></i> ${submitText}</button></div></form></div>`;
         document.querySelectorAll('.custom-file-input-wrapper').forEach(wrapper => {
             const custom = wrapper.querySelector('.custom-file-input');
             const real = wrapper.querySelector('input[type="file"]');
@@ -2777,6 +2947,41 @@ function renderProfileFileList(fieldName) {
     container.innerHTML = files.map((file, index) => `<div class="file-list-item"><div class="file-list-item-info"><i class="fas fa-file-alt"></i><span>${file.name}</span></div><button type="button" class="remove-file-button" onclick="removeProfileFile('${fieldName}', ${index})"><i class="fas fa-times"></i></button></div>`).join('');
     label.textContent = `${files.length} file(s) selected`;
 }
+
+async function deleteExistingProfileFile(type, index) {
+    const confirmMsg = type === 'resume' ? 'Are you sure you want to delete your resume?' : 'Are you sure you want to delete this certificate?';
+    if (!confirm(confirmMsg)) return;
+    try {
+        const endpoint = type === 'certificate' ? `/profile/attachment/certificate?index=${index}` : `/profile/attachment/resume`;
+        console.log('Deleting profile attachment:', endpoint);
+        const response = await apiCall(endpoint, 'DELETE');
+        console.log('Delete response:', response);
+        showNotification(`${type === 'resume' ? 'Resume' : 'Certificate'} deleted successfully`, 'success');
+        if (type === 'resume') {
+            const section = document.getElementById('existing-resume');
+            if (section) section.remove();
+            const resumeInput = document.querySelector('input[data-field-name="resume"]');
+            if (resumeInput) resumeInput.setAttribute('required', 'true');
+            const label = document.getElementById('label-resume');
+            if (label) label.textContent = 'Click to upload';
+            if (appState.existingProfileData) appState.existingProfileData.resume = null;
+        } else {
+            const certItem = document.getElementById(`existing-cert-${index}`);
+            if (certItem) certItem.remove();
+            if (appState.existingProfileData?.certificates) {
+                appState.existingProfileData.certificates.splice(index, 1);
+                if (appState.existingProfileData.certificates.length === 0) {
+                    const section = document.getElementById('existing-certificates');
+                    if (section) section.remove();
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Delete attachment error:', error);
+    }
+}
+
+window.deleteExistingProfileFile = deleteExistingProfileFile;
 
 async function handleProfileCompletionSubmit(event) {
     event.preventDefault();
@@ -3091,26 +3296,336 @@ function getDashboardTemplate(user) {
     else if (profileStatus === 'pending') profileStatusCard = `<div class="dashboard-profile-status-card"><h3><i class="fas fa-clock"></i> Profile Under Review</h3><p>Your profile is under review. You'll get full access once approved.</p></div>`;
     else if (profileStatus === 'rejected') profileStatusCard = `<div class="dashboard-profile-status-card"><h3><i class="fas fa-times-circle"></i> Profile Needs Update</h3><p>Your profile needs updates. ${user.rejectionReason ? `<strong>Reason:</strong> ${user.rejectionReason}` : ''}</p><button class="btn btn-primary" onclick="renderAppSection('profile-completion')"><i class="fas fa-edit"></i> Update Profile</button></div>`;
     else if (profileStatus === 'approved') profileStatusCard = `<div class="dashboard-profile-status-card" style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border-color: #10b981;"><h3 style="color: #059669;"><i class="fas fa-check-circle"></i> Profile Approved</h3><p style="color: #059669;">You have full access to all platform features.</p></div>`;
+
     const contractorQuickActions = `
         <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'post-job\')' : 'showRestrictedFeature(\'post-job\')'}"><div class="card-icon"><i class="fas fa-plus-circle"></i></div><h3>Create Project</h3><p>Post a new listing</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>
         <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'jobs\')' : 'showRestrictedFeature(\'jobs\')'}"><div class="card-icon"><i class="fas fa-tasks"></i></div><h3>My Projects</h3><p>Manage your listings</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>
         <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'estimation-tool\')' : 'showRestrictedFeature(\'estimation-tool\')'}"><div class="card-icon"><i class="fas fa-calculator"></i></div><h3>AI Estimation</h3><p>Get instant cost estimates</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>
         <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'approved-jobs\')' : 'showRestrictedFeature(\'approved-jobs\')'}"><div class="card-icon"><i class="fas fa-check-circle"></i></div><h3>Approved</h3><p>Track assigned work</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>
-        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'project-tracking\')' : 'showRestrictedFeature(\'project-tracking\')'}"><div class="card-icon"><i class="fas fa-project-diagram"></i></div><h3>Project Tracking</h3><p>Dashboard & status</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>`;
-    const contractorWidgets = `<div class="widget-card"><h3><i class="fas fa-history"></i> Recent Projects</h3><div id="recent-projects-widget" class="widget-content">${!isApproved ? '<p class="widget-empty-text">Complete your profile to post projects.</p>' : ''}</div></div>`;
+        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'project-tracking\')' : 'showRestrictedFeature(\'project-tracking\')'}"><div class="card-icon"><i class="fas fa-project-diagram"></i></div><h3>Project Tracking</h3><p>Dashboard & status</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>
+        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'quote-analysis\')' : 'showRestrictedFeature(\'quote-analysis\')'}"><div class="card-icon"><i class="fas fa-chart-line"></i></div><h3>Quote Analysis</h3><p>Compare & analyze quotes</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>`;
+
+    const contractorWidgets = `
+        <div class="widget-card"><h3><i class="fas fa-history"></i> Recent Projects</h3><div id="recent-projects-widget" class="widget-content">${!isApproved ? '<p class="widget-empty-text">Complete your profile to post projects.</p>' : ''}</div></div>`;
+
     const designerQuickActions = `
         <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'jobs\')' : 'showRestrictedFeature(\'jobs\')'}"><div class="card-icon"><i class="fas fa-search"></i></div><h3>Browse Projects</h3><p>Find new opportunities</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>
         <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'my-quotes\')' : 'showRestrictedFeature(\'my-quotes\')'}"><div class="card-icon"><i class="fas fa-file-invoice-dollar"></i></div><h3>My Quotes</h3><p>Track your submissions</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>
         <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'messages\')' : 'showRestrictedFeature(\'messages\')'}"><div class="card-icon"><i class="fas fa-comments"></i></div><h3>Messages</h3><p>Communicate with clients</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>`;
-    const designerWidgets = `<div class="widget-card"><h3><i class="fas fa-history"></i> Recent Quotes</h3><div id="recent-quotes-widget" class="widget-content">${!isApproved ? '<p class="widget-empty-text">Complete your profile to submit quotes.</p>' : ''}</div></div>`;
+
+    const designerWidgets = `
+        <div class="widget-card"><h3><i class="fas fa-history"></i> Recent Quotes</h3><div id="recent-quotes-widget" class="widget-content">${!isApproved ? '<p class="widget-empty-text">Complete your profile to submit quotes.</p>' : ''}</div></div>`;
+
+    // Charts section (only for approved users)
+    const chartsSection = isApproved ? `
+        <h3 class="dashboard-section-title"><i class="fas fa-chart-bar"></i> Performance Overview</h3>
+        <div class="dashboard-charts-row">
+            <div class="dashboard-chart-card">
+                <div class="chart-card-header">
+                    <h4><i class="fas fa-chart-bar"></i> ${isContractor ? 'Projects & Quotes Activity' : 'Quotes Activity'}</h4>
+                    <span class="chart-badge">Last 6 Months</span>
+                </div>
+                <div class="chart-canvas-wrapper">
+                    <canvas id="dashboard-bar-chart"></canvas>
+                </div>
+            </div>
+            <div class="dashboard-chart-card">
+                <div class="chart-card-header">
+                    <h4><i class="fas fa-chart-pie"></i> ${isContractor ? 'Project Status' : 'Quote Status'} Distribution</h4>
+                    <span class="chart-badge">Current</span>
+                </div>
+                <div class="chart-canvas-wrapper">
+                    <canvas id="dashboard-pie-chart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard-stats-row" id="dashboard-kpi-stats">
+            <div class="kpi-card kpi-blue">
+                <div class="kpi-icon"><i class="fas ${isContractor ? 'fa-folder-open' : 'fa-file-invoice-dollar'}"></i></div>
+                <div class="kpi-info"><span class="kpi-value" id="kpi-total">--</span><span class="kpi-label">${isContractor ? 'Total Projects' : 'Total Quotes'}</span></div>
+            </div>
+            <div class="kpi-card kpi-green">
+                <div class="kpi-icon"><i class="fas ${isContractor ? 'fa-check-circle' : 'fa-thumbs-up'}"></i></div>
+                <div class="kpi-info"><span class="kpi-value" id="kpi-approved">--</span><span class="kpi-label">${isContractor ? 'Approved Quotes' : 'Approved'}</span></div>
+            </div>
+            <div class="kpi-card kpi-amber">
+                <div class="kpi-icon"><i class="fas ${isContractor ? 'fa-clock' : 'fa-hourglass-half'}"></i></div>
+                <div class="kpi-info"><span class="kpi-value" id="kpi-pending">--</span><span class="kpi-label">${isContractor ? 'Pending Quotes' : 'Submitted'}</span></div>
+            </div>
+            <div class="kpi-card kpi-purple">
+                <div class="kpi-icon"><i class="fas ${isContractor ? 'fa-spinner' : 'fa-briefcase'}"></i></div>
+                <div class="kpi-info"><span class="kpi-value" id="kpi-active">--</span><span class="kpi-label">${isContractor ? 'In Progress' : 'Active Projects'}</span></div>
+            </div>
+        </div>` : '';
+
     return `
         <div class="dashboard-container">
             <div class="dashboard-hero"><div><h2>Welcome back, ${name}</h2><p>You are logged in to your <strong>${isContractor ? 'Contractor' : 'Designer'} Portal</strong>.</p></div></div>
             ${profileStatusCard}
+            ${chartsSection}
             <h3 class="dashboard-section-title">Quick Actions</h3>
             <div class="dashboard-grid">${isContractor ? contractorQuickActions : designerQuickActions}</div>
             <div class="dashboard-columns">${isContractor ? contractorWidgets : designerWidgets}</div>
         </div>`;
+}
+
+// Dashboard charts initialization
+let dashboardBarChart = null;
+let dashboardPieChart = null;
+
+async function initDashboardCharts() {
+    const isContractor = appState.currentUser.type === 'contractor';
+    let stats = null;
+
+    try {
+        const response = await apiCall('/profile/dashboard-stats', 'GET');
+        if (response.success && response.data) {
+            stats = response.data;
+        }
+    } catch (error) {
+        console.error('Dashboard stats API failed, using local data:', error);
+    }
+
+    // Fallback: build stats from fetched data if API failed
+    if (!stats) {
+        stats = {
+            userType: appState.currentUser.type,
+            projects: { total: 0, open: 0, assigned: 0, completed: 0 },
+            quotes: { total: 0, submitted: 0, approved: 0, rejected: 0 },
+            monthlyActivity: []
+        };
+
+        // Build 6-month buckets
+        const now = new Date();
+        const monthBuckets = [];
+        for (let i = 5; i >= 0; i--) {
+            const start = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const end = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59);
+            monthBuckets.push({
+                month: start.toLocaleString('default', { month: 'short' }),
+                start, end, projects: 0, quotes: 0, approved: 0
+            });
+        }
+
+        // Helper to parse Firestore timestamps
+        function parseTimestamp(ts) {
+            if (!ts) return null;
+            if (ts._seconds) return new Date(ts._seconds * 1000);
+            if (ts.seconds) return new Date(ts.seconds * 1000);
+            const d = new Date(ts);
+            return isNaN(d.getTime()) ? null : d;
+        }
+
+        try {
+            if (isContractor) {
+                const jobsResponse = await apiCall(`/jobs/user/${appState.currentUser.id}`, 'GET');
+                const jobs = jobsResponse.data || [];
+                stats.projects.total = jobs.length;
+                stats.projects.open = jobs.filter(j => j.status === 'open').length;
+                stats.projects.assigned = jobs.filter(j => j.status === 'assigned').length;
+                stats.projects.completed = jobs.filter(j => j.status === 'completed').length;
+                stats.quotes.total = jobs.reduce((sum, j) => sum + (j.quotesCount || 0), 0);
+
+                // Compute monthly project breakdown
+                jobs.forEach(job => {
+                    const created = parseTimestamp(job.createdAt);
+                    if (created) {
+                        for (const bucket of monthBuckets) {
+                            if (created >= bucket.start && created <= bucket.end) {
+                                bucket.projects++;
+                                break;
+                            }
+                        }
+                    }
+                });
+            } else {
+                const quotesResponse = await apiCall(`/quotes/user/${appState.currentUser.id}`, 'GET');
+                const quotes = quotesResponse.data || [];
+                stats.quotes.total = quotes.length;
+                stats.quotes.submitted = quotes.filter(q => q.status === 'submitted').length;
+                stats.quotes.approved = quotes.filter(q => q.status === 'approved').length;
+                stats.quotes.rejected = quotes.filter(q => q.status === 'rejected').length;
+
+                // Compute monthly quote breakdown
+                quotes.forEach(quote => {
+                    const created = parseTimestamp(quote.createdAt);
+                    if (created) {
+                        for (const bucket of monthBuckets) {
+                            if (created >= bucket.start && created <= bucket.end) {
+                                bucket.quotes++;
+                                if (quote.status === 'approved') bucket.approved++;
+                                break;
+                            }
+                        }
+                    }
+                });
+            }
+        } catch (e) {
+            console.error('Fallback data fetch failed:', e);
+        }
+
+        stats.monthlyActivity = monthBuckets.map(b => ({
+            month: b.month, projects: b.projects, quotes: b.quotes, approved: b.approved
+        }));
+    }
+
+    // Update KPI cards
+    const kpiTotal = document.getElementById('kpi-total');
+    const kpiApproved = document.getElementById('kpi-approved');
+    const kpiPending = document.getElementById('kpi-pending');
+    const kpiActive = document.getElementById('kpi-active');
+
+    if (isContractor) {
+        if (kpiTotal) kpiTotal.textContent = stats.projects.total;
+        if (kpiApproved) kpiApproved.textContent = stats.quotes.approved;
+        if (kpiPending) kpiPending.textContent = stats.quotes.submitted;
+        if (kpiActive) kpiActive.textContent = stats.projects.assigned;
+    } else {
+        if (kpiTotal) kpiTotal.textContent = stats.quotes.total;
+        if (kpiApproved) kpiApproved.textContent = stats.quotes.approved;
+        if (kpiPending) kpiPending.textContent = stats.quotes.submitted;
+        if (kpiActive) kpiActive.textContent = stats.projects.assigned;
+    }
+
+    // Bar chart
+    const barCanvas = document.getElementById('dashboard-bar-chart');
+    if (barCanvas) {
+        const barCtx = barCanvas.getContext('2d');
+        if (dashboardBarChart) dashboardBarChart.destroy();
+
+        const labels = stats.monthlyActivity.map(m => m.month);
+
+        const datasets = isContractor ? [
+            {
+                label: 'Projects Posted',
+                data: stats.monthlyActivity.map(m => m.projects || 0),
+                backgroundColor: 'rgba(37, 99, 235, 0.8)',
+                borderColor: 'rgba(37, 99, 235, 1)',
+                borderWidth: 2,
+                borderRadius: 8,
+                borderSkipped: false
+            },
+            {
+                label: 'Quotes Received',
+                data: stats.monthlyActivity.map(m => m.quotes || 0),
+                backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                borderColor: 'rgba(16, 185, 129, 1)',
+                borderWidth: 2,
+                borderRadius: 8,
+                borderSkipped: false
+            }
+        ] : [
+            {
+                label: 'Quotes Submitted',
+                data: stats.monthlyActivity.map(m => m.quotes || 0),
+                backgroundColor: 'rgba(99, 102, 241, 0.8)',
+                borderColor: 'rgba(99, 102, 241, 1)',
+                borderWidth: 2,
+                borderRadius: 8,
+                borderSkipped: false
+            },
+            {
+                label: 'Approved',
+                data: stats.monthlyActivity.map(m => m.approved || 0),
+                backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                borderColor: 'rgba(16, 185, 129, 1)',
+                borderWidth: 2,
+                borderRadius: 8,
+                borderSkipped: false
+            }
+        ];
+
+        dashboardBarChart = new Chart(barCtx, {
+            type: 'bar',
+            data: { labels, datasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top', labels: { usePointStyle: true, padding: 20, font: { family: 'Inter', size: 12, weight: '500' } } },
+                    tooltip: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                        titleFont: { family: 'Inter', size: 13, weight: '600' },
+                        bodyFont: { family: 'Inter', size: 12 },
+                        padding: 12,
+                        cornerRadius: 8,
+                        displayColors: true
+                    }
+                },
+                scales: {
+                    x: { grid: { display: false }, ticks: { font: { family: 'Inter', size: 12 } } },
+                    y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { family: 'Inter', size: 12 }, stepSize: 1 } }
+                }
+            }
+        });
+    }
+
+    // Pie chart
+    const pieCanvas = document.getElementById('dashboard-pie-chart');
+    if (pieCanvas) {
+        const pieCtx = pieCanvas.getContext('2d');
+        if (dashboardPieChart) dashboardPieChart.destroy();
+
+        let pieLabels, pieData, pieColors;
+        if (isContractor) {
+            pieLabels = ['Open', 'In Progress', 'Completed'];
+            pieData = [stats.projects.open, stats.projects.assigned, stats.projects.completed];
+            pieColors = ['rgba(37, 99, 235, 0.85)', 'rgba(245, 158, 11, 0.85)', 'rgba(16, 185, 129, 0.85)'];
+        } else {
+            pieLabels = ['Submitted', 'Approved', 'Rejected'];
+            pieData = [stats.quotes.submitted, stats.quotes.approved, stats.quotes.rejected];
+            pieColors = ['rgba(99, 102, 241, 0.85)', 'rgba(16, 185, 129, 0.85)', 'rgba(239, 68, 68, 0.85)'];
+        }
+
+        // If all zeros, show placeholder
+        const hasData = pieData.some(v => v > 0);
+        if (!hasData) {
+            pieData = [1];
+            pieLabels = ['No Data Yet'];
+            pieColors = ['rgba(203, 213, 225, 0.5)'];
+        }
+
+        dashboardPieChart = new Chart(pieCtx, {
+            type: 'doughnut',
+            data: {
+                labels: pieLabels,
+                datasets: [{
+                    data: pieData,
+                    backgroundColor: pieColors,
+                    borderColor: '#ffffff',
+                    borderWidth: 3,
+                    hoverBorderWidth: 0,
+                    hoverOffset: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '65%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { usePointStyle: true, padding: 16, font: { family: 'Inter', size: 12, weight: '500' } }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                        titleFont: { family: 'Inter', size: 13, weight: '600' },
+                        bodyFont: { family: 'Inter', size: 12 },
+                        padding: 12,
+                        cornerRadius: 8,
+                        callbacks: {
+                            label: function(context) {
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const value = context.parsed;
+                                const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+                                return ` ${context.label}: ${value} (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
 }
 
 function getSettingsTemplate(user) {
@@ -3282,6 +3797,11 @@ function buildSidebarNav() {
             <a href="#" class="sidebar-nav-link business-analytics-link" data-section="business-analytics">
                 <i class="fas fa-chart-line fa-fw"></i>
                 <span>Business Analytics</span>
+                <span class="nav-badge">NEW</span>
+            </a>
+            <a href="#" class="sidebar-nav-link" data-section="quote-analysis">
+                <i class="fas fa-poll fa-fw"></i>
+                <span>Quote Analysis</span>
                 <span class="nav-badge">NEW</span>
             </a>`;
     }
@@ -5318,6 +5838,195 @@ function toggleFAQ(faqItem) {
 /**
  * Main function to render the Business Analytics Portal.
  */
+// --- QUOTE ANALYSIS SECTION ---
+async function renderQuoteAnalysisSection() {
+    const container = document.getElementById('app-container');
+    container.innerHTML = `
+        <div class="section-header modern-header">
+            <div class="header-content">
+                <h2><i class="fas fa-chart-line"></i> Quote Analysis</h2>
+                <p class="header-subtitle">Compare, analyze, and evaluate quotes across your projects</p>
+            </div>
+        </div>
+        <div class="qa-container">
+            <div class="qa-project-selector">
+                <h3><i class="fas fa-folder-open"></i> Select a Project to Analyze</h3>
+                <div id="qa-projects-list" class="qa-projects-grid"><div class="loading-spinner"><div class="spinner"></div><p>Loading projects...</p></div></div>
+            </div>
+            <div id="qa-analysis-result" class="qa-analysis-result"></div>
+        </div>`;
+    try {
+        const response = await apiCall(`/jobs/user/${appState.currentUser.id}`, 'GET');
+        const jobs = response.data || [];
+        const projectsList = document.getElementById('qa-projects-list');
+        if (jobs.length === 0) {
+            projectsList.innerHTML = '<div class="empty-state premium-empty"><div class="empty-icon"><i class="fas fa-folder-open"></i></div><h3>No Projects</h3><p>Create a project first to receive and analyze quotes.</p></div>';
+            return;
+        }
+        projectsList.innerHTML = jobs.map(job => {
+            const statusColors = { open: '#10b981', assigned: '#3b82f6', completed: '#8b5cf6', closed: '#6b7280' };
+            const color = statusColors[job.status] || '#6b7280';
+            return `<div class="qa-project-card" onclick="analyzeProjectQuotes('${job.id}', '${(job.title || '').replace(/'/g, "\\'")}')">
+                <div class="qa-project-card-top">
+                    <span class="qa-project-status" style="background:${color}20;color:${color};border:1px solid ${color}40">${job.status}</span>
+                    <span class="qa-project-budget">${job.budget || 'N/A'}</span>
+                </div>
+                <h4>${job.title}</h4>
+                <p class="qa-project-desc">${(job.description || '').substring(0, 80)}${(job.description || '').length > 80 ? '...' : ''}</p>
+                <div class="qa-project-footer"><i class="fas fa-arrow-right"></i> Analyze Quotes</div>
+            </div>`;
+        }).join('');
+    } catch (error) {
+        document.getElementById('qa-projects-list').innerHTML = '<p class="widget-empty-text">Could not load projects.</p>';
+    }
+}
+window.renderQuoteAnalysisSection = renderQuoteAnalysisSection;
+
+async function analyzeProjectQuotes(jobId, jobTitle) {
+    const resultContainer = document.getElementById('qa-analysis-result');
+    resultContainer.innerHTML = `<div class="loading-spinner"><div class="spinner"></div><p>Analyzing quotes for "${jobTitle}"...</p></div>`;
+    resultContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    try {
+        const response = await apiCall(`/quotes/analyze/${jobId}`, 'GET');
+        if (!response.success) throw new Error(response.message);
+        const { job, analysis } = response.data;
+
+        if (!analysis) {
+            resultContainer.innerHTML = `<div class="qa-no-quotes"><i class="fas fa-inbox"></i><h3>No Quotes Yet</h3><p>No quotes have been submitted for this project yet.</p></div>`;
+            return;
+        }
+
+        const { totalQuotes, priceStats, timelineStats, scoredQuotes, recommendations, summary } = analysis;
+
+        // Build recommendation cards
+        const recCards = [];
+        if (recommendations.bestValue) recCards.push(`<div class="qa-rec-card qa-rec-best"><div class="qa-rec-icon"><i class="fas fa-trophy"></i></div><div class="qa-rec-content"><span class="qa-rec-label">Best Overall Value</span><strong>${recommendations.bestValue.designerName}</strong><p>Score: ${recommendations.bestValue.score}/100 &bull; $${recommendations.bestValue.amount.toLocaleString()}</p></div></div>`);
+        if (recommendations.cheapest) recCards.push(`<div class="qa-rec-card qa-rec-cheap"><div class="qa-rec-icon"><i class="fas fa-dollar-sign"></i></div><div class="qa-rec-content"><span class="qa-rec-label">Most Affordable</span><strong>${recommendations.cheapest.designerName}</strong><p>$${recommendations.cheapest.amount.toLocaleString()}</p></div></div>`);
+        if (recommendations.fastest) recCards.push(`<div class="qa-rec-card qa-rec-fast"><div class="qa-rec-icon"><i class="fas fa-bolt"></i></div><div class="qa-rec-content"><span class="qa-rec-label">Fastest Delivery</span><strong>${recommendations.fastest.designerName}</strong><p>${recommendations.fastest.timeline} days</p></div></div>`);
+        if (recommendations.mostExperienced) recCards.push(`<div class="qa-rec-card qa-rec-exp"><div class="qa-rec-icon"><i class="fas fa-star"></i></div><div class="qa-rec-content"><span class="qa-rec-label">Most Experienced</span><strong>${recommendations.mostExperienced.designerName}</strong><p>Profile Score: ${recommendations.mostExperienced.profileScore}/25</p></div></div>`);
+
+        // Build stats overview
+        const statsHTML = `
+            <div class="qa-stats-row">
+                <div class="qa-stat-card"><div class="qa-stat-icon" style="background:#dbeafe;color:#2563eb"><i class="fas fa-file-invoice-dollar"></i></div><div><span class="qa-stat-value">${totalQuotes}</span><span class="qa-stat-label">Total Quotes</span></div></div>
+                <div class="qa-stat-card"><div class="qa-stat-icon" style="background:#d1fae5;color:#059669"><i class="fas fa-arrow-down"></i></div><div><span class="qa-stat-value">$${priceStats.min.toLocaleString()}</span><span class="qa-stat-label">Lowest Price</span></div></div>
+                <div class="qa-stat-card"><div class="qa-stat-icon" style="background:#fef3c7;color:#d97706"><i class="fas fa-balance-scale"></i></div><div><span class="qa-stat-value">$${priceStats.avg.toLocaleString()}</span><span class="qa-stat-label">Average Price</span></div></div>
+                <div class="qa-stat-card"><div class="qa-stat-icon" style="background:#fce7f3;color:#db2777"><i class="fas fa-arrow-up"></i></div><div><span class="qa-stat-value">$${priceStats.max.toLocaleString()}</span><span class="qa-stat-label">Highest Price</span></div></div>
+                ${timelineStats.count > 0 ? `<div class="qa-stat-card"><div class="qa-stat-icon" style="background:#ede9fe;color:#7c3aed"><i class="fas fa-clock"></i></div><div><span class="qa-stat-value">${timelineStats.avg} days</span><span class="qa-stat-label">Avg Timeline</span></div></div>` : ''}
+            </div>`;
+
+        // Build scored quote cards
+        const quoteCardsHTML = scoredQuotes.map((sq, idx) => {
+            const rank = idx + 1;
+            const medal = rank === 1 ? '<span class="qa-medal qa-gold"><i class="fas fa-medal"></i> #1</span>' : rank === 2 ? '<span class="qa-medal qa-silver"><i class="fas fa-medal"></i> #2</span>' : rank === 3 ? '<span class="qa-medal qa-bronze"><i class="fas fa-medal"></i> #3</span>' : `<span class="qa-medal">#${rank}</span>`;
+            const dp = sq.designerProfile || {};
+            const skillsHTML = dp.skills && dp.skills.length > 0 ? `<div class="qa-quote-skills">${dp.skills.slice(0, 5).map(s => `<span class="qa-skill-tag">${s}</span>`).join('')}${dp.skills.length > 5 ? `<span class="qa-skill-more">+${dp.skills.length - 5}</span>` : ''}</div>` : '';
+            const attachHTML = sq.attachmentAnalysis.length > 0 ? `<div class="qa-attachments-list"><span class="qa-attach-label"><i class="fas fa-paperclip"></i> ${sq.totalAttachments} file${sq.totalAttachments > 1 ? 's' : ''} ${sq.pdfCount > 0 ? `(${sq.pdfCount} PDF)` : ''}</span>${sq.attachmentAnalysis.map(a => `<div class="qa-attach-item"><i class="fas ${a.isPdf ? 'fa-file-pdf' : 'fa-file'}"></i><span>${a.name}</span><small>${a.sizeFormatted}</small></div>`).join('')}</div>` : '<span class="qa-no-attach"><i class="fas fa-times-circle"></i> No attachments</span>';
+
+            // Score bar breakdown
+            const scoreBar = `<div class="qa-score-breakdown">
+                <div class="qa-score-bar-row"><span class="qa-score-bar-label">Price</span><div class="qa-score-bar"><div class="qa-score-fill qa-fill-price" style="width:${(sq.scores.price / 35) * 100}%"></div></div><span class="qa-score-bar-val">${sq.scores.price}/35</span></div>
+                <div class="qa-score-bar-row"><span class="qa-score-bar-label">Timeline</span><div class="qa-score-bar"><div class="qa-score-fill qa-fill-timeline" style="width:${(sq.scores.timeline / 25) * 100}%"></div></div><span class="qa-score-bar-val">${sq.scores.timeline}/25</span></div>
+                <div class="qa-score-bar-row"><span class="qa-score-bar-label">Profile</span><div class="qa-score-bar"><div class="qa-score-fill qa-fill-profile" style="width:${(sq.scores.profile / 25) * 100}%"></div></div><span class="qa-score-bar-val">${sq.scores.profile}/25</span></div>
+                <div class="qa-score-bar-row"><span class="qa-score-bar-label">Documents</span><div class="qa-score-bar"><div class="qa-score-fill qa-fill-attach" style="width:${(sq.scores.attachment / 15) * 100}%"></div></div><span class="qa-score-bar-val">${sq.scores.attachment}/15</span></div>
+            </div>`;
+
+            return `<div class="qa-quote-card ${rank === 1 ? 'qa-top-ranked' : ''}">
+                <div class="qa-quote-header">
+                    <div class="qa-quote-designer">
+                        <div class="qa-designer-avatar">${sq.designerName.charAt(0).toUpperCase()}</div>
+                        <div><strong>${sq.designerName}</strong>${dp.experience ? `<span class="qa-exp-tag">${dp.experience.substring(0, 40)}</span>` : ''}</div>
+                    </div>
+                    <div class="qa-quote-rank">${medal}<div class="qa-total-score"><span class="qa-score-num">${sq.scores.total}</span><span class="qa-score-max">/100</span></div></div>
+                </div>
+                <div class="qa-quote-metrics">
+                    <div class="qa-metric"><span class="qa-metric-label">Price</span><span class="qa-metric-value">$${sq.amount.toLocaleString()}</span></div>
+                    <div class="qa-metric"><span class="qa-metric-label">Timeline</span><span class="qa-metric-value">${sq.timeline ? sq.timeline + ' days' : 'Not specified'}</span></div>
+                    <div class="qa-metric"><span class="qa-metric-label">Status</span><span class="qa-metric-value qa-status-${sq.status}">${sq.status.charAt(0).toUpperCase() + sq.status.slice(1)}</span></div>
+                </div>
+                ${skillsHTML}
+                <div class="qa-quote-desc"><p>${sq.description.substring(0, 200)}${sq.description.length > 200 ? '...' : ''}</p></div>
+                ${scoreBar}
+                ${attachHTML}
+                <div class="qa-quote-actions">
+                    <button class="btn btn-outline btn-sm" onclick="viewQuotes('${jobId}')"><i class="fas fa-eye"></i> View Full Quote</button>
+                    <button class="btn btn-outline btn-sm" onclick="openConversation('${jobId}', '${sq.designerId}')"><i class="fas fa-comments"></i> Message</button>
+                </div>
+            </div>`;
+        }).join('');
+
+        // Build price comparison chart canvas
+        const chartId = 'qa-price-chart-' + jobId.substring(0, 8);
+        const timelineChartId = 'qa-timeline-chart-' + jobId.substring(0, 8);
+
+        resultContainer.innerHTML = `
+            <div class="qa-result-header">
+                <h3><i class="fas fa-poll"></i> Analysis: ${job.title || 'Project'}</h3>
+                <p class="qa-summary">${summary}</p>
+            </div>
+            ${recCards.length > 0 ? `<div class="qa-recommendations"><h4><i class="fas fa-lightbulb"></i> Recommendations</h4><div class="qa-rec-grid">${recCards.join('')}</div></div>` : ''}
+            ${statsHTML}
+            <div class="qa-charts-row">
+                <div class="qa-chart-card"><h4><i class="fas fa-chart-bar"></i> Price Comparison</h4><div class="qa-chart-wrapper"><canvas id="${chartId}"></canvas></div></div>
+                ${timelineStats.count > 1 ? `<div class="qa-chart-card"><h4><i class="fas fa-chart-bar"></i> Timeline Comparison</h4><div class="qa-chart-wrapper"><canvas id="${timelineChartId}"></canvas></div></div>` : ''}
+            </div>
+            <div class="qa-quotes-section"><h4><i class="fas fa-list-ol"></i> Ranked Quotes (${totalQuotes})</h4>${quoteCardsHTML}</div>`;
+
+        // Render price comparison chart
+        const priceCtx = document.getElementById(chartId);
+        if (priceCtx && typeof Chart !== 'undefined') {
+            new Chart(priceCtx.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: scoredQuotes.map(q => q.designerName.split(' ')[0]),
+                    datasets: [{
+                        label: 'Quote Amount ($)',
+                        data: scoredQuotes.map(q => q.amount),
+                        backgroundColor: scoredQuotes.map((q, i) => i === 0 ? 'rgba(16, 185, 129, 0.8)' : 'rgba(59, 130, 246, 0.6)'),
+                        borderColor: scoredQuotes.map((q, i) => i === 0 ? '#059669' : '#2563eb'),
+                        borderWidth: 2,
+                        borderRadius: 6
+                    }, {
+                        label: 'Average',
+                        data: scoredQuotes.map(() => priceStats.avg),
+                        type: 'line',
+                        borderColor: '#f59e0b',
+                        borderWidth: 2,
+                        borderDash: [6, 3],
+                        pointRadius: 0,
+                        fill: false
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'top' } }, scales: { y: { beginAtZero: true, ticks: { callback: v => '$' + v.toLocaleString() } } } }
+            });
+        }
+
+        // Render timeline chart if enough data
+        const tlCtx = document.getElementById(timelineChartId);
+        if (tlCtx && typeof Chart !== 'undefined' && timelineStats.count > 1) {
+            new Chart(tlCtx.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: scoredQuotes.filter(q => q.timeline > 0).map(q => q.designerName.split(' ')[0]),
+                    datasets: [{
+                        label: 'Timeline (days)',
+                        data: scoredQuotes.filter(q => q.timeline > 0).map(q => q.timeline),
+                        backgroundColor: scoredQuotes.filter(q => q.timeline > 0).map((q, i) => { const sorted = [...scoredQuotes].filter(sq => sq.timeline > 0).sort((a, b) => a.timeline - b.timeline); return sorted[0]?.quoteId === q.quoteId ? 'rgba(16, 185, 129, 0.8)' : 'rgba(139, 92, 246, 0.6)'; }),
+                        borderColor: scoredQuotes.filter(q => q.timeline > 0).map((q, i) => { const sorted = [...scoredQuotes].filter(sq => sq.timeline > 0).sort((a, b) => a.timeline - b.timeline); return sorted[0]?.quoteId === q.quoteId ? '#059669' : '#7c3aed'; }),
+                        borderWidth: 2,
+                        borderRadius: 6
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: v => v + ' days' } } } }
+            });
+        }
+    } catch (error) {
+        console.error('Quote analysis error:', error);
+        resultContainer.innerHTML = `<div class="qa-no-quotes"><i class="fas fa-exclamation-triangle"></i><h3>Analysis Error</h3><p>Could not analyze quotes. ${error.message || 'Please try again.'}</p></div>`;
+    }
+}
+window.analyzeProjectQuotes = analyzeProjectQuotes;
+
 async function renderBusinessAnalyticsPortal() {
     const container = document.getElementById('app-container');
     container.innerHTML = `
