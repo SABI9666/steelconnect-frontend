@@ -2943,14 +2943,17 @@ async function deleteExistingProfileFile(type, index) {
     if (!confirm(confirmMsg)) return;
     try {
         const endpoint = type === 'certificate' ? `/profile/attachment/certificate?index=${index}` : `/profile/attachment/resume`;
-        await apiCall(endpoint, 'DELETE');
+        console.log('Deleting profile attachment:', endpoint);
+        const response = await apiCall(endpoint, 'DELETE');
+        console.log('Delete response:', response);
         showNotification(`${type === 'resume' ? 'Resume' : 'Certificate'} deleted successfully`, 'success');
         if (type === 'resume') {
             const section = document.getElementById('existing-resume');
             if (section) section.remove();
-            // Re-add required to resume input if needed
             const resumeInput = document.querySelector('input[data-field-name="resume"]');
             if (resumeInput) resumeInput.setAttribute('required', 'true');
+            const label = document.getElementById('label-resume');
+            if (label) label.textContent = 'Click to upload';
             if (appState.existingProfileData) appState.existingProfileData.resume = null;
         } else {
             const certItem = document.getElementById(`existing-cert-${index}`);
@@ -2964,9 +2967,11 @@ async function deleteExistingProfileFile(type, index) {
             }
         }
     } catch (error) {
-        showNotification('Failed to delete file. Please try again.', 'error');
+        console.error('Delete attachment error:', error);
     }
 }
+
+window.deleteExistingProfileFile = deleteExistingProfileFile;
 
 async function handleProfileCompletionSubmit(event) {
     event.preventDefault();
