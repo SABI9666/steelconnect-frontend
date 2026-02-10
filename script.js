@@ -2217,37 +2217,37 @@ async function viewQuotes(jobId) {
                 const statusClass = quote.status;
                 const statusIcon = {'submitted': 'fa-clock', 'approved': 'fa-check-circle', 'rejected': 'fa-times-circle'}[quote.status] || 'fa-question-circle';
 
-                // Designer profile section
+                // Designer profile section - always show
                 const dp = quote.designerProfile || {};
-                const hasProfile = dp && (dp.skills?.length > 0 || dp.experience || dp.bio);
-                let designerProfileSection = '';
-                if (hasProfile) {
-                    const skillsHTML = dp.skills && dp.skills.length > 0
-                        ? `<div class="dp-skills">${dp.skills.slice(0, 6).map(s => `<span class="dp-skill-tag">${s}</span>`).join('')}${dp.skills.length > 6 ? `<span class="dp-skill-more">+${dp.skills.length - 6} more</span>` : ''}</div>` : '';
-                    const specsHTML = dp.specializations && dp.specializations.length > 0
-                        ? `<div class="dp-specs"><i class="fas fa-star"></i> ${dp.specializations.slice(0, 3).join(', ')}</div>` : '';
-                    designerProfileSection = `
-                        <div class="designer-profile-card">
-                            <div class="dp-header" onclick="this.parentElement.classList.toggle('expanded')">
-                                <div class="dp-header-left">
-                                    <i class="fas fa-user-circle"></i>
-                                    <span>Designer Profile</span>
-                                </div>
-                                <i class="fas fa-chevron-down dp-toggle-icon"></i>
+                const hasDetailedProfile = dp.skills?.length > 0 || dp.experience || dp.bio || dp.education || dp.hourlyRate || dp.linkedinProfile || dp.specializations?.length > 0;
+                const skillsHTML = dp.skills && dp.skills.length > 0
+                    ? `<div class="dp-skills">${dp.skills.slice(0, 6).map(s => `<span class="dp-skill-tag">${s}</span>`).join('')}${dp.skills.length > 6 ? `<span class="dp-skill-more">+${dp.skills.length - 6} more</span>` : ''}</div>` : '';
+                const specsHTML = dp.specializations && dp.specializations.length > 0
+                    ? `<div class="dp-specs"><i class="fas fa-star"></i> ${dp.specializations.slice(0, 3).join(', ')}</div>` : '';
+                const profileBodyContent = hasDetailedProfile ? `
+                    ${dp.bio ? `<div class="dp-bio"><p>${dp.bio}</p></div>` : ''}
+                    <div class="dp-details-grid">
+                        ${dp.experience ? `<div class="dp-detail"><i class="fas fa-briefcase"></i><div><span class="dp-detail-label">Experience</span><span class="dp-detail-value">${dp.experience}</span></div></div>` : ''}
+                        ${dp.education ? `<div class="dp-detail"><i class="fas fa-graduation-cap"></i><div><span class="dp-detail-label">Education</span><span class="dp-detail-value">${dp.education}</span></div></div>` : ''}
+                        ${dp.hourlyRate ? `<div class="dp-detail"><i class="fas fa-dollar-sign"></i><div><span class="dp-detail-label">Hourly Rate</span><span class="dp-detail-value">$${dp.hourlyRate}/hr</span></div></div>` : ''}
+                        ${dp.linkedinProfile ? `<div class="dp-detail"><i class="fab fa-linkedin"></i><div><span class="dp-detail-label">LinkedIn</span><a href="${dp.linkedinProfile}" target="_blank" class="dp-detail-link">View Profile</a></div></div>` : ''}
+                    </div>
+                    ${skillsHTML}
+                    ${specsHTML}
+                ` : `<p class="dp-no-details">Designer has not yet completed their detailed profile.</p>`;
+                const designerProfileSection = `
+                    <div class="designer-profile-card">
+                        <div class="dp-header" onclick="this.parentElement.classList.toggle('expanded')">
+                            <div class="dp-header-left">
+                                <i class="fas fa-user-circle"></i>
+                                <span>Designer Profile - ${quote.designerName}</span>
                             </div>
-                            <div class="dp-body">
-                                ${dp.bio ? `<div class="dp-bio"><p>${dp.bio}</p></div>` : ''}
-                                <div class="dp-details-grid">
-                                    ${dp.experience ? `<div class="dp-detail"><i class="fas fa-briefcase"></i><div><span class="dp-detail-label">Experience</span><span class="dp-detail-value">${dp.experience}</span></div></div>` : ''}
-                                    ${dp.education ? `<div class="dp-detail"><i class="fas fa-graduation-cap"></i><div><span class="dp-detail-label">Education</span><span class="dp-detail-value">${dp.education}</span></div></div>` : ''}
-                                    ${dp.hourlyRate ? `<div class="dp-detail"><i class="fas fa-dollar-sign"></i><div><span class="dp-detail-label">Hourly Rate</span><span class="dp-detail-value">$${dp.hourlyRate}/hr</span></div></div>` : ''}
-                                    ${dp.linkedinProfile ? `<div class="dp-detail"><i class="fab fa-linkedin"></i><div><span class="dp-detail-label">LinkedIn</span><a href="${dp.linkedinProfile}" target="_blank" class="dp-detail-link">View Profile</a></div></div>` : ''}
-                                </div>
-                                ${skillsHTML}
-                                ${specsHTML}
-                            </div>
-                        </div>`;
-                }
+                            <i class="fas fa-chevron-down dp-toggle-icon"></i>
+                        </div>
+                        <div class="dp-body">
+                            ${profileBodyContent}
+                        </div>
+                    </div>`;
 
                 quotesHTML += `
                     <div class="quote-item premium-quote-item quote-status-${statusClass}">
@@ -3195,172 +3195,215 @@ let dashboardBarChart = null;
 let dashboardPieChart = null;
 
 async function initDashboardCharts() {
+    const isContractor = appState.currentUser.type === 'contractor';
+    let stats = null;
+
     try {
         const response = await apiCall('/profile/dashboard-stats', 'GET');
-        if (!response.success || !response.data) return;
+        if (response.success && response.data) {
+            stats = response.data;
+        }
+    } catch (error) {
+        console.error('Dashboard stats API failed, using local data:', error);
+    }
 
-        const stats = response.data;
-        const isContractor = stats.userType === 'contractor';
+    // Fallback: build stats from fetched data if API failed
+    if (!stats) {
+        stats = {
+            userType: appState.currentUser.type,
+            projects: { total: 0, open: 0, assigned: 0, completed: 0 },
+            quotes: { total: 0, submitted: 0, approved: 0, rejected: 0 },
+            monthlyActivity: []
+        };
 
-        // Update KPI cards
-        const kpiTotal = document.getElementById('kpi-total');
-        const kpiApproved = document.getElementById('kpi-approved');
-        const kpiPending = document.getElementById('kpi-pending');
-        const kpiActive = document.getElementById('kpi-active');
-
-        if (isContractor) {
-            if (kpiTotal) kpiTotal.textContent = stats.projects.total;
-            if (kpiApproved) kpiApproved.textContent = stats.quotes.approved;
-            if (kpiPending) kpiPending.textContent = stats.quotes.submitted;
-            if (kpiActive) kpiActive.textContent = stats.projects.assigned;
-        } else {
-            if (kpiTotal) kpiTotal.textContent = stats.quotes.total;
-            if (kpiApproved) kpiApproved.textContent = stats.quotes.approved;
-            if (kpiPending) kpiPending.textContent = stats.quotes.submitted;
-            if (kpiActive) kpiActive.textContent = stats.projects.assigned;
+        try {
+            if (isContractor) {
+                const jobsResponse = await apiCall(`/jobs/user/${appState.currentUser.id}`, 'GET');
+                const jobs = jobsResponse.data || [];
+                stats.projects.total = jobs.length;
+                stats.projects.open = jobs.filter(j => j.status === 'open').length;
+                stats.projects.assigned = jobs.filter(j => j.status === 'assigned').length;
+                stats.projects.completed = jobs.filter(j => j.status === 'completed').length;
+                stats.quotes.total = jobs.reduce((sum, j) => sum + (j.quotesCount || 0), 0);
+            } else {
+                const quotesResponse = await apiCall(`/quotes/user/${appState.currentUser.id}`, 'GET');
+                const quotes = quotesResponse.data || [];
+                stats.quotes.total = quotes.length;
+                stats.quotes.submitted = quotes.filter(q => q.status === 'submitted').length;
+                stats.quotes.approved = quotes.filter(q => q.status === 'approved').length;
+                stats.quotes.rejected = quotes.filter(q => q.status === 'rejected').length;
+            }
+        } catch (e) {
+            console.error('Fallback data fetch failed:', e);
         }
 
-        // Bar chart
-        const barCanvas = document.getElementById('dashboard-bar-chart');
-        if (barCanvas && stats.monthlyActivity.length > 0) {
-            const barCtx = barCanvas.getContext('2d');
-            if (dashboardBarChart) dashboardBarChart.destroy();
-
-            const labels = stats.monthlyActivity.map(m => m.month);
-
-            const datasets = isContractor ? [
-                {
-                    label: 'Projects Posted',
-                    data: stats.monthlyActivity.map(m => m.projects),
-                    backgroundColor: 'rgba(37, 99, 235, 0.8)',
-                    borderColor: 'rgba(37, 99, 235, 1)',
-                    borderWidth: 2,
-                    borderRadius: 8,
-                    borderSkipped: false
-                },
-                {
-                    label: 'Quotes Received',
-                    data: stats.monthlyActivity.map(m => m.quotes),
-                    backgroundColor: 'rgba(16, 185, 129, 0.8)',
-                    borderColor: 'rgba(16, 185, 129, 1)',
-                    borderWidth: 2,
-                    borderRadius: 8,
-                    borderSkipped: false
-                }
-            ] : [
-                {
-                    label: 'Quotes Submitted',
-                    data: stats.monthlyActivity.map(m => m.quotes),
-                    backgroundColor: 'rgba(99, 102, 241, 0.8)',
-                    borderColor: 'rgba(99, 102, 241, 1)',
-                    borderWidth: 2,
-                    borderRadius: 8,
-                    borderSkipped: false
-                },
-                {
-                    label: 'Approved',
-                    data: stats.monthlyActivity.map(m => m.approved || 0),
-                    backgroundColor: 'rgba(16, 185, 129, 0.8)',
-                    borderColor: 'rgba(16, 185, 129, 1)',
-                    borderWidth: 2,
-                    borderRadius: 8,
-                    borderSkipped: false
-                }
-            ];
-
-            dashboardBarChart = new Chart(barCtx, {
-                type: 'bar',
-                data: { labels, datasets },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'top', labels: { usePointStyle: true, padding: 20, font: { family: 'Inter', size: 12, weight: '500' } } },
-                        tooltip: {
-                            backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                            titleFont: { family: 'Inter', size: 13, weight: '600' },
-                            bodyFont: { family: 'Inter', size: 12 },
-                            padding: 12,
-                            cornerRadius: 8,
-                            displayColors: true
-                        }
-                    },
-                    scales: {
-                        x: { grid: { display: false }, ticks: { font: { family: 'Inter', size: 12 } } },
-                        y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { family: 'Inter', size: 12 }, stepSize: 1 } }
-                    }
-                }
+        // Build 6 month labels even without monthly breakdown
+        const now = new Date();
+        for (let i = 5; i >= 0; i--) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            stats.monthlyActivity.push({
+                month: d.toLocaleString('default', { month: 'short' }),
+                projects: 0, quotes: 0, approved: 0
             });
         }
+    }
 
-        // Pie chart
-        const pieCanvas = document.getElementById('dashboard-pie-chart');
-        if (pieCanvas) {
-            const pieCtx = pieCanvas.getContext('2d');
-            if (dashboardPieChart) dashboardPieChart.destroy();
+    // Update KPI cards
+    const kpiTotal = document.getElementById('kpi-total');
+    const kpiApproved = document.getElementById('kpi-approved');
+    const kpiPending = document.getElementById('kpi-pending');
+    const kpiActive = document.getElementById('kpi-active');
 
-            let pieLabels, pieData, pieColors;
-            if (isContractor) {
-                pieLabels = ['Open', 'In Progress', 'Completed'];
-                pieData = [stats.projects.open, stats.projects.assigned, stats.projects.completed];
-                pieColors = ['rgba(37, 99, 235, 0.85)', 'rgba(245, 158, 11, 0.85)', 'rgba(16, 185, 129, 0.85)'];
-            } else {
-                pieLabels = ['Submitted', 'Approved', 'Rejected'];
-                pieData = [stats.quotes.submitted, stats.quotes.approved, stats.quotes.rejected];
-                pieColors = ['rgba(99, 102, 241, 0.85)', 'rgba(16, 185, 129, 0.85)', 'rgba(239, 68, 68, 0.85)'];
+    if (isContractor) {
+        if (kpiTotal) kpiTotal.textContent = stats.projects.total;
+        if (kpiApproved) kpiApproved.textContent = stats.quotes.approved;
+        if (kpiPending) kpiPending.textContent = stats.quotes.submitted;
+        if (kpiActive) kpiActive.textContent = stats.projects.assigned;
+    } else {
+        if (kpiTotal) kpiTotal.textContent = stats.quotes.total;
+        if (kpiApproved) kpiApproved.textContent = stats.quotes.approved;
+        if (kpiPending) kpiPending.textContent = stats.quotes.submitted;
+        if (kpiActive) kpiActive.textContent = stats.projects.assigned;
+    }
+
+    // Bar chart
+    const barCanvas = document.getElementById('dashboard-bar-chart');
+    if (barCanvas) {
+        const barCtx = barCanvas.getContext('2d');
+        if (dashboardBarChart) dashboardBarChart.destroy();
+
+        const labels = stats.monthlyActivity.map(m => m.month);
+
+        const datasets = isContractor ? [
+            {
+                label: 'Projects Posted',
+                data: stats.monthlyActivity.map(m => m.projects || 0),
+                backgroundColor: 'rgba(37, 99, 235, 0.8)',
+                borderColor: 'rgba(37, 99, 235, 1)',
+                borderWidth: 2,
+                borderRadius: 8,
+                borderSkipped: false
+            },
+            {
+                label: 'Quotes Received',
+                data: stats.monthlyActivity.map(m => m.quotes || 0),
+                backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                borderColor: 'rgba(16, 185, 129, 1)',
+                borderWidth: 2,
+                borderRadius: 8,
+                borderSkipped: false
             }
-
-            // If all zeros, show placeholder
-            const hasData = pieData.some(v => v > 0);
-            if (!hasData) {
-                pieData = [1];
-                pieLabels = ['No Data Yet'];
-                pieColors = ['rgba(203, 213, 225, 0.5)'];
+        ] : [
+            {
+                label: 'Quotes Submitted',
+                data: stats.monthlyActivity.map(m => m.quotes || 0),
+                backgroundColor: 'rgba(99, 102, 241, 0.8)',
+                borderColor: 'rgba(99, 102, 241, 1)',
+                borderWidth: 2,
+                borderRadius: 8,
+                borderSkipped: false
+            },
+            {
+                label: 'Approved',
+                data: stats.monthlyActivity.map(m => m.approved || 0),
+                backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                borderColor: 'rgba(16, 185, 129, 1)',
+                borderWidth: 2,
+                borderRadius: 8,
+                borderSkipped: false
             }
+        ];
 
-            dashboardPieChart = new Chart(pieCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: pieLabels,
-                    datasets: [{
-                        data: pieData,
-                        backgroundColor: pieColors,
-                        borderColor: '#ffffff',
-                        borderWidth: 3,
-                        hoverBorderWidth: 0,
-                        hoverOffset: 8
-                    }]
+        dashboardBarChart = new Chart(barCtx, {
+            type: 'bar',
+            data: { labels, datasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top', labels: { usePointStyle: true, padding: 20, font: { family: 'Inter', size: 12, weight: '500' } } },
+                    tooltip: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                        titleFont: { family: 'Inter', size: 13, weight: '600' },
+                        bodyFont: { family: 'Inter', size: 12 },
+                        padding: 12,
+                        cornerRadius: 8,
+                        displayColors: true
+                    }
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    cutout: '65%',
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: { usePointStyle: true, padding: 16, font: { family: 'Inter', size: 12, weight: '500' } }
-                        },
-                        tooltip: {
-                            backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                            titleFont: { family: 'Inter', size: 13, weight: '600' },
-                            bodyFont: { family: 'Inter', size: 12 },
-                            padding: 12,
-                            cornerRadius: 8,
-                            callbacks: {
-                                label: function(context) {
-                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                    const value = context.parsed;
-                                    const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
-                                    return ` ${context.label}: ${value} (${percentage}%)`;
-                                }
+                scales: {
+                    x: { grid: { display: false }, ticks: { font: { family: 'Inter', size: 12 } } },
+                    y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { family: 'Inter', size: 12 }, stepSize: 1 } }
+                }
+            }
+        });
+    }
+
+    // Pie chart
+    const pieCanvas = document.getElementById('dashboard-pie-chart');
+    if (pieCanvas) {
+        const pieCtx = pieCanvas.getContext('2d');
+        if (dashboardPieChart) dashboardPieChart.destroy();
+
+        let pieLabels, pieData, pieColors;
+        if (isContractor) {
+            pieLabels = ['Open', 'In Progress', 'Completed'];
+            pieData = [stats.projects.open, stats.projects.assigned, stats.projects.completed];
+            pieColors = ['rgba(37, 99, 235, 0.85)', 'rgba(245, 158, 11, 0.85)', 'rgba(16, 185, 129, 0.85)'];
+        } else {
+            pieLabels = ['Submitted', 'Approved', 'Rejected'];
+            pieData = [stats.quotes.submitted, stats.quotes.approved, stats.quotes.rejected];
+            pieColors = ['rgba(99, 102, 241, 0.85)', 'rgba(16, 185, 129, 0.85)', 'rgba(239, 68, 68, 0.85)'];
+        }
+
+        // If all zeros, show placeholder
+        const hasData = pieData.some(v => v > 0);
+        if (!hasData) {
+            pieData = [1];
+            pieLabels = ['No Data Yet'];
+            pieColors = ['rgba(203, 213, 225, 0.5)'];
+        }
+
+        dashboardPieChart = new Chart(pieCtx, {
+            type: 'doughnut',
+            data: {
+                labels: pieLabels,
+                datasets: [{
+                    data: pieData,
+                    backgroundColor: pieColors,
+                    borderColor: '#ffffff',
+                    borderWidth: 3,
+                    hoverBorderWidth: 0,
+                    hoverOffset: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '65%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { usePointStyle: true, padding: 16, font: { family: 'Inter', size: 12, weight: '500' } }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                        titleFont: { family: 'Inter', size: 13, weight: '600' },
+                        bodyFont: { family: 'Inter', size: 12 },
+                        padding: 12,
+                        cornerRadius: 8,
+                        callbacks: {
+                            label: function(context) {
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const value = context.parsed;
+                                const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+                                return ` ${context.label}: ${value} (${percentage}%)`;
                             }
                         }
                     }
                 }
-            });
-        }
-    } catch (error) {
-        console.error('Error loading dashboard charts:', error);
+            }
+        });
     }
 }
 

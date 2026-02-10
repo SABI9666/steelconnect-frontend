@@ -8651,6 +8651,12 @@ textarea:focus-visible {
     color: #f59e0b;
     font-size: 0.7rem;
 }
+.dp-no-details {
+    font-size: 0.82rem;
+    color: var(--text-light);
+    font-style: italic;
+    margin: 0;
+}
 
 /* ===== RESPONSIVE: Charts & KPIs ===== */
 @media (max-width: 1024px) {
