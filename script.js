@@ -3288,42 +3288,93 @@ function getEstimationToolTemplate() {
 
 function getDashboardTemplate(user) {
     const isContractor = user.type === 'contractor';
-    const name = user.name.split(' ')[0];
+    const name = user.name ? user.name.split(' ')[0] : 'User';
+    const fullName = user.name || 'User';
     const profileStatus = user.profileStatus || 'incomplete';
     const isApproved = profileStatus === 'approved';
-    let profileStatusCard = '';
-    if (profileStatus === 'incomplete') profileStatusCard = `<div class="dashboard-profile-status-card"><h3><i class="fas fa-exclamation-triangle"></i> Complete Your Profile</h3><p>Complete your profile to unlock all features.</p><button class="btn btn-primary" onclick="renderAppSection('profile-completion')"><i class="fas fa-user-edit"></i> Complete Profile</button></div>`;
-    else if (profileStatus === 'pending') profileStatusCard = `<div class="dashboard-profile-status-card"><h3><i class="fas fa-clock"></i> Profile Under Review</h3><p>Your profile is under review. You'll get full access once approved.</p></div>`;
-    else if (profileStatus === 'rejected') profileStatusCard = `<div class="dashboard-profile-status-card"><h3><i class="fas fa-times-circle"></i> Profile Needs Update</h3><p>Your profile needs updates. ${user.rejectionReason ? `<strong>Reason:</strong> ${user.rejectionReason}` : ''}</p><button class="btn btn-primary" onclick="renderAppSection('profile-completion')"><i class="fas fa-edit"></i> Update Profile</button></div>`;
-    else if (profileStatus === 'approved') profileStatusCard = `<div class="dashboard-profile-status-card" style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border-color: #10b981;"><h3 style="color: #059669;"><i class="fas fa-check-circle"></i> Profile Approved</h3><p style="color: #059669;">You have full access to all platform features.</p></div>`;
+    const avatarColor = getAvatarColor(fullName);
+    const initial = fullName.charAt(0).toUpperCase();
 
+    let profileStatusCard = '';
+    if (profileStatus === 'incomplete') profileStatusCard = `<div class="db-status-card db-status-warning"><div class="db-status-icon"><i class="fas fa-exclamation-triangle"></i></div><div class="db-status-info"><h4>Complete Your Profile</h4><p>Complete your profile to unlock all platform features and start ${isContractor ? 'posting projects' : 'submitting quotes'}.</p></div><button class="db-status-btn" onclick="renderAppSection('profile-completion')"><i class="fas fa-user-edit"></i> Complete Now</button></div>`;
+    else if (profileStatus === 'pending') profileStatusCard = `<div class="db-status-card db-status-info-state"><div class="db-status-icon"><i class="fas fa-clock"></i></div><div class="db-status-info"><h4>Profile Under Review</h4><p>Your profile is being reviewed by our team. You'll get full access once approved.</p></div><div class="db-status-badge"><i class="fas fa-hourglass-half"></i> Reviewing</div></div>`;
+    else if (profileStatus === 'rejected') profileStatusCard = `<div class="db-status-card db-status-danger"><div class="db-status-icon"><i class="fas fa-exclamation-circle"></i></div><div class="db-status-info"><h4>Profile Needs Update</h4><p>Please update your profile. ${user.rejectionReason ? `<strong>Reason:</strong> ${user.rejectionReason}` : 'Review the feedback and resubmit.'}</p></div><button class="db-status-btn db-btn-danger" onclick="renderAppSection('profile-completion')"><i class="fas fa-edit"></i> Update Profile</button></div>`;
+
+    // Quick action cards for contractor
     const contractorQuickActions = `
-        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'post-job\')' : 'showRestrictedFeature(\'post-job\')'}"><div class="card-icon"><i class="fas fa-plus-circle"></i></div><h3>Create Project</h3><p>Post a new listing</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>
-        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'jobs\')' : 'showRestrictedFeature(\'jobs\')'}"><div class="card-icon"><i class="fas fa-tasks"></i></div><h3>My Projects</h3><p>Manage your listings</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>
-        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'estimation-tool\')' : 'showRestrictedFeature(\'estimation-tool\')'}"><div class="card-icon"><i class="fas fa-calculator"></i></div><h3>AI Estimation</h3><p>Get instant cost estimates</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>
-        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'approved-jobs\')' : 'showRestrictedFeature(\'approved-jobs\')'}"><div class="card-icon"><i class="fas fa-check-circle"></i></div><h3>Approved</h3><p>Track assigned work</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>
-        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'project-tracking\')' : 'showRestrictedFeature(\'project-tracking\')'}"><div class="card-icon"><i class="fas fa-project-diagram"></i></div><h3>Project Tracking</h3><p>Dashboard & status</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>
-        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'quote-analysis\')' : 'showRestrictedFeature(\'quote-analysis\')'}"><div class="card-icon"><i class="fas fa-chart-line"></i></div><h3>Quote Analysis</h3><p>Compare & analyze quotes</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>`;
+        <div class="db-action-card ${!isApproved ? 'db-locked' : ''}" onclick="${isApproved ? 'renderAppSection(\'post-job\')' : 'showRestrictedFeature(\'post-job\')'}">
+            <div class="db-action-icon db-icon-blue"><i class="fas fa-plus-circle"></i></div>
+            <div class="db-action-text"><h4>Create Project</h4><p>Post a new listing</p></div>
+            ${!isApproved ? '<div class="db-lock-overlay"><i class="fas fa-lock"></i></div>' : '<i class="fas fa-chevron-right db-action-arrow"></i>'}
+        </div>
+        <div class="db-action-card ${!isApproved ? 'db-locked' : ''}" onclick="${isApproved ? 'renderAppSection(\'jobs\')' : 'showRestrictedFeature(\'jobs\')'}">
+            <div class="db-action-icon db-icon-indigo"><i class="fas fa-tasks"></i></div>
+            <div class="db-action-text"><h4>My Projects</h4><p>Manage your listings</p></div>
+            ${!isApproved ? '<div class="db-lock-overlay"><i class="fas fa-lock"></i></div>' : '<i class="fas fa-chevron-right db-action-arrow"></i>'}
+        </div>
+        <div class="db-action-card ${!isApproved ? 'db-locked' : ''}" onclick="${isApproved ? 'renderAppSection(\'estimation-tool\')' : 'showRestrictedFeature(\'estimation-tool\')'}">
+            <div class="db-action-icon db-icon-violet"><i class="fas fa-robot"></i></div>
+            <div class="db-action-text"><h4>AI Estimation</h4><p>Smart cost estimates</p></div>
+            ${!isApproved ? '<div class="db-lock-overlay"><i class="fas fa-lock"></i></div>' : '<i class="fas fa-chevron-right db-action-arrow"></i>'}
+        </div>
+        <div class="db-action-card ${!isApproved ? 'db-locked' : ''}" onclick="${isApproved ? 'renderAppSection(\'approved-jobs\')' : 'showRestrictedFeature(\'approved-jobs\')'}">
+            <div class="db-action-icon db-icon-green"><i class="fas fa-check-double"></i></div>
+            <div class="db-action-text"><h4>Approved</h4><p>Track assigned work</p></div>
+            ${!isApproved ? '<div class="db-lock-overlay"><i class="fas fa-lock"></i></div>' : '<i class="fas fa-chevron-right db-action-arrow"></i>'}
+        </div>
+        <div class="db-action-card ${!isApproved ? 'db-locked' : ''}" onclick="${isApproved ? 'renderAppSection(\'project-tracking\')' : 'showRestrictedFeature(\'project-tracking\')'}">
+            <div class="db-action-icon db-icon-cyan"><i class="fas fa-project-diagram"></i></div>
+            <div class="db-action-text"><h4>Project Tracking</h4><p>Status & milestones</p></div>
+            ${!isApproved ? '<div class="db-lock-overlay"><i class="fas fa-lock"></i></div>' : '<i class="fas fa-chevron-right db-action-arrow"></i>'}
+        </div>
+        <div class="db-action-card ${!isApproved ? 'db-locked' : ''}" onclick="${isApproved ? 'renderAppSection(\'quote-analysis\')' : 'showRestrictedFeature(\'quote-analysis\')'}">
+            <div class="db-action-icon db-icon-amber"><i class="fas fa-chart-line"></i></div>
+            <div class="db-action-text"><h4>Quote Analysis</h4><p>Compare & analyze</p></div>
+            ${!isApproved ? '<div class="db-lock-overlay"><i class="fas fa-lock"></i></div>' : '<i class="fas fa-chevron-right db-action-arrow"></i>'}
+        </div>`;
+
+    // Quick action cards for designer
+    const designerQuickActions = `
+        <div class="db-action-card ${!isApproved ? 'db-locked' : ''}" onclick="${isApproved ? 'renderAppSection(\'jobs\')' : 'showRestrictedFeature(\'jobs\')'}">
+            <div class="db-action-icon db-icon-blue"><i class="fas fa-search"></i></div>
+            <div class="db-action-text"><h4>Browse Projects</h4><p>Find opportunities</p></div>
+            ${!isApproved ? '<div class="db-lock-overlay"><i class="fas fa-lock"></i></div>' : '<i class="fas fa-chevron-right db-action-arrow"></i>'}
+        </div>
+        <div class="db-action-card ${!isApproved ? 'db-locked' : ''}" onclick="${isApproved ? 'renderAppSection(\'my-quotes\')' : 'showRestrictedFeature(\'my-quotes\')'}">
+            <div class="db-action-icon db-icon-green"><i class="fas fa-file-invoice-dollar"></i></div>
+            <div class="db-action-text"><h4>My Quotes</h4><p>Track submissions</p></div>
+            ${!isApproved ? '<div class="db-lock-overlay"><i class="fas fa-lock"></i></div>' : '<i class="fas fa-chevron-right db-action-arrow"></i>'}
+        </div>
+        <div class="db-action-card ${!isApproved ? 'db-locked' : ''}" onclick="${isApproved ? 'renderAppSection(\'messages\')' : 'showRestrictedFeature(\'messages\')'}">
+            <div class="db-action-icon db-icon-indigo"><i class="fas fa-comments"></i></div>
+            <div class="db-action-text"><h4>Messages</h4><p>Client communication</p></div>
+            ${!isApproved ? '<div class="db-lock-overlay"><i class="fas fa-lock"></i></div>' : '<i class="fas fa-chevron-right db-action-arrow"></i>'}
+        </div>
+        <div class="db-action-card ${!isApproved ? 'db-locked' : ''}" onclick="${isApproved ? 'renderAppSection(\'community-feed\')' : 'showRestrictedFeature(\'community-feed\')'}">
+            <div class="db-action-icon db-icon-violet"><i class="fas fa-users"></i></div>
+            <div class="db-action-text"><h4>Community</h4><p>Share your work</p></div>
+            ${!isApproved ? '<div class="db-lock-overlay"><i class="fas fa-lock"></i></div>' : '<i class="fas fa-chevron-right db-action-arrow"></i>'}
+        </div>`;
 
     const contractorWidgets = `
-        <div class="widget-card"><h3><i class="fas fa-history"></i> Recent Projects</h3><div id="recent-projects-widget" class="widget-content">${!isApproved ? '<p class="widget-empty-text">Complete your profile to post projects.</p>' : ''}</div></div>`;
-
-    const designerQuickActions = `
-        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'jobs\')' : 'showRestrictedFeature(\'jobs\')'}"><div class="card-icon"><i class="fas fa-search"></i></div><h3>Browse Projects</h3><p>Find new opportunities</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>
-        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'my-quotes\')' : 'showRestrictedFeature(\'my-quotes\')'}"><div class="card-icon"><i class="fas fa-file-invoice-dollar"></i></div><h3>My Quotes</h3><p>Track your submissions</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>
-        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'messages\')' : 'showRestrictedFeature(\'messages\')'}"><div class="card-icon"><i class="fas fa-comments"></i></div><h3>Messages</h3><p>Communicate with clients</p>${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}</div>`;
+        <div class="db-widget"><div class="db-widget-header"><h4><i class="fas fa-history"></i> Recent Projects</h4></div><div id="recent-projects-widget" class="db-widget-body">${!isApproved ? '<p class="db-widget-empty">Complete your profile to post projects.</p>' : ''}</div></div>
+        <div class="db-widget"><div class="db-widget-header"><h4><i class="fas fa-users"></i> Community Feed</h4></div><div class="db-widget-body"><p class="db-widget-promo">Discover talented designers and their latest projects.</p><button class="db-widget-link" onclick="renderAppSection('community-feed')"><i class="fas fa-arrow-right"></i> Open Community</button></div></div>`;
 
     const designerWidgets = `
-        <div class="widget-card"><h3><i class="fas fa-history"></i> Recent Quotes</h3><div id="recent-quotes-widget" class="widget-content">${!isApproved ? '<p class="widget-empty-text">Complete your profile to submit quotes.</p>' : ''}</div></div>`;
+        <div class="db-widget"><div class="db-widget-header"><h4><i class="fas fa-history"></i> Recent Quotes</h4></div><div id="recent-quotes-widget" class="db-widget-body">${!isApproved ? '<p class="db-widget-empty">Complete your profile to submit quotes.</p>' : ''}</div></div>
+        <div class="db-widget"><div class="db-widget-header"><h4><i class="fas fa-newspaper"></i> Community Feed</h4></div><div class="db-widget-body"><p class="db-widget-promo">Share your expertise and attract new clients.</p><button class="db-widget-link" onclick="renderAppSection('community-feed')"><i class="fas fa-arrow-right"></i> Open Community</button></div></div>`;
 
     // Charts section (only for approved users)
     const chartsSection = isApproved ? `
-        <h3 class="dashboard-section-title"><i class="fas fa-chart-bar"></i> Performance Overview</h3>
+        <div class="db-section-header">
+            <h3><i class="fas fa-chart-bar"></i> Performance Overview</h3>
+            <span class="db-section-badge">Live Data</span>
+        </div>
         <div class="dashboard-charts-row">
             <div class="dashboard-chart-card">
                 <div class="chart-card-header">
-                    <h4><i class="fas fa-chart-bar"></i> ${isContractor ? 'Projects & Quotes Activity' : 'Quotes Activity'}</h4>
-                    <span class="chart-badge">Last 6 Months</span>
+                    <h4><i class="fas fa-chart-bar"></i> ${isContractor ? 'Projects & Quotes' : 'Quotes Activity'}</h4>
+                    <span class="chart-badge">6 Months</span>
                 </div>
                 <div class="chart-canvas-wrapper">
                     <canvas id="dashboard-bar-chart"></canvas>
@@ -3331,7 +3382,7 @@ function getDashboardTemplate(user) {
             </div>
             <div class="dashboard-chart-card">
                 <div class="chart-card-header">
-                    <h4><i class="fas fa-chart-pie"></i> ${isContractor ? 'Project Status' : 'Quote Status'} Distribution</h4>
+                    <h4><i class="fas fa-chart-pie"></i> ${isContractor ? 'Project' : 'Quote'} Distribution</h4>
                     <span class="chart-badge">Current</span>
                 </div>
                 <div class="chart-canvas-wrapper">
@@ -3339,33 +3390,59 @@ function getDashboardTemplate(user) {
                 </div>
             </div>
         </div>
-        <div class="dashboard-stats-row" id="dashboard-kpi-stats">
-            <div class="kpi-card kpi-blue">
-                <div class="kpi-icon"><i class="fas ${isContractor ? 'fa-folder-open' : 'fa-file-invoice-dollar'}"></i></div>
-                <div class="kpi-info"><span class="kpi-value" id="kpi-total">--</span><span class="kpi-label">${isContractor ? 'Total Projects' : 'Total Quotes'}</span></div>
+        <div class="db-kpi-row" id="dashboard-kpi-stats">
+            <div class="db-kpi db-kpi-blue">
+                <div class="db-kpi-icon"><i class="fas ${isContractor ? 'fa-folder-open' : 'fa-file-invoice-dollar'}"></i></div>
+                <div class="db-kpi-data"><span class="db-kpi-value" id="kpi-total">--</span><span class="db-kpi-label">${isContractor ? 'Total Projects' : 'Total Quotes'}</span></div>
             </div>
-            <div class="kpi-card kpi-green">
-                <div class="kpi-icon"><i class="fas ${isContractor ? 'fa-check-circle' : 'fa-thumbs-up'}"></i></div>
-                <div class="kpi-info"><span class="kpi-value" id="kpi-approved">--</span><span class="kpi-label">${isContractor ? 'Approved Quotes' : 'Approved'}</span></div>
+            <div class="db-kpi db-kpi-green">
+                <div class="db-kpi-icon"><i class="fas ${isContractor ? 'fa-check-circle' : 'fa-thumbs-up'}"></i></div>
+                <div class="db-kpi-data"><span class="db-kpi-value" id="kpi-approved">--</span><span class="db-kpi-label">${isContractor ? 'Approved' : 'Approved'}</span></div>
             </div>
-            <div class="kpi-card kpi-amber">
-                <div class="kpi-icon"><i class="fas ${isContractor ? 'fa-clock' : 'fa-hourglass-half'}"></i></div>
-                <div class="kpi-info"><span class="kpi-value" id="kpi-pending">--</span><span class="kpi-label">${isContractor ? 'Pending Quotes' : 'Submitted'}</span></div>
+            <div class="db-kpi db-kpi-amber">
+                <div class="db-kpi-icon"><i class="fas ${isContractor ? 'fa-clock' : 'fa-hourglass-half'}"></i></div>
+                <div class="db-kpi-data"><span class="db-kpi-value" id="kpi-pending">--</span><span class="db-kpi-label">${isContractor ? 'Pending' : 'Submitted'}</span></div>
             </div>
-            <div class="kpi-card kpi-purple">
-                <div class="kpi-icon"><i class="fas ${isContractor ? 'fa-spinner' : 'fa-briefcase'}"></i></div>
-                <div class="kpi-info"><span class="kpi-value" id="kpi-active">--</span><span class="kpi-label">${isContractor ? 'In Progress' : 'Active Projects'}</span></div>
+            <div class="db-kpi db-kpi-purple">
+                <div class="db-kpi-icon"><i class="fas ${isContractor ? 'fa-spinner' : 'fa-briefcase'}"></i></div>
+                <div class="db-kpi-data"><span class="db-kpi-value" id="kpi-active">--</span><span class="db-kpi-label">${isContractor ? 'In Progress' : 'Active'}</span></div>
             </div>
         </div>` : '';
 
     return `
         <div class="dashboard-container">
-            <div class="dashboard-hero"><div><h2>Welcome back, ${name}</h2><p>You are logged in to your <strong>${isContractor ? 'Contractor' : 'Designer'} Portal</strong>.</p></div></div>
+            <!-- Premium Hero -->
+            <div class="db-hero">
+                <div class="db-hero-bg"></div>
+                <div class="db-hero-content">
+                    <div class="db-hero-left">
+                        <div class="db-hero-avatar" style="background-color: ${avatarColor}">${initial}</div>
+                        <div class="db-hero-info">
+                            <h2>Welcome back, ${name}</h2>
+                            <p><i class="fas ${isContractor ? 'fa-hard-hat' : 'fa-drafting-compass'}"></i> ${isContractor ? 'Contractor' : 'Designer'} Portal</p>
+                        </div>
+                    </div>
+                    <div class="db-hero-right">
+                        <div class="db-hero-date">
+                            <i class="far fa-calendar-alt"></i>
+                            <span>${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             ${profileStatusCard}
             ${chartsSection}
-            <h3 class="dashboard-section-title">Quick Actions</h3>
-            <div class="dashboard-grid">${isContractor ? contractorQuickActions : designerQuickActions}</div>
-            <div class="dashboard-columns">${isContractor ? contractorWidgets : designerWidgets}</div>
+
+            <div class="db-section-header">
+                <h3><i class="fas fa-bolt"></i> Quick Actions</h3>
+            </div>
+            <div class="db-actions-grid">${isContractor ? contractorQuickActions : designerQuickActions}</div>
+
+            <div class="db-section-header">
+                <h3><i class="fas fa-layer-group"></i> Overview</h3>
+            </div>
+            <div class="db-widgets-row">${isContractor ? contractorWidgets : designerWidgets}</div>
         </div>`;
 }
 
@@ -4058,10 +4135,17 @@ async function loadCommunityPosts(loadMore = false) {
         appState.communityPosts.push(...newPosts);
         appState.communityHasMore = response.pagination ? response.pagination.hasNext : false;
         appState.communityPage += 1;
+        // Sync API posts to local storage for cross-session visibility
+        saveCommunityPostsLocal(appState.communityPosts);
         renderCommunityPostsList();
         updateCommunityProfileStats();
         updateCommunityHeroStats(response.totalPosts, response.totalMembers);
     } catch (error) {
+        // API not available - load from localStorage so all users see shared posts
+        if (appState.communityPosts.length === 0) {
+            appState.communityPosts = loadCommunityPostsLocal();
+        }
+        appState.communityHasMore = false;
         renderCommunityPostsList();
         updateCommunityProfileStats();
     }
@@ -4072,6 +4156,20 @@ async function loadCommunityPosts(loadMore = false) {
             loadMoreContainer.innerHTML = '';
         }
     }
+}
+
+// --- Community Posts Local Storage (shared across all users) ---
+function saveCommunityPostsLocal(posts) {
+    try {
+        localStorage.setItem('steelconnect_community_posts', JSON.stringify(posts));
+    } catch (e) { /* Storage full or unavailable */ }
+}
+
+function loadCommunityPostsLocal() {
+    try {
+        const stored = localStorage.getItem('steelconnect_community_posts');
+        return stored ? JSON.parse(stored) : [];
+    } catch (e) { return []; }
 }
 
 function updateCommunityHeroStats(totalPosts, totalMembers) {
@@ -4281,6 +4379,8 @@ async function toggleLikePost(postId) {
         post.likes = (post.likes || 0) + 1;
     }
 
+    saveCommunityPostsLocal(appState.communityPosts);
+
     try {
         await apiCall(`/community/posts/${postId}/like`, 'POST');
     } catch (e) { /* API may not exist yet */ }
@@ -4321,6 +4421,8 @@ async function submitComment(postId) {
         if (!post.comments) post.comments = [];
         post.comments.push(newComment);
     }
+
+    saveCommunityPostsLocal(appState.communityPosts);
 
     try {
         await apiCall(`/community/posts/${postId}/comments`, 'POST', { text });
@@ -4490,6 +4592,7 @@ async function submitNewPost() {
     } catch (e) { /* API may not exist yet - post locally */ }
 
     appState.communityPosts.unshift(newPost);
+    saveCommunityPostsLocal(appState.communityPosts);
     appState.newPostImages = [];
     closeModal();
     renderCommunityPostsList();
@@ -4526,6 +4629,7 @@ async function updateCommunityPost(postId) {
         await apiCall(`/community/posts/${postId}`, 'PUT', { content, images: appState.newPostImages });
     } catch (e) { /* API may not exist */ }
 
+    saveCommunityPostsLocal(appState.communityPosts);
     closeModal();
     renderCommunityPostsList();
     showNotification('Post updated!', 'success');
@@ -4534,6 +4638,7 @@ async function updateCommunityPost(postId) {
 async function deleteCommunityPost(postId) {
     if (!confirm('Are you sure you want to delete this post?')) return;
     appState.communityPosts = appState.communityPosts.filter(p => p.id !== postId);
+    saveCommunityPostsLocal(appState.communityPosts);
     try {
         await apiCall(`/community/posts/${postId}`, 'DELETE');
     } catch (e) { /* API may not exist */ }
@@ -4652,6 +4757,8 @@ async function submitCommentFromDetail(postId) {
         if (!post.comments) post.comments = [];
         post.comments.push(newComment);
     }
+
+    saveCommunityPostsLocal(appState.communityPosts);
 
     try {
         await apiCall(`/community/posts/${postId}/comments`, 'POST', { text });
