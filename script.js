@@ -381,7 +381,10 @@ function updateDynamicHeader() {
 // Optimized API call function with better error handling
 async function apiCall(endpoint, method, body = null, successMessage = null) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+    // Use longer timeout for file uploads (FormData), shorter for regular API calls
+    const isFileUpload = body instanceof FormData;
+    const timeout = isFileUpload ? 120000 : 30000; // 2 min for file uploads, 30s for rest
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
 
     try {
         const options = {
@@ -1035,10 +1038,12 @@ async function loadUserQuotes() {
 async function loadUserEstimations() {
     if (!appState.currentUser) return;
     try {
-        const response = await apiCall(`/estimation/contractor/${appState.currentUser.email}`, 'GET');
-        appState.myEstimations = response.estimations || [];
+        const response = await apiCall(`/estimation/contractor/${encodeURIComponent(appState.currentUser.email)}`, 'GET');
+        appState.myEstimations = response.estimations || response.data || [];
+        console.log(`Loaded ${appState.myEstimations.length} estimations for ${appState.currentUser.email}`);
     } catch (error) {
         console.error('Error loading user estimations:', error);
+        showNotification('Could not load estimations. Please try again.', 'error');
         appState.myEstimations = [];
     }
 }
