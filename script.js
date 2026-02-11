@@ -63,6 +63,7 @@ const appState = {
     communityPage: 1,
     communityHasMore: true,
     newPostImages: [],
+    newPostImageFiles: [],
 };
 
 // === BUSINESS ANALYTICS STATE ===
@@ -4239,17 +4240,22 @@ function renderPostCard(post) {
 
     let imagesHTML = '';
     if (post.images && post.images.length > 0) {
+        const getImgSrc = (img) => typeof img === 'object' ? (img.url || '') : img;
         if (post.images.length === 1) {
-            imagesHTML = `<div class="cf-post-images single"><img src="${post.images[0]}" alt="Post image" onclick="openPostImageViewer('${post.images[0]}')" loading="lazy"></div>`;
+            const src = getImgSrc(post.images[0]);
+            imagesHTML = `<div class="cf-post-images single"><img src="${src}" alt="Post image" onclick="openPostImageViewer('${src}')" loading="lazy"></div>`;
         } else {
             const extra = post.images.length > 4 ? post.images.length - 4 : 0;
             const displayImages = post.images.slice(0, 4);
             imagesHTML = `<div class="cf-post-images grid-${Math.min(post.images.length, 4)}">
-                ${displayImages.map((img, i) => `
-                    <div class="cf-post-img-wrapper ${i === 3 && extra > 0 ? 'has-more' : ''}" onclick="openPostImageViewer('${img}')">
-                        <img src="${img}" alt="Post image" loading="lazy">
+                ${displayImages.map((img, i) => {
+                    const src = getImgSrc(img);
+                    return `
+                    <div class="cf-post-img-wrapper ${i === 3 && extra > 0 ? 'has-more' : ''}" onclick="openPostImageViewer('${src}')">
+                        <img src="${src}" alt="Post image" loading="lazy">
                         ${i === 3 && extra > 0 ? `<div class="cf-img-overlay">+${extra}</div>` : ''}
-                    </div>`).join('')}
+                    </div>`;
+                }).join('')}
             </div>`;
         }
     }
@@ -4457,9 +4463,10 @@ function openCreatePostModal(editPost = null) {
     const avatarColor = getAvatarColor(user.name || 'U');
     const initial = (user.name || 'U').charAt(0).toUpperCase();
     appState.newPostImages = [];
+    appState.newPostImageFiles = [];
 
     if (isEdit && editPost.images) {
-        appState.newPostImages = [...editPost.images];
+        appState.newPostImages = editPost.images.map(img => typeof img === 'object' ? (img.url || img) : img);
     }
 
     const content = `
@@ -4478,11 +4485,14 @@ function openCreatePostModal(editPost = null) {
             <div class="cf-create-body">
                 <textarea id="cf-post-content-input" class="cf-post-textarea" placeholder="Share your technical expertise, project highlights, or industry insights...">${isEdit ? editPost.content : ''}</textarea>
                 <div id="cf-post-image-preview" class="cf-image-preview-grid">
-                    ${isEdit && editPost.images ? editPost.images.map((img, i) => `
+                    ${isEdit && editPost.images ? editPost.images.map((img, i) => {
+                        const imgSrc = typeof img === 'object' ? (img.url || img) : img;
+                        return `
                         <div class="cf-preview-img-item">
-                            <img src="${img}" alt="Preview">
+                            <img src="${imgSrc}" alt="Preview">
                             <button class="cf-remove-img" onclick="removePostImage(${i})"><i class="fas fa-times"></i></button>
-                        </div>`).join('') : ''}
+                        </div>`;
+                    }).join('') : ''}
                 </div>
             </div>
             <div class="cf-create-toolbar">
@@ -4521,6 +4531,7 @@ function handlePostImageSelect(event) {
             showNotification(`File ${file.name} is too large. Max 10MB.`, 'warning');
             return;
         }
+        appState.newPostImageFiles.push(file);
         const reader = new FileReader();
         reader.onload = (e) => {
             appState.newPostImages.push(e.target.result);
@@ -4533,15 +4544,19 @@ function handlePostImageSelect(event) {
 function renderPostImagePreviews() {
     const container = document.getElementById('cf-post-image-preview');
     if (!container) return;
-    container.innerHTML = appState.newPostImages.map((img, i) => `
+    container.innerHTML = appState.newPostImages.map((img, i) => {
+        const src = typeof img === 'object' ? (img.url || '') : img;
+        return `
         <div class="cf-preview-img-item">
-            <img src="${img}" alt="Preview">
+            <img src="${src}" alt="Preview">
             <button class="cf-remove-img" onclick="removePostImage(${i})"><i class="fas fa-times"></i></button>
-        </div>`).join('');
+        </div>`;
+    }).join('');
 }
 
 function removePostImage(index) {
     appState.newPostImages.splice(index, 1);
+    appState.newPostImageFiles.splice(index, 1);
     renderPostImagePreviews();
 }
 
@@ -4567,37 +4582,58 @@ async function submitNewPost() {
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<div class="btn-spinner"></div> Publishing...';
 
-    const user = appState.currentUser;
-    const newPost = {
-        id: 'post-' + Date.now(),
-        authorId: user.id,
-        authorName: user.name,
-        authorType: user.type,
-        content: content,
-        images: [...appState.newPostImages],
-        likes: 0,
-        comments: [],
-        likedBy: [],
-        createdAt: new Date().toISOString()
-    };
-
     try {
-        const formData = new FormData();
-        formData.append('content', content);
-        // If real images are files, they would be appended here
-        const response = await apiCall('/community/posts', 'POST', { content, images: appState.newPostImages });
-        if (response.data) {
-            newPost.id = response.data.id || newPost.id;
+        let response;
+        if (appState.newPostImageFiles && appState.newPostImageFiles.length > 0) {
+            // Use FormData for actual file uploads
+            const formData = new FormData();
+            formData.append('content', content);
+            appState.newPostImageFiles.forEach(file => {
+                formData.append('images', file);
+            });
+            response = await apiCall('/community/posts', 'POST', formData);
+        } else {
+            // JSON body with base64 images or no images
+            response = await apiCall('/community/posts', 'POST', { content, images: appState.newPostImages });
         }
-    } catch (e) { /* API may not exist yet - post locally */ }
 
-    appState.communityPosts.unshift(newPost);
-    saveCommunityPostsLocal(appState.communityPosts);
-    appState.newPostImages = [];
-    closeModal();
-    renderCommunityPostsList();
-    updateCommunityProfileStats();
-    showNotification('Post published successfully!', 'success');
+        appState.newPostImages = [];
+        appState.newPostImageFiles = [];
+        closeModal();
+
+        if (response.data && response.data.status === 'pending') {
+            showNotification('Post submitted for review! It will appear in the feed after admin approval.', 'info');
+        } else if (response.data) {
+            appState.communityPosts.unshift(response.data);
+            saveCommunityPostsLocal(appState.communityPosts);
+            renderCommunityPostsList();
+            updateCommunityProfileStats();
+            showNotification('Post published successfully!', 'success');
+        }
+    } catch (e) {
+        // Fallback: add locally if API fails
+        const user = appState.currentUser;
+        const newPost = {
+            id: 'post-' + Date.now(),
+            authorId: user.id,
+            authorName: user.name,
+            authorType: user.type,
+            content: content,
+            images: [...appState.newPostImages],
+            likes: 0,
+            comments: [],
+            likedBy: [],
+            createdAt: new Date().toISOString()
+        };
+        appState.communityPosts.unshift(newPost);
+        saveCommunityPostsLocal(appState.communityPosts);
+        appState.newPostImages = [];
+        appState.newPostImageFiles = [];
+        closeModal();
+        renderCommunityPostsList();
+        updateCommunityProfileStats();
+        showNotification('Post saved locally (pending sync).', 'info');
+    }
 }
 
 function editCommunityPost(postId) {
@@ -4619,20 +4655,50 @@ async function updateCommunityPost(postId) {
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<div class="btn-spinner"></div> Saving...';
 
-    const post = appState.communityPosts.find(p => p.id === postId);
-    if (post) {
-        post.content = content;
-        post.images = [...appState.newPostImages];
-    }
-
     try {
-        await apiCall(`/community/posts/${postId}`, 'PUT', { content, images: appState.newPostImages });
-    } catch (e) { /* API may not exist */ }
+        let response;
+        if (appState.newPostImageFiles && appState.newPostImageFiles.length > 0) {
+            const formData = new FormData();
+            formData.append('content', content);
+            appState.newPostImageFiles.forEach(file => {
+                formData.append('images', file);
+            });
+            response = await apiCall(`/community/posts/${postId}`, 'PUT', formData);
+        } else {
+            response = await apiCall(`/community/posts/${postId}`, 'PUT', { content, images: appState.newPostImages });
+        }
 
-    saveCommunityPostsLocal(appState.communityPosts);
-    closeModal();
-    renderCommunityPostsList();
-    showNotification('Post updated!', 'success');
+        if (response.data) {
+            const post = appState.communityPosts.find(p => p.id === postId);
+            if (post) {
+                post.content = content;
+                post.images = response.data.images || [...appState.newPostImages];
+            }
+        }
+
+        saveCommunityPostsLocal(appState.communityPosts);
+        appState.newPostImageFiles = [];
+        closeModal();
+        renderCommunityPostsList();
+
+        if (response && response.data && response.data.status === 'pending') {
+            showNotification('Post updated and resubmitted for review!', 'info');
+        } else {
+            showNotification('Post updated!', 'success');
+        }
+    } catch (e) {
+        // Fallback: update locally
+        const post = appState.communityPosts.find(p => p.id === postId);
+        if (post) {
+            post.content = content;
+            post.images = [...appState.newPostImages];
+        }
+        saveCommunityPostsLocal(appState.communityPosts);
+        appState.newPostImageFiles = [];
+        closeModal();
+        renderCommunityPostsList();
+        showNotification('Post updated locally.', 'info');
+    }
 }
 
 async function deleteCommunityPost(postId) {
@@ -4663,7 +4729,10 @@ function openPostDetailView(postId) {
     let imagesHTML = '';
     if (post.images && post.images.length > 0) {
         imagesHTML = `<div class="cf-detail-images">
-            ${post.images.map(img => `<img src="${img}" alt="Post image" class="cf-detail-img" onclick="openPostImageViewer('${img}')">`).join('')}
+            ${post.images.map(img => {
+                const src = typeof img === 'object' ? (img.url || '') : img;
+                return `<img src="${src}" alt="Post image" class="cf-detail-img" onclick="openPostImageViewer('${src}')">`;
+            }).join('')}
         </div>`;
     }
 
