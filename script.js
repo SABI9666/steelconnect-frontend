@@ -2576,17 +2576,20 @@ async function renderConversationView(conversationOrId) {
                 const prevMsg = messages[index - 1];
                 const showAvatar = !prevMsg || prevMsg.senderId !== msg.senderId;
                 const senderAvatarColor = getAvatarColor(msg.senderName || 'U');
-                const attachmentsHtml = (msg.attachments && msg.attachments.length > 0) ? `<div class="msg-attachments">${msg.attachments.map(att => {
+                const msgAttachments = (msg.attachments && Array.isArray(msg.attachments) && msg.attachments.length > 0) ? msg.attachments : [];
+                const attachmentsHtml = msgAttachments.length > 0 ? `<div class="msg-attachments">${msgAttachments.map(att => {
                     const icon = getMsgFileIcon(att.name || att.type || '');
                     const size = att.size ? formatFileSize(att.size) : '';
-                    return `<a href="${att.url}" target="_blank" rel="noopener noreferrer" class="msg-attachment-item"><i class="fas ${icon}"></i><div class="msg-att-info"><span class="msg-att-name">${att.name || 'File'}</span>${size ? `<span class="msg-att-size">${size}</span>` : ''}</div><i class="fas fa-download msg-att-dl"></i></a>`;
+                    const fileUrl = att.url || att.downloadURL || '#';
+                    return `<a href="${fileUrl}" target="_blank" rel="noopener noreferrer" class="msg-attachment-item" ${fileUrl !== '#' ? 'download' : ''}><i class="fas ${icon}"></i><div class="msg-att-info"><span class="msg-att-name">${att.name || 'File'}</span>${size ? `<span class="msg-att-size">${size}</span>` : ''}</div><i class="fas fa-download msg-att-dl"></i></a>`;
                 }).join('')}</div>` : '';
+                const bubbleContent = (msg.text || '') + attachmentsHtml;
                 messagesHTML += `
                     <div class="message-wrapper premium-message ${isMine ? 'me' : 'them'}">
                         ${!isMine && showAvatar ? `<div class="message-avatar premium-msg-avatar" style="background-color: ${senderAvatarColor}">${(msg.senderName || 'U').charAt(0).toUpperCase()}</div>` : '<div class="message-avatar-spacer"></div>'}
                         <div class="message-content">
                             ${showAvatar && !isMine ? `<div class="message-sender">${msg.senderName || 'N/A'}</div>` : ''}
-                            <div class="message-bubble premium-bubble ${isMine ? 'me' : 'them'}">${msg.text || ''}${attachmentsHtml}</div>
+                            <div class="message-bubble premium-bubble ${isMine ? 'me' : 'them'}">${bubbleContent || '<span class="msg-empty-placeholder">Message</span>'}</div>
                             <div class="message-meta">${timestamp}</div>
                         </div>
                     </div>`;
@@ -2620,6 +2623,9 @@ async function handleSendMessage(conversationId) {
     input.disabled = true;
     sendBtn.disabled = true;
     sendBtn.innerHTML = '<div class="btn-spinner"></div>';
+    if (files.length > 0) {
+        showNotification(`Uploading ${files.length} file(s)...`, 'info', 3000);
+    }
     try {
         let response;
         if (files.length > 0) {
@@ -2648,14 +2654,17 @@ async function handleSendMessage(conversationId) {
             msgContainer.querySelector('.empty-messages')?.remove();
             const newMsg = data.data;
             const timestamp = formatDetailedTimestamp(newMsg.createdAt);
-            const attHtml = (newMsg.attachments && newMsg.attachments.length > 0) ? `<div class="msg-attachments">${newMsg.attachments.map(att => {
+            const sentAttachments = (newMsg.attachments && Array.isArray(newMsg.attachments) && newMsg.attachments.length > 0) ? newMsg.attachments : [];
+            const attHtml = sentAttachments.length > 0 ? `<div class="msg-attachments">${sentAttachments.map(att => {
                 const icon = getMsgFileIcon(att.name || att.type || '');
                 const size = att.size ? formatFileSize(att.size) : '';
-                return `<a href="${att.url}" target="_blank" rel="noopener noreferrer" class="msg-attachment-item"><i class="fas ${icon}"></i><div class="msg-att-info"><span class="msg-att-name">${att.name || 'File'}</span>${size ? `<span class="msg-att-size">${size}</span>` : ''}</div><i class="fas fa-download msg-att-dl"></i></a>`;
+                const fileUrl = att.url || att.downloadURL || '#';
+                return `<a href="${fileUrl}" target="_blank" rel="noopener noreferrer" class="msg-attachment-item" ${fileUrl !== '#' ? 'download' : ''}><i class="fas ${icon}"></i><div class="msg-att-info"><span class="msg-att-name">${att.name || 'File'}</span>${size ? `<span class="msg-att-size">${size}</span>` : ''}</div><i class="fas fa-download msg-att-dl"></i></a>`;
             }).join('')}</div>` : '';
+            const sentContent = (newMsg.text || '') + attHtml;
             const msgBubble = document.createElement('div');
             msgBubble.className = 'message-wrapper premium-message me';
-            msgBubble.innerHTML = `<div class="message-avatar-spacer"></div><div class="message-content"><div class="message-bubble premium-bubble me">${newMsg.text || ''}${attHtml}</div><div class="message-meta">${timestamp}</div></div>`;
+            msgBubble.innerHTML = `<div class="message-avatar-spacer"></div><div class="message-content"><div class="message-bubble premium-bubble me">${sentContent || 'File sent'}</div><div class="message-meta">${timestamp}</div></div>`;
             msgContainer.appendChild(msgBubble);
             msgContainer.scrollTop = msgContainer.scrollHeight;
             refreshNotificationsAfterMessage();

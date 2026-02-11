@@ -3374,21 +3374,24 @@ body {
 .msg-file-chip-remove:hover { color: #ef4444; background: #fef2f2; }
 
 /* --- Message Attachment Display in Bubbles --- */
-.msg-attachments { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.msg-attachments { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; width: 100%; }
 .msg-attachment-item {
-    display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 8px;
-    text-decoration: none; font-size: 12.5px; transition: background 0.15s ease;
+    display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px;
+    text-decoration: none; font-size: 13px; transition: background 0.15s ease;
+    cursor: pointer; min-width: 180px;
 }
-.premium-bubble.me .msg-attachment-item { background: rgba(255,255,255,0.15); color: white; }
-.premium-bubble.me .msg-attachment-item:hover { background: rgba(255,255,255,0.25); }
-.premium-bubble.them .msg-attachment-item { background: #f1f5f9; color: #334155; }
+.premium-bubble.me .msg-attachment-item { background: rgba(255,255,255,0.18); color: white; border: 1px solid rgba(255,255,255,0.15); }
+.premium-bubble.me .msg-attachment-item:hover { background: rgba(255,255,255,0.3); }
+.premium-bubble.them .msg-attachment-item { background: #f1f5f9; color: #334155; border: 1px solid #e2e8f0; }
 .premium-bubble.them .msg-attachment-item:hover { background: #e2e8f0; }
-.msg-attachment-item i:first-child { font-size: 18px; flex-shrink: 0; }
+.msg-attachment-item i:first-child { font-size: 22px; flex-shrink: 0; width: 28px; text-align: center; }
+.premium-bubble.them .msg-attachment-item i:first-child { color: #6366f1; }
 .msg-att-info { display: flex; flex-direction: column; flex: 1; min-width: 0; }
-.msg-att-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.msg-att-size { font-size: 11px; opacity: 0.7; }
-.msg-att-dl { font-size: 12px; opacity: 0.5; flex-shrink: 0; }
+.msg-att-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
+.msg-att-size { font-size: 11px; opacity: 0.7; margin-top: 1px; }
+.msg-att-dl { font-size: 14px; opacity: 0.4; flex-shrink: 0; }
 .msg-attachment-item:hover .msg-att-dl { opacity: 1; }
+.msg-empty-placeholder { opacity: 0.6; font-style: italic; font-size: 12px; }
 
 .premium-overlay { background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); }
 .premium-modal { border-radius: 20px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); border: 1px solid #e2e8f0; }
