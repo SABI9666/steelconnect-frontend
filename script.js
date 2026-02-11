@@ -3851,14 +3851,21 @@ async function renderCommunityFeed() {
 
     container.innerHTML = `
         <div class="cf-layout">
-            <!-- Left Sidebar - Profile Card -->
+            <!-- Left Sidebar -->
             <aside class="cf-sidebar-left">
                 <div class="cf-profile-card">
-                    <div class="cf-profile-banner"></div>
+                    <div class="cf-profile-banner">
+                        <div class="cf-banner-pattern"></div>
+                    </div>
                     <div class="cf-profile-info">
-                        <div class="cf-profile-avatar" style="background-color: ${avatarColor}">${initial}</div>
+                        <div class="cf-profile-avatar-ring">
+                            <div class="cf-profile-avatar" style="background-color: ${avatarColor}">${initial}</div>
+                        </div>
                         <h3>${user.name || 'User'}</h3>
-                        <span class="cf-profile-role ${user.type}">${user.type === 'designer' ? 'Designer' : 'Contractor'}</span>
+                        <span class="cf-profile-role ${user.type}">
+                            <i class="fas ${user.type === 'designer' ? 'fa-drafting-compass' : 'fa-hard-hat'}"></i>
+                            ${user.type === 'designer' ? 'Designer' : 'Contractor'}
+                        </span>
                         <p class="cf-profile-tagline">${isDesigner ? 'Steel & Rebar Design Professional' : 'Steel Construction Contractor'}</p>
                     </div>
                     <div class="cf-profile-stats">
@@ -3876,93 +3883,143 @@ async function renderCommunityFeed() {
                         </div>
                     </div>
                 </div>
-                ${isDesigner ? `
-                <div class="cf-sidebar-cta">
-                    <h4><i class="fas fa-lightbulb"></i> Grow Your Reach</h4>
-                    <p>Share your technical expertise to attract more clients and project opportunities.</p>
-                </div>` : `
-                <div class="cf-sidebar-cta">
-                    <h4><i class="fas fa-search"></i> Discover Talent</h4>
-                    <p>Browse posts from skilled designers. Find the right expert for your next project.</p>
-                </div>`}
+
+                <div class="cf-quick-links">
+                    <h4><i class="fas fa-bolt"></i> Quick Actions</h4>
+                    ${isDesigner ? `
+                    <button class="cf-quick-link-btn" onclick="openCreatePostModal()">
+                        <i class="fas fa-plus-circle"></i> New Post
+                    </button>
+                    <button class="cf-quick-link-btn" onclick="renderAppSection('jobs')">
+                        <i class="fas fa-briefcase"></i> Browse Projects
+                    </button>` : `
+                    <button class="cf-quick-link-btn" onclick="renderAppSection('post-job')">
+                        <i class="fas fa-plus-circle"></i> Post a Project
+                    </button>
+                    <button class="cf-quick-link-btn" onclick="renderAppSection('jobs')">
+                        <i class="fas fa-search"></i> Find Designers
+                    </button>`}
+                </div>
             </aside>
 
             <!-- Main Feed -->
             <main class="cf-main">
-                ${isDesigner ? `
-                <!-- Create Post Box -->
-                <div class="cf-create-post-box" onclick="openCreatePostModal()">
-                    <div class="cf-create-avatar" style="background-color: ${avatarColor}">${initial}</div>
-                    <div class="cf-create-prompt">
-                        <span>Share your work, insights, or technical expertise...</span>
+                <!-- Hero Welcome -->
+                <div class="cf-hero-welcome">
+                    <div class="cf-hero-content">
+                        <h2><i class="fas fa-users"></i> Community Hub</h2>
+                        <p>${isDesigner ? 'Showcase your expertise and connect with contractors' : 'Discover talented designers and industry insights'}</p>
+                    </div>
+                    <div class="cf-hero-stats">
+                        <div class="cf-hero-stat">
+                            <span class="cf-hero-stat-num" id="cf-total-posts">--</span>
+                            <span class="cf-hero-stat-label">Posts</span>
+                        </div>
+                        <div class="cf-hero-stat">
+                            <span class="cf-hero-stat-num" id="cf-total-members">--</span>
+                            <span class="cf-hero-stat-label">Members</span>
+                        </div>
                     </div>
                 </div>
-                <div class="cf-create-actions-bar">
-                    <button class="cf-create-action-btn" onclick="openCreatePostModal()">
-                        <i class="fas fa-image" style="color: #2563eb;"></i> Photo
-                    </button>
-                    <button class="cf-create-action-btn" onclick="openCreatePostModal()">
-                        <i class="fas fa-pen-fancy" style="color: #059669;"></i> Article
-                    </button>
-                    <button class="cf-create-action-btn" onclick="openCreatePostModal()">
-                        <i class="fas fa-project-diagram" style="color: #d97706;"></i> Project Showcase
-                    </button>
+
+                ${isDesigner ? `
+                <!-- Create Post -->
+                <div class="cf-create-box" onclick="openCreatePostModal()">
+                    <div class="cf-create-left">
+                        <div class="cf-create-avatar" style="background-color: ${avatarColor}">${initial}</div>
+                        <div class="cf-create-prompt">
+                            <span>Share your work, insights, or project showcase...</span>
+                        </div>
+                    </div>
+                    <div class="cf-create-actions">
+                        <button class="cf-create-action" onclick="event.stopPropagation(); openCreatePostModal()">
+                            <i class="fas fa-image"></i>
+                        </button>
+                        <button class="cf-create-action" onclick="event.stopPropagation(); openCreatePostModal()">
+                            <i class="fas fa-pen-fancy"></i>
+                        </button>
+                        <button class="cf-create-action cf-create-action-primary" onclick="event.stopPropagation(); openCreatePostModal()">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
                 </div>` : ''}
 
-                <!-- Feed Filter Tabs -->
+                <!-- Feed Filter -->
                 <div class="cf-feed-tabs">
                     <button class="cf-tab active" data-tab="all" onclick="filterCommunityFeed('all')">
-                        <i class="fas fa-stream"></i> All Posts
+                        <i class="fas fa-layer-group"></i> All Posts
                     </button>
                     <button class="cf-tab" data-tab="trending" onclick="filterCommunityFeed('trending')">
                         <i class="fas fa-fire"></i> Trending
                     </button>
                     <button class="cf-tab" data-tab="following" onclick="filterCommunityFeed('following')">
-                        <i class="fas fa-user-friends"></i> My Posts
+                        <i class="fas fa-user"></i> My Posts
                     </button>
                 </div>
 
                 <!-- Posts Container -->
                 <div id="cf-posts-container" class="cf-posts-container">
-                    <div class="loading-spinner"><div class="spinner"></div><p>Loading feed...</p></div>
+                    <div class="cf-loading-skeleton">
+                        <div class="cf-skeleton-card"><div class="cf-skeleton-header"><div class="cf-skeleton-circle"></div><div class="cf-skeleton-lines"><div class="cf-skeleton-line w60"></div><div class="cf-skeleton-line w40"></div></div></div><div class="cf-skeleton-body"><div class="cf-skeleton-line w100"></div><div class="cf-skeleton-line w80"></div><div class="cf-skeleton-line w60"></div></div></div>
+                        <div class="cf-skeleton-card"><div class="cf-skeleton-header"><div class="cf-skeleton-circle"></div><div class="cf-skeleton-lines"><div class="cf-skeleton-line w60"></div><div class="cf-skeleton-line w40"></div></div></div><div class="cf-skeleton-body"><div class="cf-skeleton-line w100"></div><div class="cf-skeleton-line w80"></div></div></div>
+                    </div>
                 </div>
 
                 <div id="cf-load-more" class="cf-load-more"></div>
             </main>
 
-            <!-- Right Sidebar - Trending / Suggestions -->
+            <!-- Right Sidebar -->
             <aside class="cf-sidebar-right">
                 <div class="cf-trending-card">
                     <h4><i class="fas fa-fire-alt"></i> Trending Topics</h4>
                     <div class="cf-trending-list">
                         <div class="cf-trending-item" onclick="searchCommunityPosts('#SteelDesign')">
-                            <span class="cf-trending-tag">#SteelDesign</span>
-                            <span class="cf-trending-count">Popular</span>
+                            <div class="cf-trending-icon"><i class="fas fa-drafting-compass"></i></div>
+                            <div class="cf-trending-info">
+                                <span class="cf-trending-tag">#SteelDesign</span>
+                                <span class="cf-trending-desc">Structural steel discussions</span>
+                            </div>
                         </div>
                         <div class="cf-trending-item" onclick="searchCommunityPosts('#RebarDetailing')">
-                            <span class="cf-trending-tag">#RebarDetailing</span>
-                            <span class="cf-trending-count">Trending</span>
+                            <div class="cf-trending-icon rebar"><i class="fas fa-ruler-combined"></i></div>
+                            <div class="cf-trending-info">
+                                <span class="cf-trending-tag">#RebarDetailing</span>
+                                <span class="cf-trending-desc">Reinforcement techniques</span>
+                            </div>
                         </div>
                         <div class="cf-trending-item" onclick="searchCommunityPosts('#StructuralEngineering')">
-                            <span class="cf-trending-tag">#StructuralEngineering</span>
-                            <span class="cf-trending-count">Active</span>
+                            <div class="cf-trending-icon engineering"><i class="fas fa-building"></i></div>
+                            <div class="cf-trending-info">
+                                <span class="cf-trending-tag">#StructuralEngineering</span>
+                                <span class="cf-trending-desc">Engineering insights</span>
+                            </div>
                         </div>
                         <div class="cf-trending-item" onclick="searchCommunityPosts('#ProjectShowcase')">
-                            <span class="cf-trending-tag">#ProjectShowcase</span>
-                            <span class="cf-trending-count">New</span>
+                            <div class="cf-trending-icon showcase"><i class="fas fa-trophy"></i></div>
+                            <div class="cf-trending-info">
+                                <span class="cf-trending-tag">#ProjectShowcase</span>
+                                <span class="cf-trending-desc">Completed projects</span>
+                            </div>
                         </div>
                         <div class="cf-trending-item" onclick="searchCommunityPosts('#AIEstimation')">
-                            <span class="cf-trending-tag">#AIEstimation</span>
-                            <span class="cf-trending-count">Hot</span>
+                            <div class="cf-trending-icon ai"><i class="fas fa-robot"></i></div>
+                            <div class="cf-trending-info">
+                                <span class="cf-trending-tag">#AIEstimation</span>
+                                <span class="cf-trending-desc">AI-powered tools</span>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="cf-suggestions-card">
-                    <h4><i class="fas fa-user-plus"></i> Platform Highlights</h4>
-                    <p class="cf-suggestion-text">Post technical content, share project showcases, and connect with professionals in the steel construction industry.</p>
-                    <button class="btn btn-outline btn-sm" onclick="renderAppSection('jobs')" style="width:100%; margin-top: 8px;">
-                        <i class="fas fa-briefcase"></i> ${isDesigner ? 'Find Projects' : 'Post a Project'}
-                    </button>
+                <div class="cf-activity-card">
+                    <h4><i class="fas fa-chart-line"></i> Community Activity</h4>
+                    <div class="cf-activity-bars">
+                        <div class="cf-activity-row"><span>Mon</span><div class="cf-activity-bar"><div class="cf-activity-fill" style="width:65%"></div></div></div>
+                        <div class="cf-activity-row"><span>Tue</span><div class="cf-activity-bar"><div class="cf-activity-fill" style="width:80%"></div></div></div>
+                        <div class="cf-activity-row"><span>Wed</span><div class="cf-activity-bar"><div class="cf-activity-fill" style="width:45%"></div></div></div>
+                        <div class="cf-activity-row"><span>Thu</span><div class="cf-activity-bar"><div class="cf-activity-fill" style="width:90%"></div></div></div>
+                        <div class="cf-activity-row"><span>Fri</span><div class="cf-activity-bar"><div class="cf-activity-fill" style="width:72%"></div></div></div>
+                    </div>
+                    <p class="cf-activity-note">Most active on Thursdays</p>
                 </div>
             </aside>
         </div>`;
@@ -4003,95 +4060,25 @@ async function loadCommunityPosts(loadMore = false) {
         appState.communityPage += 1;
         renderCommunityPostsList();
         updateCommunityProfileStats();
+        updateCommunityHeroStats(response.totalPosts, response.totalMembers);
     } catch (error) {
-        // API may not exist yet — show empty state with demo posts
-        if (appState.communityPosts.length === 0) {
-            appState.communityPosts = generateDemoPosts();
-            renderCommunityPostsList();
-            updateCommunityProfileStats();
-        }
+        renderCommunityPostsList();
+        updateCommunityProfileStats();
     }
     if (loadMoreContainer) {
-        if (appState.communityHasMore) {
-            loadMoreContainer.innerHTML = `<button class="btn btn-outline cf-load-more-btn" onclick="loadCommunityPosts(true)"><i class="fas fa-chevron-down"></i> Load More Posts</button>`;
+        if (appState.communityHasMore && appState.communityPosts.length > 0) {
+            loadMoreContainer.innerHTML = `<button class="cf-load-more-btn" onclick="loadCommunityPosts(true)"><i class="fas fa-arrow-down"></i> Load More</button>`;
         } else {
             loadMoreContainer.innerHTML = '';
         }
     }
 }
 
-function generateDemoPosts() {
-    const now = new Date();
-    return [
-        {
-            id: 'demo-1',
-            authorName: 'Sarah Mitchell',
-            authorType: 'designer',
-            authorAvatar: null,
-            content: 'Just completed a complex steel connection design for a 12-story commercial building. The moment analysis required careful consideration of seismic loads and wind forces. Sharing my approach to the base plate design which achieved 23% material savings.\n\n#SteelDesign #StructuralEngineering #ProjectShowcase',
-            images: [],
-            likes: 47,
-            comments: [
-                { id: 'c1', authorName: 'James Cooper', authorType: 'contractor', text: 'Impressive work Sarah! How did you handle the lateral bracing at the connection points?', createdAt: new Date(now - 3600000).toISOString() },
-                { id: 'c2', authorName: 'Sarah Mitchell', authorType: 'designer', text: 'Thanks James! I used a chevron brace configuration with gusset plate connections. Happy to discuss further.', createdAt: new Date(now - 1800000).toISOString() }
-            ],
-            likedBy: [],
-            createdAt: new Date(now - 7200000).toISOString()
-        },
-        {
-            id: 'demo-2',
-            authorName: 'Ahmed Al-Rashid',
-            authorType: 'designer',
-            content: 'Rebar detailing tip: When working with high-density reinforcement zones (beam-column joints), always verify bar spacing meets minimum clear distance requirements per ACI 318. I created a quick reference chart for common scenarios.\n\nThis has saved me hours on recent projects and eliminated RFIs during construction.\n\n#RebarDetailing #Tips #StructuralEngineering',
-            images: [],
-            likes: 82,
-            comments: [
-                { id: 'c3', authorName: 'Maria Chen', authorType: 'contractor', text: 'This is exactly what we needed on our current project. Would you be open to consulting on a complex foundation design?', createdAt: new Date(now - 86400000).toISOString() },
-                { id: 'c4', authorName: 'Ahmed Al-Rashid', authorType: 'designer', text: 'Absolutely Maria! Feel free to send me the project details through the messaging system.', createdAt: new Date(now - 82800000).toISOString() },
-                { id: 'c5', authorName: 'Robert Park', authorType: 'contractor', text: 'Great resource Ahmed. Bookmarked this for our team review.', createdAt: new Date(now - 43200000).toISOString() }
-            ],
-            likedBy: [],
-            createdAt: new Date(now - 172800000).toISOString()
-        },
-        {
-            id: 'demo-3',
-            authorName: 'Elena Rodriguez',
-            authorType: 'designer',
-            content: 'Excited to share our latest project: A 200-meter steel pedestrian bridge with a unique cable-stayed design. The project involved 450 tonnes of structural steel and used advanced parametric modeling for the curved deck geometry.\n\nKey challenges solved:\n- Wind vibration damping with TMDs\n- Thermal expansion joints for 60°C range\n- Fatigue-resistant weld details for 100-year design life\n\n#ProjectShowcase #BridgeDesign #SteelDesign',
-            images: [],
-            likes: 156,
-            comments: [
-                { id: 'c6', authorName: 'David Thompson', authorType: 'contractor', text: 'Stunning design Elena! We would love to collaborate on future bridge projects. Your parametric approach is exactly what we need.', createdAt: new Date(now - 259200000).toISOString() }
-            ],
-            likedBy: [],
-            createdAt: new Date(now - 345600000).toISOString()
-        },
-        {
-            id: 'demo-4',
-            authorName: 'Michael Chen',
-            authorType: 'designer',
-            content: 'AI-powered cost estimation is transforming how we bid on steel projects. Just ran our latest warehouse design through the SteelConnect AI estimator — the results were within 3% of our manual takeoff!\n\nFor anyone who hasn\'t tried it yet, the platform\'s estimation tool handles:\n- Structural steel weight calculations\n- Connection material quantities\n- Fabrication complexity factors\n\nHighly recommended for quick preliminary estimates.\n\n#AIEstimation #Technology #SteelDesign',
-            images: [],
-            likes: 93,
-            comments: [
-                { id: 'c7', authorName: 'Lisa Wang', authorType: 'contractor', text: 'We have been using the AI estimation tool for 3 months now. Game changer for early-stage project budgeting!', createdAt: new Date(now - 432000000).toISOString() },
-                { id: 'c8', authorName: 'Michael Chen', authorType: 'designer', text: 'Agreed Lisa! The time savings alone make it worthwhile. Plus clients love getting quick ballpark figures.', createdAt: new Date(now - 428400000).toISOString() }
-            ],
-            likedBy: [],
-            createdAt: new Date(now - 518400000).toISOString()
-        },
-        {
-            id: 'demo-5',
-            authorName: 'Priya Sharma',
-            authorType: 'designer',
-            content: 'Material selection matters: We recently switched from A36 to A992 steel for a 8-story office building and reduced the total steel tonnage by 18% while maintaining all structural requirements.\n\nThe higher yield strength (50 ksi vs 36 ksi) allowed us to use lighter W-sections throughout, particularly in the gravity columns and floor beams. Net project savings: $340,000.\n\n#SteelDesign #Engineering #CostOptimization',
-            images: [],
-            likes: 128,
-            comments: [],
-            likedBy: [],
-            createdAt: new Date(now - 604800000).toISOString()
-        }
-    ];
+function updateCommunityHeroStats(totalPosts, totalMembers) {
+    const postsEl = document.getElementById('cf-total-posts');
+    const membersEl = document.getElementById('cf-total-members');
+    if (postsEl) postsEl.textContent = totalPosts || appState.communityPosts.length || '0';
+    if (membersEl) membersEl.textContent = totalMembers || '--';
 }
 
 function updateCommunityProfileStats() {
@@ -4126,12 +4113,16 @@ function renderCommunityPostsList(searchTag = null) {
     }
 
     if (posts.length === 0) {
+        const isDesigner = appState.currentUser.type === 'designer';
         container.innerHTML = `
             <div class="cf-empty-feed">
-                <i class="fas fa-newspaper"></i>
-                <h3>${communityFeedFilter === 'following' ? 'You haven\'t posted yet' : 'No posts found'}</h3>
-                <p>${appState.currentUser.type === 'designer' ? 'Share your first post to showcase your work and attract clients!' : 'The community feed will populate as designers share their work.'}</p>
-                ${appState.currentUser.type === 'designer' ? '<button class="btn btn-primary" onclick="openCreatePostModal()"><i class="fas fa-plus"></i> Create Your First Post</button>' : ''}
+                <div class="cf-empty-icon">
+                    <div class="cf-empty-icon-bg"></div>
+                    <i class="fas ${communityFeedFilter === 'following' ? 'fa-user-edit' : 'fa-comments'}"></i>
+                </div>
+                <h3>${communityFeedFilter === 'following' ? 'You haven\'t posted yet' : (searchTag ? 'No posts found for ' + searchTag : 'No posts yet')}</h3>
+                <p>${isDesigner ? 'Be the first to share your expertise and showcase your projects to attract new clients!' : 'The community feed will come alive as designers share their work. Check back soon!'}</p>
+                ${isDesigner ? `<button class="cf-empty-cta" onclick="openCreatePostModal()"><i class="fas fa-plus"></i> Create First Post</button>` : ''}
             </div>`;
         return;
     }
@@ -4146,6 +4137,7 @@ function renderPostCard(post) {
     const isLiked = (post.likedBy || []).includes(appState.currentUser.id);
     const commentsCount = (post.comments || []).length;
     const contentHTML = formatPostContent(post.content || '');
+    const isOwner = post.authorId === appState.currentUser.id;
 
     let imagesHTML = '';
     if (post.images && post.images.length > 0) {
@@ -4192,43 +4184,55 @@ function renderPostCard(post) {
     return `
         <article class="cf-post-card" data-post-id="${post.id}">
             <div class="cf-post-header">
-                <div class="cf-post-avatar" style="background-color: ${avatarColor}">${initial}</div>
-                <div class="cf-post-author-info">
-                    <h4>${post.authorName || 'Unknown User'}</h4>
-                    <span class="cf-post-author-role ${post.authorType || ''}">${post.authorType === 'designer' ? 'Designer' : 'Contractor'}</span>
-                    <span class="cf-post-time">${timeAgo}</span>
+                <div class="cf-post-avatar-wrap">
+                    <div class="cf-post-avatar" style="background-color: ${avatarColor}">${initial}</div>
+                    <span class="cf-post-avatar-badge ${post.authorType || ''}"><i class="fas ${post.authorType === 'designer' ? 'fa-drafting-compass' : 'fa-hard-hat'}"></i></span>
                 </div>
-                ${post.authorId === appState.currentUser.id ? `
+                <div class="cf-post-author-info">
+                    <div class="cf-post-author-top">
+                        <h4>${post.authorName || 'Unknown User'}</h4>
+                        <span class="cf-post-author-role ${post.authorType || ''}">${post.authorType === 'designer' ? 'Designer' : 'Contractor'}</span>
+                    </div>
+                    <span class="cf-post-time"><i class="far fa-clock"></i> ${timeAgo}</span>
+                </div>
+                ${isOwner ? `
                 <div class="cf-post-menu">
                     <button class="cf-post-menu-btn" onclick="togglePostMenu('${post.id}')"><i class="fas fa-ellipsis-h"></i></button>
                     <div class="cf-post-dropdown" id="cf-menu-${post.id}">
                         <button onclick="editCommunityPost('${post.id}')"><i class="fas fa-edit"></i> Edit Post</button>
-                        <button onclick="deleteCommunityPost('${post.id}')" class="danger"><i class="fas fa-trash"></i> Delete Post</button>
+                        <button onclick="deleteCommunityPost('${post.id}')" class="danger"><i class="fas fa-trash-alt"></i> Delete</button>
                     </div>
                 </div>` : ''}
             </div>
             <div class="cf-post-content">${contentHTML}</div>
             ${imagesHTML}
-            <div class="cf-post-stats">
-                <span class="cf-like-count">${post.likes || 0} likes</span>
-                <span class="cf-comment-count" onclick="openPostDetailView('${post.id}')">${commentsCount} comments</span>
-            </div>
-            <div class="cf-post-actions">
-                <button class="cf-action-btn ${isLiked ? 'liked' : ''}" onclick="toggleLikePost('${post.id}')">
-                    <i class="fas fa-thumbs-up"></i> Like
-                </button>
-                <button class="cf-action-btn" onclick="focusCommentInput('${post.id}')">
-                    <i class="fas fa-comment"></i> Comment
-                </button>
-                <button class="cf-action-btn" onclick="sharePost('${post.id}')">
-                    <i class="fas fa-share"></i> Share
-                </button>
+            <div class="cf-post-engagement">
+                <div class="cf-post-stats">
+                    <span class="cf-like-count">
+                        <span class="cf-like-icon-group">${isLiked ? '<i class="fas fa-heart"></i>' : '<i class="far fa-heart"></i>'}</span>
+                        ${post.likes || 0}
+                    </span>
+                    <span class="cf-comment-count" onclick="openPostDetailView('${post.id}')">
+                        <i class="far fa-comment-dots"></i> ${commentsCount}
+                    </span>
+                </div>
+                <div class="cf-post-actions">
+                    <button class="cf-action-btn ${isLiked ? 'liked' : ''}" onclick="toggleLikePost('${post.id}')">
+                        <i class="fas ${isLiked ? 'fa-heart' : 'fa-heart'}"></i> ${isLiked ? 'Liked' : 'Like'}
+                    </button>
+                    <button class="cf-action-btn" onclick="focusCommentInput('${post.id}')">
+                        <i class="fas fa-comment-alt"></i> Comment
+                    </button>
+                    <button class="cf-action-btn" onclick="sharePost('${post.id}')">
+                        <i class="fas fa-share-alt"></i> Share
+                    </button>
+                </div>
             </div>
             ${commentsPreviewHTML}
             <div class="cf-add-comment" id="cf-comment-box-${post.id}">
                 <div class="cf-comment-input-avatar" style="background-color: ${getAvatarColor(appState.currentUser.name || 'U')}">${(appState.currentUser.name || 'U').charAt(0).toUpperCase()}</div>
                 <form class="cf-comment-form" onsubmit="event.preventDefault(); submitComment('${post.id}')">
-                    <input type="text" id="cf-comment-input-${post.id}" placeholder="Add a comment..." autocomplete="off">
+                    <input type="text" id="cf-comment-input-${post.id}" placeholder="Write a comment..." autocomplete="off">
                     <button type="submit" class="cf-comment-send"><i class="fas fa-paper-plane"></i></button>
                 </form>
             </div>
@@ -4359,14 +4363,15 @@ function openCreatePostModal(editPost = null) {
     const content = `
         <div class="cf-create-modal">
             <div class="cf-create-header">
-                <div class="cf-create-header-info">
-                    <div class="cf-create-avatar-modal" style="background-color: ${avatarColor}">${initial}</div>
-                    <div>
-                        <strong>${user.name || 'User'}</strong>
-                        <span class="cf-create-role ${user.type}">${user.type === 'designer' ? 'Designer' : 'Contractor'}</span>
-                    </div>
+                <h3>${isEdit ? '<i class="fas fa-edit"></i> Edit Post' : '<i class="fas fa-feather-alt"></i> Create Post'}</h3>
+                <button class="cf-create-close" onclick="closeModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="cf-create-author">
+                <div class="cf-create-avatar-modal" style="background-color: ${avatarColor}">${initial}</div>
+                <div>
+                    <strong>${user.name || 'User'}</strong>
+                    <span class="cf-create-role ${user.type}"><i class="fas ${user.type === 'designer' ? 'fa-drafting-compass' : 'fa-hard-hat'}"></i> ${user.type === 'designer' ? 'Designer' : 'Contractor'}</span>
                 </div>
-                <h3>${isEdit ? 'Edit Post' : 'Create a Post'}</h3>
             </div>
             <div class="cf-create-body">
                 <textarea id="cf-post-content-input" class="cf-post-textarea" placeholder="Share your technical expertise, project highlights, or industry insights...">${isEdit ? editPost.content : ''}</textarea>
@@ -4379,24 +4384,28 @@ function openCreatePostModal(editPost = null) {
                 </div>
             </div>
             <div class="cf-create-toolbar">
-                <label class="cf-toolbar-btn" title="Add Images">
-                    <i class="fas fa-image"></i> Photo
-                    <input type="file" id="cf-post-image-input" accept="image/*" multiple onchange="handlePostImageSelect(event)" style="display:none;">
-                </label>
+                <div class="cf-toolbar-left">
+                    <label class="cf-toolbar-btn" title="Add Images">
+                        <i class="fas fa-image"></i>
+                        <input type="file" id="cf-post-image-input" accept="image/*" multiple onchange="handlePostImageSelect(event)" style="display:none;">
+                    </label>
+                    <button type="button" class="cf-toolbar-btn" onclick="insertHashtag('#SteelDesign')" title="Add hashtag"><i class="fas fa-hashtag"></i></button>
+                </div>
                 <div class="cf-hashtag-suggestions">
                     <button type="button" class="cf-tag-btn" onclick="insertHashtag('#SteelDesign')">#SteelDesign</button>
                     <button type="button" class="cf-tag-btn" onclick="insertHashtag('#RebarDetailing')">#RebarDetailing</button>
                     <button type="button" class="cf-tag-btn" onclick="insertHashtag('#ProjectShowcase')">#ProjectShowcase</button>
+                    <button type="button" class="cf-tag-btn" onclick="insertHashtag('#StructuralEngineering')">#Engineering</button>
                 </div>
             </div>
             <div class="cf-create-footer">
-                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-                <button class="btn btn-primary" id="cf-submit-post-btn" onclick="${isEdit ? `updateCommunityPost('${editPost.id}')` : 'submitNewPost()'}">
-                    <i class="fas ${isEdit ? 'fa-save' : 'fa-paper-plane'}"></i> ${isEdit ? 'Save Changes' : 'Publish Post'}
+                <span class="cf-char-hint"><i class="fas fa-info-circle"></i> Add images & hashtags to boost visibility</span>
+                <button class="cf-publish-btn" id="cf-submit-post-btn" onclick="${isEdit ? `updateCommunityPost('${editPost.id}')` : 'submitNewPost()'}">
+                    <i class="fas ${isEdit ? 'fa-save' : 'fa-paper-plane'}"></i> ${isEdit ? 'Save' : 'Publish'}
                 </button>
             </div>
         </div>`;
-    showGenericModal(content, 'max-width: 640px; padding: 0; border-radius: 16px; overflow: hidden;');
+    showGenericModal(content, 'max-width: 620px; padding: 0; border-radius: 20px; overflow: hidden;');
 }
 
 function handlePostImageSelect(event) {
@@ -4544,6 +4553,7 @@ function openPostDetailView(postId) {
     const user = appState.currentUser;
     const userAvatarColor = getAvatarColor(user.name || 'U');
     const userInitial = (user.name || 'U').charAt(0).toUpperCase();
+    const isLiked = (post.likedBy || []).includes(user.id);
 
     let imagesHTML = '';
     if (post.images && post.images.length > 0) {
@@ -4561,35 +4571,53 @@ function openPostDetailView(postId) {
                 <div class="cf-detail-comment-body">
                     <div class="cf-detail-comment-header">
                         <strong>${c.authorName || 'Unknown'}</strong>
-                        <span class="cf-comment-role ${c.authorType || ''}">${c.authorType || 'user'}</span>
+                        <span class="cf-comment-role ${c.authorType || ''}">${c.authorType === 'designer' ? 'Designer' : 'Contractor'}</span>
                     </div>
                     <p>${c.text || ''}</p>
-                    <span class="cf-detail-comment-time">${getTimeAgo(c.createdAt)}</span>
+                    <span class="cf-detail-comment-time"><i class="far fa-clock"></i> ${getTimeAgo(c.createdAt)}</span>
                 </div>
             </div>`;
     }).join('');
 
     const modalContent = `
         <div class="cf-detail-modal">
+            <div class="cf-detail-top-bar">
+                <span class="cf-detail-title"><i class="fas fa-comment-dots"></i> Post Detail</span>
+                <button class="cf-detail-close" onclick="closeModal()"><i class="fas fa-times"></i></button>
+            </div>
             <div class="cf-detail-post-header">
-                <div class="cf-post-avatar" style="background-color: ${avatarColor}">${initial}</div>
+                <div class="cf-post-avatar-wrap">
+                    <div class="cf-post-avatar" style="background-color: ${avatarColor}">${initial}</div>
+                    <span class="cf-post-avatar-badge ${post.authorType || ''}"><i class="fas ${post.authorType === 'designer' ? 'fa-drafting-compass' : 'fa-hard-hat'}"></i></span>
+                </div>
                 <div class="cf-post-author-info">
-                    <h4>${post.authorName || 'Unknown User'}</h4>
-                    <span class="cf-post-author-role ${post.authorType || ''}">${post.authorType === 'designer' ? 'Designer' : 'Contractor'}</span>
-                    <span class="cf-post-time">${timeAgo}</span>
+                    <div class="cf-post-author-top">
+                        <h4>${post.authorName || 'Unknown User'}</h4>
+                        <span class="cf-post-author-role ${post.authorType || ''}">${post.authorType === 'designer' ? 'Designer' : 'Contractor'}</span>
+                    </div>
+                    <span class="cf-post-time"><i class="far fa-clock"></i> ${timeAgo}</span>
                 </div>
             </div>
             <div class="cf-detail-content">${contentHTML}</div>
             ${imagesHTML}
-            <div class="cf-detail-stats">
-                <span><i class="fas fa-thumbs-up"></i> ${post.likes || 0} likes</span>
-                <span><i class="fas fa-comment"></i> ${(post.comments || []).length} comments</span>
+            <div class="cf-detail-engagement">
+                <div class="cf-detail-stats">
+                    <span><i class="fas fa-heart" style="color: #ef4444;"></i> ${post.likes || 0} likes</span>
+                    <span><i class="fas fa-comment-dots" style="color: #2563eb;"></i> ${(post.comments || []).length} comments</span>
+                </div>
+                <div class="cf-detail-actions">
+                    <button class="cf-action-btn ${isLiked ? 'liked' : ''}" onclick="toggleLikePost('${post.id}'); closeModal(); setTimeout(() => openPostDetailView('${post.id}'), 200);">
+                        <i class="fas fa-heart"></i> ${isLiked ? 'Liked' : 'Like'}
+                    </button>
+                    <button class="cf-action-btn" onclick="sharePost('${post.id}')">
+                        <i class="fas fa-share-alt"></i> Share
+                    </button>
+                </div>
             </div>
-            <div class="cf-detail-divider"></div>
             <div class="cf-detail-comments-section">
-                <h4>Comments</h4>
+                <h4><i class="fas fa-comments"></i> Comments (${(post.comments || []).length})</h4>
                 <div class="cf-detail-comments-list">
-                    ${commentsHTML || '<p class="cf-no-comments">No comments yet. Be the first to comment!</p>'}
+                    ${commentsHTML || '<div class="cf-no-comments"><i class="far fa-comment-dots"></i><p>No comments yet. Start the conversation!</p></div>'}
                 </div>
             </div>
             <div class="cf-detail-comment-input">
@@ -4600,7 +4628,7 @@ function openPostDetailView(postId) {
                 </form>
             </div>
         </div>`;
-    showGenericModal(modalContent, 'max-width: 680px; padding: 0; border-radius: 16px; overflow: hidden; max-height: 85vh; overflow-y: auto;');
+    showGenericModal(modalContent, 'max-width: 680px; padding: 0; border-radius: 20px; overflow: hidden; max-height: 85vh; overflow-y: auto;');
 }
 
 async function submitCommentFromDetail(postId) {
