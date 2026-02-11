@@ -3418,6 +3418,7 @@ body {
 .file-size { font-size: 0.875rem; color: #64748b; }
 .remove-file-btn { background: #ef4444; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease; }
 .remove-file-btn:hover { background: #dc2626; transform: scale(1.1); }
+.selected-files-total { padding: 10px 14px; margin-top: 8px; background: #eff6ff; border-radius: 8px; color: #2563eb; font-size: 13px; text-align: center; border: 1px solid #dbeafe; }
 .estimation-features { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin: 2rem 0; }
 .feature-item { display: flex; align-items: center; gap: 1rem; background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-left: 4px solid #3B82F6; }
 .feature-item i { font-size: 2rem; color: #3B82F6; }
