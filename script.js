@@ -1700,10 +1700,10 @@ function handleQuoteFileChange(event) {
         showNotification('Maximum 5 files allowed for quotes', 'warning');
         return;
     }
-    const maxSize = 15 * 1024 * 1024; // 15MB
+    const maxSize = 50 * 1024 * 1024; // 50MB
     const invalidFiles = files.filter(file => file.size > maxSize);
     if (invalidFiles.length > 0) {
-        showNotification(`Some files exceed 15MB limit: ${invalidFiles.map(f => f.name).join(', ')}`, 'error');
+        showNotification(`Some files exceed 50MB limit: ${invalidFiles.map(f => f.name).join(', ')}`, 'error');
         return;
     }
     // Validate file types for quotes
@@ -1810,7 +1810,7 @@ function showQuoteModal(jobId) {
                     </div>
                 </div>
                 <div id="quote-attachments-list" class="file-list-container"></div>
-                <small class="form-help">Optional. Up to 5 files, 15MB each. Supported: PDF, DOC, DOCX, JPG, PNG, DWG, XLS, XLSX, TXT</small>
+                <small class="form-help">Optional. Up to 5 files, 50MB each. Supported: PDF, DOC, DOCX, JPG, PNG, DWG, XLS, XLSX, TXT</small>
             </div>
             <div class="form-actions">
                 <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
@@ -1943,7 +1943,7 @@ async function editQuote(quoteId) {
                         </div>
                     </div>
                     <div id="quote-attachments-list" class="file-list-container"></div>
-                    <small class="form-help">Optional. Add up to 5 additional files, 15MB each.</small>
+                    <small class="form-help">Optional. Add up to 5 additional files, 50MB each.</small>
                 </div>
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
@@ -2000,10 +2000,10 @@ function handleJobFileChange(event) {
         showNotification('Maximum 10 files allowed', 'warning');
         return;
     }
-    const maxSize = 15 * 1024 * 1024; // 15MB
+    const maxSize = 50 * 1024 * 1024; // 50MB
     const invalidFiles = files.filter(file => file.size > maxSize);
     if (invalidFiles.length > 0) {
-        showNotification(`Some files exceed 15MB limit: ${invalidFiles.map(f => f.name).join(', ')}`, 'error');
+        showNotification(`Some files exceed 50MB limit: ${invalidFiles.map(f => f.name).join(', ')}`, 'error');
         return;
     }
     appState.jobFiles.push(...files);
@@ -3249,19 +3249,35 @@ function setupEstimationToolEventListeners() {
 function handleFileSelect(files) {
     const fileList = document.getElementById('selected-files-list');
     const submitBtn = document.getElementById('submit-estimation-btn');
+    // Validate file count
+    if (files.length > 20) {
+        showNotification('Maximum 20 files allowed for estimation', 'warning');
+        return;
+    }
+    // Validate individual file sizes
+    const maxSize = 50 * 1024 * 1024; // 50MB
+    const oversized = Array.from(files).filter(f => f.size > maxSize);
+    if (oversized.length > 0) {
+        showNotification(`Some files exceed 50MB limit: ${oversized.map(f => f.name).join(', ')}`, 'error');
+        return;
+    }
     appState.uploadedFile = files;
     let filesHTML = '';
+    let totalSize = 0;
     for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const fileSize = (file.size / 1024 / 1024).toFixed(2);
+        totalSize += file.size;
         const fileType = getFileTypeIcon(file.type, file.name);
         filesHTML += `<div class="selected-file-item"><div class="file-info"><i class="fas ${fileType.icon}"></i><div class="file-details"><span class="file-name">${file.name}</span><span class="file-size">${fileSize} MB</span></div></div><button type="button" class="remove-file-btn" onclick="removeFile(${i})"><i class="fas fa-times"></i></button></div>`;
     }
+    const totalMB = (totalSize / 1024 / 1024).toFixed(2);
+    filesHTML += `<div class="selected-files-total"><strong>${files.length} file(s)</strong> &middot; Total: ${totalMB} MB</div>`;
     fileList.innerHTML = filesHTML;
     document.getElementById('file-info-container').style.display = 'block';
     submitBtn.disabled = false;
     updateEstimationStep(2);
-    showNotification(`${files.length} file(s) selected`, 'success');
+    showNotification(`${files.length} file(s) selected (${totalMB} MB total)`, 'success');
 }
 
 function getFileTypeIcon(mimeType, fileName) {
@@ -3413,7 +3429,7 @@ function getPostJobTemplate() {
                             </div>
                         </div>
                         <div id="job-attachments-list" class="file-list-container"></div>
-                        <small class="form-help">Upload up to 10 files, 15MB each. Supported formats: PDF, DOC, DWG, Images</small>
+                        <small class="form-help">Upload up to 10 files, 50MB each. Supported formats: PDF, DOC, DWG, Images</small>
                     </div>
                 </div>
                 <div class="form-actions"><button type="submit" class="btn btn-primary btn-large"><i class="fas fa-rocket"></i> Post Project</button></div>
@@ -3439,7 +3455,7 @@ function getEstimationToolTemplate() {
                     <div class="file-upload-section premium-upload-section">
                         <div id="file-upload-area" class="file-upload-area premium-upload-area">
                             <input type="file" id="file-upload-input" accept=".pdf,.dwg,.doc,.docx,.jpg,.jpeg,.png" multiple />
-                            <div class="upload-content"><div class="file-upload-icon"><i class="fas fa-cloud-upload-alt"></i></div><h3>Drag & Drop Files Here</h3><p>or click to browse</p><small class="upload-limit">Max 10 files, 15MB each</small></div>
+                            <div class="upload-content"><div class="file-upload-icon"><i class="fas fa-cloud-upload-alt"></i></div><h3>Drag & Drop Files Here</h3><p>or click to browse</p><small class="upload-limit">Max 20 files, 50MB each</small></div>
                         </div>
                         <div id="file-info-container" class="selected-files-container" style="display: none;"><h4><i class="fas fa-files"></i> Selected Files</h4><div id="selected-files-list" class="selected-files-list"></div></div>
                     </div>
