@@ -64,6 +64,8 @@ const appState = {
     communityHasMore: true,
     newPostImages: [],
     newPostImageFiles: [],
+    messageAttachments: [],
+    trackingProjects: [],
 };
 
 // === BUSINESS ANALYTICS STATE ===
@@ -2548,9 +2550,12 @@ async function renderConversationView(conversationOrId) {
                 <div class="chat-actions"><span class="participant-type-badge premium-badge ${other.type || ''}"><i class="fas ${other.type === 'designer' ? 'fa-drafting-compass' : 'fa-building'}"></i> ${other.type || 'User'}</span></div>
             </div>
             <div class="chat-messages premium-messages" id="chat-messages-container"><div class="loading-messages"><div class="spinner"></div><p>Loading...</p></div></div>
-            <div class="chat-input-area premium-input-area"><form id="send-message-form" class="message-form premium-message-form"><div class="message-input-container"><input type="text" id="message-text-input" placeholder="Type your message..." required autocomplete="off"><button type="submit" class="send-button premium-send-btn" title="Send"><i class="fas fa-paper-plane"></i></button></div></form></div>
+            <div id="msg-file-preview" class="msg-file-preview" style="display:none"></div>
+            <div class="chat-input-area premium-input-area"><form id="send-message-form" class="message-form premium-message-form"><div class="message-input-container"><input type="file" id="msg-file-input" multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xls,.xlsx,.txt,.zip" style="display:none"><button type="button" class="msg-attach-btn" title="Attach files (PDF, documents, images)" onclick="document.getElementById('msg-file-input').click()"><i class="fas fa-paperclip"></i></button><input type="text" id="message-text-input" placeholder="Type your message..." autocomplete="off"><button type="submit" class="send-button premium-send-btn" title="Send"><i class="fas fa-paper-plane"></i></button></div></form></div>
         </div>`;
     document.getElementById('send-message-form').addEventListener('submit', (e) => { e.preventDefault(); handleSendMessage(convo.id); });
+    appState.messageAttachments = [];
+    document.getElementById('msg-file-input').addEventListener('change', (e) => handleMessageFileSelect(e));
     const msgContainer = document.getElementById('chat-messages-container');
     try {
         const response = await apiCall(`/messages/${convo.id}/messages`, 'GET');
@@ -2571,12 +2576,17 @@ async function renderConversationView(conversationOrId) {
                 const prevMsg = messages[index - 1];
                 const showAvatar = !prevMsg || prevMsg.senderId !== msg.senderId;
                 const senderAvatarColor = getAvatarColor(msg.senderName || 'U');
+                const attachmentsHtml = (msg.attachments && msg.attachments.length > 0) ? `<div class="msg-attachments">${msg.attachments.map(att => {
+                    const icon = getMsgFileIcon(att.name || att.type || '');
+                    const size = att.size ? formatFileSize(att.size) : '';
+                    return `<a href="${att.url}" target="_blank" rel="noopener noreferrer" class="msg-attachment-item"><i class="fas ${icon}"></i><div class="msg-att-info"><span class="msg-att-name">${att.name || 'File'}</span>${size ? `<span class="msg-att-size">${size}</span>` : ''}</div><i class="fas fa-download msg-att-dl"></i></a>`;
+                }).join('')}</div>` : '';
                 messagesHTML += `
                     <div class="message-wrapper premium-message ${isMine ? 'me' : 'them'}">
                         ${!isMine && showAvatar ? `<div class="message-avatar premium-msg-avatar" style="background-color: ${senderAvatarColor}">${(msg.senderName || 'U').charAt(0).toUpperCase()}</div>` : '<div class="message-avatar-spacer"></div>'}
                         <div class="message-content">
                             ${showAvatar && !isMine ? `<div class="message-sender">${msg.senderName || 'N/A'}</div>` : ''}
-                            <div class="message-bubble premium-bubble ${isMine ? 'me' : 'them'}">${msg.text || ''}</div>
+                            <div class="message-bubble premium-bubble ${isMine ? 'me' : 'them'}">${msg.text || ''}${attachmentsHtml}</div>
                             <div class="message-meta">${timestamp}</div>
                         </div>
                     </div>`;
@@ -2604,28 +2614,48 @@ async function handleSendMessage(conversationId) {
     const input = document.getElementById('message-text-input');
     const sendBtn = document.querySelector('.send-button');
     const text = input.value.trim();
-    if (!text) return;
+    const files = appState.messageAttachments || [];
+    if (!text && files.length === 0) return;
     const originalBtnContent = sendBtn.innerHTML;
     input.disabled = true;
     sendBtn.disabled = true;
     sendBtn.innerHTML = '<div class="btn-spinner"></div>';
     try {
-        const response = await fetch(`${BACKEND_URL}/messages/${conversationId}/messages`, {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${appState.jwtToken}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text })
-        });
+        let response;
+        if (files.length > 0) {
+            // Use FormData for file uploads
+            const formData = new FormData();
+            if (text) formData.append('text', text);
+            files.forEach(f => formData.append('attachments', f));
+            response = await fetch(`${BACKEND_URL}/messages/${conversationId}/messages`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${appState.jwtToken}` },
+                body: formData
+            });
+        } else {
+            response = await fetch(`${BACKEND_URL}/messages/${conversationId}/messages`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${appState.jwtToken}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text })
+            });
+        }
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'Failed to send message');
         if (data.success) {
             input.value = '';
+            clearMessageAttachments();
             const msgContainer = document.getElementById('chat-messages-container');
             msgContainer.querySelector('.empty-messages')?.remove();
             const newMsg = data.data;
             const timestamp = formatDetailedTimestamp(newMsg.createdAt);
+            const attHtml = (newMsg.attachments && newMsg.attachments.length > 0) ? `<div class="msg-attachments">${newMsg.attachments.map(att => {
+                const icon = getMsgFileIcon(att.name || att.type || '');
+                const size = att.size ? formatFileSize(att.size) : '';
+                return `<a href="${att.url}" target="_blank" rel="noopener noreferrer" class="msg-attachment-item"><i class="fas ${icon}"></i><div class="msg-att-info"><span class="msg-att-name">${att.name || 'File'}</span>${size ? `<span class="msg-att-size">${size}</span>` : ''}</div><i class="fas fa-download msg-att-dl"></i></a>`;
+            }).join('')}</div>` : '';
             const msgBubble = document.createElement('div');
             msgBubble.className = 'message-wrapper premium-message me';
-            msgBubble.innerHTML = `<div class="message-avatar-spacer"></div><div class="message-content"><div class="message-bubble premium-bubble me">${newMsg.text}</div><div class="message-meta">${timestamp}</div></div>`;
+            msgBubble.innerHTML = `<div class="message-avatar-spacer"></div><div class="message-content"><div class="message-bubble premium-bubble me">${newMsg.text || ''}${attHtml}</div><div class="message-meta">${timestamp}</div></div>`;
             msgContainer.appendChild(msgBubble);
             msgContainer.scrollTop = msgContainer.scrollHeight;
             refreshNotificationsAfterMessage();
@@ -2642,6 +2672,74 @@ async function handleSendMessage(conversationId) {
     }
 }
 
+
+// --- MESSAGE FILE ATTACHMENT HELPERS ---
+function handleMessageFileSelect(e) {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+    const maxSize = 25 * 1024 * 1024; // 25MB
+    const maxFiles = 20;
+    const current = appState.messageAttachments || [];
+    if (current.length + files.length > maxFiles) {
+        showNotification(`Maximum ${maxFiles} files allowed per message.`, 'warning');
+        return;
+    }
+    for (const f of files) {
+        if (f.size > maxSize) {
+            showNotification(`"${f.name}" exceeds 25MB limit.`, 'error');
+            return;
+        }
+    }
+    appState.messageAttachments = [...current, ...files];
+    renderMessageFilePreview();
+    // Remove 'required' from text input since we have files
+    const textInput = document.getElementById('message-text-input');
+    if (textInput) textInput.removeAttribute('required');
+}
+
+function removeMessageAttachment(index) {
+    appState.messageAttachments.splice(index, 1);
+    renderMessageFilePreview();
+    if (appState.messageAttachments.length === 0) {
+        const textInput = document.getElementById('message-text-input');
+        if (textInput && !textInput.value.trim()) textInput.setAttribute('required', '');
+    }
+}
+
+function clearMessageAttachments() {
+    appState.messageAttachments = [];
+    const preview = document.getElementById('msg-file-preview');
+    if (preview) { preview.style.display = 'none'; preview.innerHTML = ''; }
+    const fileInput = document.getElementById('msg-file-input');
+    if (fileInput) fileInput.value = '';
+}
+
+function renderMessageFilePreview() {
+    const preview = document.getElementById('msg-file-preview');
+    if (!preview) return;
+    const files = appState.messageAttachments || [];
+    if (files.length === 0) { preview.style.display = 'none'; preview.innerHTML = ''; return; }
+    preview.style.display = 'flex';
+    preview.innerHTML = files.map((f, i) => {
+        const icon = getMsgFileIcon(f.name);
+        const size = formatFileSize(f.size);
+        return `<div class="msg-file-chip"><i class="fas ${icon}"></i><span class="msg-file-chip-name">${f.name.length > 20 ? f.name.substring(0, 17) + '...' : f.name}</span><span class="msg-file-chip-size">${size}</span><button type="button" class="msg-file-chip-remove" onclick="removeMessageAttachment(${i})"><i class="fas fa-times"></i></button></div>`;
+    }).join('');
+}
+
+function getMsgFileIcon(nameOrType) {
+    const ext = (nameOrType || '').toLowerCase().split('.').pop();
+    const map = { 'pdf': 'fa-file-pdf', 'doc': 'fa-file-word', 'docx': 'fa-file-word', 'xls': 'fa-file-excel', 'xlsx': 'fa-file-excel', 'jpg': 'fa-file-image', 'jpeg': 'fa-file-image', 'png': 'fa-file-image', 'txt': 'fa-file-alt', 'zip': 'fa-file-archive' };
+    return map[ext] || 'fa-file';
+}
+
+function formatFileSize(bytes) {
+    if (!bytes || bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
 
 // --- UI & MODAL FUNCTIONS ---
 function lockBodyScroll() {
@@ -3406,6 +3504,11 @@ function getDashboardTemplate(user) {
             <div class="db-action-text"><h4>My Quotes</h4><p>Track submissions</p></div>
             ${!isApproved ? '<div class="db-lock-overlay"><i class="fas fa-lock"></i></div>' : '<i class="fas fa-chevron-right db-action-arrow"></i>'}
         </div>
+        <div class="db-action-card ${!isApproved ? 'db-locked' : ''}" onclick="${isApproved ? 'renderAppSection(\'project-tracking\')' : 'showRestrictedFeature(\'project-tracking\')'}">
+            <div class="db-action-icon db-icon-cyan"><i class="fas fa-project-diagram"></i></div>
+            <div class="db-action-text"><h4>Project Tracking</h4><p>Status & milestones</p></div>
+            ${!isApproved ? '<div class="db-lock-overlay"><i class="fas fa-lock"></i></div>' : '<i class="fas fa-chevron-right db-action-arrow"></i>'}
+        </div>
         <div class="db-action-card ${!isApproved ? 'db-locked' : ''}" onclick="${isApproved ? 'renderAppSection(\'messages\')' : 'showRestrictedFeature(\'messages\')'}">
             <div class="db-action-icon db-icon-indigo"><i class="fas fa-comments"></i></div>
             <div class="db-action-text"><h4>Messages</h4><p>Client communication</p></div>
@@ -3902,6 +4005,11 @@ function buildSidebarNav() {
             <a href="#" class="sidebar-nav-link" data-section="my-quotes">
                 <i class="fas fa-file-invoice-dollar fa-fw"></i>
                 <span>My Quotes</span>
+            </a>
+            <a href="#" class="sidebar-nav-link" data-section="project-tracking">
+                <i class="fas fa-project-diagram fa-fw"></i>
+                <span>Project Tracking</span>
+                <span class="nav-badge">NEW</span>
             </a>`;
     } else {
         links += `
@@ -4973,7 +5081,11 @@ async function loadProjectTrackingData() {
     const statsRow = document.getElementById('pt-stats-row');
     const listContainer = document.getElementById('pt-project-list');
     try {
-        const response = await apiCall(`/jobs/user/${appState.currentUser.id}`, 'GET');
+        const isDesigner = appState.currentUser.type === 'designer';
+        const endpoint = isDesigner
+            ? `/jobs/assigned/${appState.currentUser.id}`
+            : `/jobs/user/${appState.currentUser.id}`;
+        const response = await apiCall(endpoint, 'GET');
         const allJobs = response.data || [];
         appState.trackingProjects = allJobs;
 
@@ -5088,7 +5200,8 @@ function renderProjectTrackingList(projects) {
                         <i class="fas fa-file-invoice-dollar"></i>
                         <span>${job.quotesCount || 0} Quotes</span>
                     </div>
-                    ${job.assignedToName ? `<div class="pt-meta-item"><i class="fas fa-user-check"></i><span>${job.assignedToName}</span></div>` : ''}
+                    ${appState.currentUser.type === 'designer' && job.posterName ? `<div class="pt-meta-item"><i class="fas fa-user-tie"></i><span>${job.posterName}</span></div>` : ''}
+                    ${appState.currentUser.type !== 'designer' && job.assignedToName ? `<div class="pt-meta-item"><i class="fas fa-user-check"></i><span>${job.assignedToName}</span></div>` : ''}
                 </div>
                 <div class="pt-project-footer">
                     <span class="pt-created">${createdStr ? 'Created ' + createdStr : ''}</span>
@@ -5123,6 +5236,14 @@ async function renderProjectDetailView(jobId) {
         const jobResponse = await apiCall(`/jobs/${jobId}`, 'GET');
         const job = jobResponse.data;
         if (!job) throw new Error('Project not found');
+        // Merge poster info from tracking data (designers get posterEmail from assigned endpoint)
+        const trackingJob = (appState.trackingProjects || []).find(j => j.id === jobId);
+        if (trackingJob) {
+            if (trackingJob.posterEmail) job.posterEmail = trackingJob.posterEmail;
+            if (trackingJob.posterName) job.posterName = trackingJob.posterName;
+            if (trackingJob.posterCompany) job.posterCompany = trackingJob.posterCompany;
+        }
+        const isDesignerView = appState.currentUser.type === 'designer';
 
         const progress = getProjectProgress(job);
         const statusConfig = getStatusConfig(job.status);
@@ -5184,7 +5305,9 @@ async function renderProjectDetailView(jobId) {
                             <span class="pt-hero-stat-label">Created</span>
                             <span class="pt-hero-stat-value">${createdStr}</span>
                         </div>
-                        ${job.assignedToName ? `<div class="pt-hero-stat"><span class="pt-hero-stat-label">Assigned To</span><span class="pt-hero-stat-value">${job.assignedToName}</span></div>` : ''}
+                        ${!isDesignerView && job.assignedToName ? `<div class="pt-hero-stat"><span class="pt-hero-stat-label">Assigned To</span><span class="pt-hero-stat-value">${job.assignedToName}</span></div>` : ''}
+                        ${isDesignerView && job.posterName ? `<div class="pt-hero-stat"><span class="pt-hero-stat-label">Client</span><span class="pt-hero-stat-value">${job.posterName}</span></div>` : ''}
+                        ${isDesignerView && job.posterEmail ? `<div class="pt-hero-stat"><span class="pt-hero-stat-label">Client Email</span><span class="pt-hero-stat-value"><i class="fas fa-envelope" style="margin-right:4px;font-size:12px;color:#6366f1"></i>${job.posterEmail}</span></div>` : ''}
                         ${job.approvedAmount ? `<div class="pt-hero-stat"><span class="pt-hero-stat-label">Approved Amount</span><span class="pt-hero-stat-value">${job.approvedAmount}</span></div>` : ''}
                     </div>
                 </div>
@@ -5239,12 +5362,31 @@ async function renderProjectDetailView(jobId) {
                             </div>
                         </div>
 
+                        ${isDesignerView && job.posterEmail ? `
+                        <div class="pt-sidebar-card pt-invoice-card">
+                            <h4><i class="fas fa-file-invoice-dollar"></i> Send Invoice</h4>
+                            <div class="pt-invoice-info">
+                                <p class="pt-invoice-hint">Send invoices to the client for this project</p>
+                                ${job.posterName ? `<div class="pt-info-row"><span class="pt-info-label">Client</span><span class="pt-info-value">${job.posterName}</span></div>` : ''}
+                                ${job.posterCompany ? `<div class="pt-info-row"><span class="pt-info-label">Company</span><span class="pt-info-value">${job.posterCompany}</span></div>` : ''}
+                                <div class="pt-info-row pt-email-row">
+                                    <span class="pt-info-label">Email</span>
+                                    <span class="pt-info-value pt-email-value"><i class="fas fa-envelope"></i> ${job.posterEmail}</span>
+                                </div>
+                                <div class="pt-invoice-actions">
+                                    <a href="mailto:${job.posterEmail}?subject=Invoice for ${encodeURIComponent(job.title)}&body=${encodeURIComponent('Dear ' + (job.posterName || 'Client') + ',\\n\\nPlease find attached the invoice for the project: ' + job.title + '.\\n\\nBest regards,\\n' + (appState.currentUser.name || 'Designer'))}" class="btn btn-primary btn-block"><i class="fas fa-envelope"></i> Email Invoice</a>
+                                    <button class="btn btn-outline btn-block" onclick="openConversation('${job.id}', '${job.posterId}')"><i class="fas fa-paperclip"></i> Send via Messages</button>
+                                </div>
+                            </div>
+                        </div>` : ''}
+
                         <div class="pt-sidebar-card">
                             <h4><i class="fas fa-bolt"></i> Quick Actions</h4>
                             <div class="pt-sidebar-actions">
-                                ${job.status === 'open' ? `<button class="btn btn-primary btn-block" onclick="renderAppSection('jobs')"><i class="fas fa-eye"></i> View Quotes</button>` : ''}
-                                ${job.status === 'assigned' && job.assignedTo ? `<button class="btn btn-primary btn-block" onclick="openConversation('${job.id}', '${job.assignedTo}')"><i class="fas fa-comments"></i> Message Designer</button>` : ''}
-                                ${job.status === 'assigned' ? `<button class="btn btn-success btn-block" onclick="markJobCompleted('${job.id}')"><i class="fas fa-check-double"></i> Mark Completed</button>` : ''}
+                                ${!isDesignerView && job.status === 'open' ? `<button class="btn btn-primary btn-block" onclick="renderAppSection('jobs')"><i class="fas fa-eye"></i> View Quotes</button>` : ''}
+                                ${!isDesignerView && job.status === 'assigned' && job.assignedTo ? `<button class="btn btn-primary btn-block" onclick="openConversation('${job.id}', '${job.assignedTo}')"><i class="fas fa-comments"></i> Message Designer</button>` : ''}
+                                ${isDesignerView && job.posterId ? `<button class="btn btn-primary btn-block" onclick="openConversation('${job.id}', '${job.posterId}')"><i class="fas fa-comments"></i> Message Client</button>` : ''}
+                                ${!isDesignerView && job.status === 'assigned' ? `<button class="btn btn-success btn-block" onclick="markJobCompleted('${job.id}')"><i class="fas fa-check-double"></i> Mark Completed</button>` : ''}
                                 <button class="btn btn-outline btn-block" onclick="renderProjectTrackingDashboard()"><i class="fas fa-arrow-left"></i> Back to Tracking</button>
                             </div>
                         </div>
@@ -5269,10 +5411,11 @@ function buildProjectMilestones(job) {
         status: 'completed'
     });
 
+    const isDesigner = appState.currentUser.type === 'designer';
     if ((job.quotesCount || 0) > 0) {
         milestones.push({
-            title: 'Quotes Received',
-            description: `${job.quotesCount} quote(s) have been submitted by designers.`,
+            title: isDesigner ? 'Quote Submitted' : 'Quotes Received',
+            description: isDesigner ? 'Your quote has been submitted for this project.' : `${job.quotesCount} quote(s) have been submitted by designers.`,
             date: '',
             icon: 'fa-file-invoice-dollar',
             status: 'completed'
@@ -5280,7 +5423,7 @@ function buildProjectMilestones(job) {
     } else if (job.status === 'open') {
         milestones.push({
             title: 'Awaiting Quotes',
-            description: 'Waiting for designers to submit quotes.',
+            description: isDesigner ? 'Submit a quote for this project.' : 'Waiting for designers to submit quotes.',
             date: '',
             icon: 'fa-clock',
             status: 'active'
@@ -5289,8 +5432,8 @@ function buildProjectMilestones(job) {
 
     if (job.status === 'assigned' || job.status === 'completed') {
         milestones.push({
-            title: 'Designer Assigned',
-            description: `${job.assignedToName || 'A designer'} has been assigned to this project.`,
+            title: isDesigner ? 'You Were Assigned' : 'Designer Assigned',
+            description: isDesigner ? 'You have been assigned to this project.' : `${job.assignedToName || 'A designer'} has been assigned to this project.`,
             date: '',
             icon: 'fa-user-check',
             status: 'completed'
@@ -5304,15 +5447,15 @@ function buildProjectMilestones(job) {
         });
     } else {
         milestones.push({
-            title: 'Assign Designer',
-            description: 'Review and approve a quote to assign a designer.',
+            title: isDesigner ? 'Get Assigned' : 'Assign Designer',
+            description: isDesigner ? 'Waiting for the client to approve your quote.' : 'Review and approve a quote to assign a designer.',
             date: '',
             icon: 'fa-user-plus',
             status: 'pending'
         });
         milestones.push({
             title: 'Work In Progress',
-            description: 'Designer will begin working once assigned.',
+            description: isDesigner ? 'Work begins once you are assigned.' : 'Designer will begin working once assigned.',
             date: '',
             icon: 'fa-hammer',
             status: 'pending'

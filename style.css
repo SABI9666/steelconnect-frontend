@@ -3346,6 +3346,50 @@ body {
 .premium-send-btn { background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%); border: none; border-radius: 50%; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; color: white; cursor: pointer; transition: all var(--transition-normal); box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3); flex-shrink: 0; }
 .premium-send-btn:hover { transform: scale(1.05); box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4); }
 .premium-send-btn:active { transform: scale(0.95); }
+
+/* --- Message File Attachment Button --- */
+.msg-attach-btn {
+    background: none; border: none; color: #64748b; font-size: 18px; cursor: pointer;
+    padding: 8px 12px; border-radius: 50%; transition: color 0.15s ease, background 0.15s ease;
+    flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+}
+.msg-attach-btn:hover { color: #2563eb; background: rgba(37, 99, 235, 0.08); }
+
+/* --- Message File Preview Bar (above input) --- */
+.msg-file-preview {
+    display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 12px;
+    background: #f8fafc; border-top: 1px solid #e2e8f0; max-height: 120px; overflow-y: auto;
+}
+.msg-file-chip {
+    display: flex; align-items: center; gap: 6px; background: white; border: 1px solid #e2e8f0;
+    border-radius: 8px; padding: 5px 8px 5px 10px; font-size: 12px; color: #334155; max-width: 220px;
+}
+.msg-file-chip i:first-child { color: #6366f1; font-size: 14px; flex-shrink: 0; }
+.msg-file-chip-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
+.msg-file-chip-size { color: #94a3b8; font-size: 11px; flex-shrink: 0; }
+.msg-file-chip-remove {
+    background: none; border: none; color: #94a3b8; cursor: pointer; padding: 2px 4px;
+    font-size: 11px; border-radius: 4px; flex-shrink: 0;
+}
+.msg-file-chip-remove:hover { color: #ef4444; background: #fef2f2; }
+
+/* --- Message Attachment Display in Bubbles --- */
+.msg-attachments { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.msg-attachment-item {
+    display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 8px;
+    text-decoration: none; font-size: 12.5px; transition: background 0.15s ease;
+}
+.premium-bubble.me .msg-attachment-item { background: rgba(255,255,255,0.15); color: white; }
+.premium-bubble.me .msg-attachment-item:hover { background: rgba(255,255,255,0.25); }
+.premium-bubble.them .msg-attachment-item { background: #f1f5f9; color: #334155; }
+.premium-bubble.them .msg-attachment-item:hover { background: #e2e8f0; }
+.msg-attachment-item i:first-child { font-size: 18px; flex-shrink: 0; }
+.msg-att-info { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.msg-att-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.msg-att-size { font-size: 11px; opacity: 0.7; }
+.msg-att-dl { font-size: 12px; opacity: 0.5; flex-shrink: 0; }
+.msg-attachment-item:hover .msg-att-dl { opacity: 1; }
+
 .premium-overlay { background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); }
 .premium-modal { border-radius: 20px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); border: 1px solid #e2e8f0; }
 .premium-modal-header { background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%); color: white; padding: 1.75rem; border-radius: 20px 20px 0 0; margin: -2.25rem -2.25rem 1.75rem -2.25rem; }
@@ -8885,6 +8929,15 @@ textarea:focus-visible {
     width: 100%;
     justify-content: center;
 }
+
+/* --- Invoice Card in Project Tracking Sidebar --- */
+.pt-invoice-card { border: 1px solid #e0e7ff; background: linear-gradient(135deg, #f5f3ff 0%, #ffffff 100%); }
+.pt-invoice-card h4 i { color: #6366f1; }
+.pt-invoice-info { display: flex; flex-direction: column; gap: 10px; }
+.pt-invoice-hint { font-size: 12.5px; color: #64748b; margin: 0 0 4px 0; line-height: 1.45; }
+.pt-email-row .pt-info-value { color: #6366f1; font-weight: 600; }
+.pt-email-value i { margin-right: 4px; font-size: 11px; }
+.pt-invoice-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
 
 /* ============================================ */
 /* PROJECT TRACKING - CHAT HISTORY STYLES       */
