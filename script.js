@@ -516,14 +516,14 @@ async function handleLogin(event) {
         localStorage.setItem('currentUser', JSON.stringify(data.user));
         localStorage.setItem('jwtToken', data.token);
 
-        // Close modal and show app view in parallel
+        // Close modal and transition to app view
         closeModal();
+        showAppView();
 
-        // Defer non-critical operations
-        requestAnimationFrame(() => {
-            showAppView();
+        // Show welcome notification after app has settled
+        setTimeout(() => {
             showNotification(`Welcome to SteelConnect, ${data.user.name}!`, 'success');
-        });
+        }, 600);
 
     } catch (error) {
         let errorMsg = error.message || 'Login failed. Please try again.';
@@ -2645,13 +2645,10 @@ async function handleSendMessage(conversationId) {
 
 // --- UI & MODAL FUNCTIONS ---
 function lockBodyScroll() {
-    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-    document.body.style.paddingRight = `${scrollbarWidth}px`;
     document.body.style.overflow = 'hidden';
 }
 
 function unlockBodyScroll() {
-    document.body.style.paddingRight = '';
     document.body.style.overflow = '';
 }
 
@@ -2708,8 +2705,13 @@ function closeModal() {
 // ========================================
 
 function showAppView() {
+    const appContent = document.getElementById('app-content');
+    // Prepare: show app-content off-screen so layout computes without visible shift
+    appContent.classList.remove('app-ready');
+    appContent.style.display = 'flex';
+
+    // Batch all DOM changes before the user sees anything
     document.getElementById('landing-page-content').style.display = 'none';
-    document.getElementById('app-content').style.display = 'flex';
     document.getElementById('auth-buttons-container').style.display = 'none';
     document.getElementById('user-info-container').style.display = 'flex';
     const user = appState.currentUser;
@@ -2718,7 +2720,17 @@ function showAppView() {
     const navMenu = document.getElementById('main-nav-menu');
     if (navMenu) navMenu.innerHTML = '';
     initializeNotificationSystem();
-    checkProfileAndRoute();
+
+    // Let checkProfileAndRoute do its work, then fade in
+    checkProfileAndRoute().then(() => {
+        requestAnimationFrame(() => {
+            appContent.classList.add('app-ready');
+        });
+    }).catch(() => {
+        requestAnimationFrame(() => {
+            appContent.classList.add('app-ready');
+        });
+    });
 }
 
 function logout() {
@@ -2738,10 +2750,14 @@ function logout() {
 }
 
 function showLandingPageView() {
+    const appContent = document.getElementById('app-content');
+    appContent.classList.remove('app-ready');
+    appContent.style.display = 'none';
     document.getElementById('landing-page-content').style.display = 'block';
-    document.getElementById('app-content').style.display = 'none';
     document.getElementById('auth-buttons-container').style.display = 'flex';
     document.getElementById('user-info-container').style.display = 'none';
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar) sidebar.style.display = 'none';
     const navMenu = document.getElementById('main-nav-menu');
     if (navMenu) navMenu.innerHTML = `
         <a href="#ai-estimation" class="nav-link">AI Estimation</a><a href="#how-it-works" class="nav-link">How It Works</a>
@@ -2752,7 +2768,7 @@ function showLandingPageView() {
 
 async function checkProfileAndRoute() {
     const container = document.getElementById('app-container');
-    container.innerHTML = `<div class="loading-spinner"><div class="spinner"></div><p>Loading your dashboard...</p></div>`;
+    container.innerHTML = `<div class="loading-spinner" style="opacity:0.5"><div class="spinner"></div><p>Loading your dashboard...</p></div>`;
     try {
         const response = await apiCall('/profile/status', 'GET');
         const { profileStatus, canAccess, rejectionReason } = response.data;
@@ -3223,13 +3239,16 @@ function showNotification(message, type = 'info', duration = 4000) {
     }
     const notif = document.createElement('div');
     notif.className = `notification premium-notification notification-${type}`;
-    notif.innerHTML = `<div class="notification-content"><i class="fas ${getNotificationIcon(type)}"></i><span>${message}</span></div><button class="notification-close" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>`;
+    notif.innerHTML = `
+        <div class="notif-icon-area"><i class="fas ${getNotificationIcon(type)}"></i></div>
+        <div class="notification-content"><span>${message}</span></div>
+        <button class="notification-close" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>
+        ${duration > 0 ? `<div class="notif-progress" style="animation-duration:${duration}ms"></div>` : ''}`;
     container.appendChild(notif);
 
     if (duration > 0) {
         setTimeout(() => {
             if (notif.parentElement) {
-                notif.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
                 notif.style.opacity = '0';
                 notif.style.transform = 'translateX(20px)';
                 setTimeout(() => notif.remove(), 300);
