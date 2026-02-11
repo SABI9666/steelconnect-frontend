@@ -350,23 +350,29 @@ function updateDynamicHeader() {
     const headerElement = document.getElementById('dynamic-feature-header');
     if (headerElement) {
         const feature = headerFeatures[appState.currentHeaderSlide];
-        headerElement.innerHTML = `
-            <div class="feature-header-content" style="background: ${feature.gradient};">
-                <div class="feature-icon-container">
-                    <i class="fas ${feature.icon}"></i>
+        // Fade out, swap content, fade in - prevents layout jitter
+        headerElement.style.transition = 'opacity 0.3s ease';
+        headerElement.style.opacity = '0';
+        setTimeout(() => {
+            headerElement.innerHTML = `
+                <div class="feature-header-content" style="background: ${feature.gradient};">
+                    <div class="feature-icon-container">
+                        <i class="fas ${feature.icon}"></i>
+                    </div>
+                    <div class="feature-text-content">
+                        <h2 class="feature-title">${feature.title}</h2>
+                        <p class="feature-subtitle">${feature.subtitle}</p>
+                        <p class="feature-description">${feature.description}</p>
+                    </div>
+                    <div class="feature-indicators">
+                        ${headerFeatures.map((_, index) =>
+                            `<div class="indicator ${index === appState.currentHeaderSlide ? 'active' : ''}"></div>`
+                        ).join('')}
+                    </div>
                 </div>
-                <div class="feature-text-content">
-                    <h2 class="feature-title">${feature.title}</h2>
-                    <p class="feature-subtitle">${feature.subtitle}</p>
-                    <p class="feature-description">${feature.description}</p>
-                </div>
-                <div class="feature-indicators">
-                    ${headerFeatures.map((_, index) =>
-                        `<div class="indicator ${index === appState.currentHeaderSlide ? 'active' : ''}"></div>`
-                    ).join('')}
-                </div>
-            </div>
-        `;
+            `;
+            headerElement.style.opacity = '1';
+        }, 300);
     }
 }
 
@@ -433,15 +439,36 @@ async function apiCall(endpoint, method, body = null, successMessage = null) {
 async function handleRegister(event) {
     event.preventDefault();
     const form = event.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<div class="btn-spinner"></div> Creating Account...';
+    submitBtn.disabled = true;
+
     const userData = {
         name: form.regName.value,
         email: form.regEmail.value,
         password: form.regPassword.value,
         type: form.regRole.value,
     };
-    await apiCall('/auth/register', 'POST', userData, 'Registration successful! Please sign in.')
-        .then(() => renderAuthForm('login'))
-        .catch(() => {});
+    try {
+        await apiCall('/auth/register', 'POST', userData, 'Registration successful! Please sign in.');
+        renderAuthForm('login');
+    } catch (error) {
+        const errorMsg = error.message || 'Registration failed. Please try again.';
+        const errorContainer = document.getElementById('auth-error-container');
+        if (errorContainer) {
+            errorContainer.innerHTML = `
+                <div class="auth-inline-error">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span>${errorMsg}</span>
+                    <button class="auth-error-dismiss" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>
+                </div>`;
+        } else {
+            showNotification(errorMsg, 'error');
+        }
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    }
 }
 
 // Optimized handleLogin
@@ -499,10 +526,22 @@ async function handleLogin(event) {
         });
 
     } catch (error) {
+        let errorMsg = error.message || 'Login failed. Please try again.';
         if (error.name === 'AbortError') {
-            showNotification('Login timeout. Please check your connection and try again.', 'error');
+            errorMsg = 'Login timeout. Please check your connection and try again.';
+        }
+
+        // Show inline error inside the modal
+        const errorContainer = document.getElementById('auth-error-container');
+        if (errorContainer) {
+            errorContainer.innerHTML = `
+                <div class="auth-inline-error">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span>${errorMsg}</span>
+                    <button class="auth-error-dismiss" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>
+                </div>`;
         } else {
-            showNotification(error.message || 'Login failed. Please try again.', 'error');
+            showNotification(errorMsg, 'error');
         }
 
         // Reset button state
@@ -3190,7 +3229,9 @@ function showNotification(message, type = 'info', duration = 4000) {
     if (duration > 0) {
         setTimeout(() => {
             if (notif.parentElement) {
+                notif.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
                 notif.style.opacity = '0';
+                notif.style.transform = 'translateX(20px)';
                 setTimeout(() => notif.remove(), 300);
             }
         }, duration);
@@ -3209,11 +3250,11 @@ function showRestrictedFeature(featureName) {
 
 // --- TEMPLATE GETTERS ---
 function getLoginTemplate() {
-    return `<div class="auth-header premium-auth-header"><div class="auth-logo"><i class="fas fa-drafting-compass"></i></div><h2>Welcome Back</h2><p>Sign in to your account</p></div><form id="login-form" class="premium-form"><div class="form-group"><label class="form-label"><i class="fas fa-envelope"></i> Email</label><input type="email" class="form-input" name="loginEmail" required></div><div class="form-group"><label class="form-label"><i class="fas fa-lock"></i> Password</label><input type="password" class="form-input" name="loginPassword" required></div><button type="submit" class="btn btn-primary btn-full"><i class="fas fa-sign-in-alt"></i> Sign In</button></form><div class="auth-switch">Don't have an account? <a onclick="renderAuthForm('register')">Create one</a></div>`;
+    return `<div class="auth-header premium-auth-header"><div class="auth-logo"><i class="fas fa-drafting-compass"></i></div><h2>Welcome Back</h2><p>Sign in to your account</p></div><div id="auth-error-container"></div><form id="login-form" class="premium-form"><div class="form-group"><label class="form-label"><i class="fas fa-envelope"></i> Email</label><input type="email" class="form-input" name="loginEmail" required></div><div class="form-group"><label class="form-label"><i class="fas fa-lock"></i> Password</label><input type="password" class="form-input" name="loginPassword" required></div><button type="submit" class="btn btn-primary btn-full"><i class="fas fa-sign-in-alt"></i> Sign In</button></form><div class="auth-switch">Don't have an account? <a onclick="renderAuthForm('register')">Create one</a></div>`;
 }
 
 function getRegisterTemplate() {
-    return `<div class="auth-header premium-auth-header"><div class="auth-logo"><i class="fas fa-drafting-compass"></i></div><h2>Join SteelConnect</h2><p>Create your professional account</p></div><form id="register-form" class="premium-form"><div class="form-group"><label class="form-label"><i class="fas fa-user"></i> Full Name</label><input type="text" class="form-input" name="regName" required></div><div class="form-group"><label class="form-label"><i class="fas fa-envelope"></i> Email</label><input type="email" class="form-input" name="regEmail" required></div><div class="form-group"><label class="form-label"><i class="fas fa-lock"></i> Password</label><input type="password" class="form-input" name="regPassword" required></div><div class="form-group"><label class="form-label"><i class="fas fa-user-tag"></i> I am a...</label><select class="form-select" name="regRole" required><option value="" disabled selected>Select role</option><option value="contractor">Client / Contractor</option><option value="designer">Designer / Engineer</option></select></div><button type="submit" class="btn btn-primary btn-full"><i class="fas fa-user-plus"></i> Create Account</button></form><div class="auth-switch">Already have an account? <a onclick="renderAuthForm('login')">Sign In</a></div>`;
+    return `<div class="auth-header premium-auth-header"><div class="auth-logo"><i class="fas fa-drafting-compass"></i></div><h2>Join SteelConnect</h2><p>Create your professional account</p></div><div id="auth-error-container"></div><form id="register-form" class="premium-form"><div class="form-group"><label class="form-label"><i class="fas fa-user"></i> Full Name</label><input type="text" class="form-input" name="regName" required></div><div class="form-group"><label class="form-label"><i class="fas fa-envelope"></i> Email</label><input type="email" class="form-input" name="regEmail" required></div><div class="form-group"><label class="form-label"><i class="fas fa-lock"></i> Password</label><input type="password" class="form-input" name="regPassword" required></div><div class="form-group"><label class="form-label"><i class="fas fa-user-tag"></i> I am a...</label><select class="form-select" name="regRole" required><option value="" disabled selected>Select role</option><option value="contractor">Client / Contractor</option><option value="designer">Designer / Engineer</option></select></div><button type="submit" class="btn btn-primary btn-full"><i class="fas fa-user-plus"></i> Create Account</button></form><div class="auth-switch">Already have an account? <a onclick="renderAuthForm('login')">Sign In</a></div>`;
 }
 
 function getPostJobTemplate() {
@@ -4269,6 +4310,7 @@ function renderPostCard(post) {
                 ${previewComments.map(c => {
                     const cColor = getAvatarColor(c.authorName || 'U');
                     const cInitial = (c.authorName || 'U').charAt(0).toUpperCase();
+                    const canDeleteComment = c.authorId === appState.currentUser.id || post.authorId === appState.currentUser.id;
                     return `
                     <div class="cf-comment-item">
                         <div class="cf-comment-avatar" style="background-color: ${cColor}">${cInitial}</div>
@@ -4277,6 +4319,7 @@ function renderPostCard(post) {
                                 <strong>${c.authorName || 'Unknown'}</strong>
                                 <span class="cf-comment-role ${c.authorType || ''}">${c.authorType || 'user'}</span>
                                 <span class="cf-comment-time">${getTimeAgo(c.createdAt)}</span>
+                                ${canDeleteComment ? `<button class="cf-comment-delete-btn" onclick="event.stopPropagation(); deleteComment('${post.id}', '${c.id}')" title="Delete comment"><i class="fas fa-trash-alt"></i></button>` : ''}
                             </div>
                             <p>${c.text || ''}</p>
                         </div>
@@ -4739,6 +4782,7 @@ function openPostDetailView(postId) {
     const commentsHTML = (post.comments || []).map(c => {
         const cColor = getAvatarColor(c.authorName || 'U');
         const cInitial = (c.authorName || 'U').charAt(0).toUpperCase();
+        const canDeleteComment = c.authorId === user.id || post.authorId === user.id;
         return `
             <div class="cf-detail-comment">
                 <div class="cf-detail-comment-avatar" style="background-color: ${cColor}">${cInitial}</div>
@@ -4746,6 +4790,7 @@ function openPostDetailView(postId) {
                     <div class="cf-detail-comment-header">
                         <strong>${c.authorName || 'Unknown'}</strong>
                         <span class="cf-comment-role ${c.authorType || ''}">${c.authorType === 'designer' ? 'Designer' : 'Contractor'}</span>
+                        ${canDeleteComment ? `<button class="cf-comment-delete-btn" onclick="event.stopPropagation(); deleteComment('${post.id}', '${c.id}'); closeModal(); setTimeout(() => openPostDetailView('${post.id}'), 200);" title="Delete comment"><i class="fas fa-trash-alt"></i></button>` : ''}
                     </div>
                     <p>${c.text || ''}</p>
                     <span class="cf-detail-comment-time"><i class="far fa-clock"></i> ${getTimeAgo(c.createdAt)}</span>
@@ -4841,6 +4886,26 @@ async function submitCommentFromDetail(postId) {
         postEl.outerHTML = renderPostCard(post);
     }
     showNotification('Comment added!', 'success');
+}
+
+async function deleteComment(postId, commentId) {
+    if (!confirm('Delete this comment?')) return;
+    const post = appState.communityPosts.find(p => p.id === postId);
+    if (post && post.comments) {
+        post.comments = post.comments.filter(c => c.id !== commentId);
+    }
+    saveCommunityPostsLocal(appState.communityPosts);
+
+    try {
+        await apiCall(`/community/posts/${postId}/comments/${commentId}`, 'DELETE');
+    } catch (e) { /* fallback: already removed locally */ }
+
+    // Re-render the post card in feed
+    const postEl = document.querySelector(`.cf-post-card[data-post-id="${postId}"]`);
+    if (postEl && post) {
+        postEl.outerHTML = renderPostCard(post);
+    }
+    showNotification('Comment deleted.', 'info');
 }
 
 function openPostImageViewer(imageUrl) {
