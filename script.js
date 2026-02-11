@@ -2689,7 +2689,12 @@ function logout() {
     appState.myEstimations = [];
     appState.notifications = [];
     appState.profileFiles = {};
+    // Preserve community posts across logout - only clear auth data
+    const communityPosts = localStorage.getItem('steelconnect_community_posts');
     localStorage.clear();
+    if (communityPosts) {
+        localStorage.setItem('steelconnect_community_posts', communityPosts);
+    }
     clearTimeout(inactivityTimer);
     clearTimeout(warningTimer);
     dismissInactivityWarning();
@@ -4122,33 +4127,37 @@ function searchCommunityPosts(tag) {
 }
 
 async function loadCommunityPosts(loadMore = false) {
-    const postsContainer = document.getElementById('cf-posts-container');
     const loadMoreContainer = document.getElementById('cf-load-more');
     if (!loadMore) {
         appState.communityPosts = [];
         appState.communityPage = 1;
-        appState.communityHasMore = true;
+        appState.communityHasMore = false;
     }
+
+    // Try API first, fallback to localStorage
+    let loaded = false;
     try {
         const response = await apiCall(`/community/posts?page=${appState.communityPage}&limit=10`, 'GET');
         const newPosts = response.data || [];
         appState.communityPosts.push(...newPosts);
         appState.communityHasMore = response.pagination ? response.pagination.hasNext : false;
         appState.communityPage += 1;
-        // Sync API posts to local storage for cross-session visibility
         saveCommunityPostsLocal(appState.communityPosts);
-        renderCommunityPostsList();
-        updateCommunityProfileStats();
         updateCommunityHeroStats(response.totalPosts, response.totalMembers);
+        loaded = true;
     } catch (error) {
-        // API not available - load from localStorage so all users see shared posts
-        if (appState.communityPosts.length === 0) {
-            appState.communityPosts = loadCommunityPostsLocal();
-        }
-        appState.communityHasMore = false;
-        renderCommunityPostsList();
-        updateCommunityProfileStats();
+        // Backend community API not available - use localStorage as database
     }
+
+    if (!loaded) {
+        appState.communityPosts = loadCommunityPostsLocal();
+        appState.communityHasMore = false;
+        updateCommunityHeroStats(appState.communityPosts.length, null);
+    }
+
+    renderCommunityPostsList();
+    updateCommunityProfileStats();
+
     if (loadMoreContainer) {
         if (appState.communityHasMore && appState.communityPosts.length > 0) {
             loadMoreContainer.innerHTML = `<button class="cf-load-more-btn" onclick="loadCommunityPosts(true)"><i class="fas fa-arrow-down"></i> Load More</button>`;
@@ -4158,11 +4167,22 @@ async function loadCommunityPosts(loadMore = false) {
     }
 }
 
-// --- Community Posts Local Storage (shared across all users) ---
+// --- Community Posts Local Storage (persists across logout/login) ---
 function saveCommunityPostsLocal(posts) {
     try {
-        localStorage.setItem('steelconnect_community_posts', JSON.stringify(posts));
-    } catch (e) { /* Storage full or unavailable */ }
+        // Save without base64 images to avoid localStorage quota issues
+        const postsToSave = posts.map(p => ({
+            ...p,
+            images: (p.images || []).map(img => img.startsWith('data:') ? '[image]' : img)
+        }));
+        localStorage.setItem('steelconnect_community_posts', JSON.stringify(postsToSave));
+    } catch (e) {
+        // If storage is full, try saving without images at all
+        try {
+            const lite = posts.map(p => ({ ...p, images: [] }));
+            localStorage.setItem('steelconnect_community_posts', JSON.stringify(lite));
+        } catch (e2) { /* Storage truly unavailable */ }
+    }
 }
 
 function loadCommunityPostsLocal() {
@@ -4569,7 +4589,7 @@ async function submitNewPost() {
 
     const user = appState.currentUser;
     const newPost = {
-        id: 'post-' + Date.now(),
+        id: 'post-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
         authorId: user.id,
         authorName: user.name,
         authorType: user.type,
@@ -4581,16 +4601,17 @@ async function submitNewPost() {
         createdAt: new Date().toISOString()
     };
 
+    // Try saving to backend API
     try {
-        const formData = new FormData();
-        formData.append('content', content);
-        // If real images are files, they would be appended here
         const response = await apiCall('/community/posts', 'POST', { content, images: appState.newPostImages });
-        if (response.data) {
-            newPost.id = response.data.id || newPost.id;
+        if (response.data && response.data.id) {
+            newPost.id = response.data.id;
         }
-    } catch (e) { /* API may not exist yet - post locally */ }
+    } catch (e) {
+        // Backend community API not available yet - saving locally
+    }
 
+    // Always save to local state + localStorage (works as primary DB)
     appState.communityPosts.unshift(newPost);
     saveCommunityPostsLocal(appState.communityPosts);
     appState.newPostImages = [];
@@ -4623,11 +4644,12 @@ async function updateCommunityPost(postId) {
     if (post) {
         post.content = content;
         post.images = [...appState.newPostImages];
+        post.updatedAt = new Date().toISOString();
     }
 
     try {
         await apiCall(`/community/posts/${postId}`, 'PUT', { content, images: appState.newPostImages });
-    } catch (e) { /* API may not exist */ }
+    } catch (e) { /* Backend API not available - saved locally */ }
 
     saveCommunityPostsLocal(appState.communityPosts);
     closeModal();
