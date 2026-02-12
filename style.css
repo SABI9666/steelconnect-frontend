@@ -5308,6 +5308,143 @@ body {
     gap: 1rem;
 }
 
+/* --- PREMIUM AI ESTIMATION HERO & FORM --- */
+.est-hero {
+    position: relative; background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%);
+    border-radius: 24px; padding: 3rem 2.5rem; margin-bottom: 2rem; overflow: hidden; text-align: center;
+}
+.est-hero-glow {
+    position: absolute; top: -50%; left: 50%; transform: translateX(-50%);
+    width: 600px; height: 600px; background: radial-gradient(circle, rgba(59,130,246,0.2) 0%, transparent 60%);
+    pointer-events: none;
+}
+.est-hero-content { position: relative; z-index: 2; }
+.est-hero-badge {
+    display: inline-flex; align-items: center; gap: 6px; background: rgba(59,130,246,0.2);
+    color: #60a5fa; padding: 6px 16px; border-radius: 20px; font-size: 0.8rem; font-weight: 700;
+    letter-spacing: 1px; text-transform: uppercase; margin-bottom: 1rem; border: 1px solid rgba(59,130,246,0.3);
+}
+.est-hero-badge i { font-size: 0.75rem; }
+.est-hero-title {
+    font-size: 2.2rem; font-weight: 800; color: #fff; margin: 0 0 0.75rem; line-height: 1.2;
+    background: linear-gradient(to right, #fff, #93c5fd); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.est-hero-subtitle { font-size: 1.05rem; color: #94a3b8; margin: 0; max-width: 600px; margin-inline: auto; line-height: 1.6; }
+
+/* Steps bar */
+.est-steps-bar {
+    display: flex; align-items: center; justify-content: center; gap: 0; margin-bottom: 2.5rem;
+    padding: 1.5rem 2rem; background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    border: 1px solid #e2e8f0;
+}
+.est-step {
+    display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 100px; position: relative;
+}
+.est-step-circle {
+    width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 0.95rem; border: 3px solid #cbd5e1; color: #94a3b8; background: #f8fafc;
+    transition: all 0.4s ease;
+}
+.est-step.active .est-step-circle {
+    border-color: #3b82f6; color: #fff; background: linear-gradient(135deg, #3b82f6, #2563eb);
+    box-shadow: 0 0 0 4px rgba(59,130,246,0.2);
+}
+.est-step.completed .est-step-circle {
+    border-color: #10b981; color: #fff; background: linear-gradient(135deg, #10b981, #059669);
+}
+.est-step-label { font-size: 0.8rem; font-weight: 600; color: #94a3b8; text-align: center; transition: color 0.3s; }
+.est-step.active .est-step-label { color: #1e40af; }
+.est-step.completed .est-step-label { color: #059669; }
+.est-req-dot { color: #ef4444; font-weight: 700; }
+.est-step-line {
+    flex: 1; height: 3px; background: #e2e8f0; border-radius: 2px; min-width: 40px; max-width: 80px;
+    transition: background 0.4s ease; margin-bottom: 26px;
+}
+.est-step-line.completed { background: linear-gradient(90deg, #10b981, #3b82f6); }
+
+/* Estimation cards */
+.est-card {
+    background: #fff; border-radius: 20px; padding: 2rem; margin-bottom: 1.5rem;
+    border: 1px solid #e2e8f0; box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+    transition: box-shadow 0.3s, border-color 0.3s;
+}
+.est-card:hover { box-shadow: 0 8px 30px rgba(0,0,0,0.08); border-color: #c7d2fe; }
+.est-card-header {
+    display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 1.5rem;
+    padding-bottom: 1.25rem; border-bottom: 2px solid #f1f5f9;
+}
+.est-card-icon {
+    width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center;
+    justify-content: center; font-size: 1.3rem; color: #fff; flex-shrink: 0;
+}
+.est-card-icon.blue { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+.est-card-icon.indigo { background: linear-gradient(135deg, #6366f1, #4f46e5); }
+.est-card-header h3 { font-size: 1.15rem; font-weight: 700; color: #1f2937; margin: 0 0 4px; }
+.est-card-desc { font-size: 0.875rem; color: #64748b; margin: 0; line-height: 1.5; }
+.est-mandatory { font-size: 0.7rem; font-weight: 700; color: #ef4444; text-transform: uppercase; letter-spacing: 0.5px; vertical-align: middle; }
+
+/* Form fields */
+.est-label { font-weight: 600; color: #334155; font-size: 0.95rem; }
+.est-req-star { color: #ef4444; font-weight: 700; margin-left: 2px; }
+.est-field-hint { display: block; margin-top: 6px; font-size: 0.8rem; color: #94a3b8; }
+.est-form-body { display: flex; flex-direction: column; gap: 1.25rem; }
+.est-browse-link { color: #3b82f6; font-weight: 600; text-decoration: underline; cursor: pointer; }
+
+/* Format tags in upload area */
+.est-format-tags { display: flex; gap: 8px; justify-content: center; margin: 1rem 0; flex-wrap: wrap; }
+.est-format-tag {
+    display: inline-flex; align-items: center; gap: 5px; padding: 5px 12px; border-radius: 20px;
+    font-size: 0.78rem; font-weight: 600; border: 1.5px solid;
+}
+.est-format-tag.pdf { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
+.est-format-tag.dwg { background: #f0f9ff; color: #0284c7; border-color: #bae6fd; }
+.est-format-tag.doc { background: #eff6ff; color: #2563eb; border-color: #dbeafe; }
+.est-format-tag.img { background: #f0fdf4; color: #16a34a; border-color: #bbf7d0; }
+.est-upload-icon-wrap {
+    width: 70px; height: 70px; border-radius: 50%; background: linear-gradient(135deg, #dbeafe, #eff6ff);
+    display: flex; align-items: center; justify-content: center; font-size: 2rem; color: #3b82f6;
+    margin-bottom: 1rem; transition: transform 0.3s, box-shadow 0.3s;
+}
+.premium-upload-area:hover .est-upload-icon-wrap {
+    transform: translateY(-4px); box-shadow: 0 8px 25px rgba(59,130,246,0.2);
+}
+.upload-limit { color: #94a3b8; font-size: 0.8rem; margin-top: 0.5rem; display: flex; align-items: center; gap: 5px; justify-content: center; }
+
+/* Info banner */
+.est-info-banner {
+    display: flex; align-items: flex-start; gap: 14px; padding: 1.25rem 1.5rem; background: linear-gradient(135deg, #f0f9ff, #eff6ff);
+    border-radius: 14px; border: 1px solid #bfdbfe; margin-bottom: 1.5rem; font-size: 0.9rem; color: #1e40af; line-height: 1.6;
+}
+.est-info-icon { font-size: 1.3rem; color: #3b82f6; flex-shrink: 0; margin-top: 2px; }
+
+/* Submit section */
+.est-submit-section { text-align: center; padding: 1rem 0; }
+.est-submit-btn {
+    display: inline-flex; align-items: center; gap: 10px; padding: 16px 40px; font-size: 1.1rem;
+    font-weight: 700; color: #fff; background: linear-gradient(135deg, #3b82f6, #2563eb);
+    border: none; border-radius: 14px; cursor: pointer; transition: all 0.3s;
+    box-shadow: 0 4px 15px rgba(37,99,235,0.3);
+}
+.est-submit-btn:hover:not(:disabled) {
+    transform: translateY(-2px); box-shadow: 0 8px 25px rgba(37,99,235,0.4);
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+}
+.est-submit-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+.est-submit-note {
+    margin-top: 12px; font-size: 0.8rem; color: #94a3b8; display: flex; align-items: center;
+    justify-content: center; gap: 6px;
+}
+.est-submit-note i { font-size: 0.7rem; }
+
+@media (max-width: 640px) {
+    .est-hero { padding: 2rem 1.25rem; }
+    .est-hero-title { font-size: 1.5rem; }
+    .est-steps-bar { flex-wrap: wrap; gap: 8px; padding: 1rem; }
+    .est-step-line { min-width: 20px; }
+    .est-card { padding: 1.25rem; }
+    .est-card-header { flex-direction: column; gap: 0.75rem; }
+}
+
 /* --- PROFESSIONAL ESTIMATION TOOL STYLES --- */
 /* Header Stats Enhancement */
 .header-stats {
