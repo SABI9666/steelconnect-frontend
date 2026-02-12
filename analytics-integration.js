@@ -649,9 +649,13 @@ function getDashboardViewHTML() {
             <div class="ad-kpi-footer">
                 <div class="ad-kpi-stat"><span class="ad-kpi-stat-label">Avg</span><span class="ad-kpi-stat-val">${formatKpiValue(kpi.avg)}</span></div>
                 <div class="ad-kpi-divider"></div>
+                ${kpi.median !== undefined ? `<div class="ad-kpi-stat"><span class="ad-kpi-stat-label">Median</span><span class="ad-kpi-stat-val">${formatKpiValue(kpi.median)}</span></div><div class="ad-kpi-divider"></div>` : ''}
                 <div class="ad-kpi-stat"><span class="ad-kpi-stat-label">Max</span><span class="ad-kpi-stat-val">${formatKpiValue(kpi.max)}</span></div>
                 ${kpi.min !== undefined ? `<div class="ad-kpi-divider"></div><div class="ad-kpi-stat"><span class="ad-kpi-stat-label">Min</span><span class="ad-kpi-stat-val">${formatKpiValue(kpi.min)}</span></div>` : ''}
             </div>
+            ${kpi.growthRate !== undefined ? `<div class="ad-kpi-growth" style="margin-top:6px;font-size:11px;color:${kpi.growthRate >= 0 ? '#10b981' : '#ef4444'};text-align:center;">
+                <i class="fas fa-chart-line"></i> Growth: ${kpi.growthRate >= 0 ? '+' : ''}${kpi.growthRate.toFixed(1)}%${kpi.peakLabel ? ` &middot; Peak: ${kpi.peakLabel}` : ''}
+            </div>` : ''}
             <div class="ad-kpi-glow" style="background: ${color}"></div>
         </div>`;
     }).join('');
