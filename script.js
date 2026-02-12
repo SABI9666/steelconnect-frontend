@@ -3292,10 +3292,15 @@ function getFileTypeIcon(mimeType, fileName) {
 }
 
 function updateEstimationStep(activeStep) {
-    document.querySelectorAll('.estimation-steps .step').forEach((step, index) => {
+    document.querySelectorAll('.est-steps-bar .est-step').forEach((step, index) => {
         const stepNum = index + 1;
-        if (stepNum < activeStep) step.classList.add('completed'); else step.classList.remove('completed');
-        if (stepNum === activeStep) step.classList.add('active'); else step.classList.remove('active');
+        if (stepNum < activeStep) { step.classList.add('completed'); step.classList.remove('active'); }
+        else if (stepNum === activeStep) { step.classList.add('active'); step.classList.remove('completed'); }
+        else { step.classList.remove('completed'); step.classList.remove('active'); }
+    });
+    // Animate the connecting lines
+    document.querySelectorAll('.est-step-line').forEach((line, index) => {
+        if (index + 1 < activeStep) line.classList.add('completed'); else line.classList.remove('completed');
     });
 }
 
@@ -3445,32 +3450,98 @@ function getPostJobTemplate() {
 function getEstimationToolTemplate() {
     return `
         <div id="dynamic-feature-header" class="dynamic-feature-header"></div>
-        <div class="section-header modern-header">
-            <div class="header-content"><h2><i class="fas fa-robot"></i> AI-Powered Cost Estimation</h2><p class="header-subtitle">Upload your drawings and get instant cost estimates</p></div>
+        <div class="est-hero">
+            <div class="est-hero-glow"></div>
+            <div class="est-hero-content">
+                <div class="est-hero-badge"><i class="fas fa-bolt"></i> AI-Powered</div>
+                <h1 class="est-hero-title">Smart Cost Estimation</h1>
+                <p class="est-hero-subtitle">Upload your project drawings and receive an accurate, AI-generated cost breakdown from our engineering experts</p>
+            </div>
         </div>
         <div class="estimation-tool-container premium-estimation-container">
-            <div class="estimation-steps">
-                <div class="step active" data-step="1"><div class="step-number">1</div><div class="step-content"><h4>Upload Files</h4><p>Add your drawings</p></div></div>
-                <div class="step" data-step="2"><div class="step-number">2</div><div class="step-content"><h4>Project Details</h4><p>Describe requirements</p></div></div>
-                <div class="step" data-step="3"><div class="step-number">3</div><div class="step-content"><h4>Get Estimate</h4><p>Receive detailed cost breakdown</p></div></div>
+            <div class="est-steps-bar">
+                <div class="est-step active" data-step="1">
+                    <div class="est-step-circle"><span>1</span></div>
+                    <div class="est-step-label">Upload Files <span class="est-req-dot">*</span></div>
+                </div>
+                <div class="est-step-line"></div>
+                <div class="est-step" data-step="2">
+                    <div class="est-step-circle"><span>2</span></div>
+                    <div class="est-step-label">Project Details <span class="est-req-dot">*</span></div>
+                </div>
+                <div class="est-step-line"></div>
+                <div class="est-step" data-step="3">
+                    <div class="est-step-circle"><span>3</span></div>
+                    <div class="est-step-label">Submit & Track</div>
+                </div>
             </div>
             <form id="estimation-form" class="premium-estimation-form">
-                <div class="form-section premium-section">
-                    <h3><i class="fas fa-upload"></i> Upload Project Files</h3>
+                <div class="est-card">
+                    <div class="est-card-header">
+                        <div class="est-card-icon blue"><i class="fas fa-cloud-upload-alt"></i></div>
+                        <div>
+                            <h3>Upload Project Files <span class="est-mandatory">* Required</span></h3>
+                            <p class="est-card-desc">Upload your PDF drawings, blueprints, or project documents for analysis</p>
+                        </div>
+                    </div>
                     <div class="file-upload-section premium-upload-section">
                         <div id="file-upload-area" class="file-upload-area premium-upload-area">
                             <input type="file" id="file-upload-input" accept=".pdf,.dwg,.doc,.docx,.jpg,.jpeg,.png" multiple />
-                            <div class="upload-content"><div class="file-upload-icon"><i class="fas fa-cloud-upload-alt"></i></div><h3>Drag & Drop Files Here</h3><p>or click to browse</p><small class="upload-limit">Max 20 files, 50MB each</small></div>
+                            <div class="upload-content">
+                                <div class="est-upload-icon-wrap"><i class="fas fa-cloud-upload-alt"></i></div>
+                                <h3>Drag & Drop Files Here</h3>
+                                <p>or <span class="est-browse-link">click to browse</span> from your computer</p>
+                                <div class="est-format-tags">
+                                    <span class="est-format-tag pdf"><i class="fas fa-file-pdf"></i> PDF</span>
+                                    <span class="est-format-tag dwg"><i class="fas fa-drafting-compass"></i> DWG</span>
+                                    <span class="est-format-tag doc"><i class="fas fa-file-word"></i> DOC</span>
+                                    <span class="est-format-tag img"><i class="fas fa-file-image"></i> IMG</span>
+                                </div>
+                                <small class="upload-limit"><i class="fas fa-info-circle"></i> Max 20 files, 50MB each</small>
+                            </div>
                         </div>
-                        <div id="file-info-container" class="selected-files-container" style="display: none;"><h4><i class="fas fa-files"></i> Selected Files</h4><div id="selected-files-list" class="selected-files-list"></div></div>
+                        <div id="file-info-container" class="selected-files-container" style="display: none;">
+                            <h4><i class="fas fa-paperclip"></i> Selected Files</h4>
+                            <div id="selected-files-list" class="selected-files-list"></div>
+                        </div>
                     </div>
                 </div>
-                <div class="form-section premium-section">
-                    <h3><i class="fas fa-info-circle"></i> Project Information</h3>
-                    <div class="form-group"><label class="form-label"><i class="fas fa-heading"></i> Project Title</label><input type="text" class="form-input premium-input" name="projectTitle" required placeholder="e.g., Commercial Building Steel Framework"></div>
-                    <div class="form-group"><label class="form-label"><i class="fas fa-file-alt"></i> Project Description</label><textarea class="form-textarea premium-textarea" name="description" required placeholder="Describe your project..."></textarea></div>
+
+                <div class="est-card">
+                    <div class="est-card-header">
+                        <div class="est-card-icon indigo"><i class="fas fa-clipboard-list"></i></div>
+                        <div>
+                            <h3>Project Information <span class="est-mandatory">* Required</span></h3>
+                            <p class="est-card-desc">Provide details about your project to help us deliver an accurate estimate</p>
+                        </div>
+                    </div>
+                    <div class="est-form-body">
+                        <div class="form-group">
+                            <label class="form-label est-label">Project Title <span class="est-req-star">*</span></label>
+                            <input type="text" class="form-input premium-input" name="projectTitle" required placeholder="e.g., Commercial Building Steel Framework" />
+                            <small class="est-field-hint">Give your project a clear, descriptive name</small>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label est-label">Project Description <span class="est-req-star">*</span></label>
+                            <textarea class="form-textarea premium-textarea" name="description" required rows="5" placeholder="Describe the scope, materials, dimensions, and any special requirements for your project..."></textarea>
+                            <small class="est-field-hint">The more detail you provide, the more accurate your estimate will be</small>
+                        </div>
+                    </div>
                 </div>
-                <div class="form-actions estimation-actions"><button type="button" id="submit-estimation-btn" class="btn btn-primary btn-large premium-btn" disabled><i class="fas fa-paper-plane"></i> Submit Request</button></div>
+
+                <div class="est-info-banner">
+                    <div class="est-info-icon"><i class="fas fa-shield-alt"></i></div>
+                    <div>
+                        <strong>How it works:</strong> Our team reviews your files and project details, then provides a detailed cost breakdown. Typical turnaround is 1-3 business days.
+                    </div>
+                </div>
+
+                <div class="est-submit-section">
+                    <button type="button" id="submit-estimation-btn" class="est-submit-btn" disabled>
+                        <i class="fas fa-paper-plane"></i> Submit Estimation Request
+                    </button>
+                    <p class="est-submit-note"><i class="fas fa-lock"></i> All uploaded files are securely stored and only accessible to authorized engineers</p>
+                </div>
             </form>
         </div>`;
 }
