@@ -212,10 +212,15 @@ function getPortalHTML() {
                                 }
                                 <span><i class="fas fa-sync-alt"></i> ${(db.frequency || 'daily').charAt(0).toUpperCase() + (db.frequency || 'daily').slice(1)}</span>
                                 <span><i class="fas fa-calendar-check"></i> ${db.approvedAt ? new Date(db.approvedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A'}</span>
+                                ${db.googleSheetUrl ? `<span style="color:${db.linkType === 'sharepoint' ? '#0078d4' : '#34a853'}"><i class="fas ${db.linkType === 'sharepoint' ? 'fa-cloud' : 'fa-link'}"></i> ${db.linkType === 'sharepoint' ? 'SharePoint' : db.linkType === 'google' ? 'Google Sheet' : 'Linked'}</span>` : ''}
+                                ${db.syncInterval && db.syncInterval !== 'manual' ? `<span style="color:#6366f1"><i class="fas fa-sync"></i> Auto-sync: ${db.syncInterval}</span>` : ''}
                             </div>
-                            <div class="ad-approved-cta">
-                                <span><i class="fas fa-eye"></i> View ${db.manualDashboardUrl ? 'Custom Dashboard' : 'Full Dashboard'}</span>
-                                <i class="fas fa-arrow-right"></i>
+                            <div class="ad-approved-actions" style="display:flex;align-items:center;justify-content:space-between">
+                                <div class="ad-approved-cta" style="flex:1">
+                                    <span><i class="fas fa-eye"></i> View ${db.manualDashboardUrl ? 'Custom Dashboard' : 'Full Dashboard'}</span>
+                                    <i class="fas fa-arrow-right"></i>
+                                </div>
+                                ${db.googleSheetUrl ? `<button class="ad-sync-btn" onclick="event.stopPropagation(); syncDashboard('${db._id}')" title="Refresh data from linked sheet" style="background:none;border:1px solid #e2e8f0;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:.78rem;color:#6366f1;display:flex;align-items:center;gap:5px;transition:all .2s"><i class="fas fa-sync-alt"></i> Sync</button>` : ''}
                             </div>
                         </div>
                     </div>
@@ -281,14 +286,28 @@ function showAnalyticsUploadView() {
                 </div>
             </div>
 
-            <!-- Google Sheet Link -->
+            <!-- Sheet Link (Google Sheets / SharePoint / OneDrive) -->
             <div class="ad-form-group">
-                <label><i class="fas fa-link"></i> Google Sheet Link <span style="font-weight:400;color:#94a3b8">(paste your shared Google Sheet URL)</span></label>
+                <label><i class="fas fa-link"></i> Sheet Link <span style="font-weight:400;color:#94a3b8">(Google Sheets, SharePoint, or OneDrive)</span></label>
                 <div class="ad-gsheet-input-wrap">
-                    <div class="ad-gsheet-icon"><i class="fab fa-google-drive"></i></div>
-                    <input type="url" id="ad-sheet-link" class="ad-form-input ad-gsheet-field" placeholder="https://docs.google.com/spreadsheets/d/..." oninput="validateUploadInputs()">
+                    <div class="ad-gsheet-icon"><i class="fas fa-cloud"></i></div>
+                    <input type="url" id="ad-sheet-link" class="ad-form-input ad-gsheet-field" placeholder="Paste Google Sheet, SharePoint, or OneDrive link..." oninput="validateUploadInputs()">
                 </div>
-                <small class="ad-gsheet-hint"><i class="fas fa-info-circle"></i> Make sure the sheet is shared (anyone with the link can view)</small>
+                <small class="ad-gsheet-hint"><i class="fas fa-info-circle"></i> Supports Google Sheets, SharePoint (.xlsx), and OneDrive. Make sure the file is shared publicly.</small>
+            </div>
+
+            <!-- Auto-Sync Interval -->
+            <div class="ad-form-group">
+                <label><i class="fas fa-sync-alt"></i> Auto-Sync Interval <span style="font-weight:400;color:#94a3b8">(auto-refresh when sheet is updated)</span></label>
+                <select id="ad-sync-interval" class="ad-form-select">
+                    <option value="daily" selected>Daily</option>
+                    <option value="hourly">Hourly</option>
+                    <option value="realtime">Every 5 minutes (Realtime)</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                    <option value="manual">Manual only</option>
+                </select>
+                <small class="ad-gsheet-hint"><i class="fas fa-info-circle"></i> Dashboard will automatically re-fetch data from the linked sheet at this interval.</small>
             </div>
 
             <!-- Divider -->
@@ -376,13 +395,15 @@ async function handleSheetUpload(event) {
 
     const hasFile = fileInput && fileInput.files && fileInput.files[0];
     const hasLink = linkInput && linkInput.value.trim();
+    const syncIntervalSelect = document.getElementById('ad-sync-interval');
+    const syncInterval = syncIntervalSelect ? syncIntervalSelect.value : 'daily';
 
     if (!title) {
         if (typeof showNotification === 'function') showNotification('Please fill in the dashboard title', 'error');
         return;
     }
     if (!hasFile && !hasLink) {
-        if (typeof showNotification === 'function') showNotification('Please upload a file or provide a Google Sheet link', 'error');
+        if (typeof showNotification === 'function') showNotification('Please upload a file or provide a sheet link (Google Sheets, SharePoint, or OneDrive)', 'error');
         return;
     }
 
@@ -397,15 +418,13 @@ async function handleSheetUpload(event) {
         formData.append('dataType', dataType);
         formData.append('frequency', frequency);
         formData.append('description', description);
+        if (hasLink) formData.append('syncInterval', syncInterval);
 
         const response = await window.apiCall('/analysis/upload-sheet', 'POST', formData);
 
         if (typeof closeModal === 'function') closeModal();
         if (typeof showNotification === 'function') {
-            const msg = hasFile
-                ? `Dashboard auto-generated with ${response.chartsGenerated || 0} charts! Sent to admin for approval.`
-                : 'Google Sheet link submitted! Dashboard will be reviewed by admin.';
-            showNotification(msg, 'success');
+            showNotification(`Dashboard auto-generated with ${response.chartsGenerated || 0} charts! Sent to admin for approval.`, 'success');
         }
 
         // Refresh portal
@@ -428,6 +447,33 @@ async function deletePendingDashboard(id) {
         if (typeof showNotification === 'function') showNotification(error.message || 'Failed to delete', 'error');
     }
 }
+
+// ===== SYNC DASHBOARD FROM LINKED SHEET =====
+window.syncDashboard = async function(id) {
+    const btn = document.querySelector(`.ad-sync-btn[onclick*="${id}"]`);
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> Syncing...';
+    }
+    try {
+        const result = await window.apiCall(`/analysis/dashboard/${id}/sync`, 'POST');
+        if (typeof showNotification === 'function') {
+            showNotification(result.dataChanged
+                ? 'Dashboard synced! Data has been updated with the latest sheet data.'
+                : 'Dashboard synced. No changes detected in the sheet data.',
+                result.dataChanged ? 'success' : 'info'
+            );
+        }
+        if (result.dataChanged) await renderAnalyticsPortal();
+    } catch (error) {
+        if (typeof showNotification === 'function') showNotification(error.message || 'Failed to sync dashboard', 'error');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-sync-alt"></i> Sync';
+        }
+    }
+};
 
 // ===== DASHBOARD STATUS DETAIL VIEW =====
 function showDashboardStatus(dashboardId) {
