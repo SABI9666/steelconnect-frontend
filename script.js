@@ -69,11 +69,7 @@ const appState = {
 };
 
 // === BUSINESS ANALYTICS STATE ===
-const businessAnalyticsState = {
-    currentRequest: null,
-    history: [],
-    isLoading: false,
-};
+// Business analytics state removed - clients view approved dashboards only (no uploads)
 
 
 // Professional Features Header Data
@@ -797,7 +793,7 @@ function getNotificationActionButtons(notification) {
             break;
         case 'business_analytics':
             if (metadata?.action === 'analytics_completed') {
-                buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); renderAppSection('business-analytics')"><i class="fas fa-chart-line"></i> View Report</button>`;
+                buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); renderAppSection('ai-analytics')"><i class="fas fa-chart-line"></i> View Report</button>`;
             }
             break;
         default:
@@ -851,7 +847,7 @@ function handleNotificationClick(notificationId, type, metadata = {}) {
             }
             break;
         case 'business_analytics':
-            renderAppSection('business-analytics');
+            renderAppSection('ai-analytics');
             break;
         default:
             renderAppSection('dashboard');
@@ -2910,7 +2906,7 @@ function renderAppSection(sectionId) {
     document.querySelectorAll('.sidebar-nav-link').forEach(link => link.classList.toggle('active', link.dataset.section === sectionId));
     const profileStatus = appState.currentUser.profileStatus;
     const isApproved = profileStatus === 'approved';
-    const restrictedSections = ['post-job', 'jobs', 'my-quotes', 'approved-jobs', 'estimation-tool', 'my-estimations', 'messages', 'business-analytics', 'project-tracking', 'community-feed', 'quote-analysis'];
+    const restrictedSections = ['post-job', 'jobs', 'my-quotes', 'approved-jobs', 'estimation-tool', 'my-estimations', 'messages', 'ai-analytics', 'project-tracking', 'community-feed', 'quote-analysis'];
     if (restrictedSections.includes(sectionId) && !isApproved) {
         container.innerHTML = getRestrictedAccessTemplate(sectionId, profileStatus);
         return;
@@ -2961,7 +2957,10 @@ function renderAppSection(sectionId) {
         renderCommunityFeed();
     }
     else if (sectionId === 'business-analytics') {
-        renderBusinessAnalyticsPortal();
+        // Redirect to premium AI Analytics dashboard (view-only, no client uploads)
+        if (typeof renderAnalyticsDashboard === 'function') {
+            renderAnalyticsDashboard();
+        }
     }
     else if (sectionId === 'quote-analysis') {
         renderQuoteAnalysisSection();
@@ -2969,7 +2968,7 @@ function renderAppSection(sectionId) {
 }
 
 function getRestrictedAccessTemplate(sectionId, profileStatus) {
-    const sectionNames = { 'post-job': 'Post Projects', 'jobs': 'Browse Projects', 'my-quotes': 'My Quotes', 'approved-jobs': 'Approved Projects', 'estimation-tool': 'AI Estimation', 'my-estimations': 'My Estimations', 'messages': 'Messages', 'business-analytics': 'Business Analytics', 'project-tracking': 'Project Tracking', 'community-feed': 'Community Feed', 'quote-analysis': 'Quote Analysis' };
+    const sectionNames = { 'post-job': 'Post Projects', 'jobs': 'Browse Projects', 'my-quotes': 'My Quotes', 'approved-jobs': 'Approved Projects', 'estimation-tool': 'AI Estimation', 'my-estimations': 'My Estimations', 'messages': 'Messages', 'ai-analytics': 'Analytics Dashboard', 'project-tracking': 'Project Tracking', 'community-feed': 'Community Feed', 'quote-analysis': 'Quote Analysis' };
     const sectionName = sectionNames[sectionId] || 'This Feature';
     let msg = '', btn = '', icon = 'fa-lock', color = '#f59e0b';
     if (profileStatus === 'incomplete') {
@@ -4170,10 +4169,10 @@ function buildSidebarNav() {
             </a>
             <hr class="sidebar-divider">
             <div class="sidebar-section-title">Analytics & Reports</div>
-            <a href="#" class="sidebar-nav-link business-analytics-link" data-section="business-analytics">
-                <i class="fas fa-chart-line fa-fw"></i>
-                <span>Business Analytics</span>
-                <span class="nav-badge">NEW</span>
+            <a href="#" class="sidebar-nav-link analytics-nav-link" data-section="ai-analytics">
+                <i class="fas fa-chart-bar fa-fw"></i>
+                <span>Analytics Dashboard</span>
+                <span class="nav-badge" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-size:10px;padding:2px 6px;border-radius:10px;margin-left:8px">PRO</span>
             </a>
             <a href="#" class="sidebar-nav-link" data-section="quote-analysis">
                 <i class="fas fa-poll fa-fw"></i>
@@ -6588,478 +6587,5 @@ async function analyzeProjectQuotes(jobId, jobTitle) {
 }
 window.analyzeProjectQuotes = analyzeProjectQuotes;
 
-async function renderBusinessAnalyticsPortal() {
-    const container = document.getElementById('app-container');
-    container.innerHTML = `
-        <div class="section-header modern-header">
-            <div class="header-content">
-                <h2><i class="fas fa-chart-line"></i> Business Analytics</h2>
-                <p class="header-subtitle">Request and view comprehensive business analytics reports from your project data.</p>
-            </div>
-             <div class="header-actions">
-                <button class="btn btn-outline" onclick="showBusinessAnalyticsHistory()"><i class="fas fa-history"></i> View History</button>
-            </div>
-        </div>
-        <div id="business-analytics-content" class="business-analytics-container">
-            <div class="loading-spinner"><div class="spinner"></div><p>Loading Business Analytics Portal...</p></div>
-        </div>
-    `;
-    await loadAndDisplayBusinessAnalyticsRequest();
-}
-
-/**
- * Fetches the user's latest business analytics request and renders the correct view.
- */
-async function loadAndDisplayBusinessAnalyticsRequest() {
-    const contentArea = document.getElementById('business-analytics-content');
-    businessAnalyticsState.isLoading = true;
-    try {
-        const response = await apiCall('/analysis/my-request', 'GET');
-        businessAnalyticsState.currentRequest = response.request;
-        if (!businessAnalyticsState.currentRequest || businessAnalyticsState.currentRequest.status === 'completed') {
-            // No active request or last one is completed, show the new request form
-            contentArea.innerHTML = getBusinessAnalyticsNewRequestTemplate(businessAnalyticsState.currentRequest);
-            // Setup form listener
-            const form = document.getElementById('business-analytics-request-form');
-            if (form) {
-                form.addEventListener('submit', handleBusinessAnalyticsSubmit);
-            }
-        } else {
-            // An active request is pending
-            contentArea.innerHTML = getBusinessAnalyticsPendingTemplate(businessAnalyticsState.currentRequest);
-        }
-    } catch (error) {
-        console.error('Error loading business analytics:', error);
-        contentArea.innerHTML = `
-            <div class="error-state">
-                <h3>Error Loading Portal</h3>
-                <p>Could not retrieve your business analytics request status. Please try again.</p>
-                <button class="btn btn-primary" onclick="renderBusinessAnalyticsPortal()">Retry</button>
-            </div>`;
-    } finally {
-        businessAnalyticsState.isLoading = false;
-    }
-}
-
-/**
- * Template for submitting a new business analytics request.
- */
-function getBusinessAnalyticsNewRequestTemplate(lastRequest = null) {
-    return `
-        ${lastRequest ? getBusinessAnalyticsCompletedTemplate(lastRequest) : ''}
-        <div class="analysis-card">
-            <h3><i class="fas fa-plus-circle"></i> Submit a New Business Analytics Request</h3>
-            <p>Provide your data source URL and describe what analytics you need for your business insights.</p>
-            <form id="business-analytics-request-form" class="premium-form">
-                 <div class="form-row">
-                    <div class="form-group">
-                        <label class="form-label"><i class="fas fa-database"></i> Data Type</label>
-                        <select class="form-select" name="dataType" required>
-                            <option value="Production Update" selected>Production Update</option>
-                            <option value="Sales Analytics">Sales Analytics</option>
-                            <option value="Financial Report">Financial Report</option>
-                            <option value="Project Analytics">Project Analytics</option>
-                            <option value="Performance Metrics">Performance Metrics</option>
-                            <option value="Custom Analysis">Custom Analysis</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label"><i class="fas fa-sync-alt"></i> Report Frequency</label>
-                        <select class="form-select" name="frequency" required>
-                            <option value="Daily" selected>Daily</option>
-                            <option value="Weekly">Weekly</option>
-                            <option value="Monthly">Monthly</option>
-                            <option value="Quarterly">Quarterly</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label class="form-label"><i class="fas fa-link"></i> Data Source URL</label>
-                    <input type="url" class="form-input" name="googleSheetUrl" placeholder="https://docs.google.com/spreadsheets/d/... or any data source URL" required>
-                    <small>Please ensure the data source is accessible or shared with our analytics team.</small>
-                </div>
-                <div class="form-group">
-                    <label class="form-label"><i class="fas fa-file-alt"></i> Analytics Requirements</label>
-                    <textarea class="form-textarea" name="description" rows="4" placeholder="Describe what business insights you need, key metrics to analyze, charts/graphs required, or specific questions you want answered..." required></textarea>
-                </div>
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary btn-large"><i class="fas fa-paper-plane"></i> Submit Analytics Request</button>
-                </div>
-            </form>
-        </div>
-    `;
-}
-
-/**
- * Template for displaying a pending business analytics request.
- */
-function getBusinessAnalyticsPendingTemplate(request) {
-    return `
-        <div class="analysis-card status-pending">
-            <h3><i class="fas fa-clock"></i> Your Analytics Request is Being Processed</h3>
-            <p>Our analytics team has received your request and is working on your business intelligence report. You will be notified once it's complete.</p>
-            <div class="request-summary">
-                <h4>Request Summary</h4>
-                <ul>
-                    <li><strong>Request ID:</strong> <span>${request._id}</span></li>
-                    <li><strong>Status:</strong> <span class="status-badge pending">Processing</span></li>
-                    <li><strong>Submitted:</strong> <span>${formatDetailedDate(request.createdAt)}</span></li>
-                    <li><strong>Data Type:</strong> <span>${request.dataType}</span></li>
-                    <li><strong>Frequency:</strong> <span>${request.frequency}</span></li>
-                    <li><strong>Data Source:</strong> <a href="${request.googleSheetUrl}" target="_blank">View Source</a></li>
-                </ul>
-            </div>
-            <div class="form-actions">
-                <button class="btn btn-outline" onclick="showEditBusinessAnalyticsModal('${request._id}')"><i class="fas fa-edit"></i> Edit Request</button>
-                <button class="btn btn-danger" onclick="handleBusinessAnalyticsCancel('${request._id}')"><i class="fas fa-times"></i> Cancel Request</button>
-            </div>
-        </div>
-    `;
-}
-
-/**
- * Template for displaying a completed business analytics report.
- */
-function getBusinessAnalyticsCompletedTemplate(request) {
-    if (!request.vercelUrl) {
-        return `
-            <div class="analysis-card status-completed">
-                <h3><i class="fas fa-check-circle"></i> Your Report is Ready</h3>
-                <p>Your business analytics report for request #${request._id} is complete.</p>
-                <div class="report-container">
-                    <div class="report-placeholder">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <h4>Report URL is missing.</h4>
-                        <p>Please contact support for assistance.</p>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-    return `
-        <div class="analysis-card status-completed">
-            <h3><i class="fas fa-check-circle"></i> Your Business Analytics Report is Ready</h3>
-            <p>Your comprehensive business analytics report for request #${request._id} is complete. View the interactive dashboard below.</p>
-            <div class="report-container">
-                <iframe
-                     src="${request.vercelUrl}"
-                     class="analysis-iframe"
-                     frameborder="0"
-                    allow="fullscreen"
-                    loading="lazy">
-                </iframe>
-            </div>
-            <div class="form-actions">
-                <a href="${request.vercelUrl}" target="_blank" class="btn btn-primary">
-                    <i class="fas fa-expand"></i> Open Full Report
-                </a>
-                <button class="btn btn-outline" onclick="downloadBusinessAnalyticsReport('${escapeAttr(request.vercelUrl)}', '${escapeAttr(request._id)}')">
-                    <i class="fas fa-download"></i> Download Report
-                </button>
-            </div>
-        </div>
-    `;
-}
-
-/**
- * Handles the form submission for a new business analytics request.
- */
-async function handleBusinessAnalyticsSubmit(event) {
-    event.preventDefault();
-    const form = event.target;
-    const submitBtn = form.querySelector('button[type="submit"]');
-    const originalText = submitBtn.innerHTML;
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = '<div class="btn-spinner"></div> Submitting...';
-    try {
-        const requestData = {
-            dataType: form.dataType.value,
-            frequency: form.frequency.value,
-            googleSheetUrl: form.googleSheetUrl.value,
-            description: form.description.value,
-        };
-        // Basic validation for URL
-        if (!requestData.googleSheetUrl.includes('http')) {
-            throw new Error('Please provide a valid URL.');
-        }
-        await apiCall('/analysis/submit-request', 'POST', requestData, 'Business analytics request submitted successfully!');
-        addLocalNotification(
-            'Request Submitted',
-            'Your business analytics request has been submitted and is being processed.',
-            'success'
-        );
-        // Refresh the portal view to show the pending status
-        await loadAndDisplayBusinessAnalyticsRequest();
-    } catch (error) {
-        showNotification(error.message, 'error');
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = originalText;
-    }
-}
-
-/**
- * Shows a modal to edit a pending business analytics request.
- */
-function showEditBusinessAnalyticsModal(requestId) {
-    const request = businessAnalyticsState.currentRequest;
-    if (!request || request._id !== requestId) return;
-    const modalContent = `
-        <div class="modal-header">
-            <h3><i class="fas fa-edit"></i> Edit Business Analytics Request</h3>
-        </div>
-        <form id="edit-business-analytics-request-form" class="premium-form">
-            <input type="hidden" name="requestId" value="${request._id}">
-            <div class="form-group">
-                <label class="form-label">Data Type</label>
-                <select class="form-select" name="dataType">
-                    <option value="Production Update" ${request.dataType === 'Production Update' ? 'selected' : ''}>Production Update</option>
-                    <option value="Sales Analytics" ${request.dataType === 'Sales Analytics' ? 'selected' : ''}>Sales Analytics</option>
-                    <option value="Financial Report" ${request.dataType === 'Financial Report' ? 'selected' : ''}>Financial Report</option>
-                    <option value="Project Analytics" ${request.dataType === 'Project Analytics' ? 'selected' : ''}>Project Analytics</option>
-                    <option value="Performance Metrics" ${request.dataType === 'Performance Metrics' ? 'selected' : ''}>Performance Metrics</option>
-                    <option value="Custom Analysis" ${request.dataType === 'Custom Analysis' ? 'selected' : ''}>Custom Analysis</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Data Source URL</label>
-                <input type="url" class="form-input" name="googleSheetUrl" value="${request.googleSheetUrl}" required>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Analytics Requirements</label>
-                <textarea class="form-textarea" name="description" rows="4" required>${request.description}</textarea>
-            </div>
-            <div class="form-actions">
-                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-                <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Changes</button>
-            </div>
-        </form>
-    `;
-    showGenericModal(modalContent, 'max-width: 600px;');
-    document.getElementById('edit-business-analytics-request-form').addEventListener('submit', handleBusinessAnalyticsEdit);
-}
-
-/**
- * Handles the submission of the edit business analytics request form.
- */
-async function handleBusinessAnalyticsEdit(event) {
-    event.preventDefault();
-    const form = event.target;
-    const submitBtn = form.querySelector('button[type="submit"]');
-    const originalText = submitBtn.innerHTML;
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = '<div class="btn-spinner"></div> Saving...';
-    const requestId = form.requestId.value;
-    const updatedData = {
-        dataType: form.dataType.value,
-        googleSheetUrl: form.googleSheetUrl.value,
-        description: form.description.value,
-    };
-    try {
-        await apiCall(`/analysis/request/${requestId}`, 'PUT', updatedData, 'Request updated successfully!');
-        addLocalNotification('Updated', 'Your business analytics request has been updated.', 'success');
-        closeModal();
-        await loadAndDisplayBusinessAnalyticsRequest(); // Refresh view
-    } catch (error) {
-        showNotification(error.message, 'error');
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = originalText;
-    }
-}
-
-/**
- * Handles the cancellation of a pending business analytics request.
- */
-async function handleBusinessAnalyticsCancel(requestId) {
-    if (confirm('Are you sure you want to cancel this business analytics request? This action cannot be undone.')) {
-        try {
-            await apiCall(`/analysis/request/${requestId}`, 'DELETE', null, 'Request cancelled successfully.');
-            addLocalNotification('Cancelled', 'Your business analytics request has been cancelled.', 'info');
-            businessAnalyticsState.currentRequest = null;
-            await loadAndDisplayBusinessAnalyticsRequest(); // Refresh view
-        } catch (error) {
-            showNotification(error.message, 'error');
-        }
-    }
-}
-
-/**
- * Fetches and displays the user's business analytics request history in a modal.
- */
-async function showBusinessAnalyticsHistory() {
-    showGenericModal('<div class="loading-spinner"><div class="spinner"></div><p>Loading History...</p></div>', 'max-width: 800px;');
-    try {
-        const response = await apiCall('/analysis/history', 'GET');
-        const requests = response.requests || [];
-        businessAnalyticsState.history = requests;
-        const historyHTML = requests.length === 0 ?
-            `<div class="empty-state">
-            <i class="fas fa-history"></i>
-            <h3>No History Found</h3>
-            <p>You have not submitted any business analytics requests yet.</p>
-        </div>` :
-            `<div class="analysis-history-list">
-            ${requests.map(req => `
-                <div class="history-item status-${req.status}">
-                    <div class="history-item-header">
-                        <span class="history-item-date">${formatDetailedDate(req.createdAt)}</span>
-                        <span class="status-badge ${req.status}">${req.status}</span>
-                    </div>
-                    <div class="history-item-body">
-                        <p><strong>Data Type:</strong> ${req.dataType}</p>
-                        <p><strong>Description:</strong> ${truncateText(req.description, 100)}</p>
-                    </div>
-                     <div class="history-item-footer">
-                       ${req.vercelUrl ? `<a href="${req.vercelUrl}" target="_blank" class="btn btn-outline btn-sm"><i class="fas fa-eye"></i> View Report</a>` : `<span>Report not yet available</span>`}
-                    </div>
-                </div>
-            `).join('')}
-        </div>`;
-        const modalContent = `
-            <div class="modal-header"><h3><i class="fas fa-history"></i> Business Analytics Request History</h3></div>
-            ${historyHTML}
-        `;
-        showGenericModal(modalContent, 'max-width: 800px;');
-    } catch (error) {
-        showGenericModal(`<div class="error-state"><h3>Error</h3><p>Could not load your request history.</p></div>`, 'max-width: 800px;');
-    }
-}
-
-/**
- * Downloads the business analytics report
- */
-function downloadBusinessAnalyticsReport(reportUrl, requestId) {
-    try {
-        // For HTML reports hosted on external platforms, we'll open in new tab
-        // and inform user how to save
-        const newWindow = window.open(reportUrl, '_blank');
-        if (newWindow) {
-            showNotification('Report opened in new tab. Use Ctrl+S or Cmd+S to save the HTML file.', 'info', 8000);
-        } else {
-            showNotification('Please allow popups to view the report.', 'warning');
-        }
-    } catch (error) {
-        console.error('Error opening report:', error);
-        showNotification('Unable to open report. Please contact support.', 'error');
-    }
-}
-
-
-// --- CSS STYLES FOR BUSINESS ANALYTICS ---
-const businessAnalyticsStyles = `
-.business-analytics-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 20px;
-}
-.analysis-card {
-    background: white;
-    border-radius: 12px;
-    padding: 30px;
-    margin-bottom: 20px;
-    border: 1px solid #e5e7eb;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-.analysis-card.status-pending {
-    border-left: 4px solid #f59e0b;
-    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
-}
-.analysis-card.status-completed {
-    border-left: 4px solid #10b981;
-    background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
-}
-.analysis-iframe {
-    width: 100%;
-    height: 600px;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    margin: 20px 0;
-}
-.report-container {
-    margin: 20px 0;
-}
-.report-placeholder {
-    text-align: center;
-    padding: 60px 20px;
-    background: #f9fafb;
-    border: 2px dashed #d1d5db;
-    border-radius: 8px;
-}
-.report-placeholder i {
-    font-size: 48px;
-    color: #9ca3af;
-    margin-bottom: 16px;
-}
-.request-summary ul {
-    list-style: none;
-    padding: 0;
-}
-.request-summary li {
-    padding: 8px 0;
-    border-bottom: 1px solid #f3f4f6;
-}
-.request-summary li:last-child {
-    border-bottom: none;
-}
-.analysis-history-list {
-    max-height: 500px;
-    overflow-y: auto;
-}
-.history-item {
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    padding: 16px;
-    margin-bottom: 12px;
-    background: white;
-}
-.history-item.status-completed {
-    border-left: 4px solid #10b981;
-}
-.history-item.status-pending {
-    border-left: 4px solid #f59e0b;
-}
-.history-item-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 12px;
-}
-.history-item-date {
-    font-weight: 500;
-    color: #374151;
-}
-.history-item-footer {
-    margin-top: 12px;
-    text-align: right;
-}
-.business-analytics-link .nav-badge {
-    background: linear-gradient(135deg, #10b981, #059669);
-    color: white;
-    font-size: 10px;
-    padding: 2px 6px;
-    border-radius: 10px;
-    margin-left: 8px;
-}
-.status-badge.pending {
-    background: #fef3c7;
-    color: #92400e;
-    padding: 4px 8px;
-    border-radius: 12px;
-    font-size: 12px;
-    font-weight: 500;
-}
-.status-badge.completed {
-    background: #d1fae5;
-    color: #065f46;
-    padding: 4px 8px;
-    border-radius: 12px;
-    font-size: 12px;
-    font-weight: 500;
-}`;
-
-// Inject the styles immediately
-if (!document.getElementById('business-analytics-styles')) {
-    const styleSheet = document.createElement('style');
-    styleSheet.id = 'business-analytics-styles';
-    styleSheet.textContent = businessAnalyticsStyles;
-    document.head.appendChild(styleSheet);
-}
+// Business Analytics - View Only (No client uploads - admin manages all data)
+// Clients can only view approved dashboards via the AI Analytics Dashboard (analytics-integration.js)
