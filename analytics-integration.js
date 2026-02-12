@@ -35,6 +35,7 @@ function initializeAnalyticsIntegration() {
     window.showApprovedDashboards = showApprovedDashboards;
     window.handleSheetUpload = handleSheetUpload;
     window.deletePendingDashboard = deletePendingDashboard;
+    window.renderAnalyticsPortal = renderAnalyticsPortal;
     addAnalyticsStyles();
 }
 
@@ -95,7 +96,7 @@ function getPortalHTML() {
                         <div class="ad-upload-icon-box"><i class="fas fa-cloud-upload-alt"></i></div>
                         <div>
                             <h3>Upload Your Data</h3>
-                            <p>Upload a Google Sheet or Excel file with your data. We'll auto-generate a premium dashboard and send it to your admin for approval.</p>
+                            <p>Upload an Excel file or paste a Google Sheet link. We'll auto-generate a premium dashboard and send it to your admin for approval.</p>
                         </div>
                     </div>
                     <button class="ad-upload-btn" onclick="showAnalyticsUploadView()">
@@ -143,12 +144,16 @@ function getPortalHTML() {
                                 <div class="ad-pending-icon"><i class="fas fa-chart-pie"></i></div>
                                 <div class="ad-pending-info">
                                     <h4>${db.title}</h4>
-                                    <span class="ad-pending-file"><i class="fas fa-file-excel"></i> ${db.fileName || 'Uploaded file'}</span>
+                                    <span class="ad-pending-file">
+                                        ${db.fileName ? `<i class="fas fa-file-excel"></i> ${db.fileName}` : ''}
+                                        ${db.googleSheetUrl ? `<i class="fab fa-google-drive" style="color:#34a853"></i> Google Sheet linked` : ''}
+                                        ${!db.fileName && !db.googleSheetUrl ? '<i class="fas fa-file-excel"></i> Uploaded file' : ''}
+                                    </span>
                                 </div>
                                 <span class="ad-status-pill pending"><i class="fas fa-clock"></i> Pending</span>
                             </div>
                             <div class="ad-pending-meta">
-                                <span><i class="fas fa-chart-bar"></i> ${db.chartsCount || 0} charts auto-generated</span>
+                                <span><i class="fas fa-chart-bar"></i> ${db.chartsCount || 0} charts${db.chartsCount > 0 ? ' auto-generated' : ' (pending from link)'}</span>
                                 <span><i class="fas fa-sync-alt"></i> ${db.frequency || 'daily'}</span>
                                 <span><i class="fas fa-calendar"></i> ${new Date(db.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
                             </div>
@@ -232,7 +237,7 @@ function showAnalyticsUploadView() {
             <div class="ad-upload-modal-icon"><i class="fas fa-file-excel"></i></div>
             <div>
                 <h3>Upload Your Data</h3>
-                <p>Upload a spreadsheet to auto-generate a dashboard. Supported: .xlsx, .xls, .csv</p>
+                <p>Upload a spreadsheet file and/or provide a Google Sheet link to auto-generate a dashboard</p>
             </div>
         </div>
         <form id="ad-upload-form" class="ad-upload-form" onsubmit="handleSheetUpload(event)">
@@ -268,10 +273,27 @@ function showAnalyticsUploadView() {
                     <input type="text" id="ad-sheet-desc" class="ad-form-input" placeholder="Brief description of the data...">
                 </div>
             </div>
+
+            <!-- Google Sheet Link -->
             <div class="ad-form-group">
-                <label><i class="fas fa-cloud-upload-alt"></i> Select Spreadsheet File *</label>
+                <label><i class="fas fa-link"></i> Google Sheet Link <span style="font-weight:400;color:#94a3b8">(paste your shared Google Sheet URL)</span></label>
+                <div class="ad-gsheet-input-wrap">
+                    <div class="ad-gsheet-icon"><i class="fab fa-google-drive"></i></div>
+                    <input type="url" id="ad-sheet-link" class="ad-form-input ad-gsheet-field" placeholder="https://docs.google.com/spreadsheets/d/..." oninput="validateUploadInputs()">
+                </div>
+                <small class="ad-gsheet-hint"><i class="fas fa-info-circle"></i> Make sure the sheet is shared (anyone with the link can view)</small>
+            </div>
+
+            <!-- Divider -->
+            <div class="ad-upload-divider">
+                <span>and / or</span>
+            </div>
+
+            <!-- File Upload -->
+            <div class="ad-form-group">
+                <label><i class="fas fa-cloud-upload-alt"></i> Upload Spreadsheet File <span style="font-weight:400;color:#94a3b8">(for auto-generated dashboard)</span></label>
                 <div class="ad-file-drop" id="ad-file-drop" onclick="document.getElementById('ad-sheet-file').click()">
-                    <input type="file" id="ad-sheet-file" accept=".xlsx,.xls,.csv" required style="display:none" onchange="handleFileSelect(this)">
+                    <input type="file" id="ad-sheet-file" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleFileSelect(this)">
                     <div class="ad-file-drop-content" id="ad-file-drop-content">
                         <i class="fas fa-cloud-upload-alt"></i>
                         <span>Click to browse or drag & drop your file</span>
@@ -281,7 +303,7 @@ function showAnalyticsUploadView() {
             </div>
             <div class="ad-upload-actions">
                 <button type="submit" class="ad-submit-btn" id="ad-upload-submit-btn">
-                    <i class="fas fa-rocket"></i> Upload & Generate Dashboard
+                    <i class="fas fa-rocket"></i> Submit & Generate Dashboard
                 </button>
                 <button type="button" class="ad-cancel-btn" onclick="closeModal()">Cancel</button>
             </div>
@@ -324,6 +346,17 @@ window.handleFileSelect = function(input) {
     }
 };
 
+window.validateUploadInputs = function() {
+    const linkInput = document.getElementById('ad-sheet-link');
+    const fileInput = document.getElementById('ad-sheet-file');
+    const wrap = linkInput ? linkInput.closest('.ad-gsheet-input-wrap') : null;
+    if (wrap && linkInput && linkInput.value.trim()) {
+        wrap.classList.add('has-link');
+    } else if (wrap) {
+        wrap.classList.remove('has-link');
+    }
+};
+
 async function handleSheetUpload(event) {
     event.preventDefault();
     const title = document.getElementById('ad-sheet-title').value.trim();
@@ -331,10 +364,18 @@ async function handleSheetUpload(event) {
     const frequency = document.getElementById('ad-sheet-freq').value;
     const description = document.getElementById('ad-sheet-desc').value.trim();
     const fileInput = document.getElementById('ad-sheet-file');
+    const linkInput = document.getElementById('ad-sheet-link');
     const btn = document.getElementById('ad-upload-submit-btn');
 
-    if (!title || !fileInput.files[0]) {
-        if (typeof showNotification === 'function') showNotification('Please fill in the title and select a file', 'error');
+    const hasFile = fileInput && fileInput.files && fileInput.files[0];
+    const hasLink = linkInput && linkInput.value.trim();
+
+    if (!title) {
+        if (typeof showNotification === 'function') showNotification('Please fill in the dashboard title', 'error');
+        return;
+    }
+    if (!hasFile && !hasLink) {
+        if (typeof showNotification === 'function') showNotification('Please upload a file or provide a Google Sheet link', 'error');
         return;
     }
 
@@ -343,7 +384,8 @@ async function handleSheetUpload(event) {
 
     try {
         const formData = new FormData();
-        formData.append('spreadsheet', fileInput.files[0]);
+        if (hasFile) formData.append('spreadsheet', fileInput.files[0]);
+        if (hasLink) formData.append('googleSheetUrl', linkInput.value.trim());
         formData.append('title', title);
         formData.append('dataType', dataType);
         formData.append('frequency', frequency);
@@ -353,7 +395,10 @@ async function handleSheetUpload(event) {
 
         if (typeof closeModal === 'function') closeModal();
         if (typeof showNotification === 'function') {
-            showNotification(`Dashboard auto-generated with ${response.chartsGenerated || 0} charts! Sent to admin for approval.`, 'success');
+            const msg = hasFile
+                ? `Dashboard auto-generated with ${response.chartsGenerated || 0} charts! Sent to admin for approval.`
+                : 'Google Sheet link submitted! Dashboard will be reviewed by admin.';
+            showNotification(msg, 'success');
         }
 
         // Refresh portal
@@ -362,7 +407,7 @@ async function handleSheetUpload(event) {
         console.error('Upload error:', error);
         if (typeof showNotification === 'function') showNotification(error.message || 'Failed to upload. Please try again.', 'error');
         btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-rocket"></i> Upload & Generate Dashboard';
+        btn.innerHTML = '<i class="fas fa-rocket"></i> Submit & Generate Dashboard';
     }
 }
 
@@ -836,6 +881,21 @@ function addAnalyticsStyles() {
 .ad-file-drop-content i { font-size:2rem; color:#cbd5e1; }
 .ad-file-drop-content span { font-size:.9rem; font-weight:600; color:#475569; }
 .ad-file-drop-content small { font-size:.78rem; color:#94a3b8; }
+/* Google Sheet Link */
+.ad-gsheet-input-wrap { display:flex; align-items:center; gap:0; border:1px solid #e2e8f0; border-radius:10px; overflow:hidden; transition:all .2s; background:#fff; }
+.ad-gsheet-input-wrap:focus-within { border-color:#34a853; box-shadow:0 0 0 3px rgba(52,168,83,.1); }
+.ad-gsheet-input-wrap.has-link { border-color:#34a853; }
+.ad-gsheet-icon { display:flex; align-items:center; justify-content:center; padding:0 14px; color:#94a3b8; font-size:1.1rem; background:#f8fafc; border-right:1px solid #e2e8f0; min-height:42px; }
+.ad-gsheet-input-wrap.has-link .ad-gsheet-icon { color:#34a853; background:rgba(52,168,83,.05); }
+.ad-gsheet-field { border:none !important; border-radius:0 !important; box-shadow:none !important; flex:1; }
+.ad-gsheet-hint { display:flex; align-items:center; gap:5px; font-size:.75rem; color:#94a3b8; margin-top:4px; }
+.ad-gsheet-hint i { font-size:.7rem; color:#34a853; }
+
+/* Upload Divider */
+.ad-upload-divider { display:flex; align-items:center; gap:16px; margin:4px 0; }
+.ad-upload-divider::before, .ad-upload-divider::after { content:''; flex:1; height:1px; background:#e2e8f0; }
+.ad-upload-divider span { font-size:.78rem; color:#94a3b8; font-weight:600; text-transform:uppercase; letter-spacing:.05em; }
+
 .ad-upload-actions { display:flex; gap:12px; margin-top:8px; }
 .ad-submit-btn { flex:1; background:linear-gradient(135deg,#6366f1,#8b5cf6); color:#fff; border:none; padding:14px 24px; border-radius:12px; font-weight:700; cursor:pointer; font-size:.95rem; display:flex; align-items:center; justify-content:center; gap:10px; transition:all .3s; }
 .ad-submit-btn:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(99,102,241,.35); }
@@ -940,18 +1000,13 @@ function addAnalyticsStyles() {
     document.head.appendChild(style);
 }
 
-// Initialize
-document.addEventListener('DOMContentLoaded', function() {
-    setTimeout(function retry() {
-        if (typeof window.appState !== 'undefined' && typeof window.buildSidebarNav === 'function') {
-            initializeAnalyticsIntegration();
-            if (window.appState.currentUser && window.appState.currentUser.type === 'contractor') {
-                if (typeof window.buildSidebarNav === 'function') window.buildSidebarNav();
-            }
-        } else {
-            setTimeout(retry, 1000);
-        }
-    }, 500);
-});
+// Initialize - script is loaded dynamically after DOM is ready, so init immediately
+(function initRetry() {
+    if (typeof window.appState !== 'undefined' && typeof window.buildSidebarNav === 'function') {
+        initializeAnalyticsIntegration();
+    } else {
+        setTimeout(initRetry, 500);
+    }
+})();
 
 window.initializeAnalyticsIntegration = initializeAnalyticsIntegration;
