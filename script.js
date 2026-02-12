@@ -3246,43 +3246,70 @@ function setupEstimationToolEventListeners() {
             if (e.dataTransfer.files.length > 0) handleFileSelect(e.dataTransfer.files);
         });
     }
-    if (fileInput) fileInput.addEventListener('change', (e) => { if (e.target.files.length > 0) handleFileSelect(e.target.files); });
+    if (fileInput) fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) handleFileSelect(e.target.files);
+        e.target.value = ''; // Reset so user can select more files again
+    });
     const submitBtn = document.getElementById('submit-estimation-btn');
     if (submitBtn) submitBtn.addEventListener('click', handleEstimationSubmit);
 }
 
-function handleFileSelect(files) {
+function handleFileSelect(files, isRerender) {
     const fileList = document.getElementById('selected-files-list');
     const submitBtn = document.getElementById('submit-estimation-btn');
-    // Validate file count
-    if (files.length > 20) {
-        showNotification('Maximum 20 files allowed for estimation', 'warning');
-        return;
-    }
-    // Validate individual file sizes
     const maxSize = 50 * 1024 * 1024; // 50MB
-    const oversized = Array.from(files).filter(f => f.size > maxSize);
+
+    // Accumulate files: merge new files with existing ones
+    let existing = [];
+    if (!isRerender && appState.uploadedFile) {
+        existing = Array.from(appState.uploadedFile);
+    }
+    const newFiles = Array.from(files);
+
+    // Validate individual file sizes
+    const oversized = newFiles.filter(f => f.size > maxSize);
     if (oversized.length > 0) {
         showNotification(`Some files exceed 50MB limit: ${oversized.map(f => f.name).join(', ')}`, 'error');
         return;
     }
-    appState.uploadedFile = files;
+
+    // Merge and deduplicate by name+size
+    const merged = isRerender ? newFiles : [...existing];
+    if (!isRerender) {
+        newFiles.forEach(nf => {
+            const dup = merged.find(ef => ef.name === nf.name && ef.size === nf.size);
+            if (!dup) merged.push(nf);
+        });
+    }
+
+    // Validate total file count
+    if (merged.length > 20) {
+        showNotification(`Maximum 20 files allowed. You have ${existing.length} + ${newFiles.length} = ${merged.length} files. Please remove some first.`, 'warning');
+        return;
+    }
+
+    // Store as DataTransfer FileList so it works with FormData
+    const dt = new DataTransfer();
+    merged.forEach(file => dt.items.add(file));
+    appState.uploadedFile = dt.files;
+
+    // Render file list
     let filesHTML = '';
     let totalSize = 0;
-    for (let i = 0; i < files.length; i++) {
-        const file = files[i];
+    for (let i = 0; i < merged.length; i++) {
+        const file = merged[i];
         const fileSize = (file.size / 1024 / 1024).toFixed(2);
         totalSize += file.size;
         const fileType = getFileTypeIcon(file.type, file.name);
         filesHTML += `<div class="selected-file-item"><div class="file-info"><i class="fas ${fileType.icon}"></i><div class="file-details"><span class="file-name">${file.name}</span><span class="file-size">${fileSize} MB</span></div></div><button type="button" class="remove-file-btn" onclick="removeFile(${i})"><i class="fas fa-times"></i></button></div>`;
     }
     const totalMB = (totalSize / 1024 / 1024).toFixed(2);
-    filesHTML += `<div class="selected-files-total"><strong>${files.length} file(s)</strong> &middot; Total: ${totalMB} MB</div>`;
+    filesHTML += `<div class="selected-files-total"><strong>${merged.length} file(s)</strong> &middot; Total: ${totalMB} MB</div>`;
     fileList.innerHTML = filesHTML;
     document.getElementById('file-info-container').style.display = 'block';
     submitBtn.disabled = false;
     updateEstimationStep(2);
-    showNotification(`${files.length} file(s) selected (${totalMB} MB total)`, 'success');
+    if (!isRerender) showNotification(`${newFiles.length} file(s) added. Total: ${merged.length} file(s) (${totalMB} MB)`, 'success');
 }
 
 function getFileTypeIcon(mimeType, fileName) {
@@ -3312,11 +3339,13 @@ function removeFile(index) {
         document.getElementById('file-info-container').style.display = 'none';
         document.getElementById('submit-estimation-btn').disabled = true;
         updateEstimationStep(1);
+        showNotification('All files removed', 'info');
     } else {
         const dt = new DataTransfer();
         filesArray.forEach(file => dt.items.add(file));
         appState.uploadedFile = dt.files;
-        handleFileSelect(appState.uploadedFile);
+        handleFileSelect(filesArray, true);
+        showNotification(`File removed. ${filesArray.length} file(s) remaining`, 'info');
     }
 }
 
@@ -3497,7 +3526,7 @@ function getEstimationToolTemplate() {
                                     <span class="est-format-tag doc"><i class="fas fa-file-word"></i> DOC</span>
                                     <span class="est-format-tag img"><i class="fas fa-file-image"></i> IMG</span>
                                 </div>
-                                <small class="upload-limit"><i class="fas fa-info-circle"></i> Max 20 files, 50MB each</small>
+                                <small class="upload-limit"><i class="fas fa-info-circle"></i> Max 20 files, 50MB each. You can add files multiple times.</small>
                             </div>
                         </div>
                         <div id="file-info-container" class="selected-files-container" style="display: none;">
