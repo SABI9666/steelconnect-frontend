@@ -192,22 +192,27 @@ function getPortalHTML() {
             <div class="ad-approved-grid">
                 ${approved.map((db, i) => `
                     <div class="ad-approved-card" onclick="showApprovedDashboards(${i})" style="cursor:pointer">
-                        <div class="ad-approved-strip"></div>
+                        <div class="ad-approved-strip" ${db.manualDashboardUrl ? 'style="background:linear-gradient(90deg,#6366f1,#8b5cf6)"' : ''}></div>
                         <div class="ad-approved-body">
                             <div class="ad-approved-head">
-                                <div class="ad-approved-icon"><i class="fas fa-chart-bar"></i></div>
+                                <div class="ad-approved-icon" ${db.manualDashboardUrl ? 'style="background:linear-gradient(135deg,rgba(99,102,241,.1),rgba(139,92,246,.08));color:#6366f1"' : ''}>
+                                    <i class="fas ${db.manualDashboardUrl ? 'fa-external-link-alt' : 'fa-chart-bar'}"></i>
+                                </div>
                                 <div>
                                     <h4>${db.title}</h4>
                                     <p>${db.description || 'Business analytics dashboard'}</p>
                                 </div>
                             </div>
                             <div class="ad-approved-meta">
-                                <span><i class="fas fa-chart-pie"></i> ${db.chartsCount || (db.charts ? db.charts.length : 0)} charts</span>
+                                ${db.manualDashboardUrl
+                                    ? '<span style="color:#6366f1;font-weight:600"><i class="fas fa-user-shield"></i> Admin Curated</span>'
+                                    : `<span><i class="fas fa-chart-pie"></i> ${db.chartsCount || (db.charts ? db.charts.length : 0)} charts</span>`
+                                }
                                 <span><i class="fas fa-sync-alt"></i> ${(db.frequency || 'daily').charAt(0).toUpperCase() + (db.frequency || 'daily').slice(1)}</span>
                                 <span><i class="fas fa-calendar-check"></i> ${db.approvedAt ? new Date(db.approvedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A'}</span>
                             </div>
                             <div class="ad-approved-cta">
-                                <span><i class="fas fa-eye"></i> View Full Dashboard</span>
+                                <span><i class="fas fa-eye"></i> View ${db.manualDashboardUrl ? 'Custom Dashboard' : 'Full Dashboard'}</span>
                                 <i class="fas fa-arrow-right"></i>
                             </div>
                         </div>
@@ -481,16 +486,73 @@ function getDashboardViewHTML() {
     const db = analyticsState.activeDashboard;
     if (!db) return '<div class="ad-portal"><p>No dashboard found.</p></div>';
 
+    const hasManualUrl = db.manualDashboardUrl && db.manualDashboardUrl.trim();
+
     // Dashboard selector tabs
     let selectorHTML = '';
     if (analyticsState.approvedDashboards.length > 1) {
         selectorHTML = `<div class="ad-db-selector">${analyticsState.approvedDashboards.map((d, i) =>
             `<button class="ad-db-tab ${d._id === db._id ? 'active' : ''}" onclick="switchAnalyticsDashboard(${i})">
                 <i class="fas fa-chart-pie"></i> ${d.title || 'Dashboard ' + (i+1)}
+                ${d.manualDashboardUrl ? '<span class="ad-db-tab-link-badge"><i class="fas fa-external-link-alt"></i></span>' : ''}
             </button>`
         ).join('')}</div>`;
     }
 
+    // If admin provided a manual dashboard URL, show that instead of auto-generated charts
+    if (hasManualUrl) {
+        return `
+        <div class="ad-portal">
+            <div class="ad-hero-header">
+                <div class="ad-hero-bg"><div class="ad-hero-gradient"></div><div class="ad-hero-pattern"></div>
+                    <div class="ad-hero-orb ad-hero-orb-1"></div><div class="ad-hero-orb ad-hero-orb-2"></div></div>
+                <div class="ad-hero-content">
+                    <div class="ad-hero-left">
+                        <div class="ad-hero-icon-box"><i class="fas fa-chart-bar"></i></div>
+                        <div class="ad-hero-text">
+                            <h1>${db.title || 'Analytics Dashboard'}</h1>
+                            <p>Custom dashboard curated by your admin team</p>
+                        </div>
+                    </div>
+                    <div class="ad-hero-right">
+                        <button class="ad-hero-btn" onclick="renderAnalyticsPortal()"><i class="fas fa-arrow-left"></i> Back to Portal</button>
+                        <a href="${db.manualDashboardUrl}" target="_blank" rel="noopener" class="ad-hero-btn" style="text-decoration:none"><i class="fas fa-external-link-alt"></i> Open in New Tab</a>
+                    </div>
+                </div>
+            </div>
+            ${selectorHTML}
+            <div class="ad-content">
+                <div class="ad-dashboard-bar">
+                    <div class="ad-dashboard-info">
+                        <div class="ad-dashboard-icon" style="background:linear-gradient(135deg,#10b981,#059669)"><i class="fas fa-external-link-alt"></i></div>
+                        <div>
+                            <h2>${db.title || 'Dashboard'}</h2>
+                            ${db.description ? `<p class="ad-dashboard-desc">${db.description}</p>` : ''}
+                        </div>
+                    </div>
+                    <div class="ad-dashboard-meta-pills">
+                        <div class="ad-meta-pill frequency"><i class="fas fa-sync-alt"></i> ${(db.frequency || 'daily').charAt(0).toUpperCase() + (db.frequency || 'daily').slice(1)}</div>
+                        <div class="ad-meta-pill date"><i class="fas fa-calendar-check"></i> ${new Date(db.approvedAt || db.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+                        <div class="ad-meta-pill charts" style="color:#10b981"><i class="fas fa-user-shield"></i> Admin Curated</div>
+                    </div>
+                </div>
+                <div class="ad-external-dashboard">
+                    <iframe src="${db.manualDashboardUrl}" class="ad-external-iframe" frameborder="0" allowfullscreen loading="lazy"></iframe>
+                    <div class="ad-external-fallback">
+                        <div class="ad-external-fallback-icon"><i class="fas fa-external-link-alt"></i></div>
+                        <h4>Your Dashboard is Ready</h4>
+                        <p>If the dashboard doesn't load above, click below to open it directly.</p>
+                        <a href="${db.manualDashboardUrl}" target="_blank" rel="noopener" class="ad-external-open-btn">
+                            <i class="fas fa-external-link-alt"></i> Open Dashboard
+                        </a>
+                    </div>
+                </div>
+                <div class="ad-footer-note"><i class="fas fa-shield-alt"></i> Dashboard curated and approved by your admin team.</div>
+            </div>
+        </div>`;
+    }
+
+    // Auto-generated dashboard with charts, KPIs, data table
     // KPIs
     let allKpis = [];
     (db.charts || []).forEach(chart => { if (chart.kpis) allKpis = allKpis.concat(chart.kpis); });
@@ -610,6 +672,7 @@ function getDashboardViewHTML() {
                     <div class="ad-meta-pill frequency"><i class="fas fa-sync-alt"></i> ${(db.frequency || 'daily').charAt(0).toUpperCase() + (db.frequency || 'daily').slice(1)}</div>
                     <div class="ad-meta-pill date"><i class="fas fa-calendar-check"></i> ${new Date(db.approvedAt || db.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
                     <div class="ad-meta-pill charts"><i class="fas fa-chart-pie"></i> ${totalCharts} Charts</div>
+                    <div class="ad-meta-pill" style="color:#10b981"><i class="fas fa-magic"></i> Auto-Generated</div>
                 </div>
             </div>
             ${topKpis.length > 0 ? `<div class="ad-kpi-grid">${kpisHTML}</div>` : ''}
@@ -977,6 +1040,17 @@ function addAnalyticsStyles() {
 .ad-td-label { font-weight:600; color:#1e293b; }
 .ad-td-value { text-align:right; font-variant-numeric:tabular-nums; font-weight:600; }
 .ad-td-more { text-align:center; color:#94a3b8; font-style:italic; padding:16px; }
+
+/* External/Manual Dashboard */
+.ad-external-dashboard { background:#fff; border-radius:22px; overflow:hidden; border:1px solid rgba(0,0,0,.04); box-shadow:0 1px 3px rgba(0,0,0,.03),0 4px 20px rgba(0,0,0,.04); margin-bottom:32px; }
+.ad-external-iframe { width:100%; height:75vh; min-height:500px; border:none; display:block; }
+.ad-external-fallback { text-align:center; padding:40px 20px; background:linear-gradient(135deg,#f0f2ff,#faf5ff); border-top:1px solid #e2e8f0; }
+.ad-external-fallback-icon { font-size:2rem; color:#6366f1; margin-bottom:12px; }
+.ad-external-fallback h4 { margin:0 0 8px; font-size:1.1rem; font-weight:700; color:#1e293b; }
+.ad-external-fallback p { margin:0 0 16px; color:#64748b; font-size:.88rem; }
+.ad-external-open-btn { display:inline-flex; align-items:center; gap:8px; padding:12px 28px; background:linear-gradient(135deg,#6366f1,#8b5cf6); color:#fff; border-radius:12px; font-weight:700; font-size:.9rem; text-decoration:none; transition:all .3s; box-shadow:0 4px 16px rgba(99,102,241,.25); }
+.ad-external-open-btn:hover { transform:translateY(-2px); box-shadow:0 8px 28px rgba(99,102,241,.35); }
+.ad-db-tab-link-badge { margin-left:4px; font-size:.65rem; color:#10b981; }
 
 /* Footer */
 .ad-footer-note { text-align:center; padding:32px 20px; color:#94a3b8; font-size:.82rem; font-weight:500; display:flex; align-items:center; justify-content:center; gap:8px; }
