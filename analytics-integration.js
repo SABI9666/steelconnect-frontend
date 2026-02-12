@@ -35,6 +35,7 @@ function initializeAnalyticsIntegration() {
     window.showApprovedDashboards = showApprovedDashboards;
     window.handleSheetUpload = handleSheetUpload;
     window.deletePendingDashboard = deletePendingDashboard;
+    window.showDashboardStatus = showDashboardStatus;
     window.renderAnalyticsPortal = renderAnalyticsPortal;
     addAnalyticsStyles();
 }
@@ -137,7 +138,7 @@ function getPortalHTML() {
             </div>
             <div class="ad-pending-grid">
                 ${pending.map(db => `
-                    <div class="ad-pending-card">
+                    <div class="ad-pending-card" style="cursor:pointer" onclick="showDashboardStatus('${db._id}')">
                         <div class="ad-pending-status-bar"></div>
                         <div class="ad-pending-body">
                             <div class="ad-pending-head">
@@ -158,8 +159,8 @@ function getPortalHTML() {
                                 <span><i class="fas fa-calendar"></i> ${new Date(db.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
                             </div>
                             <div class="ad-pending-footer">
-                                <span class="ad-pending-note"><i class="fas fa-info-circle"></i> Your dashboard is being reviewed by the admin team. You'll be notified once approved.</span>
-                                <button class="ad-pending-delete" onclick="deletePendingDashboard('${db._id}')" title="Cancel & Delete">
+                                <span class="ad-pending-note"><i class="fas fa-info-circle"></i> Click to view status details</span>
+                                <button class="ad-pending-delete" onclick="event.stopPropagation();deletePendingDashboard('${db._id}')" title="Cancel & Delete">
                                     <i class="fas fa-trash-alt"></i>
                                 </button>
                             </div>
@@ -175,10 +176,11 @@ function getPortalHTML() {
             </div>
             <div class="ad-rejected-list">
                 ${rejected.map(db => `
-                    <div class="ad-rejected-item">
+                    <div class="ad-rejected-item" style="cursor:pointer" onclick="showDashboardStatus('${db._id}')">
                         <i class="fas fa-chart-pie"></i>
-                        <div><strong>${db.title}</strong><br><small>${db.fileName || ''} &middot; ${new Date(db.createdAt).toLocaleDateString()}</small></div>
+                        <div style="flex:1"><strong>${db.title}</strong><br><small>${db.fileName || ''} &middot; ${new Date(db.createdAt).toLocaleDateString()}</small></div>
                         <span class="ad-status-pill rejected"><i class="fas fa-times"></i> Rejected</span>
+                        <i class="fas fa-chevron-right" style="color:#cbd5e1;font-size:.75rem"></i>
                     </div>
                 `).join('')}
             </div>` : ''}
@@ -424,6 +426,75 @@ async function deletePendingDashboard(id) {
         await renderAnalyticsPortal();
     } catch (error) {
         if (typeof showNotification === 'function') showNotification(error.message || 'Failed to delete', 'error');
+    }
+}
+
+// ===== DASHBOARD STATUS DETAIL VIEW =====
+function showDashboardStatus(dashboardId) {
+    const db = analyticsState.allDashboards.find(d => d._id === dashboardId);
+    if (!db) return;
+
+    const statusConfig = {
+        pending: { icon: 'fa-hourglass-half', color: '#f59e0b', bg: 'rgba(245,158,11,.08)', label: 'Pending Review', desc: 'Your dashboard is being reviewed by the admin team. You will be notified once a decision is made.' },
+        approved: { icon: 'fa-check-circle', color: '#10b981', bg: 'rgba(16,185,129,.08)', label: 'Approved', desc: 'Your dashboard has been approved and is ready to view.' },
+        rejected: { icon: 'fa-times-circle', color: '#ef4444', bg: 'rgba(239,68,68,.08)', label: 'Rejected', desc: 'Your dashboard was not approved. You may re-upload with updated data.' }
+    };
+    const sc = statusConfig[db.status] || statusConfig.pending;
+
+    const modalContent = `
+    <div class="ad-upload-modal" style="max-width:520px">
+        <div style="text-align:center;padding:20px 0 10px">
+            <div style="width:72px;height:72px;border-radius:22px;background:${sc.bg};display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:1.8rem;color:${sc.color}">
+                <i class="fas ${sc.icon}"></i>
+            </div>
+            <h3 style="margin:0 0 6px;font-size:1.2rem;font-weight:800;color:#0f172a">${db.title}</h3>
+            <span style="display:inline-flex;align-items:center;gap:6px;padding:6px 16px;border-radius:20px;font-size:.78rem;font-weight:700;color:${sc.color};background:${sc.bg};text-transform:uppercase;letter-spacing:.03em">
+                <i class="fas ${sc.icon}"></i> ${sc.label}
+            </span>
+        </div>
+        <div style="background:#f8fafc;border-radius:14px;padding:18px;margin:16px 0;font-size:.88rem;color:#475569;line-height:1.7;text-align:center">
+            ${sc.desc}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0">
+            <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px;text-align:center">
+                <div style="font-size:.72rem;color:#94a3b8;font-weight:600;text-transform:uppercase;margin-bottom:4px">Charts</div>
+                <div style="font-size:1.3rem;font-weight:800;color:#0f172a">${db.chartsCount || (db.charts ? db.charts.length : 0)}</div>
+            </div>
+            <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px;text-align:center">
+                <div style="font-size:.72rem;color:#94a3b8;font-weight:600;text-transform:uppercase;margin-bottom:4px">Frequency</div>
+                <div style="font-size:1.3rem;font-weight:800;color:#0f172a">${(db.frequency || 'daily').charAt(0).toUpperCase() + (db.frequency || 'daily').slice(1)}</div>
+            </div>
+            <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px;text-align:center">
+                <div style="font-size:.72rem;color:#94a3b8;font-weight:600;text-transform:uppercase;margin-bottom:4px">Submitted</div>
+                <div style="font-size:.88rem;font-weight:700;color:#0f172a">${new Date(db.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+            </div>
+            <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px;text-align:center">
+                <div style="font-size:.72rem;color:#94a3b8;font-weight:600;text-transform:uppercase;margin-bottom:4px">Source</div>
+                <div style="font-size:.88rem;font-weight:700;color:#0f172a">${db.fileName ? 'File Upload' : db.googleSheetUrl ? 'Google Sheet' : 'N/A'}</div>
+            </div>
+        </div>
+        ${db.description ? `<div style="font-size:.85rem;color:#64748b;padding:0 4px;margin-bottom:12px"><strong>Description:</strong> ${db.description}</div>` : ''}
+        ${db.googleSheetUrl ? `<div style="font-size:.82rem;color:#34a853;display:flex;align-items:center;gap:6px;margin-bottom:12px;padding:0 4px"><i class="fab fa-google-drive"></i> Google Sheet linked</div>` : ''}
+        ${db.status === 'approved' ? `
+            <button class="ad-submit-btn" style="width:100%;margin-top:4px" onclick="closeModal();showApprovedDashboards(${analyticsState.approvedDashboards.findIndex(d => d._id === db._id)})">
+                <i class="fas fa-eye"></i> View Dashboard
+            </button>
+        ` : db.status === 'pending' ? `
+            <div style="text-align:center;padding-top:8px">
+                <button class="ad-cancel-btn" onclick="closeModal()" style="min-width:120px">Close</button>
+                <button style="margin-left:8px;background:none;border:1px solid #fca5a5;color:#dc2626;padding:10px 20px;border-radius:12px;font-weight:600;cursor:pointer;font-size:.85rem" onclick="closeModal();deletePendingDashboard('${db._id}')">
+                    <i class="fas fa-trash-alt"></i> Cancel Request
+                </button>
+            </div>
+        ` : `
+            <button class="ad-cancel-btn" style="width:100%;margin-top:4px" onclick="closeModal()">Close</button>
+        `}
+    </div>`;
+
+    if (typeof showGenericModal === 'function') {
+        showGenericModal(modalContent, 'max-width: 520px;');
+    } else if (typeof showModal === 'function') {
+        showModal(modalContent);
     }
 }
 
@@ -811,12 +882,20 @@ window.changeChartType = function(idx, newType) {
 // ===== PREMIUM CSS =====
 function addAnalyticsStyles() {
     if (document.head.querySelector('#analytics-styles')) return;
-    const style = document.createElement('style');
-    style.id = 'analytics-styles';
-    style.textContent = `
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+    // Load CSS via <link> tag for reliability (inline style injection can fail silently)
+    const link = document.createElement('link');
+    link.id = 'analytics-styles';
+    link.rel = 'stylesheet';
+    link.href = 'analytics-styles.css';
+    document.head.appendChild(link);
+}
 
-/* ========== ROOT / PORTAL ========== */
+// Legacy inline CSS removed - now served from analytics-styles.css
+function _addAnalyticsStylesLegacy() {
+    if (document.head.querySelector('#analytics-styles-legacy')) return;
+    const style = document.createElement('style');
+    style.id = 'analytics-styles-legacy';
+    style.textContent = `
 .ad-portal {
     background: linear-gradient(165deg, #f0f2ff 0%, #f8fafc 25%, #faf5ff 50%, #f0fdfa 75%, #f8fafc 100%);
     min-height: 100vh;
@@ -1282,6 +1361,16 @@ function addAnalyticsStyles() {
 `;
     document.head.appendChild(style);
 }
+
+// Also add the link tag to index.html as backup via JS
+(function loadAnalyticsCSS() {
+    if (!document.head.querySelector('#analytics-styles') && !document.head.querySelector('link[href*="analytics-styles"]')) {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = 'analytics-styles.css';
+        document.head.appendChild(link);
+    }
+})();
 
 // Initialize - script is loaded dynamically after DOM is ready, so init immediately
 (function initRetry() {
