@@ -2956,10 +2956,16 @@ function renderAppSection(sectionId) {
     else if (sectionId === 'community-feed') {
         renderCommunityFeed();
     }
-    else if (sectionId === 'business-analytics') {
-        // Redirect to premium AI Analytics dashboard (view-only, no client uploads)
-        if (typeof renderAnalyticsDashboard === 'function') {
-            renderAnalyticsDashboard();
+    else if (sectionId === 'ai-analytics' || sectionId === 'business-analytics') {
+        // Premium AI Analytics dashboard - contractor uploads sheet, admin approves, contractor views dashboard
+        if (typeof window.renderAnalyticsPortal === 'function') {
+            window.renderAnalyticsPortal();
+        } else if (typeof window.initializeAnalyticsIntegration === 'function') {
+            window.initializeAnalyticsIntegration();
+            if (typeof window.renderAnalyticsPortal === 'function') window.renderAnalyticsPortal();
+        } else {
+            container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:60vh;flex-direction:column;gap:16px"><div class="spinner"></div><p>Loading Analytics Dashboard...</p></div>';
+            setTimeout(() => renderAppSection(sectionId), 1500);
         }
     }
     else if (sectionId === 'quote-analysis') {
