@@ -810,10 +810,10 @@ function getDashboardViewHTML() {
     const totalRecords = (db.charts || []).reduce((sum, c) => sum + (c.rowCount || c.labels?.length || 0), 0);
     const pa = db.predictiveAnalysis;
 
-    // === PREDICTIVE ANALYSIS SECTION ===
+    // === PREDICTIVE ANALYSIS SECTION (Premium Report) ===
     let predictiveHTML = '';
     if (pa) {
-        // Data quality gate — only show if there's meaningful content
+        // Data quality gate
         const paInsights = (pa.insights || []).filter(i => i && i.text);
         const paForecasts = (pa.forecasts || []).filter(f => f && (f.values || []).length > 0 && f.regression && f.regression.rSquared > 0.15);
         const paAnomalies = [];
@@ -824,118 +824,200 @@ function getDashboardViewHTML() {
         const hasMeaningfulData = paInsights.length > 0 || paForecasts.length > 0 || paAnomalies.length > 0 || paCorrelations.length > 0;
 
         if (hasMeaningfulData) {
-        // Summary counts
-        const summaryParts = [];
-        if (paInsights.length > 0) summaryParts.push(`<span class="ad-pa-stat"><i class="fas fa-lightbulb"></i> ${paInsights.length} insight${paInsights.length !== 1 ? 's' : ''}</span>`);
-        if (paForecasts.length > 0) summaryParts.push(`<span class="ad-pa-stat"><i class="fas fa-chart-line"></i> ${paForecasts.length} forecast${paForecasts.length !== 1 ? 's' : ''}</span>`);
-        if (paCorrelations.length > 0) summaryParts.push(`<span class="ad-pa-stat"><i class="fas fa-project-diagram"></i> ${paCorrelations.length} correlation${paCorrelations.length !== 1 ? 's' : ''}</span>`);
-        if (paAnomalies.length > 0) summaryParts.push(`<span class="ad-pa-stat"><i class="fas fa-exclamation-triangle"></i> ${paAnomalies.length} anomal${paAnomalies.length !== 1 ? 'ies' : 'y'}</span>`);
-        if (pa.seasonality) summaryParts.push(`<span class="ad-pa-stat"><i class="fas fa-wave-square"></i> Seasonality</span>`);
-        const summaryHTML = `<div class="ad-pa-summary">${summaryParts.join('')}</div>`;
+        // Compute an overall health score (0-100)
+        const scoreFactors = [];
+        if (paForecasts.length > 0) {
+            const avgR2 = paForecasts.reduce((s, f) => s + (f.regression?.rSquared || 0), 0) / paForecasts.length;
+            scoreFactors.push(avgR2 * 40);
+        }
+        if (paInsights.length > 0) scoreFactors.push(Math.min(paInsights.length * 5, 20));
+        if (paCorrelations.length > 0) scoreFactors.push(Math.min(paCorrelations.length * 5, 20));
+        if (paAnomalies.length > 0) scoreFactors.push(Math.max(0, 20 - paAnomalies.length * 3));
+        else scoreFactors.push(20);
+        const overallScore = Math.round(Math.min(100, scoreFactors.reduce((s, v) => s + v, 0)));
+        const scoreColor = overallScore >= 75 ? '#10b981' : overallScore >= 50 ? '#f59e0b' : '#ef4444';
+        const scoreLabel = overallScore >= 75 ? 'Excellent' : overallScore >= 50 ? 'Good' : 'Needs Attention';
 
-        // AI Insights (max 6)
+        // Executive summary
+        const execSummaryHTML = `
+        <div class="ad-pa-exec-summary">
+            <div class="ad-pa-exec-left">
+                <div class="ad-pa-score-ring" style="--score-color: ${scoreColor}; --score-pct: ${overallScore}%">
+                    <svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="42" class="ad-score-track"/><circle cx="50" cy="50" r="42" class="ad-score-fill" style="stroke: ${scoreColor}; stroke-dasharray: ${overallScore * 2.64} 264"/></svg>
+                    <div class="ad-score-text"><span class="ad-score-num">${overallScore}</span><span class="ad-score-label">${scoreLabel}</span></div>
+                </div>
+            </div>
+            <div class="ad-pa-exec-right">
+                <h3>Analysis Report</h3>
+                <p>AI-powered analysis of your data covering ${paForecasts.length} predictive model${paForecasts.length !== 1 ? 's' : ''}, ${paInsights.length} key insight${paInsights.length !== 1 ? 's' : ''}, ${paCorrelations.length} correlation${paCorrelations.length !== 1 ? 's' : ''}, and ${paAnomalies.length} anomal${paAnomalies.length !== 1 ? 'ies' : 'y'} detected.</p>
+                <div class="ad-pa-exec-stats">
+                    ${paInsights.length > 0 ? `<div class="ad-pa-exec-stat"><div class="ad-pa-exec-stat-icon" style="background:rgba(245,158,11,.1);color:#f59e0b"><i class="fas fa-lightbulb"></i></div><div class="ad-pa-exec-stat-num">${paInsights.length}</div><div class="ad-pa-exec-stat-lbl">Insights</div></div>` : ''}
+                    ${paForecasts.length > 0 ? `<div class="ad-pa-exec-stat"><div class="ad-pa-exec-stat-icon" style="background:rgba(99,102,241,.1);color:#6366f1"><i class="fas fa-chart-line"></i></div><div class="ad-pa-exec-stat-num">${paForecasts.length}</div><div class="ad-pa-exec-stat-lbl">Forecasts</div></div>` : ''}
+                    ${paCorrelations.length > 0 ? `<div class="ad-pa-exec-stat"><div class="ad-pa-exec-stat-icon" style="background:rgba(139,92,246,.1);color:#8b5cf6"><i class="fas fa-project-diagram"></i></div><div class="ad-pa-exec-stat-num">${paCorrelations.length}</div><div class="ad-pa-exec-stat-lbl">Correlations</div></div>` : ''}
+                    ${paAnomalies.length > 0 ? `<div class="ad-pa-exec-stat"><div class="ad-pa-exec-stat-icon" style="background:rgba(239,68,68,.1);color:#ef4444"><i class="fas fa-exclamation-triangle"></i></div><div class="ad-pa-exec-stat-num">${paAnomalies.length}</div><div class="ad-pa-exec-stat-lbl">Anomalies</div></div>` : ''}
+                    ${pa.seasonality ? `<div class="ad-pa-exec-stat"><div class="ad-pa-exec-stat-icon" style="background:rgba(6,182,212,.1);color:#06b6d4"><i class="fas fa-wave-square"></i></div><div class="ad-pa-exec-stat-num">1</div><div class="ad-pa-exec-stat-lbl">Seasonal</div></div>` : ''}
+                </div>
+            </div>
+        </div>`;
+
+        // AI Insights (max 6) — premium cards
         const insightsHTML = paInsights.length > 0 ? `
-        <div class="ad-pa-section">
-            <div class="ad-pa-section-head"><i class="fas fa-lightbulb"></i><h3>Key Insights</h3><span class="ad-pa-count">${paInsights.length}</span></div>
-            <div class="ad-insights-grid">
-                ${paInsights.slice(0, 6).map(ins => {
+        <div class="ad-pa-section-v2">
+            <div class="ad-pa-section-head-v2">
+                <div class="ad-pa-sh-icon" style="background:linear-gradient(135deg,#fef3c7,#fde68a);color:#d97706"><i class="fas fa-lightbulb"></i></div>
+                <div><h3>Key Insights</h3><p>AI-discovered patterns and observations</p></div>
+                <span class="ad-pa-count-v2">${paInsights.length}</span>
+            </div>
+            <div class="ad-insights-grid-v2">
+                ${paInsights.slice(0, 6).map((ins, ii) => {
                     const typeClass = ins.type || 'info';
                     const icon = typeClass === 'positive' ? 'fa-arrow-trend-up' : typeClass === 'warning' ? 'fa-exclamation-triangle' : typeClass === 'negative' ? 'fa-arrow-trend-down' : 'fa-info-circle';
-                    return `<div class="ad-insight-card ad-insight-${typeClass}">
-                        <div class="ad-insight-icon"><i class="fas ${icon}"></i></div>
+                    return `<div class="ad-insight-card-v2 ad-insight-${typeClass}" style="animation-delay:${ii * 0.06}s">
+                        <div class="ad-insight-num">${String(ii + 1).padStart(2, '0')}</div>
+                        <div class="ad-insight-icon-v2"><i class="fas ${icon}"></i></div>
                         <p>${ins.text}</p>
                     </div>`;
                 }).join('')}
             </div>
         </div>` : '';
 
-        // Forecasts (max 4, only with decent R²)
+        // Forecasts (max 4) — premium cards with mini-charts
         const forecastsHTML = paForecasts.length > 0 ? `
-        <div class="ad-pa-section">
-            <div class="ad-pa-section-head"><i class="fas fa-chart-line"></i><h3>Predictive Forecasts</h3><span class="ad-pa-badge">Linear Regression</span></div>
-            <div class="ad-forecast-grid">
+        <div class="ad-pa-section-v2">
+            <div class="ad-pa-section-head-v2">
+                <div class="ad-pa-sh-icon" style="background:linear-gradient(135deg,#e0e7ff,#c7d2fe);color:#4f46e5"><i class="fas fa-chart-line"></i></div>
+                <div><h3>Predictive Forecasts</h3><p>Linear regression models with confidence scoring</p></div>
+                <span class="ad-pa-badge-v2"><i class="fas fa-robot"></i> ML-Powered</span>
+            </div>
+            <div class="ad-forecast-grid-v2">
                 ${paForecasts.slice(0, 4).map((fc, fi) => {
                     const reg = fc.regression || {};
                     const rSq = reg.rSquared || 0;
                     const isUp = (reg.slope || 0) >= 0;
-                    const r2Class = rSq >= 0.7 ? 'ad-r2-strong' : rSq >= 0.4 ? 'ad-r2-moderate' : 'ad-r2-weak';
-                    const r2Label = rSq >= 0.7 ? 'Strong fit' : rSq >= 0.4 ? 'Moderate fit' : 'Weak fit';
-                    return `<div class="ad-forecast-card">
-                        <div class="ad-forecast-head">
-                            <span class="ad-forecast-col">${fc.column || fc.metric || 'Metric'}</span>
-                            <span class="ad-forecast-r2 ${r2Class}" title="${r2Label} (R\u00b2 = ${rSq.toFixed(3)})">R\u00b2 ${rSq.toFixed(2)} &middot; ${r2Label}</span>
+                    const r2Pct = Math.round(rSq * 100);
+                    const r2Color = rSq >= 0.7 ? '#10b981' : rSq >= 0.4 ? '#f59e0b' : '#6366f1';
+                    const r2Label = rSq >= 0.7 ? 'Strong' : rSq >= 0.4 ? 'Moderate' : 'Weak';
+                    return `<div class="ad-forecast-card-v2" style="animation-delay:${fi * 0.08}s">
+                        <div class="ad-fc-top">
+                            <div class="ad-fc-metric">${fc.column || fc.metric || 'Metric'}</div>
+                            <div class="ad-fc-direction ${isUp ? 'up' : 'down'}"><i class="fas fa-arrow-${isUp ? 'up' : 'down'}"></i> ${isUp ? 'Rising' : 'Falling'}</div>
                         </div>
-                        <div class="ad-forecast-body">
-                            <div class="ad-forecast-direction ${isUp ? 'up' : 'down'}">
-                                <i class="fas fa-arrow-${isUp ? 'up' : 'down'}"></i>
-                                <span>${isUp ? 'Upward' : 'Downward'}</span>
+                        <div class="ad-fc-r2-bar">
+                            <div class="ad-fc-r2-info">
+                                <span class="ad-fc-r2-label">Model Accuracy (R\u00b2)</span>
+                                <span class="ad-fc-r2-val" style="color:${r2Color}">${r2Pct}% &middot; ${r2Label}</span>
                             </div>
-                            <div class="ad-forecast-values">
-                                ${(fc.values || []).slice(0, 3).map((v, vi) => `<div class="ad-forecast-val"><span class="ad-fv-label">+${vi + 1}</span><span class="ad-fv-num">${formatKpiValue(v)}</span></div>`).join('')}
-                            </div>
+                            <div class="ad-fc-r2-track"><div class="ad-fc-r2-fill" style="width:${r2Pct}%;background:${r2Color}"></div></div>
                         </div>
-                        <canvas id="ad-forecast-chart-${fi}" style="height:120px;margin-top:12px"></canvas>
+                        <div class="ad-fc-predictions">
+                            ${(fc.values || []).slice(0, 4).map((v, vi) => `
+                                <div class="ad-fc-pred-item">
+                                    <span class="ad-fc-pred-period">Period +${vi + 1}</span>
+                                    <span class="ad-fc-pred-val">${formatKpiValue(v)}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <div class="ad-fc-chart-wrap"><canvas id="ad-forecast-chart-${fi}" style="height:130px"></canvas></div>
                     </div>`;
                 }).join('')}
             </div>
         </div>` : '';
 
-        // Correlations — show insight cards (not raw matrix)
+        // Correlations — premium cards
         const corrHTML = paCorrelations.length > 0 ? `
-        <div class="ad-pa-section">
-            <div class="ad-pa-section-head"><i class="fas fa-project-diagram"></i><h3>Data Correlations</h3><span class="ad-pa-badge">Pearson</span></div>
-            <div class="ad-corr-cards">
-                ${paCorrelations.slice(0, 4).map(ins => {
+        <div class="ad-pa-section-v2">
+            <div class="ad-pa-section-head-v2">
+                <div class="ad-pa-sh-icon" style="background:linear-gradient(135deg,#ede9fe,#ddd6fe);color:#7c3aed"><i class="fas fa-project-diagram"></i></div>
+                <div><h3>Data Correlations</h3><p>Pearson correlation analysis between metrics</p></div>
+                <span class="ad-pa-badge-v2"><i class="fas fa-link"></i> Pearson</span>
+            </div>
+            <div class="ad-corr-grid-v2">
+                ${paCorrelations.slice(0, 4).map((ins, ci) => {
                     const corrVal = ins.correlation != null ? ins.correlation : 0;
                     const absCorr = Math.abs(corrVal);
                     const color = absCorr >= 0.7 ? (corrVal > 0 ? '#10b981' : '#ef4444') : absCorr >= 0.5 ? '#f59e0b' : '#94a3b8';
                     const strengthLabel = ins.strength || (absCorr >= 0.7 ? 'Strong' : absCorr >= 0.5 ? 'Moderate' : 'Weak');
-                    const dirLabel = ins.direction || (corrVal >= 0 ? 'positive' : 'negative');
-                    return `<div class="ad-corr-card">
-                        <div class="ad-corr-value" style="background:${color}12;color:${color};border:2px solid ${color}30">${corrVal.toFixed(2)}</div>
-                        <div class="ad-corr-detail">
-                            <div class="ad-corr-pair"><strong>${ins.col1 || ''}</strong> <span class="ad-corr-arrow">&harr;</span> <strong>${ins.col2 || ''}</strong></div>
-                            <div class="ad-corr-strength">${strengthLabel} ${dirLabel} correlation</div>
+                    const dirLabel = ins.direction || (corrVal >= 0 ? 'Positive' : 'Negative');
+                    const corrPct = Math.round(absCorr * 100);
+                    return `<div class="ad-corr-card-v2" style="animation-delay:${ci * 0.06}s">
+                        <div class="ad-corr-gauge">
+                            <svg viewBox="0 0 80 80"><circle cx="40" cy="40" r="34" fill="none" stroke="#e2e8f0" stroke-width="5"/><circle cx="40" cy="40" r="34" fill="none" stroke="${color}" stroke-width="5" stroke-dasharray="${corrPct * 2.14} 214" stroke-linecap="round" transform="rotate(-90 40 40)"/></svg>
+                            <span style="color:${color}">${corrVal.toFixed(2)}</span>
+                        </div>
+                        <div class="ad-corr-detail-v2">
+                            <div class="ad-corr-cols"><span>${ins.col1 || ''}</span><i class="fas fa-arrows-alt-h"></i><span>${ins.col2 || ''}</span></div>
+                            <div class="ad-corr-strength-v2" style="color:${color}"><i class="fas fa-circle"></i> ${strengthLabel} ${dirLabel}</div>
                         </div>
                     </div>`;
                 }).join('')}
             </div>
         </div>` : '';
 
-        // Anomalies — grouped, max 6
+        // Anomalies — premium alert cards
         const anomalyHTML = paAnomalies.length > 0 ? `
-        <div class="ad-pa-section">
-            <div class="ad-pa-section-head"><i class="fas fa-exclamation-triangle"></i><h3>Anomaly Detection</h3><span class="ad-pa-badge">Z-Score</span><span class="ad-pa-count">${paAnomalies.length}</span></div>
-            <div class="ad-anomaly-grid">
-                ${paAnomalies.slice(0, 6).map(a => {
+        <div class="ad-pa-section-v2">
+            <div class="ad-pa-section-head-v2">
+                <div class="ad-pa-sh-icon" style="background:linear-gradient(135deg,#fee2e2,#fecaca);color:#dc2626"><i class="fas fa-exclamation-triangle"></i></div>
+                <div><h3>Anomaly Detection</h3><p>Statistical outliers detected via Z-Score analysis</p></div>
+                <span class="ad-pa-count-v2 ad-pa-count-alert">${paAnomalies.length}</span>
+            </div>
+            <div class="ad-anomaly-grid-v2">
+                ${paAnomalies.slice(0, 6).map((a, ai) => {
                     const isHigh = a.type === 'high';
-                    return `<div class="ad-anomaly-card ad-anomaly-${isHigh ? 'high' : 'low'}">
-                        <div class="ad-anomaly-badge">${isHigh ? '<i class="fas fa-arrow-up"></i> HIGH' : '<i class="fas fa-arrow-down"></i> LOW'}</div>
-                        <div class="ad-anomaly-info">
-                            <div class="ad-anomaly-col">${a.column}</div>
-                            <div class="ad-anomaly-row">${a.label || ''}: <strong>${formatKpiValue(a.value)}</strong></div>
+                    return `<div class="ad-anomaly-card-v2 ${isHigh ? 'ad-anom-high' : 'ad-anom-low'}" style="animation-delay:${ai * 0.06}s">
+                        <div class="ad-anom-indicator"><div class="ad-anom-dot"></div></div>
+                        <div class="ad-anom-content">
+                            <div class="ad-anom-type">${isHigh ? '<i class="fas fa-arrow-up"></i> HIGH OUTLIER' : '<i class="fas fa-arrow-down"></i> LOW OUTLIER'}</div>
+                            <div class="ad-anom-metric">${a.column}</div>
+                            <div class="ad-anom-detail">${a.label || ''}: <strong>${formatKpiValue(a.value)}</strong></div>
                         </div>
-                        <div class="ad-anomaly-zscore">${(a.zScore || 0).toFixed(1)}&sigma;</div>
+                        <div class="ad-anom-sigma"><span>${(a.zScore || 0).toFixed(1)}</span>&sigma;</div>
                     </div>`;
                 }).join('')}
             </div>
         </div>` : '';
 
-        // Seasonality
+        // Seasonality — premium badge
         const seasonHTML = pa.seasonality ? `
-        <div class="ad-pa-section ad-pa-seasonality">
-            <div class="ad-pa-section-head"><i class="fas fa-calendar-alt"></i><h3>Seasonality</h3></div>
-            <div class="ad-season-badge"><i class="fas fa-wave-square"></i> ${pa.seasonality.label || 'Seasonal'} cycle &middot; Period: ${pa.seasonality.period || '?'} &middot; Strength: ${((pa.seasonality.strength || 0) * 100).toFixed(0)}%</div>
+        <div class="ad-pa-section-v2 ad-pa-season-section">
+            <div class="ad-pa-section-head-v2">
+                <div class="ad-pa-sh-icon" style="background:linear-gradient(135deg,#cffafe,#a5f3fc);color:#0891b2"><i class="fas fa-calendar-alt"></i></div>
+                <div><h3>Seasonal Patterns</h3><p>Cyclical trends detected in your data</p></div>
+            </div>
+            <div class="ad-season-card-v2">
+                <div class="ad-season-visual">
+                    <div class="ad-season-wave"><svg viewBox="0 0 200 40"><path d="M0,20 Q25,0 50,20 T100,20 T150,20 T200,20" fill="none" stroke="#06b6d4" stroke-width="2.5" opacity=".6"/><path d="M0,22 Q25,4 50,22 T100,22 T150,22 T200,22" fill="none" stroke="#0891b2" stroke-width="2" opacity=".3"/></svg></div>
+                </div>
+                <div class="ad-season-info">
+                    <span class="ad-season-pill"><i class="fas fa-wave-square"></i> ${pa.seasonality.label || 'Seasonal'} Cycle</span>
+                    <span class="ad-season-pill"><i class="fas fa-redo"></i> Period: ${pa.seasonality.period || '?'}</span>
+                    <span class="ad-season-pill"><i class="fas fa-signal"></i> Strength: ${((pa.seasonality.strength || 0) * 100).toFixed(0)}%</span>
+                </div>
+            </div>
         </div>` : '';
 
         predictiveHTML = `
-        <div class="ad-predictive-analysis" id="ad-predictive-section">
-            <div class="ad-pa-title-bar">
-                <div class="ad-pa-title"><i class="fas fa-brain"></i><h2>Predictive Analysis</h2></div>
-                <span class="ad-pa-powered">Powered by SteelConnect AI</span>
+        <div class="ad-predictive-analysis-v2" id="ad-predictive-section">
+            <div class="ad-pa-header-v2">
+                <div class="ad-pa-header-bg"></div>
+                <div class="ad-pa-header-content">
+                    <div class="ad-pa-header-left">
+                        <div class="ad-pa-header-icon"><i class="fas fa-brain"></i></div>
+                        <div>
+                            <h2>Predictive Analysis Report</h2>
+                            <p>AI-powered intelligence from your business data</p>
+                        </div>
+                    </div>
+                    <div class="ad-pa-header-right">
+                        <span class="ad-pa-powered-v2"><i class="fas fa-microchip"></i> SteelConnect AI</span>
+                        <span class="ad-pa-date-v2"><i class="fas fa-calendar"></i> ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                    </div>
+                </div>
             </div>
-            ${summaryHTML}
-            ${insightsHTML}${forecastsHTML}${corrHTML}${anomalyHTML}${seasonHTML}
+            ${execSummaryHTML}
+            <div class="ad-pa-body-v2">
+                ${insightsHTML}${forecastsHTML}${corrHTML}${anomalyHTML}${seasonHTML}
+            </div>
         </div>`;
         } // end hasMeaningfulData
     }
@@ -1053,12 +1135,12 @@ function exportChartImage(idx) {
     if (typeof showNotification === 'function') showNotification('Chart exported as image', 'success');
 }
 
-// ===== PDF EXPORT =====
+// ===== PREMIUM PDF EXPORT =====
 window.exportDashboardPDF = async function() {
     const db = analyticsState.activeDashboard;
     if (!db) return;
     const btn = document.getElementById('ad-pdf-btn');
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating PDF...'; }
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating Premium Report...'; }
 
     try {
         // Dynamically load jsPDF if not loaded
@@ -1072,77 +1154,232 @@ window.exportDashboardPDF = async function() {
         }
         const { jsPDF } = window.jspdf;
         const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-        const W = 210, H = 297, M = 15;
+        const W = 210, H = 297, M = 18;
+
+        // Color palette
+        const C = {
+            primary: [99, 102, 241],    // indigo
+            dark: [15, 23, 42],         // slate-900
+            darkAlt: [30, 41, 59],      // slate-800
+            text: [51, 65, 85],         // slate-600
+            muted: [100, 116, 139],     // slate-400
+            light: [241, 245, 249],     // slate-100
+            white: [255, 255, 255],
+            green: [16, 185, 129],
+            red: [239, 68, 68],
+            amber: [245, 158, 11],
+            purple: [139, 92, 246],
+            cyan: [6, 182, 212],
+        };
+
+        function addPageFooter(pdf, pageNum, totalPages, title) {
+            // Bottom line
+            pdf.setDrawColor(...C.primary);
+            pdf.setLineWidth(0.5);
+            pdf.line(M, H - 14, W - M, H - 14);
+            pdf.setFontSize(7); pdf.setTextColor(...C.muted);
+            pdf.text('SteelConnect Analytics', M, H - 9);
+            pdf.text(`${title}`, W / 2, H - 9, { align: 'center' });
+            pdf.text(`Page ${pageNum} of ${totalPages}`, W - M, H - 9, { align: 'right' });
+            pdf.setFontSize(6);
+            pdf.text('Confidential - Generated by SteelConnect AI', W / 2, H - 5, { align: 'center' });
+        }
+
+        function sectionHeader(pdf, y, icon, title, subtitle) {
+            if (y + 20 > H - 20) { pdf.addPage(); y = M; }
+            // Accent bar
+            pdf.setFillColor(...C.primary);
+            pdf.roundedRect(M, y, 4, 12, 2, 2, 'F');
+            pdf.setTextColor(...C.dark);
+            pdf.setFontSize(13); pdf.setFont(undefined, 'bold');
+            pdf.text(title, M + 9, y + 5);
+            if (subtitle) {
+                pdf.setFontSize(8); pdf.setFont(undefined, 'normal');
+                pdf.setTextColor(...C.muted);
+                pdf.text(subtitle, M + 9, y + 10);
+            }
+            return y + 16;
+        }
+
+        // ============================
+        //  PAGE 1: COVER PAGE
+        // ============================
+        // Dark gradient header (full page cover)
+        pdf.setFillColor(15, 23, 42);
+        pdf.rect(0, 0, W, H, 'F');
+        // Decorative accent bars
+        pdf.setFillColor(99, 102, 241);
+        pdf.rect(0, 0, W, 4, 'F');
+        pdf.setFillColor(139, 92, 246);
+        pdf.rect(0, 4, W, 1.5, 'F');
+        // Side accent
+        pdf.setFillColor(99, 102, 241);
+        pdf.rect(0, 80, 6, 120, 'F');
+        pdf.setFillColor(139, 92, 246);
+        pdf.rect(0, 130, 4, 40, 'F');
+
+        // Logo / Brand
+        pdf.setFontSize(11); pdf.setFont(undefined, 'bold');
+        pdf.setTextColor(99, 102, 241);
+        pdf.text('STEELCONNECT', M, 30);
+        pdf.setFontSize(9); pdf.setFont(undefined, 'normal');
+        pdf.setTextColor(148, 163, 184);
+        pdf.text('AI-Powered Business Intelligence', M, 37);
+
+        // Title
+        pdf.setFontSize(32); pdf.setFont(undefined, 'bold');
+        pdf.setTextColor(255, 255, 255);
+        const titleLines = pdf.splitTextToSize(db.title || 'Analytics Report', W - M * 2 - 10);
+        pdf.text(titleLines, M, 75);
+        let coverY = 75 + titleLines.length * 14;
+
+        // Subtitle / description
+        if (db.description) {
+            pdf.setFontSize(12); pdf.setFont(undefined, 'normal');
+            pdf.setTextColor(148, 163, 184);
+            const descLines = pdf.splitTextToSize(db.description, W - M * 2 - 10);
+            pdf.text(descLines.slice(0, 3), M, coverY + 4);
+            coverY += descLines.length * 6 + 8;
+        }
+
+        // Divider line
+        pdf.setDrawColor(99, 102, 241);
+        pdf.setLineWidth(0.8);
+        pdf.line(M, coverY + 4, M + 50, coverY + 4);
+        coverY += 18;
+
+        // Report metadata boxes
+        const metaItems = [
+            { label: 'REPORT TYPE', value: 'Predictive Analysis' },
+            { label: 'FREQUENCY', value: (db.frequency || 'monthly').charAt(0).toUpperCase() + (db.frequency || 'monthly').slice(1) },
+            { label: 'CHARTS', value: String((db.charts || []).length) },
+            { label: 'GENERATED', value: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) },
+        ];
+        const metaBoxW = (W - M * 2) / 2 - 4;
+        metaItems.forEach((item, i) => {
+            const mx = M + (i % 2) * (metaBoxW + 8);
+            const my = coverY + Math.floor(i / 2) * 24;
+            pdf.setFillColor(30, 41, 59);
+            pdf.roundedRect(mx, my, metaBoxW, 20, 3, 3, 'F');
+            pdf.setFontSize(7); pdf.setFont(undefined, 'bold');
+            pdf.setTextColor(99, 102, 241);
+            pdf.text(item.label, mx + 6, my + 7);
+            pdf.setFontSize(11); pdf.setFont(undefined, 'bold');
+            pdf.setTextColor(226, 232, 240);
+            pdf.text(item.value, mx + 6, my + 15);
+        });
+
+        // Bottom of cover
+        pdf.setFontSize(8); pdf.setFont(undefined, 'normal');
+        pdf.setTextColor(100, 116, 139);
+        pdf.text('This report contains AI-generated analysis, forecasts, anomaly detection, and correlation insights.', M, H - 25);
+        pdf.text('Confidential - For authorized use only', M, H - 19);
+        pdf.setFontSize(7);
+        pdf.setTextColor(71, 85, 105);
+        pdf.text(`Report ID: SC-${Date.now().toString(36).toUpperCase()}  |  SteelConnect Analytics Engine v2.0`, M, H - 12);
+
+        // ============================
+        //  PAGE 2: EXECUTIVE SUMMARY + KPIs
+        // ============================
+        pdf.addPage();
         let y = M;
 
-        // === HEADER ===
-        pdf.setFillColor(30, 41, 59);
-        pdf.rect(0, 0, W, 40, 'F');
+        // Page header bar
+        pdf.setFillColor(248, 250, 252);
+        pdf.rect(0, 0, W, 12, 'F');
         pdf.setFillColor(99, 102, 241);
-        pdf.rect(0, 38, W, 2, 'F');
-        pdf.setTextColor(255, 255, 255);
-        pdf.setFontSize(22); pdf.setFont(undefined, 'bold');
-        pdf.text(db.title || 'Analytics Dashboard', M, 18);
-        pdf.setFontSize(10); pdf.setFont(undefined, 'normal');
-        pdf.text(`Generated: ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}  |  Frequency: ${db.frequency || 'daily'}  |  ${(db.charts || []).length} charts`, M, 28);
-        if (db.description) { pdf.setFontSize(9); pdf.text(db.description.substring(0, 100), M, 34); }
-        y = 48;
+        pdf.rect(0, 0, W, 1.5, 'F');
+        pdf.setFontSize(8); pdf.setFont(undefined, 'bold');
+        pdf.setTextColor(...C.primary);
+        pdf.text('STEELCONNECT ANALYTICS REPORT', M, 8);
+        pdf.setFont(undefined, 'normal');
+        pdf.setTextColor(...C.muted);
+        pdf.text(db.title || '', W - M, 8, { align: 'right' });
+        y = 20;
 
-        // === KPI SUMMARY ===
+        // Section: Executive Summary
+        y = sectionHeader(pdf, y, '', 'Executive Summary', 'Overview of key findings from your data');
+
+        // KPIs
         const allKpis = [];
         (db.charts || []).forEach(c => { if (c.kpis) allKpis.push(...c.kpis); });
         if (allKpis.length > 0) {
-            pdf.setTextColor(30, 41, 59);
-            pdf.setFontSize(14); pdf.setFont(undefined, 'bold');
-            pdf.text('Key Performance Indicators', M, y); y += 8;
             const kpiCols = Math.min(allKpis.length, 4);
-            const kpiW = (W - M * 2) / kpiCols;
+            const kpiW = (W - M * 2 - (kpiCols - 1) * 4) / kpiCols;
             allKpis.slice(0, 8).forEach((kpi, i) => {
                 const col = i % kpiCols;
                 const row = Math.floor(i / kpiCols);
-                const kx = M + col * kpiW;
-                const ky = y + row * 28;
+                const kx = M + col * (kpiW + 4);
+                const ky = y + row * 30;
+                // Card background
                 pdf.setFillColor(248, 250, 252);
-                pdf.roundedRect(kx, ky, kpiW - 4, 24, 3, 3, 'F');
-                pdf.setFontSize(14); pdf.setFont(undefined, 'bold');
-                pdf.setTextColor(30, 41, 59);
-                pdf.text(formatKpiValue(kpi.total), kx + 4, ky + 10);
-                pdf.setFontSize(8); pdf.setFont(undefined, 'normal');
-                pdf.setTextColor(100, 116, 139);
-                pdf.text((kpi.label || '').substring(0, 20), kx + 4, ky + 16);
-                const trendColor = (kpi.trend || 0) >= 0 ? [16, 185, 129] : [239, 68, 68];
-                pdf.setTextColor(...trendColor);
-                pdf.text(`${(kpi.trend || 0) >= 0 ? '+' : ''}${kpi.trend || 0}%`, kx + 4, ky + 21);
+                pdf.roundedRect(kx, ky, kpiW, 26, 3, 3, 'F');
+                // Left accent
+                const accentColors = [C.primary, C.green, C.amber, C.red, C.purple, C.cyan, C.primary, C.green];
+                const ac = accentColors[i % accentColors.length];
+                pdf.setFillColor(...ac);
+                pdf.roundedRect(kx, ky, 2, 26, 1, 1, 'F');
+                // Value
+                pdf.setFontSize(15); pdf.setFont(undefined, 'bold');
+                pdf.setTextColor(...C.dark);
+                pdf.text(formatKpiValue(kpi.total), kx + 7, ky + 10);
+                // Label
+                pdf.setFontSize(7.5); pdf.setFont(undefined, 'normal');
+                pdf.setTextColor(...C.muted);
+                pdf.text((kpi.label || '').substring(0, 22), kx + 7, ky + 16);
+                // Trend
+                const trendUp = (kpi.trend || 0) >= 0;
+                pdf.setFontSize(7); pdf.setFont(undefined, 'bold');
+                pdf.setTextColor(...(trendUp ? C.green : C.red));
+                pdf.text(`${trendUp ? '+' : ''}${(kpi.trend || 0).toFixed(1)}%`, kx + 7, ky + 22);
+                // Stats
+                pdf.setFont(undefined, 'normal');
+                pdf.setTextColor(...C.muted); pdf.setFontSize(6);
+                pdf.text(`Avg: ${formatKpiValue(kpi.avg)}  Max: ${formatKpiValue(kpi.max)}`, kx + kpiW - 4, ky + 22, { align: 'right' });
             });
-            y += Math.ceil(Math.min(allKpis.length, 8) / kpiCols) * 28 + 8;
+            y += Math.ceil(Math.min(allKpis.length, 8) / kpiCols) * 30 + 6;
         }
 
-        // === CHARTS ===
+        // ============================
+        //  CHARTS
+        // ============================
         const charts = db.charts || [];
+        if (charts.length > 0) {
+            y = sectionHeader(pdf, y, '', 'Data Visualizations', `${charts.length} chart${charts.length !== 1 ? 's' : ''} generated from your data`);
+        }
         for (let idx = 0; idx < charts.length; idx++) {
             const canvas = document.getElementById(`ad-chart-${idx}`);
             if (!canvas) continue;
-            if (y + 90 > H - M) { pdf.addPage(); y = M; }
-            pdf.setTextColor(30, 41, 59);
-            pdf.setFontSize(11); pdf.setFont(undefined, 'bold');
-            pdf.text(charts[idx].customTitle || charts[idx].sheetName || `Chart ${idx + 1}`, M, y);
-            pdf.setFontSize(8); pdf.setFont(undefined, 'normal');
-            pdf.setTextColor(100, 116, 139);
-            pdf.text(`${charts[idx].chartType || 'bar'} | ${charts[idx].rowCount || charts[idx].labels?.length || 0} records | ${(charts[idx].dataColumns || []).length} metrics`, M + 100, y);
-            y += 4;
+            if (y + 95 > H - 20) { pdf.addPage(); y = M + 6; }
+            // Chart card border
+            pdf.setDrawColor(226, 232, 240);
+            pdf.setLineWidth(0.3);
+            pdf.roundedRect(M, y, W - M * 2, 82, 4, 4, 'S');
+            // Chart title bar
+            pdf.setFillColor(248, 250, 252);
+            pdf.roundedRect(M + 0.15, y + 0.15, W - M * 2 - 0.3, 10, 4, 4, 'F');
+            // Cover bottom corners of title bar
+            pdf.setFillColor(248, 250, 252);
+            pdf.rect(M + 0.15, y + 6, W - M * 2 - 0.3, 4.15, 'F');
+            pdf.setTextColor(...C.dark);
+            pdf.setFontSize(9); pdf.setFont(undefined, 'bold');
+            pdf.text(charts[idx].customTitle || charts[idx].sheetName || `Chart ${idx + 1}`, M + 5, y + 7);
+            pdf.setFontSize(7); pdf.setFont(undefined, 'normal');
+            pdf.setTextColor(...C.muted);
+            pdf.text(`${charts[idx].chartType || 'bar'} | ${charts[idx].rowCount || 0} records | ${(charts[idx].dataColumns || []).length} metrics`, W - M - 4, y + 7, { align: 'right' });
+            // Chart image
             try {
-                const imgData = canvas.toDataURL('image/png', 0.92);
-                const imgW = W - M * 2;
-                const imgH = 70;
-                pdf.addImage(imgData, 'PNG', M, y, imgW, imgH);
-                y += imgH + 8;
-            } catch (e) { y += 10; }
+                const imgData = canvas.toDataURL('image/png', 0.95);
+                pdf.addImage(imgData, 'PNG', M + 3, y + 12, W - M * 2 - 6, 66);
+            } catch (e) {}
+            y += 86;
         }
 
-        // === PREDICTIVE ANALYSIS ===
+        // ============================
+        //  PREDICTIVE ANALYSIS
+        // ============================
         const pa = db.predictiveAnalysis;
         if (pa) {
-            // Apply same quality gate as display
             const pdfInsights = (pa.insights || []).filter(i => i && i.text);
             const pdfForecasts = (pa.forecasts || []).filter(f => f && (f.values || []).length > 0 && f.regression && f.regression.rSquared > 0.15);
             const pdfAnomalies = [];
@@ -1151,134 +1388,225 @@ window.exportDashboardPDF = async function() {
             const hasPdfData = pdfInsights.length > 0 || pdfForecasts.length > 0 || pdfAnomalies.length > 0 || pdfCorrelations.length > 0;
 
             if (hasPdfData) {
-            if (y + 30 > H - M) { pdf.addPage(); y = M; }
-            pdf.setFillColor(99, 102, 241);
-            pdf.rect(M, y, W - M * 2, 8, 'F');
-            pdf.setTextColor(255, 255, 255);
-            pdf.setFontSize(12); pdf.setFont(undefined, 'bold');
-            pdf.text('Predictive Analysis', M + 4, y + 6);
-            y += 14;
+                // New page for Predictive Analysis
+                pdf.addPage();
+                y = M;
 
-            // Insights
-            if (pdfInsights.length > 0) {
-                pdf.setTextColor(30, 41, 59);
-                pdf.setFontSize(10); pdf.setFont(undefined, 'bold');
-                pdf.text('Key Insights', M, y); y += 6;
+                // Predictive Analysis full-width banner
+                pdf.setFillColor(15, 23, 42);
+                pdf.roundedRect(M, y, W - M * 2, 22, 4, 4, 'F');
+                pdf.setFillColor(99, 102, 241);
+                pdf.roundedRect(M, y, W - M * 2, 3, 4, 4, 'F');
+                pdf.setFillColor(15, 23, 42);
+                pdf.rect(M, y + 2, W - M * 2, 3, 'F');
+                pdf.setTextColor(255, 255, 255);
+                pdf.setFontSize(14); pdf.setFont(undefined, 'bold');
+                pdf.text('Predictive Analysis Report', M + 8, y + 14);
                 pdf.setFontSize(8); pdf.setFont(undefined, 'normal');
-                for (const ins of pdfInsights.slice(0, 6)) {
-                    if (y + 8 > H - M) { pdf.addPage(); y = M; }
-                    const icon = ins.type === 'positive' ? '+' : ins.type === 'warning' ? '!' : ins.type === 'negative' ? '-' : 'i';
-                    const color = ins.type === 'positive' ? [16, 185, 129] : ins.type === 'warning' ? [245, 158, 11] : ins.type === 'negative' ? [239, 68, 68] : [99, 102, 241];
-                    pdf.setTextColor(...color);
-                    pdf.text(`[${icon}]`, M, y);
-                    pdf.setTextColor(51, 65, 85);
-                    pdf.text((ins.text || '').substring(0, 120), M + 8, y);
-                    y += 6;
-                }
-                y += 4;
-            }
+                pdf.setTextColor(148, 163, 184);
+                pdf.text('AI-Powered Intelligence', W - M - 8, y + 14, { align: 'right' });
+                y += 30;
 
-            // Forecasts
-            if (pdfForecasts.length > 0) {
-                if (y + 20 > H - M) { pdf.addPage(); y = M; }
-                pdf.setTextColor(30, 41, 59);
-                pdf.setFontSize(10); pdf.setFont(undefined, 'bold');
-                pdf.text('Forecasts (Linear Regression)', M, y); y += 6;
-                pdf.setFontSize(8); pdf.setFont(undefined, 'normal');
-                for (const fc of pdfForecasts.slice(0, 4)) {
-                    if (y + 12 > H - M) { pdf.addPage(); y = M; }
-                    const reg = fc.regression || {};
-                    const rSq = (reg.rSquared || 0);
-                    const fitLabel = rSq >= 0.7 ? 'Strong' : rSq >= 0.4 ? 'Moderate' : 'Weak';
-                    pdf.setTextColor(99, 102, 241);
-                    pdf.text(fc.column || fc.metric || 'Metric', M, y);
-                    pdf.setTextColor(100, 116, 139);
-                    pdf.text(`  R\u00b2: ${rSq.toFixed(2)} (${fitLabel})  |  Next: ${(fc.values || []).slice(0, 3).map(v => formatKpiValue(v)).join(', ')}`, M + 40, y);
-                    y += 5;
+                // Insights
+                if (pdfInsights.length > 0) {
+                    y = sectionHeader(pdf, y, '', 'Key Insights', `${pdfInsights.length} AI-discovered pattern${pdfInsights.length !== 1 ? 's' : ''}`);
+                    for (const ins of pdfInsights.slice(0, 6)) {
+                        if (y + 12 > H - 20) { pdf.addPage(); y = M; }
+                        const typeColors = { positive: C.green, warning: C.amber, negative: C.red, info: C.primary };
+                        const tc = typeColors[ins.type] || C.primary;
+                        // Insight card
+                        pdf.setFillColor(tc[0], tc[1], tc[2], 0.06);
+                        pdf.setFillColor(Math.min(255, tc[0] + 200), Math.min(255, tc[1] + 190), Math.min(255, tc[2] + 190));
+                        pdf.roundedRect(M, y, W - M * 2, 10, 2, 2, 'F');
+                        pdf.setFillColor(...tc);
+                        pdf.roundedRect(M, y, 2.5, 10, 1, 1, 'F');
+                        // Type badge
+                        const icon = ins.type === 'positive' ? '+' : ins.type === 'warning' ? '!' : ins.type === 'negative' ? '-' : 'i';
+                        pdf.setFontSize(7); pdf.setFont(undefined, 'bold');
+                        pdf.setTextColor(...tc);
+                        pdf.text(`[${icon}]`, M + 5, y + 6.5);
+                        // Text
+                        pdf.setFont(undefined, 'normal');
+                        pdf.setTextColor(...C.text);
+                        pdf.setFontSize(8);
+                        const insLines = pdf.splitTextToSize((ins.text || '').substring(0, 150), W - M * 2 - 20);
+                        pdf.text(insLines[0] || '', M + 12, y + 6.5);
+                        y += 13;
+                    }
+                    y += 4;
                 }
-                // Render forecast chart images
-                for (let fi = 0; fi < Math.min(pdfForecasts.length, 3); fi++) {
-                    const fCanvas = document.getElementById(`ad-forecast-chart-${fi}`);
-                    if (fCanvas) {
-                        if (y + 50 > H - M) { pdf.addPage(); y = M; }
-                        try { pdf.addImage(fCanvas.toDataURL('image/png', 0.9), 'PNG', M, y, W - M * 2, 40); y += 44; } catch (e) {}
+
+                // Forecasts
+                if (pdfForecasts.length > 0) {
+                    y = sectionHeader(pdf, y, '', 'Predictive Forecasts', 'Linear regression models with confidence scoring');
+                    for (const fc of pdfForecasts.slice(0, 4)) {
+                        if (y + 22 > H - 20) { pdf.addPage(); y = M; }
+                        const reg = fc.regression || {};
+                        const rSq = reg.rSquared || 0;
+                        const isUp = (reg.slope || 0) >= 0;
+                        const r2Color = rSq >= 0.7 ? C.green : rSq >= 0.4 ? C.amber : C.primary;
+                        const fitLabel = rSq >= 0.7 ? 'Strong' : rSq >= 0.4 ? 'Moderate' : 'Weak';
+                        // Card
+                        pdf.setFillColor(248, 250, 252);
+                        pdf.roundedRect(M, y, W - M * 2, 18, 3, 3, 'F');
+                        // Metric name
+                        pdf.setFontSize(9); pdf.setFont(undefined, 'bold');
+                        pdf.setTextColor(...C.dark);
+                        pdf.text(fc.column || fc.metric || 'Metric', M + 5, y + 6);
+                        // Direction badge
+                        pdf.setFontSize(7); pdf.setFont(undefined, 'bold');
+                        pdf.setTextColor(...(isUp ? C.green : C.red));
+                        pdf.text(isUp ? 'RISING' : 'FALLING', M + 5, y + 12);
+                        // R² bar visualization
+                        const barX = M + 55; const barW = 50;
+                        pdf.setFillColor(226, 232, 240);
+                        pdf.roundedRect(barX, y + 4, barW, 3, 1, 1, 'F');
+                        pdf.setFillColor(...r2Color);
+                        pdf.roundedRect(barX, y + 4, barW * rSq, 3, 1, 1, 'F');
+                        pdf.setFontSize(7); pdf.setFont(undefined, 'bold');
+                        pdf.setTextColor(...r2Color);
+                        pdf.text(`R\u00b2: ${(rSq * 100).toFixed(0)}% (${fitLabel})`, barX, y + 12);
+                        // Forecast values
+                        const vals = (fc.values || []).slice(0, 4);
+                        const vStartX = W - M - 5;
+                        pdf.setFontSize(7); pdf.setFont(undefined, 'normal');
+                        pdf.setTextColor(...C.text);
+                        const valStr = vals.map((v, vi) => `+${vi + 1}: ${formatKpiValue(v)}`).join('   ');
+                        pdf.text(valStr, vStartX, y + 6, { align: 'right' });
+                        pdf.setFontSize(6); pdf.setTextColor(...C.muted);
+                        pdf.text('Predicted Values', vStartX, y + 11, { align: 'right' });
+                        y += 22;
+                    }
+                    // Forecast chart images
+                    for (let fi = 0; fi < Math.min(pdfForecasts.length, 3); fi++) {
+                        const fCanvas = document.getElementById(`ad-forecast-chart-${fi}`);
+                        if (fCanvas) {
+                            if (y + 55 > H - 20) { pdf.addPage(); y = M; }
+                            pdf.setDrawColor(226, 232, 240);
+                            pdf.setLineWidth(0.3);
+                            pdf.roundedRect(M, y, W - M * 2, 48, 3, 3, 'S');
+                            try { pdf.addImage(fCanvas.toDataURL('image/png', 0.92), 'PNG', M + 2, y + 2, W - M * 2 - 4, 44); } catch (e) {}
+                            y += 52;
+                        }
+                    }
+                    y += 4;
+                }
+
+                // Correlations
+                if (pdfCorrelations.length > 0) {
+                    y = sectionHeader(pdf, y, '', 'Data Correlations', 'Pearson correlation analysis');
+                    for (const ci of pdfCorrelations.slice(0, 4)) {
+                        if (y + 14 > H - 20) { pdf.addPage(); y = M; }
+                        const corrVal = ci.correlation || 0;
+                        const absCorr = Math.abs(corrVal);
+                        const cColor = absCorr >= 0.7 ? (corrVal > 0 ? C.green : C.red) : absCorr >= 0.5 ? C.amber : C.muted;
+                        const strength = ci.strength || (absCorr >= 0.7 ? 'Strong' : 'Moderate');
+                        // Card
+                        pdf.setFillColor(248, 250, 252);
+                        pdf.roundedRect(M, y, W - M * 2, 11, 2, 2, 'F');
+                        // Correlation value circle
+                        pdf.setFillColor(...cColor);
+                        pdf.circle(M + 8, y + 5.5, 4, 'F');
+                        pdf.setFontSize(7); pdf.setFont(undefined, 'bold');
+                        pdf.setTextColor(255, 255, 255);
+                        pdf.text(corrVal.toFixed(2), M + 8, y + 6.5, { align: 'center' });
+                        // Column pair
+                        pdf.setFontSize(8.5); pdf.setFont(undefined, 'bold');
+                        pdf.setTextColor(...C.dark);
+                        pdf.text(`${ci.col1 || '?'}  \u2194  ${ci.col2 || '?'}`, M + 16, y + 5);
+                        pdf.setFontSize(7); pdf.setFont(undefined, 'normal');
+                        pdf.setTextColor(...cColor);
+                        pdf.text(`${strength} ${ci.direction || ''} correlation`, M + 16, y + 9.5);
+                        y += 14;
+                    }
+                    y += 4;
+                }
+
+                // Anomalies
+                if (pdfAnomalies.length > 0) {
+                    y = sectionHeader(pdf, y, '', 'Anomaly Detection', `${pdfAnomalies.length} statistical outlier${pdfAnomalies.length !== 1 ? 's' : ''} (Z-Score analysis)`);
+                    for (const a of pdfAnomalies.slice(0, 6)) {
+                        if (y + 12 > H - 20) { pdf.addPage(); y = M; }
+                        const isHigh = a.type === 'high';
+                        const aColor = isHigh ? C.red : [59, 130, 246];
+                        pdf.setFillColor(isHigh ? 254 : 239, isHigh ? 242 : 246, isHigh ? 242 : 255);
+                        pdf.roundedRect(M, y, W - M * 2, 10, 2, 2, 'F');
+                        // Type badge
+                        pdf.setFillColor(...aColor);
+                        pdf.roundedRect(M + 3, y + 2.5, 14, 5, 2, 2, 'F');
+                        pdf.setFontSize(5.5); pdf.setFont(undefined, 'bold');
+                        pdf.setTextColor(255, 255, 255);
+                        pdf.text(isHigh ? 'HIGH' : 'LOW', M + 10, y + 6, { align: 'center' });
+                        // Details
+                        pdf.setFontSize(8); pdf.setFont(undefined, 'bold');
+                        pdf.setTextColor(...C.dark);
+                        pdf.text(`${a.column || ''}`, M + 20, y + 5);
+                        pdf.setFont(undefined, 'normal');
+                        pdf.setTextColor(...C.text);
+                        pdf.text(`${a.label || ''}: ${formatKpiValue(a.value)}`, M + 20, y + 9);
+                        // Z-score
+                        pdf.setFontSize(8); pdf.setFont(undefined, 'bold');
+                        pdf.setTextColor(...aColor);
+                        pdf.text(`${(a.zScore || 0).toFixed(1)}\u03C3`, W - M - 5, y + 6, { align: 'right' });
+                        y += 13;
                     }
                 }
-                y += 4;
-            }
-
-            // Correlation insights
-            if (pdfCorrelations.length > 0) {
-                if (y + 15 > H - M) { pdf.addPage(); y = M; }
-                pdf.setTextColor(30, 41, 59);
-                pdf.setFontSize(10); pdf.setFont(undefined, 'bold');
-                pdf.text('Correlations', M, y); y += 6;
-                pdf.setFontSize(8); pdf.setFont(undefined, 'normal');
-                for (const ci of pdfCorrelations.slice(0, 4)) {
-                    pdf.setTextColor(51, 65, 85);
-                    const strength = ci.strength || (Math.abs(ci.correlation) >= 0.7 ? 'Strong' : 'Moderate');
-                    pdf.text(`${ci.col1 || '?'} <-> ${ci.col2 || '?'}: ${strength} ${ci.direction || ''} (r=${(ci.correlation || 0).toFixed(2)})`, M, y);
-                    y += 5;
-                }
-                y += 4;
-            }
-
-            // Anomalies
-            if (pdfAnomalies.length > 0) {
-                if (y + 15 > H - M) { pdf.addPage(); y = M; }
-                pdf.setTextColor(30, 41, 59);
-                pdf.setFontSize(10); pdf.setFont(undefined, 'bold');
-                pdf.text('Anomalies Detected', M, y); y += 6;
-                pdf.setFontSize(8); pdf.setFont(undefined, 'normal');
-                for (const a of pdfAnomalies.slice(0, 6)) {
-                    if (y + 6 > H - M) { pdf.addPage(); y = M; }
-                    pdf.setTextColor(a.type === 'high' ? 239 : 59, a.type === 'high' ? 68 : 130, a.type === 'high' ? 68 : 246);
-                    pdf.text(`[${(a.type || '').toUpperCase()}] ${a.column || ''} at "${a.label || ''}": ${formatKpiValue(a.value)} (${(a.zScore || 0).toFixed(1)}\u03C3)`, M, y);
-                    y += 5;
-                }
-            }
             } // end hasPdfData
         }
 
-        // === DATA TABLE ===
+        // ============================
+        //  DATA TABLE
+        // ============================
         const firstChart = charts[0];
         if (firstChart) {
-            if (y + 30 > H - M) { pdf.addPage(); y = M; }
-            pdf.setTextColor(30, 41, 59);
-            pdf.setFontSize(10); pdf.setFont(undefined, 'bold');
-            pdf.text(`Data Table: ${firstChart.sheetName || 'Sheet'} (${firstChart.rowCount || firstChart.labels?.length || 0} rows)`, M, y); y += 6;
+            if (y + 40 > H - 20) { pdf.addPage(); y = M; }
+            y = sectionHeader(pdf, y, '', 'Data Table', `${firstChart.sheetName || 'Sheet'} - ${firstChart.rowCount || firstChart.labels?.length || 0} rows`);
             pdf.setFontSize(7); pdf.setFont(undefined, 'normal');
             const cols = [firstChart.labelColumn || 'Label', ...(firstChart.dataColumns || []).slice(0, 5)];
             const colW = (W - M * 2) / cols.length;
-            // Header
-            pdf.setFillColor(241, 245, 249);
-            pdf.rect(M, y, W - M * 2, 6, 'F');
-            pdf.setTextColor(51, 65, 85); pdf.setFont(undefined, 'bold');
-            cols.forEach((c, ci) => pdf.text(c.substring(0, 15), M + ci * colW + 2, y + 4));
+            // Table header
+            pdf.setFillColor(15, 23, 42);
+            pdf.roundedRect(M, y, W - M * 2, 7, 2, 2, 'F');
+            // Cover bottom corners
+            pdf.rect(M, y + 4, W - M * 2, 3, 'F');
+            pdf.setTextColor(255, 255, 255); pdf.setFont(undefined, 'bold');
+            pdf.setFontSize(6.5);
+            cols.forEach((c, ci) => pdf.text(c.substring(0, 16).toUpperCase(), M + ci * colW + 3, y + 4.5));
             y += 7; pdf.setFont(undefined, 'normal');
-            const maxRows = Math.min((firstChart.labels || []).length, 25);
+            const maxRows = Math.min((firstChart.labels || []).length, 30);
             for (let ri = 0; ri < maxRows; ri++) {
-                if (y + 5 > H - M) { pdf.addPage(); y = M; }
-                if (ri % 2 === 0) { pdf.setFillColor(248, 250, 252); pdf.rect(M, y - 1, W - M * 2, 5, 'F'); }
-                pdf.setTextColor(51, 65, 85);
-                pdf.text(String((firstChart.labels || [])[ri] || '').substring(0, 18), M + 2, y + 3);
+                if (y + 5 > H - 20) { pdf.addPage(); y = M; }
+                if (ri % 2 === 0) {
+                    pdf.setFillColor(248, 250, 252);
+                    pdf.rect(M, y - 0.5, W - M * 2, 5, 'F');
+                }
+                pdf.setTextColor(...C.text); pdf.setFontSize(7);
+                pdf.text(String((firstChart.labels || [])[ri] || '').substring(0, 20), M + 3, y + 3);
                 (firstChart.datasets || []).slice(0, 5).forEach((ds, di) => {
-                    pdf.text(String(formatKpiValue(ds.data[ri])), M + (di + 1) * colW + 2, y + 3);
+                    pdf.setFont(undefined, 'bold');
+                    pdf.text(String(formatKpiValue(ds.data[ri])), M + (di + 1) * colW + 3, y + 3);
+                    pdf.setFont(undefined, 'normal');
                 });
+                y += 5;
+            }
+            if ((firstChart.labels || []).length > maxRows) {
+                pdf.setFontSize(6); pdf.setTextColor(...C.muted);
+                pdf.text(`... ${(firstChart.labels || []).length - maxRows} more rows not shown`, M + 3, y + 3);
                 y += 5;
             }
         }
 
-        // === FOOTER ===
+        // ============================
+        //  ADD FOOTERS TO ALL PAGES
+        // ============================
         const pageCount = pdf.internal.getNumberOfPages();
-        for (let i = 1; i <= pageCount; i++) {
+        for (let i = 2; i <= pageCount; i++) {
             pdf.setPage(i);
-            pdf.setFontSize(7); pdf.setTextColor(150, 150, 150);
-            pdf.text(`SteelConnect Analytics Report  |  ${db.title}  |  Page ${i} of ${pageCount}`, W / 2, H - 8, { align: 'center' });
+            addPageFooter(pdf, i - 1, pageCount - 1, db.title || 'Report');
         }
 
         pdf.save(`${(db.title || 'Dashboard').replace(/[^a-zA-Z0-9]/g, '_')}_Report_${new Date().toISOString().split('T')[0]}.pdf`);
-        if (typeof showNotification === 'function') showNotification('PDF report downloaded successfully!', 'success');
+        if (typeof showNotification === 'function') showNotification('Premium PDF report downloaded!', 'success');
     } catch (error) {
         console.error('PDF export error:', error);
         if (typeof showNotification === 'function') showNotification('Failed to generate PDF. Please try again.', 'error');
