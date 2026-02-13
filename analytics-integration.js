@@ -759,9 +759,118 @@ function getDashboardViewHTML() {
 
     const totalCharts = (db.charts || []).length;
     const totalRecords = (db.charts || []).reduce((sum, c) => sum + (c.rowCount || 0), 0);
+    const pa = db.predictiveAnalysis;
+
+    // === PREDICTIVE ANALYSIS SECTION ===
+    let predictiveHTML = '';
+    if (pa) {
+        // AI Insights
+        const insightsHTML = (pa.insights || []).length > 0 ? `
+        <div class="ad-pa-section">
+            <div class="ad-pa-section-head"><i class="fas fa-brain"></i><h3>AI-Powered Insights</h3></div>
+            <div class="ad-insights-grid">
+                ${pa.insights.map(ins => `
+                    <div class="ad-insight-card ad-insight-${ins.type}">
+                        <div class="ad-insight-icon"><i class="fas ${ins.type === 'positive' ? 'fa-arrow-trend-up' : ins.type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle'}"></i></div>
+                        <p>${ins.text}</p>
+                    </div>
+                `).join('')}
+            </div>
+        </div>` : '';
+
+        // Forecasts
+        const forecastsHTML = (pa.forecasts || []).length > 0 ? `
+        <div class="ad-pa-section">
+            <div class="ad-pa-section-head"><i class="fas fa-crystal-ball"></i><h3>Predictive Forecasts</h3><span class="ad-pa-badge">Linear Regression</span></div>
+            <div class="ad-forecast-grid">
+                ${pa.forecasts.map((fc, fi) => `
+                    <div class="ad-forecast-card">
+                        <div class="ad-forecast-head">
+                            <span class="ad-forecast-col">${fc.column}</span>
+                            <span class="ad-forecast-r2" title="R-squared: ${fc.regression.rSquared}">R&sup2; = ${fc.regression.rSquared}</span>
+                        </div>
+                        <div class="ad-forecast-body">
+                            <div class="ad-forecast-direction ${fc.regression.slope >= 0 ? 'up' : 'down'}">
+                                <i class="fas fa-arrow-${fc.regression.slope >= 0 ? 'up' : 'down'}"></i>
+                                <span>${fc.regression.slope >= 0 ? 'Upward' : 'Downward'} Trend</span>
+                                <small>slope: ${fc.regression.slope}/period</small>
+                            </div>
+                            <div class="ad-forecast-values">
+                                ${fc.values.map((v, vi) => `<div class="ad-forecast-val"><span class="ad-fv-label">Period +${vi + 1}</span><span class="ad-fv-num">${formatKpiValue(v)}</span></div>`).join('')}
+                            </div>
+                        </div>
+                        <canvas id="ad-forecast-chart-${fi}" style="height:120px;margin-top:12px"></canvas>
+                    </div>
+                `).join('')}
+            </div>
+        </div>` : '';
+
+        // Correlation Matrix
+        const corrHTML = pa.correlations && pa.correlations.columns.length >= 2 ? `
+        <div class="ad-pa-section">
+            <div class="ad-pa-section-head"><i class="fas fa-project-diagram"></i><h3>Correlation Matrix</h3><span class="ad-pa-badge">Pearson r</span></div>
+            <div class="ad-corr-wrap">
+                <table class="ad-corr-table">
+                    <thead><tr><th></th>${pa.correlations.columns.map(c => `<th title="${c}">${c.length > 12 ? c.substring(0, 10) + '..' : c}</th>`).join('')}</tr></thead>
+                    <tbody>
+                        ${pa.correlations.matrix.map((row, ri) => `
+                            <tr><td class="ad-corr-label">${pa.correlations.columns[ri].length > 12 ? pa.correlations.columns[ri].substring(0, 10) + '..' : pa.correlations.columns[ri]}</td>
+                            ${row.map((val, ci) => {
+                                const abs = Math.abs(val);
+                                const bg = ri === ci ? 'rgba(99,102,241,.15)' : val > 0 ? \`rgba(16,185,129,\${abs * 0.4})\` : \`rgba(239,68,68,\${abs * 0.4})\`;
+                                return \`<td style="background:\${bg};font-weight:\${abs > 0.7 ? 700 : 400};color:\${abs > 0.5 ? '#1e293b' : '#64748b'}" title="\${pa.correlations.columns[ri]} vs \${pa.correlations.columns[ci]}">\${val.toFixed(2)}</td>\`;
+                            }).join('')}</tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+            ${pa.correlations.insights.length > 0 ? `
+                <div class="ad-corr-insights">
+                    ${pa.correlations.insights.slice(0, 4).map(ins => `
+                        <div class="ad-corr-insight"><i class="fas fa-link" style="color:${ins.direction === 'positive' ? '#10b981' : '#ef4444'}"></i>
+                        <strong>${ins.col1}</strong> &harr; <strong>${ins.col2}</strong>: ${ins.strength} ${ins.direction} (r=${ins.correlation})</div>
+                    `).join('')}
+                </div>` : ''}
+        </div>` : '';
+
+        // Anomalies
+        const anomalyHTML = (pa.anomalies || []).length > 0 ? `
+        <div class="ad-pa-section">
+            <div class="ad-pa-section-head"><i class="fas fa-exclamation-triangle"></i><h3>Anomaly Detection</h3><span class="ad-pa-badge">Z-Score Method</span></div>
+            <div class="ad-anomaly-grid">
+                ${pa.anomalies.map(ag => ag.anomalies.map(a => `
+                    <div class="ad-anomaly-card ad-anomaly-${a.type}">
+                        <div class="ad-anomaly-type"><i class="fas fa-${a.type === 'high' ? 'arrow-up' : 'arrow-down'}"></i> ${a.type.toUpperCase()}</div>
+                        <div class="ad-anomaly-detail">
+                            <span class="ad-anomaly-col">${ag.column}</span>
+                            <span class="ad-anomaly-label">${a.label}</span>
+                            <span class="ad-anomaly-val">${formatKpiValue(a.value)}</span>
+                            <span class="ad-anomaly-z">Z=${a.zScore}</span>
+                        </div>
+                    </div>
+                `).join('')).join('')}
+            </div>
+        </div>` : '';
+
+        // Seasonality
+        const seasonHTML = pa.seasonality ? `
+        <div class="ad-pa-section ad-pa-seasonality">
+            <div class="ad-pa-section-head"><i class="fas fa-calendar-alt"></i><h3>Seasonality Detected</h3></div>
+            <div class="ad-season-badge"><i class="fas fa-wave-square"></i> ${pa.seasonality.label} cycle (period: ${pa.seasonality.period}, strength: ${(pa.seasonality.strength * 100).toFixed(0)}%)</div>
+        </div>` : '';
+
+        predictiveHTML = `
+        <div class="ad-predictive-analysis" id="ad-predictive-section">
+            <div class="ad-pa-title-bar">
+                <div class="ad-pa-title"><i class="fas fa-brain"></i><h2>Predictive Analysis & Intelligence</h2></div>
+                <span class="ad-pa-powered">Powered by SteelConnect AI Engine</span>
+            </div>
+            ${insightsHTML}${forecastsHTML}${corrHTML}${anomalyHTML}${seasonHTML}
+        </div>`;
+    }
 
     return `
-    <div class="ad-portal">
+    <div class="ad-portal" id="ad-portal-root">
         <div class="ad-hero-header">
             <div class="ad-hero-bg"><div class="ad-hero-gradient"></div><div class="ad-hero-pattern"></div>
                 <div class="ad-hero-orb ad-hero-orb-1"></div><div class="ad-hero-orb ad-hero-orb-2"></div></div>
@@ -770,17 +879,18 @@ function getDashboardViewHTML() {
                     <div class="ad-hero-icon-box"><i class="fas fa-chart-bar"></i></div>
                     <div class="ad-hero-text">
                         <h1>${db.title || 'Analytics Dashboard'}</h1>
-                        <p>Real-time business intelligence &middot; ${totalCharts} charts &middot; ${formatKpiValue(totalRecords)} records</p>
+                        <p>Real-time business intelligence &middot; ${totalCharts} charts &middot; ${formatKpiValue(totalRecords)} records${pa ? ' &middot; AI Insights' : ''}</p>
                     </div>
                 </div>
                 <div class="ad-hero-right">
-                    <button class="ad-hero-btn" onclick="renderAnalyticsPortal()"><i class="fas fa-arrow-left"></i> Back to Portal</button>
+                    <button class="ad-hero-btn" onclick="renderAnalyticsPortal()"><i class="fas fa-arrow-left"></i> Back</button>
+                    <button class="ad-hero-btn" onclick="exportDashboardPDF()" id="ad-pdf-btn"><i class="fas fa-file-pdf"></i> Download PDF</button>
                     <button class="ad-hero-btn" onclick="showApprovedDashboards(0)"><i class="fas fa-sync-alt"></i> Refresh</button>
                 </div>
             </div>
         </div>
         ${selectorHTML}
-        <div class="ad-content">
+        <div class="ad-content" id="ad-content-root">
             <div class="ad-dashboard-bar">
                 <div class="ad-dashboard-info">
                     <div class="ad-dashboard-icon"><i class="fas fa-chart-bar"></i></div>
@@ -794,12 +904,14 @@ function getDashboardViewHTML() {
                     <div class="ad-meta-pill date"><i class="fas fa-calendar-check"></i> ${new Date(db.approvedAt || db.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
                     <div class="ad-meta-pill charts"><i class="fas fa-chart-pie"></i> ${totalCharts} Charts</div>
                     <div class="ad-meta-pill" style="color:#10b981"><i class="fas fa-magic"></i> Auto-Generated</div>
+                    ${pa ? '<div class="ad-meta-pill" style="color:#8b5cf6"><i class="fas fa-brain"></i> AI Insights</div>' : ''}
                 </div>
             </div>
             ${topKpis.length > 0 ? `<div class="ad-kpi-grid">${kpisHTML}</div>` : ''}
             <div class="ad-charts-grid">${chartsHTML}</div>
+            ${predictiveHTML}
             ${tableHTML}
-            <div class="ad-footer-note"><i class="fas fa-shield-alt"></i> Data uploaded by you, reviewed and approved by your admin team.</div>
+            <div class="ad-footer-note"><i class="fas fa-shield-alt"></i> Data uploaded by you, reviewed and approved by your admin team. Analysis generated ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}.</div>
         </div>
     </div>`;
 }
@@ -870,14 +982,269 @@ function exportChartImage(idx) {
     if (typeof showNotification === 'function') showNotification('Chart exported as image', 'success');
 }
 
+// ===== PDF EXPORT =====
+window.exportDashboardPDF = async function() {
+    const db = analyticsState.activeDashboard;
+    if (!db) return;
+    const btn = document.getElementById('ad-pdf-btn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating PDF...'; }
+
+    try {
+        // Dynamically load jsPDF if not loaded
+        if (typeof window.jspdf === 'undefined') {
+            await new Promise((resolve, reject) => {
+                const s = document.createElement('script');
+                s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js';
+                s.onload = resolve; s.onerror = reject;
+                document.head.appendChild(s);
+            });
+        }
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        const W = 210, H = 297, M = 15;
+        let y = M;
+
+        // === HEADER ===
+        pdf.setFillColor(30, 41, 59);
+        pdf.rect(0, 0, W, 40, 'F');
+        pdf.setFillColor(99, 102, 241);
+        pdf.rect(0, 38, W, 2, 'F');
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFontSize(22); pdf.setFont(undefined, 'bold');
+        pdf.text(db.title || 'Analytics Dashboard', M, 18);
+        pdf.setFontSize(10); pdf.setFont(undefined, 'normal');
+        pdf.text(`Generated: ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}  |  Frequency: ${db.frequency || 'daily'}  |  ${(db.charts || []).length} charts`, M, 28);
+        if (db.description) { pdf.setFontSize(9); pdf.text(db.description.substring(0, 100), M, 34); }
+        y = 48;
+
+        // === KPI SUMMARY ===
+        const allKpis = [];
+        (db.charts || []).forEach(c => { if (c.kpis) allKpis.push(...c.kpis); });
+        if (allKpis.length > 0) {
+            pdf.setTextColor(30, 41, 59);
+            pdf.setFontSize(14); pdf.setFont(undefined, 'bold');
+            pdf.text('Key Performance Indicators', M, y); y += 8;
+            const kpiCols = Math.min(allKpis.length, 4);
+            const kpiW = (W - M * 2) / kpiCols;
+            allKpis.slice(0, 8).forEach((kpi, i) => {
+                const col = i % kpiCols;
+                const row = Math.floor(i / kpiCols);
+                const kx = M + col * kpiW;
+                const ky = y + row * 28;
+                pdf.setFillColor(248, 250, 252);
+                pdf.roundedRect(kx, ky, kpiW - 4, 24, 3, 3, 'F');
+                pdf.setFontSize(14); pdf.setFont(undefined, 'bold');
+                pdf.setTextColor(30, 41, 59);
+                pdf.text(formatKpiValue(kpi.total), kx + 4, ky + 10);
+                pdf.setFontSize(8); pdf.setFont(undefined, 'normal');
+                pdf.setTextColor(100, 116, 139);
+                pdf.text(kpi.label.substring(0, 20), kx + 4, ky + 16);
+                const trendColor = kpi.trend >= 0 ? [16, 185, 129] : [239, 68, 68];
+                pdf.setTextColor(...trendColor);
+                pdf.text(`${kpi.trend >= 0 ? '+' : ''}${kpi.trend}%`, kx + 4, ky + 21);
+            });
+            y += Math.ceil(Math.min(allKpis.length, 8) / kpiCols) * 28 + 8;
+        }
+
+        // === CHARTS ===
+        const charts = db.charts || [];
+        for (let idx = 0; idx < charts.length; idx++) {
+            const canvas = document.getElementById(`ad-chart-${idx}`);
+            if (!canvas) continue;
+            if (y + 90 > H - M) { pdf.addPage(); y = M; }
+            pdf.setTextColor(30, 41, 59);
+            pdf.setFontSize(11); pdf.setFont(undefined, 'bold');
+            pdf.text(charts[idx].customTitle || charts[idx].sheetName || `Chart ${idx + 1}`, M, y);
+            pdf.setFontSize(8); pdf.setFont(undefined, 'normal');
+            pdf.setTextColor(100, 116, 139);
+            pdf.text(`${charts[idx].chartType} | ${charts[idx].rowCount} records | ${charts[idx].dataColumns.length} metrics`, M + 100, y);
+            y += 4;
+            try {
+                const imgData = canvas.toDataURL('image/png', 0.92);
+                const imgW = W - M * 2;
+                const imgH = 70;
+                pdf.addImage(imgData, 'PNG', M, y, imgW, imgH);
+                y += imgH + 8;
+            } catch (e) { y += 10; }
+        }
+
+        // === PREDICTIVE ANALYSIS ===
+        const pa = db.predictiveAnalysis;
+        if (pa) {
+            if (y + 30 > H - M) { pdf.addPage(); y = M; }
+            pdf.setFillColor(99, 102, 241);
+            pdf.rect(M, y, W - M * 2, 8, 'F');
+            pdf.setTextColor(255, 255, 255);
+            pdf.setFontSize(12); pdf.setFont(undefined, 'bold');
+            pdf.text('Predictive Analysis & Intelligence', M + 4, y + 6);
+            y += 14;
+
+            // Insights
+            if (pa.insights && pa.insights.length > 0) {
+                pdf.setTextColor(30, 41, 59);
+                pdf.setFontSize(10); pdf.setFont(undefined, 'bold');
+                pdf.text('AI Insights', M, y); y += 6;
+                pdf.setFontSize(8); pdf.setFont(undefined, 'normal');
+                for (const ins of pa.insights.slice(0, 6)) {
+                    if (y + 8 > H - M) { pdf.addPage(); y = M; }
+                    const icon = ins.type === 'positive' ? '+' : ins.type === 'warning' ? '!' : 'i';
+                    const color = ins.type === 'positive' ? [16, 185, 129] : ins.type === 'warning' ? [245, 158, 11] : [99, 102, 241];
+                    pdf.setTextColor(...color);
+                    pdf.text(`[${icon}]`, M, y);
+                    pdf.setTextColor(51, 65, 85);
+                    pdf.text(ins.text.substring(0, 120), M + 8, y);
+                    y += 6;
+                }
+                y += 4;
+            }
+
+            // Forecasts
+            if (pa.forecasts && pa.forecasts.length > 0) {
+                if (y + 20 > H - M) { pdf.addPage(); y = M; }
+                pdf.setTextColor(30, 41, 59);
+                pdf.setFontSize(10); pdf.setFont(undefined, 'bold');
+                pdf.text('Forecasts (Linear Regression)', M, y); y += 6;
+                pdf.setFontSize(8); pdf.setFont(undefined, 'normal');
+                for (const fc of pa.forecasts.slice(0, 4)) {
+                    if (y + 12 > H - M) { pdf.addPage(); y = M; }
+                    pdf.setTextColor(99, 102, 241);
+                    pdf.text(fc.column, M, y);
+                    pdf.setTextColor(100, 116, 139);
+                    pdf.text(`  Slope: ${fc.regression.slope}  |  R²: ${fc.regression.rSquared}  |  Next: ${fc.values.slice(0, 3).map(v => formatKpiValue(v)).join(', ')}`, M + 40, y);
+                    y += 5;
+                }
+                // Render forecast chart images
+                for (let fi = 0; fi < Math.min(pa.forecasts.length, 3); fi++) {
+                    const fCanvas = document.getElementById(`ad-forecast-chart-${fi}`);
+                    if (fCanvas) {
+                        if (y + 50 > H - M) { pdf.addPage(); y = M; }
+                        try { pdf.addImage(fCanvas.toDataURL('image/png', 0.9), 'PNG', M, y, W - M * 2, 40); y += 44; } catch (e) {}
+                    }
+                }
+                y += 4;
+            }
+
+            // Correlation insights
+            if (pa.correlations && pa.correlations.insights.length > 0) {
+                if (y + 15 > H - M) { pdf.addPage(); y = M; }
+                pdf.setTextColor(30, 41, 59);
+                pdf.setFontSize(10); pdf.setFont(undefined, 'bold');
+                pdf.text('Correlations', M, y); y += 6;
+                pdf.setFontSize(8); pdf.setFont(undefined, 'normal');
+                for (const ci of pa.correlations.insights.slice(0, 5)) {
+                    pdf.setTextColor(51, 65, 85);
+                    pdf.text(`${ci.col1} <-> ${ci.col2}: ${ci.strength} ${ci.direction} (r=${ci.correlation})`, M, y);
+                    y += 5;
+                }
+                y += 4;
+            }
+
+            // Anomalies
+            if (pa.anomalies && pa.anomalies.length > 0) {
+                if (y + 15 > H - M) { pdf.addPage(); y = M; }
+                pdf.setTextColor(30, 41, 59);
+                pdf.setFontSize(10); pdf.setFont(undefined, 'bold');
+                pdf.text('Anomalies Detected', M, y); y += 6;
+                pdf.setFontSize(8); pdf.setFont(undefined, 'normal');
+                for (const ag of pa.anomalies.slice(0, 3)) {
+                    for (const a of ag.anomalies.slice(0, 3)) {
+                        if (y + 6 > H - M) { pdf.addPage(); y = M; }
+                        pdf.setTextColor(a.type === 'high' ? 239 : 59, a.type === 'high' ? 68 : 130, a.type === 'high' ? 68 : 246);
+                        pdf.text(`[${a.type.toUpperCase()}] ${ag.column} at "${a.label}": ${formatKpiValue(a.value)} (Z=${a.zScore})`, M, y);
+                        y += 5;
+                    }
+                }
+            }
+        }
+
+        // === DATA TABLE ===
+        const firstChart = charts[0];
+        if (firstChart) {
+            if (y + 30 > H - M) { pdf.addPage(); y = M; }
+            pdf.setTextColor(30, 41, 59);
+            pdf.setFontSize(10); pdf.setFont(undefined, 'bold');
+            pdf.text(`Data Table: ${firstChart.sheetName} (${firstChart.rowCount} rows)`, M, y); y += 6;
+            pdf.setFontSize(7); pdf.setFont(undefined, 'normal');
+            const cols = [firstChart.labelColumn, ...firstChart.dataColumns.slice(0, 5)];
+            const colW = (W - M * 2) / cols.length;
+            // Header
+            pdf.setFillColor(241, 245, 249);
+            pdf.rect(M, y, W - M * 2, 6, 'F');
+            pdf.setTextColor(51, 65, 85); pdf.setFont(undefined, 'bold');
+            cols.forEach((c, ci) => pdf.text(c.substring(0, 15), M + ci * colW + 2, y + 4));
+            y += 7; pdf.setFont(undefined, 'normal');
+            const maxRows = Math.min(firstChart.labels.length, 25);
+            for (let ri = 0; ri < maxRows; ri++) {
+                if (y + 5 > H - M) { pdf.addPage(); y = M; }
+                if (ri % 2 === 0) { pdf.setFillColor(248, 250, 252); pdf.rect(M, y - 1, W - M * 2, 5, 'F'); }
+                pdf.setTextColor(51, 65, 85);
+                pdf.text(String(firstChart.labels[ri] || '').substring(0, 18), M + 2, y + 3);
+                firstChart.datasets.slice(0, 5).forEach((ds, di) => {
+                    pdf.text(String(formatKpiValue(ds.data[ri])), M + (di + 1) * colW + 2, y + 3);
+                });
+                y += 5;
+            }
+        }
+
+        // === FOOTER ===
+        const pageCount = pdf.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            pdf.setPage(i);
+            pdf.setFontSize(7); pdf.setTextColor(150, 150, 150);
+            pdf.text(`SteelConnect Analytics Report  |  ${db.title}  |  Page ${i} of ${pageCount}`, W / 2, H - 8, { align: 'center' });
+        }
+
+        pdf.save(`${(db.title || 'Dashboard').replace(/[^a-zA-Z0-9]/g, '_')}_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+        if (typeof showNotification === 'function') showNotification('PDF report downloaded successfully!', 'success');
+    } catch (error) {
+        console.error('PDF export error:', error);
+        if (typeof showNotification === 'function') showNotification('Failed to generate PDF. Please try again.', 'error');
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-file-pdf"></i> Download PDF'; }
+    }
+};
+
 // ===== CHART RENDERING =====
 function initializeDashboardCharts() {
     if (typeof Chart === 'undefined' || !analyticsState.activeDashboard) return;
-    (analyticsState.activeDashboard.charts || []).forEach((chart, idx) => {
+    const db = analyticsState.activeDashboard;
+    (db.charts || []).forEach((chart, idx) => {
         const ctx = document.getElementById(`ad-chart-${idx}`);
         if (!ctx) return;
         createChart(ctx, chart, idx);
     });
+    // Render forecast mini-charts
+    if (db.predictiveAnalysis && db.predictiveAnalysis.forecasts) {
+        db.predictiveAnalysis.forecasts.forEach((fc, fi) => {
+            const ctx = document.getElementById(`ad-forecast-chart-${fi}`);
+            if (!ctx || typeof Chart === 'undefined') return;
+            const maKey = Object.keys(db.predictiveAnalysis.movingAverages || {})[fi];
+            const maData = maKey ? db.predictiveAnalysis.movingAverages[maKey] : null;
+            const original = maData ? maData.original : [];
+            const forecastVals = fc.values || [];
+            const allLabels = [...original.map((_, i) => `${i + 1}`), ...forecastVals.map((_, i) => `F${i + 1}`)];
+            const actualData = [...original, ...forecastVals.map(() => null)];
+            const predictedData = [...original.map(() => null), ...forecastVals];
+            // Fill the gap: connect last actual to first forecast
+            if (original.length > 0 && forecastVals.length > 0) {
+                predictedData[original.length - 1] = original[original.length - 1];
+            }
+            const datasets = [
+                { label: 'Actual', data: actualData, borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,.08)', fill: true, tension: 0.4, pointRadius: 2, borderWidth: 2 },
+                { label: 'Forecast', data: predictedData, borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,.08)', fill: true, tension: 0.4, pointRadius: 3, borderWidth: 2, borderDash: [5, 5] }
+            ];
+            if (maData && maData.ma3) {
+                datasets.push({ label: 'MA(3)', data: [...maData.ma3, ...forecastVals.map(() => null)], borderColor: '#10b981', borderWidth: 1.5, pointRadius: 0, tension: 0.5, fill: false });
+            }
+            new Chart(ctx, {
+                type: 'line', data: { labels: allLabels, datasets },
+                options: { responsive: true, maintainAspectRatio: false, animation: { duration: 800 },
+                    plugins: { legend: { display: true, position: 'top', labels: { usePointStyle: true, font: { size: 10 }, padding: 8 } }, tooltip: { backgroundColor: 'rgba(15,23,42,.9)', cornerRadius: 8 } },
+                    scales: { x: { display: true, grid: { display: false }, ticks: { font: { size: 9 }, maxTicksLimit: 10 } }, y: { display: true, grid: { color: 'rgba(0,0,0,.03)' }, ticks: { font: { size: 9 }, callback: v => formatKpiValue(v) } } }
+                }
+            });
+        });
+    }
 }
 
 function createChart(ctx, chartConfig, idx) {
