@@ -362,7 +362,23 @@ window.handleFileSelect = function(input) {
     const content = document.getElementById('ad-file-drop-content');
     if (input.files && input.files[0]) {
         const f = input.files[0];
+        const maxSize = 50 * 1024 * 1024; // 50MB
         const size = f.size > 1024 * 1024 ? (f.size / (1024 * 1024)).toFixed(1) + ' MB' : (f.size / 1024).toFixed(0) + ' KB';
+
+        if (f.size > maxSize) {
+            content.innerHTML = `
+                <i class="fas fa-exclamation-triangle" style="color:#ef4444"></i>
+                <span style="font-weight:700;color:#ef4444">${f.name}</span>
+                <small style="color:#ef4444">${size} — exceeds 50MB limit</small>
+            `;
+            document.getElementById('ad-file-drop').classList.remove('has-file');
+            document.getElementById('ad-file-drop').classList.add('has-error');
+            input.value = '';
+            if (typeof showNotification === 'function') showNotification('File exceeds 50MB limit. Please use a smaller file.', 'error');
+            return;
+        }
+
+        document.getElementById('ad-file-drop').classList.remove('has-error');
         content.innerHTML = `
             <i class="fas fa-file-excel" style="color:#10b981"></i>
             <span style="font-weight:700;color:#1e293b">${f.name}</span>
@@ -404,6 +420,10 @@ async function handleSheetUpload(event) {
     }
     if (!hasFile && !hasLink) {
         if (typeof showNotification === 'function') showNotification('Please upload a file or provide a sheet link (Google Sheets, SharePoint, or OneDrive)', 'error');
+        return;
+    }
+    if (hasFile && fileInput.files[0].size > 50 * 1024 * 1024) {
+        if (typeof showNotification === 'function') showNotification('File exceeds 50MB limit. Please use a smaller file.', 'error');
         return;
     }
 
