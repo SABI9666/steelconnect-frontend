@@ -1143,18 +1143,45 @@ window.exportDashboardPDF = async function() {
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating Premium Report...'; }
 
     try {
-        // Dynamically load jsPDF if not loaded
+        // Load jsPDF with multiple CDN fallbacks
         if (typeof window.jspdf === 'undefined') {
-            await new Promise((resolve, reject) => {
-                const s = document.createElement('script');
-                s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js';
-                s.onload = resolve; s.onerror = reject;
-                document.head.appendChild(s);
-            });
+            const cdnUrls = [
+                'https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js',
+                'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js',
+                'https://unpkg.com/jspdf@2.5.2/dist/jspdf.umd.min.js'
+            ];
+            let loaded = false;
+            for (const url of cdnUrls) {
+                if (loaded) break;
+                try {
+                    await new Promise((resolve, reject) => {
+                        const s = document.createElement('script');
+                        s.src = url;
+                        s.onload = () => { loaded = true; resolve(); };
+                        s.onerror = () => reject(new Error('CDN failed: ' + url));
+                        document.head.appendChild(s);
+                    });
+                } catch (e) {
+                    console.warn('[PDF]', e.message);
+                }
+            }
+            if (!window.jspdf) {
+                throw new Error('Could not load PDF library. Please check your internet connection and try again.');
+            }
         }
         const { jsPDF } = window.jspdf;
         const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
         const W = 210, H = 297, M = 18;
+
+        // Polyfill roundedRect if missing (older jsPDF)
+        if (typeof pdf.roundedRect !== 'function') {
+            pdf.roundedRect = function(x, y, w, h, rx, ry, style) {
+                if (style === 'F') { this.setFillColor.apply(this, this.__lastFill || [200,200,200]); this.rect(x, y, w, h, 'F'); }
+                else if (style === 'S') { this.rect(x, y, w, h, 'S'); }
+                else { this.rect(x, y, w, h, style); }
+                return this;
+            };
+        }
 
         // Color palette
         const C = {
