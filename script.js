@@ -6448,7 +6448,8 @@ async function renderQuoteAnalysisSection() {
             </div>`;
         }).join('');
     } catch (error) {
-        document.getElementById('qa-projects-list').innerHTML = '<p class="widget-empty-text">Could not load projects.</p>';
+        const el = document.getElementById('qa-projects-list');
+        if (el) el.innerHTML = '<p class="widget-empty-text">Could not load projects.</p>';
     }
 }
 window.renderQuoteAnalysisSection = renderQuoteAnalysisSection;

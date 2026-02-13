@@ -597,6 +597,22 @@ async function showApprovedDashboards(index) {
     const idx = Math.min(index || 0, analyticsState.approvedDashboards.length - 1);
     analyticsState.activeDashboard = analyticsState.approvedDashboards[idx];
 
+    // For link-based dashboards with no/empty charts, fetch live data from the linked sheet
+    const db = analyticsState.activeDashboard;
+    if (db && db.googleSheetUrl && (!db.charts || db.charts.length === 0)) {
+        try {
+            console.log('[ANALYTICS] Fetching live data for linked dashboard:', db._id);
+            const liveData = await window.apiCall(`/analysis/dashboard/${db._id}/live-data`, 'GET');
+            if (liveData.charts && liveData.charts.length > 0) {
+                db.charts = liveData.charts;
+                db.predictiveAnalysis = liveData.predictiveAnalysis || db.predictiveAnalysis;
+                db.sheetNames = liveData.sheetNames || db.sheetNames;
+            }
+        } catch (liveErr) {
+            console.error('[ANALYTICS] Live data fetch failed:', liveErr.message);
+        }
+    }
+
     // Destroy old charts
     Object.values(analyticsState.charts).forEach(c => { if (c && c.destroy) c.destroy(); });
     analyticsState.charts = {};
@@ -611,8 +627,21 @@ async function refreshAnalyticsDashboards() {
     if (typeof showNotification === 'function') showNotification('Dashboards refreshed', 'success');
 }
 
-function switchAnalyticsDashboard(index) {
+async function switchAnalyticsDashboard(index) {
     analyticsState.activeDashboard = analyticsState.approvedDashboards[index];
+
+    // For link-based dashboards, fetch live data if charts are empty
+    const db = analyticsState.activeDashboard;
+    if (db && db.googleSheetUrl && (!db.charts || db.charts.length === 0)) {
+        try {
+            const liveData = await window.apiCall(`/analysis/dashboard/${db._id}/live-data`, 'GET');
+            if (liveData.charts && liveData.charts.length > 0) {
+                db.charts = liveData.charts;
+                db.predictiveAnalysis = liveData.predictiveAnalysis || db.predictiveAnalysis;
+            }
+        } catch (e) { console.error('[ANALYTICS] Live data fetch failed:', e.message); }
+    }
+
     Object.values(analyticsState.charts).forEach(c => { if (c && c.destroy) c.destroy(); });
     analyticsState.charts = {};
     document.getElementById('app-container').innerHTML = getDashboardViewHTML();
