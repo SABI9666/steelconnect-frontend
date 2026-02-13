@@ -813,109 +813,131 @@ function getDashboardViewHTML() {
     // === PREDICTIVE ANALYSIS SECTION ===
     let predictiveHTML = '';
     if (pa) {
-        // AI Insights
-        const insightsHTML = (pa.insights || []).length > 0 ? `
+        // Data quality gate — only show if there's meaningful content
+        const paInsights = (pa.insights || []).filter(i => i && i.text);
+        const paForecasts = (pa.forecasts || []).filter(f => f && (f.values || []).length > 0 && f.regression && f.regression.rSquared > 0.15);
+        const paAnomalies = [];
+        (pa.anomalies || []).forEach(ag => {
+            (ag.anomalies || []).forEach(a => paAnomalies.push({ ...a, column: ag.column || ag.metric || '', sheet: ag.sheet || '' }));
+        });
+        const paCorrelations = (pa.correlations && pa.correlations.insights && pa.correlations.insights.length > 0) ? pa.correlations.insights.filter(c => Math.abs(c.correlation || 0) >= 0.4) : [];
+        const hasMeaningfulData = paInsights.length > 0 || paForecasts.length > 0 || paAnomalies.length > 0 || paCorrelations.length > 0;
+
+        if (hasMeaningfulData) {
+        // Summary counts
+        const summaryParts = [];
+        if (paInsights.length > 0) summaryParts.push(`<span class="ad-pa-stat"><i class="fas fa-lightbulb"></i> ${paInsights.length} insight${paInsights.length !== 1 ? 's' : ''}</span>`);
+        if (paForecasts.length > 0) summaryParts.push(`<span class="ad-pa-stat"><i class="fas fa-chart-line"></i> ${paForecasts.length} forecast${paForecasts.length !== 1 ? 's' : ''}</span>`);
+        if (paCorrelations.length > 0) summaryParts.push(`<span class="ad-pa-stat"><i class="fas fa-project-diagram"></i> ${paCorrelations.length} correlation${paCorrelations.length !== 1 ? 's' : ''}</span>`);
+        if (paAnomalies.length > 0) summaryParts.push(`<span class="ad-pa-stat"><i class="fas fa-exclamation-triangle"></i> ${paAnomalies.length} anomal${paAnomalies.length !== 1 ? 'ies' : 'y'}</span>`);
+        if (pa.seasonality) summaryParts.push(`<span class="ad-pa-stat"><i class="fas fa-wave-square"></i> Seasonality</span>`);
+        const summaryHTML = `<div class="ad-pa-summary">${summaryParts.join('')}</div>`;
+
+        // AI Insights (max 6)
+        const insightsHTML = paInsights.length > 0 ? `
         <div class="ad-pa-section">
-            <div class="ad-pa-section-head"><i class="fas fa-brain"></i><h3>AI-Powered Insights</h3></div>
+            <div class="ad-pa-section-head"><i class="fas fa-lightbulb"></i><h3>Key Insights</h3><span class="ad-pa-count">${paInsights.length}</span></div>
             <div class="ad-insights-grid">
-                ${pa.insights.map(ins => `
-                    <div class="ad-insight-card ad-insight-${ins.type}">
-                        <div class="ad-insight-icon"><i class="fas ${ins.type === 'positive' ? 'fa-arrow-trend-up' : ins.type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle'}"></i></div>
+                ${paInsights.slice(0, 6).map(ins => {
+                    const typeClass = ins.type || 'info';
+                    const icon = typeClass === 'positive' ? 'fa-arrow-trend-up' : typeClass === 'warning' ? 'fa-exclamation-triangle' : typeClass === 'negative' ? 'fa-arrow-trend-down' : 'fa-info-circle';
+                    return `<div class="ad-insight-card ad-insight-${typeClass}">
+                        <div class="ad-insight-icon"><i class="fas ${icon}"></i></div>
                         <p>${ins.text}</p>
-                    </div>
-                `).join('')}
+                    </div>`;
+                }).join('')}
             </div>
         </div>` : '';
 
-        // Forecasts
-        const forecastsHTML = (pa.forecasts || []).length > 0 ? `
+        // Forecasts (max 4, only with decent R²)
+        const forecastsHTML = paForecasts.length > 0 ? `
         <div class="ad-pa-section">
-            <div class="ad-pa-section-head"><i class="fas fa-crystal-ball"></i><h3>Predictive Forecasts</h3><span class="ad-pa-badge">Linear Regression</span></div>
+            <div class="ad-pa-section-head"><i class="fas fa-chart-line"></i><h3>Predictive Forecasts</h3><span class="ad-pa-badge">Linear Regression</span></div>
             <div class="ad-forecast-grid">
-                ${pa.forecasts.map((fc, fi) => `
-                    <div class="ad-forecast-card">
+                ${paForecasts.slice(0, 4).map((fc, fi) => {
+                    const reg = fc.regression || {};
+                    const rSq = reg.rSquared || 0;
+                    const isUp = (reg.slope || 0) >= 0;
+                    const r2Class = rSq >= 0.7 ? 'ad-r2-strong' : rSq >= 0.4 ? 'ad-r2-moderate' : 'ad-r2-weak';
+                    const r2Label = rSq >= 0.7 ? 'Strong fit' : rSq >= 0.4 ? 'Moderate fit' : 'Weak fit';
+                    return `<div class="ad-forecast-card">
                         <div class="ad-forecast-head">
                             <span class="ad-forecast-col">${fc.column || fc.metric || 'Metric'}</span>
-                            <span class="ad-forecast-r2" title="R-squared: ${(fc.regression || {}).rSquared || 0}">R&sup2; = ${((fc.regression || {}).rSquared || 0).toFixed(3)}</span>
+                            <span class="ad-forecast-r2 ${r2Class}" title="${r2Label} (R\u00b2 = ${rSq.toFixed(3)})">R\u00b2 ${rSq.toFixed(2)} &middot; ${r2Label}</span>
                         </div>
                         <div class="ad-forecast-body">
-                            <div class="ad-forecast-direction ${(fc.regression || {}).slope >= 0 ? 'up' : 'down'}">
-                                <i class="fas fa-arrow-${(fc.regression || {}).slope >= 0 ? 'up' : 'down'}"></i>
-                                <span>${(fc.regression || {}).slope >= 0 ? 'Upward' : 'Downward'} Trend</span>
-                                <small>slope: ${((fc.regression || {}).slope || 0).toFixed(2)}/period</small>
+                            <div class="ad-forecast-direction ${isUp ? 'up' : 'down'}">
+                                <i class="fas fa-arrow-${isUp ? 'up' : 'down'}"></i>
+                                <span>${isUp ? 'Upward' : 'Downward'}</span>
                             </div>
                             <div class="ad-forecast-values">
-                                ${(fc.values || []).map((v, vi) => `<div class="ad-forecast-val"><span class="ad-fv-label">Period +${vi + 1}</span><span class="ad-fv-num">${formatKpiValue(v)}</span></div>`).join('')}
+                                ${(fc.values || []).slice(0, 3).map((v, vi) => `<div class="ad-forecast-val"><span class="ad-fv-label">+${vi + 1}</span><span class="ad-fv-num">${formatKpiValue(v)}</span></div>`).join('')}
                             </div>
                         </div>
                         <canvas id="ad-forecast-chart-${fi}" style="height:120px;margin-top:12px"></canvas>
-                    </div>
-                `).join('')}
+                    </div>`;
+                }).join('')}
             </div>
         </div>` : '';
 
-        // Correlation Matrix
-        const corrHTML = pa.correlations && pa.correlations.columns && pa.correlations.columns.length >= 2 && pa.correlations.matrix ? `
+        // Correlations — show insight cards (not raw matrix)
+        const corrHTML = paCorrelations.length > 0 ? `
         <div class="ad-pa-section">
-            <div class="ad-pa-section-head"><i class="fas fa-project-diagram"></i><h3>Correlation Matrix</h3><span class="ad-pa-badge">Pearson r</span></div>
-            <div class="ad-corr-wrap">
-                <table class="ad-corr-table">
-                    <thead><tr><th></th>${pa.correlations.columns.map(c => `<th title="${c}">${c.length > 12 ? c.substring(0, 10) + '..' : c}</th>`).join('')}</tr></thead>
-                    <tbody>
-                        ${pa.correlations.matrix.map((row, ri) => `
-                            <tr><td class="ad-corr-label">${(pa.correlations.columns[ri] || '').length > 12 ? pa.correlations.columns[ri].substring(0, 10) + '..' : (pa.correlations.columns[ri] || '')}</td>
-                            ${row.map((val, ci) => {
-                                const abs = Math.abs(val || 0);
-                                const bg = ri === ci ? 'rgba(99,102,241,.15)' : (val || 0) > 0 ? `rgba(16,185,129,${abs * 0.4})` : `rgba(239,68,68,${abs * 0.4})`;
-                                return `<td style="background:${bg};font-weight:${abs > 0.7 ? 700 : 400};color:${abs > 0.5 ? '#1e293b' : '#64748b'}" title="${pa.correlations.columns[ri] || ''} vs ${pa.correlations.columns[ci] || ''}">${(val || 0).toFixed(2)}</td>`;
-                            }).join('')}</tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            </div>
-            ${(pa.correlations.insights || []).length > 0 ? `
-                <div class="ad-corr-insights">
-                    ${pa.correlations.insights.slice(0, 4).map(ins => `
-                        <div class="ad-corr-insight"><i class="fas fa-link" style="color:${ins.direction === 'positive' ? '#10b981' : '#ef4444'}"></i>
-                        <strong>${ins.col1 || ''}</strong> &harr; <strong>${ins.col2 || ''}</strong>: ${ins.strength || ''} ${ins.direction || ''} (r=${ins.correlation || 0})</div>
-                    `).join('')}
-                </div>` : ''}
-        </div>` : '';
-
-        // Anomalies
-        const anomalyHTML = (pa.anomalies || []).length > 0 ? `
-        <div class="ad-pa-section">
-            <div class="ad-pa-section-head"><i class="fas fa-exclamation-triangle"></i><h3>Anomaly Detection</h3><span class="ad-pa-badge">Z-Score Method</span></div>
-            <div class="ad-anomaly-grid">
-                ${pa.anomalies.map(ag => (ag.anomalies || []).map(a => `
-                    <div class="ad-anomaly-card ad-anomaly-${a.type || 'high'}">
-                        <div class="ad-anomaly-type"><i class="fas fa-${a.type === 'high' ? 'arrow-up' : 'arrow-down'}"></i> ${(a.type || '').toUpperCase()}</div>
-                        <div class="ad-anomaly-detail">
-                            <span class="ad-anomaly-col">${ag.column || ''}</span>
-                            <span class="ad-anomaly-label">${a.label || ''}</span>
-                            <span class="ad-anomaly-val">${formatKpiValue(a.value)}</span>
-                            <span class="ad-anomaly-z">Z=${a.zScore || 0}</span>
+            <div class="ad-pa-section-head"><i class="fas fa-project-diagram"></i><h3>Data Correlations</h3><span class="ad-pa-badge">Pearson</span></div>
+            <div class="ad-corr-cards">
+                ${paCorrelations.slice(0, 4).map(ins => {
+                    const corrVal = ins.correlation != null ? ins.correlation : 0;
+                    const absCorr = Math.abs(corrVal);
+                    const color = absCorr >= 0.7 ? (corrVal > 0 ? '#10b981' : '#ef4444') : absCorr >= 0.5 ? '#f59e0b' : '#94a3b8';
+                    const strengthLabel = ins.strength || (absCorr >= 0.7 ? 'Strong' : absCorr >= 0.5 ? 'Moderate' : 'Weak');
+                    const dirLabel = ins.direction || (corrVal >= 0 ? 'positive' : 'negative');
+                    return `<div class="ad-corr-card">
+                        <div class="ad-corr-value" style="background:${color}12;color:${color};border:2px solid ${color}30">${corrVal.toFixed(2)}</div>
+                        <div class="ad-corr-detail">
+                            <div class="ad-corr-pair"><strong>${ins.col1 || ''}</strong> <span class="ad-corr-arrow">&harr;</span> <strong>${ins.col2 || ''}</strong></div>
+                            <div class="ad-corr-strength">${strengthLabel} ${dirLabel} correlation</div>
                         </div>
-                    </div>
-                `).join('')).join('')}
+                    </div>`;
+                }).join('')}
+            </div>
+        </div>` : '';
+
+        // Anomalies — grouped, max 6
+        const anomalyHTML = paAnomalies.length > 0 ? `
+        <div class="ad-pa-section">
+            <div class="ad-pa-section-head"><i class="fas fa-exclamation-triangle"></i><h3>Anomaly Detection</h3><span class="ad-pa-badge">Z-Score</span><span class="ad-pa-count">${paAnomalies.length}</span></div>
+            <div class="ad-anomaly-grid">
+                ${paAnomalies.slice(0, 6).map(a => {
+                    const isHigh = a.type === 'high';
+                    return `<div class="ad-anomaly-card ad-anomaly-${isHigh ? 'high' : 'low'}">
+                        <div class="ad-anomaly-badge">${isHigh ? '<i class="fas fa-arrow-up"></i> HIGH' : '<i class="fas fa-arrow-down"></i> LOW'}</div>
+                        <div class="ad-anomaly-info">
+                            <div class="ad-anomaly-col">${a.column}</div>
+                            <div class="ad-anomaly-row">${a.label || ''}: <strong>${formatKpiValue(a.value)}</strong></div>
+                        </div>
+                        <div class="ad-anomaly-zscore">${(a.zScore || 0).toFixed(1)}&sigma;</div>
+                    </div>`;
+                }).join('')}
             </div>
         </div>` : '';
 
         // Seasonality
         const seasonHTML = pa.seasonality ? `
         <div class="ad-pa-section ad-pa-seasonality">
-            <div class="ad-pa-section-head"><i class="fas fa-calendar-alt"></i><h3>Seasonality Detected</h3></div>
-            <div class="ad-season-badge"><i class="fas fa-wave-square"></i> ${pa.seasonality.label} cycle (period: ${pa.seasonality.period}, strength: ${(pa.seasonality.strength * 100).toFixed(0)}%)</div>
+            <div class="ad-pa-section-head"><i class="fas fa-calendar-alt"></i><h3>Seasonality</h3></div>
+            <div class="ad-season-badge"><i class="fas fa-wave-square"></i> ${pa.seasonality.label || 'Seasonal'} cycle &middot; Period: ${pa.seasonality.period || '?'} &middot; Strength: ${((pa.seasonality.strength || 0) * 100).toFixed(0)}%</div>
         </div>` : '';
 
         predictiveHTML = `
         <div class="ad-predictive-analysis" id="ad-predictive-section">
             <div class="ad-pa-title-bar">
-                <div class="ad-pa-title"><i class="fas fa-brain"></i><h2>Predictive Analysis & Intelligence</h2></div>
-                <span class="ad-pa-powered">Powered by SteelConnect AI Engine</span>
+                <div class="ad-pa-title"><i class="fas fa-brain"></i><h2>Predictive Analysis</h2></div>
+                <span class="ad-pa-powered">Powered by SteelConnect AI</span>
             </div>
+            ${summaryHTML}
             ${insightsHTML}${forecastsHTML}${corrHTML}${anomalyHTML}${seasonHTML}
         </div>`;
+        } // end hasMeaningfulData
     }
 
     return `
@@ -928,7 +950,7 @@ function getDashboardViewHTML() {
                     <div class="ad-hero-icon-box"><i class="fas fa-chart-bar"></i></div>
                     <div class="ad-hero-text">
                         <h1>${db.title || 'Analytics Dashboard'}</h1>
-                        <p>Real-time business intelligence &middot; ${totalCharts} charts &middot; ${formatKpiValue(totalRecords)} records${pa ? ' &middot; AI Insights' : ''}</p>
+                        <p>Real-time business intelligence &middot; ${totalCharts} charts &middot; ${formatKpiValue(totalRecords)} records${predictiveHTML ? ' &middot; AI Insights' : ''}</p>
                     </div>
                 </div>
                 <div class="ad-hero-right">
@@ -953,7 +975,7 @@ function getDashboardViewHTML() {
                     <div class="ad-meta-pill date"><i class="fas fa-calendar-check"></i> ${new Date(db.approvedAt || db.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
                     <div class="ad-meta-pill charts"><i class="fas fa-chart-pie"></i> ${totalCharts} Charts</div>
                     <div class="ad-meta-pill" style="color:#10b981"><i class="fas fa-magic"></i> Auto-Generated</div>
-                    ${pa ? '<div class="ad-meta-pill" style="color:#8b5cf6"><i class="fas fa-brain"></i> AI Insights</div>' : ''}
+                    ${predictiveHTML ? '<div class="ad-meta-pill" style="color:#8b5cf6"><i class="fas fa-brain"></i> AI Insights</div>' : ''}
                 </div>
             </div>
             ${topKpis.length > 0 ? `<div class="ad-kpi-grid">${kpisHTML}</div>` : ''}
@@ -1120,51 +1142,62 @@ window.exportDashboardPDF = async function() {
         // === PREDICTIVE ANALYSIS ===
         const pa = db.predictiveAnalysis;
         if (pa) {
+            // Apply same quality gate as display
+            const pdfInsights = (pa.insights || []).filter(i => i && i.text);
+            const pdfForecasts = (pa.forecasts || []).filter(f => f && (f.values || []).length > 0 && f.regression && f.regression.rSquared > 0.15);
+            const pdfAnomalies = [];
+            (pa.anomalies || []).forEach(ag => { (ag.anomalies || []).forEach(a => pdfAnomalies.push({ ...a, column: ag.column || '' })); });
+            const pdfCorrelations = (pa.correlations && pa.correlations.insights) ? pa.correlations.insights.filter(c => Math.abs(c.correlation || 0) >= 0.4) : [];
+            const hasPdfData = pdfInsights.length > 0 || pdfForecasts.length > 0 || pdfAnomalies.length > 0 || pdfCorrelations.length > 0;
+
+            if (hasPdfData) {
             if (y + 30 > H - M) { pdf.addPage(); y = M; }
             pdf.setFillColor(99, 102, 241);
             pdf.rect(M, y, W - M * 2, 8, 'F');
             pdf.setTextColor(255, 255, 255);
             pdf.setFontSize(12); pdf.setFont(undefined, 'bold');
-            pdf.text('Predictive Analysis & Intelligence', M + 4, y + 6);
+            pdf.text('Predictive Analysis', M + 4, y + 6);
             y += 14;
 
             // Insights
-            if (pa.insights && pa.insights.length > 0) {
+            if (pdfInsights.length > 0) {
                 pdf.setTextColor(30, 41, 59);
                 pdf.setFontSize(10); pdf.setFont(undefined, 'bold');
-                pdf.text('AI Insights', M, y); y += 6;
+                pdf.text('Key Insights', M, y); y += 6;
                 pdf.setFontSize(8); pdf.setFont(undefined, 'normal');
-                for (const ins of pa.insights.slice(0, 6)) {
+                for (const ins of pdfInsights.slice(0, 6)) {
                     if (y + 8 > H - M) { pdf.addPage(); y = M; }
-                    const icon = ins.type === 'positive' ? '+' : ins.type === 'warning' ? '!' : 'i';
-                    const color = ins.type === 'positive' ? [16, 185, 129] : ins.type === 'warning' ? [245, 158, 11] : [99, 102, 241];
+                    const icon = ins.type === 'positive' ? '+' : ins.type === 'warning' ? '!' : ins.type === 'negative' ? '-' : 'i';
+                    const color = ins.type === 'positive' ? [16, 185, 129] : ins.type === 'warning' ? [245, 158, 11] : ins.type === 'negative' ? [239, 68, 68] : [99, 102, 241];
                     pdf.setTextColor(...color);
                     pdf.text(`[${icon}]`, M, y);
                     pdf.setTextColor(51, 65, 85);
-                    pdf.text((ins.text || ins.message || '').substring(0, 120), M + 8, y);
+                    pdf.text((ins.text || '').substring(0, 120), M + 8, y);
                     y += 6;
                 }
                 y += 4;
             }
 
             // Forecasts
-            if (pa.forecasts && pa.forecasts.length > 0) {
+            if (pdfForecasts.length > 0) {
                 if (y + 20 > H - M) { pdf.addPage(); y = M; }
                 pdf.setTextColor(30, 41, 59);
                 pdf.setFontSize(10); pdf.setFont(undefined, 'bold');
                 pdf.text('Forecasts (Linear Regression)', M, y); y += 6;
                 pdf.setFontSize(8); pdf.setFont(undefined, 'normal');
-                for (const fc of pa.forecasts.slice(0, 4)) {
+                for (const fc of pdfForecasts.slice(0, 4)) {
                     if (y + 12 > H - M) { pdf.addPage(); y = M; }
+                    const reg = fc.regression || {};
+                    const rSq = (reg.rSquared || 0);
+                    const fitLabel = rSq >= 0.7 ? 'Strong' : rSq >= 0.4 ? 'Moderate' : 'Weak';
                     pdf.setTextColor(99, 102, 241);
                     pdf.text(fc.column || fc.metric || 'Metric', M, y);
                     pdf.setTextColor(100, 116, 139);
-                    const reg = fc.regression || {};
-                    pdf.text(`  Slope: ${(reg.slope || 0).toFixed(2)}  |  R²: ${(reg.rSquared || 0).toFixed(3)}  |  Next: ${(fc.values || []).slice(0, 3).map(v => formatKpiValue(v)).join(', ')}`, M + 40, y);
+                    pdf.text(`  R\u00b2: ${rSq.toFixed(2)} (${fitLabel})  |  Next: ${(fc.values || []).slice(0, 3).map(v => formatKpiValue(v)).join(', ')}`, M + 40, y);
                     y += 5;
                 }
                 // Render forecast chart images
-                for (let fi = 0; fi < Math.min(pa.forecasts.length, 3); fi++) {
+                for (let fi = 0; fi < Math.min(pdfForecasts.length, 3); fi++) {
                     const fCanvas = document.getElementById(`ad-forecast-chart-${fi}`);
                     if (fCanvas) {
                         if (y + 50 > H - M) { pdf.addPage(); y = M; }
@@ -1175,36 +1208,36 @@ window.exportDashboardPDF = async function() {
             }
 
             // Correlation insights
-            if (pa.correlations && pa.correlations.insights && pa.correlations.insights.length > 0) {
+            if (pdfCorrelations.length > 0) {
                 if (y + 15 > H - M) { pdf.addPage(); y = M; }
                 pdf.setTextColor(30, 41, 59);
                 pdf.setFontSize(10); pdf.setFont(undefined, 'bold');
                 pdf.text('Correlations', M, y); y += 6;
                 pdf.setFontSize(8); pdf.setFont(undefined, 'normal');
-                for (const ci of pa.correlations.insights.slice(0, 5)) {
+                for (const ci of pdfCorrelations.slice(0, 4)) {
                     pdf.setTextColor(51, 65, 85);
-                    pdf.text(`${ci.col1} <-> ${ci.col2}: ${ci.strength} ${ci.direction} (r=${ci.correlation})`, M, y);
+                    const strength = ci.strength || (Math.abs(ci.correlation) >= 0.7 ? 'Strong' : 'Moderate');
+                    pdf.text(`${ci.col1 || '?'} <-> ${ci.col2 || '?'}: ${strength} ${ci.direction || ''} (r=${(ci.correlation || 0).toFixed(2)})`, M, y);
                     y += 5;
                 }
                 y += 4;
             }
 
             // Anomalies
-            if (pa.anomalies && pa.anomalies.length > 0) {
+            if (pdfAnomalies.length > 0) {
                 if (y + 15 > H - M) { pdf.addPage(); y = M; }
                 pdf.setTextColor(30, 41, 59);
                 pdf.setFontSize(10); pdf.setFont(undefined, 'bold');
                 pdf.text('Anomalies Detected', M, y); y += 6;
                 pdf.setFontSize(8); pdf.setFont(undefined, 'normal');
-                for (const ag of pa.anomalies.slice(0, 3)) {
-                    for (const a of (ag.anomalies || []).slice(0, 3)) {
-                        if (y + 6 > H - M) { pdf.addPage(); y = M; }
-                        pdf.setTextColor(a.type === 'high' ? 239 : 59, a.type === 'high' ? 68 : 130, a.type === 'high' ? 68 : 246);
-                        pdf.text(`[${(a.type || '').toUpperCase()}] ${ag.column || ''} at "${a.label || ''}": ${formatKpiValue(a.value)} (Z=${a.zScore || 0})`, M, y);
-                        y += 5;
-                    }
+                for (const a of pdfAnomalies.slice(0, 6)) {
+                    if (y + 6 > H - M) { pdf.addPage(); y = M; }
+                    pdf.setTextColor(a.type === 'high' ? 239 : 59, a.type === 'high' ? 68 : 130, a.type === 'high' ? 68 : 246);
+                    pdf.text(`[${(a.type || '').toUpperCase()}] ${a.column || ''} at "${a.label || ''}": ${formatKpiValue(a.value)} (${(a.zScore || 0).toFixed(1)}\u03C3)`, M, y);
+                    y += 5;
                 }
             }
+            } // end hasPdfData
         }
 
         // === DATA TABLE ===
@@ -1263,12 +1296,15 @@ function initializeDashboardCharts() {
         if (!ctx) return;
         createChart(ctx, chart, idx);
     });
-    // Render forecast mini-charts
+    // Render forecast mini-charts (only for quality-filtered forecasts)
     if (db.predictiveAnalysis && db.predictiveAnalysis.forecasts) {
-        db.predictiveAnalysis.forecasts.forEach((fc, fi) => {
+        const qualityForecasts = db.predictiveAnalysis.forecasts.filter(f => f && (f.values || []).length > 0 && f.regression && f.regression.rSquared > 0.15).slice(0, 4);
+        qualityForecasts.forEach((fc, fi) => {
             const ctx = document.getElementById(`ad-forecast-chart-${fi}`);
             if (!ctx || typeof Chart === 'undefined') return;
-            const maKey = Object.keys(db.predictiveAnalysis.movingAverages || {})[fi];
+            const maKeys = Object.keys(db.predictiveAnalysis.movingAverages || {});
+            const origIdx = db.predictiveAnalysis.forecasts.indexOf(fc);
+            const maKey = maKeys[origIdx] || maKeys[fi];
             const maData = maKey ? db.predictiveAnalysis.movingAverages[maKey] : null;
             const original = maData ? maData.original : [];
             const forecastVals = fc.values || [];
