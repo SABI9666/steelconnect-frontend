@@ -4541,6 +4541,65 @@ body {
 }
 .auth-error-dismiss:hover { opacity: 1; background: rgba(239,68,68,0.1); }
 
+/* ========================================   AUTH FORGOT PASSWORD   ======================================== */
+.auth-forgot-password {
+    text-align: right;
+    margin: -8px 0 12px 0;
+}
+.auth-forgot-password a {
+    color: #2563eb;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+.auth-forgot-password a:hover {
+    color: #1d4ed8;
+    text-decoration: underline;
+}
+.auth-forgot-password a i {
+    margin-right: 4px;
+    font-size: 12px;
+}
+
+/* Auth success message */
+.auth-inline-success {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #f0fdf4;
+    border: 1px solid #86efac;
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    color: #166534;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.4;
+}
+.auth-inline-success i.fa-check-circle {
+    color: #22c55e;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+.auth-inline-success span { flex: 1; }
+
+/* Reset code input styling */
+.reset-code-input {
+    text-align: center;
+    font-size: 24px !important;
+    font-weight: 700 !important;
+    letter-spacing: 8px !important;
+    font-family: 'Courier New', monospace !important;
+}
+.reset-code-input::placeholder {
+    font-size: 14px !important;
+    letter-spacing: normal !important;
+    font-weight: 400 !important;
+    font-family: inherit !important;
+}
+
 /* ========================================   TOAST NOTIFICATIONS (Premium)   ======================================== */
 .notification-container {
     position: fixed;
