@@ -2690,6 +2690,14 @@ body {
     opacity: 1;
     color: var(--primary-color);
 }
+/* Sidebar profile link for non-approved users */
+.sidebar-profile-link {
+    border-left: 3px solid #f59e0b !important;
+    background: rgba(245, 158, 11, 0.05);
+}
+.sidebar-profile-link:hover {
+    background: rgba(245, 158, 11, 0.1) !important;
+}
 .sidebar-divider {
     border: none;
     height: 1px;
