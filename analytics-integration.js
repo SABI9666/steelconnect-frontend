@@ -806,8 +806,8 @@ function getDashboardViewHTML() {
         </div>`;
     }
 
-    const totalCharts = (db.charts || []).length;
-    const totalRecords = (db.charts || []).reduce((sum, c) => sum + (c.rowCount || 0), 0);
+    const totalCharts = (db.charts || []).length || db.totalChartsGenerated || 0;
+    const totalRecords = (db.charts || []).reduce((sum, c) => sum + (c.rowCount || c.labels?.length || 0), 0);
     const pa = db.predictiveAnalysis;
 
     // === PREDICTIVE ANALYSIS SECTION ===
@@ -835,17 +835,17 @@ function getDashboardViewHTML() {
                 ${pa.forecasts.map((fc, fi) => `
                     <div class="ad-forecast-card">
                         <div class="ad-forecast-head">
-                            <span class="ad-forecast-col">${fc.column}</span>
-                            <span class="ad-forecast-r2" title="R-squared: ${fc.regression.rSquared}">R&sup2; = ${fc.regression.rSquared}</span>
+                            <span class="ad-forecast-col">${fc.column || fc.metric || 'Metric'}</span>
+                            <span class="ad-forecast-r2" title="R-squared: ${(fc.regression || {}).rSquared || 0}">R&sup2; = ${((fc.regression || {}).rSquared || 0).toFixed(3)}</span>
                         </div>
                         <div class="ad-forecast-body">
-                            <div class="ad-forecast-direction ${fc.regression.slope >= 0 ? 'up' : 'down'}">
-                                <i class="fas fa-arrow-${fc.regression.slope >= 0 ? 'up' : 'down'}"></i>
-                                <span>${fc.regression.slope >= 0 ? 'Upward' : 'Downward'} Trend</span>
-                                <small>slope: ${fc.regression.slope}/period</small>
+                            <div class="ad-forecast-direction ${(fc.regression || {}).slope >= 0 ? 'up' : 'down'}">
+                                <i class="fas fa-arrow-${(fc.regression || {}).slope >= 0 ? 'up' : 'down'}"></i>
+                                <span>${(fc.regression || {}).slope >= 0 ? 'Upward' : 'Downward'} Trend</span>
+                                <small>slope: ${((fc.regression || {}).slope || 0).toFixed(2)}/period</small>
                             </div>
                             <div class="ad-forecast-values">
-                                ${fc.values.map((v, vi) => `<div class="ad-forecast-val"><span class="ad-fv-label">Period +${vi + 1}</span><span class="ad-fv-num">${formatKpiValue(v)}</span></div>`).join('')}
+                                ${(fc.values || []).map((v, vi) => `<div class="ad-forecast-val"><span class="ad-fv-label">Period +${vi + 1}</span><span class="ad-fv-num">${formatKpiValue(v)}</span></div>`).join('')}
                             </div>
                         </div>
                         <canvas id="ad-forecast-chart-${fi}" style="height:120px;margin-top:12px"></canvas>
@@ -855,7 +855,7 @@ function getDashboardViewHTML() {
         </div>` : '';
 
         // Correlation Matrix
-        const corrHTML = pa.correlations && pa.correlations.columns.length >= 2 ? `
+        const corrHTML = pa.correlations && pa.correlations.columns && pa.correlations.columns.length >= 2 && pa.correlations.matrix ? `
         <div class="ad-pa-section">
             <div class="ad-pa-section-head"><i class="fas fa-project-diagram"></i><h3>Correlation Matrix</h3><span class="ad-pa-badge">Pearson r</span></div>
             <div class="ad-corr-wrap">
@@ -863,21 +863,21 @@ function getDashboardViewHTML() {
                     <thead><tr><th></th>${pa.correlations.columns.map(c => `<th title="${c}">${c.length > 12 ? c.substring(0, 10) + '..' : c}</th>`).join('')}</tr></thead>
                     <tbody>
                         ${pa.correlations.matrix.map((row, ri) => `
-                            <tr><td class="ad-corr-label">${pa.correlations.columns[ri].length > 12 ? pa.correlations.columns[ri].substring(0, 10) + '..' : pa.correlations.columns[ri]}</td>
+                            <tr><td class="ad-corr-label">${(pa.correlations.columns[ri] || '').length > 12 ? pa.correlations.columns[ri].substring(0, 10) + '..' : (pa.correlations.columns[ri] || '')}</td>
                             ${row.map((val, ci) => {
-                                const abs = Math.abs(val);
-                                const bg = ri === ci ? 'rgba(99,102,241,.15)' : val > 0 ? `rgba(16,185,129,${abs * 0.4})` : `rgba(239,68,68,${abs * 0.4})`;
-                                return `<td style="background:${bg};font-weight:${abs > 0.7 ? 700 : 400};color:${abs > 0.5 ? '#1e293b' : '#64748b'}" title="${pa.correlations.columns[ri]} vs ${pa.correlations.columns[ci]}">${val.toFixed(2)}</td>`;
+                                const abs = Math.abs(val || 0);
+                                const bg = ri === ci ? 'rgba(99,102,241,.15)' : (val || 0) > 0 ? `rgba(16,185,129,${abs * 0.4})` : `rgba(239,68,68,${abs * 0.4})`;
+                                return `<td style="background:${bg};font-weight:${abs > 0.7 ? 700 : 400};color:${abs > 0.5 ? '#1e293b' : '#64748b'}" title="${pa.correlations.columns[ri] || ''} vs ${pa.correlations.columns[ci] || ''}">${(val || 0).toFixed(2)}</td>`;
                             }).join('')}</tr>
                         `).join('')}
                     </tbody>
                 </table>
             </div>
-            ${pa.correlations.insights.length > 0 ? `
+            ${(pa.correlations.insights || []).length > 0 ? `
                 <div class="ad-corr-insights">
                     ${pa.correlations.insights.slice(0, 4).map(ins => `
                         <div class="ad-corr-insight"><i class="fas fa-link" style="color:${ins.direction === 'positive' ? '#10b981' : '#ef4444'}"></i>
-                        <strong>${ins.col1}</strong> &harr; <strong>${ins.col2}</strong>: ${ins.strength} ${ins.direction} (r=${ins.correlation})</div>
+                        <strong>${ins.col1 || ''}</strong> &harr; <strong>${ins.col2 || ''}</strong>: ${ins.strength || ''} ${ins.direction || ''} (r=${ins.correlation || 0})</div>
                     `).join('')}
                 </div>` : ''}
         </div>` : '';
@@ -887,14 +887,14 @@ function getDashboardViewHTML() {
         <div class="ad-pa-section">
             <div class="ad-pa-section-head"><i class="fas fa-exclamation-triangle"></i><h3>Anomaly Detection</h3><span class="ad-pa-badge">Z-Score Method</span></div>
             <div class="ad-anomaly-grid">
-                ${pa.anomalies.map(ag => ag.anomalies.map(a => `
-                    <div class="ad-anomaly-card ad-anomaly-${a.type}">
-                        <div class="ad-anomaly-type"><i class="fas fa-${a.type === 'high' ? 'arrow-up' : 'arrow-down'}"></i> ${a.type.toUpperCase()}</div>
+                ${pa.anomalies.map(ag => (ag.anomalies || []).map(a => `
+                    <div class="ad-anomaly-card ad-anomaly-${a.type || 'high'}">
+                        <div class="ad-anomaly-type"><i class="fas fa-${a.type === 'high' ? 'arrow-up' : 'arrow-down'}"></i> ${(a.type || '').toUpperCase()}</div>
                         <div class="ad-anomaly-detail">
-                            <span class="ad-anomaly-col">${ag.column}</span>
-                            <span class="ad-anomaly-label">${a.label}</span>
+                            <span class="ad-anomaly-col">${ag.column || ''}</span>
+                            <span class="ad-anomaly-label">${a.label || ''}</span>
                             <span class="ad-anomaly-val">${formatKpiValue(a.value)}</span>
-                            <span class="ad-anomaly-z">Z=${a.zScore}</span>
+                            <span class="ad-anomaly-z">Z=${a.zScore || 0}</span>
                         </div>
                     </div>
                 `).join('')).join('')}
@@ -1087,10 +1087,10 @@ window.exportDashboardPDF = async function() {
                 pdf.text(formatKpiValue(kpi.total), kx + 4, ky + 10);
                 pdf.setFontSize(8); pdf.setFont(undefined, 'normal');
                 pdf.setTextColor(100, 116, 139);
-                pdf.text(kpi.label.substring(0, 20), kx + 4, ky + 16);
-                const trendColor = kpi.trend >= 0 ? [16, 185, 129] : [239, 68, 68];
+                pdf.text((kpi.label || '').substring(0, 20), kx + 4, ky + 16);
+                const trendColor = (kpi.trend || 0) >= 0 ? [16, 185, 129] : [239, 68, 68];
                 pdf.setTextColor(...trendColor);
-                pdf.text(`${kpi.trend >= 0 ? '+' : ''}${kpi.trend}%`, kx + 4, ky + 21);
+                pdf.text(`${(kpi.trend || 0) >= 0 ? '+' : ''}${kpi.trend || 0}%`, kx + 4, ky + 21);
             });
             y += Math.ceil(Math.min(allKpis.length, 8) / kpiCols) * 28 + 8;
         }
@@ -1106,7 +1106,7 @@ window.exportDashboardPDF = async function() {
             pdf.text(charts[idx].customTitle || charts[idx].sheetName || `Chart ${idx + 1}`, M, y);
             pdf.setFontSize(8); pdf.setFont(undefined, 'normal');
             pdf.setTextColor(100, 116, 139);
-            pdf.text(`${charts[idx].chartType} | ${charts[idx].rowCount} records | ${charts[idx].dataColumns.length} metrics`, M + 100, y);
+            pdf.text(`${charts[idx].chartType || 'bar'} | ${charts[idx].rowCount || charts[idx].labels?.length || 0} records | ${(charts[idx].dataColumns || []).length} metrics`, M + 100, y);
             y += 4;
             try {
                 const imgData = canvas.toDataURL('image/png', 0.92);
@@ -1141,7 +1141,7 @@ window.exportDashboardPDF = async function() {
                     pdf.setTextColor(...color);
                     pdf.text(`[${icon}]`, M, y);
                     pdf.setTextColor(51, 65, 85);
-                    pdf.text(ins.text.substring(0, 120), M + 8, y);
+                    pdf.text((ins.text || ins.message || '').substring(0, 120), M + 8, y);
                     y += 6;
                 }
                 y += 4;
@@ -1157,9 +1157,10 @@ window.exportDashboardPDF = async function() {
                 for (const fc of pa.forecasts.slice(0, 4)) {
                     if (y + 12 > H - M) { pdf.addPage(); y = M; }
                     pdf.setTextColor(99, 102, 241);
-                    pdf.text(fc.column, M, y);
+                    pdf.text(fc.column || fc.metric || 'Metric', M, y);
                     pdf.setTextColor(100, 116, 139);
-                    pdf.text(`  Slope: ${fc.regression.slope}  |  R²: ${fc.regression.rSquared}  |  Next: ${fc.values.slice(0, 3).map(v => formatKpiValue(v)).join(', ')}`, M + 40, y);
+                    const reg = fc.regression || {};
+                    pdf.text(`  Slope: ${(reg.slope || 0).toFixed(2)}  |  R²: ${(reg.rSquared || 0).toFixed(3)}  |  Next: ${(fc.values || []).slice(0, 3).map(v => formatKpiValue(v)).join(', ')}`, M + 40, y);
                     y += 5;
                 }
                 // Render forecast chart images
@@ -1174,7 +1175,7 @@ window.exportDashboardPDF = async function() {
             }
 
             // Correlation insights
-            if (pa.correlations && pa.correlations.insights.length > 0) {
+            if (pa.correlations && pa.correlations.insights && pa.correlations.insights.length > 0) {
                 if (y + 15 > H - M) { pdf.addPage(); y = M; }
                 pdf.setTextColor(30, 41, 59);
                 pdf.setFontSize(10); pdf.setFont(undefined, 'bold');
@@ -1196,10 +1197,10 @@ window.exportDashboardPDF = async function() {
                 pdf.text('Anomalies Detected', M, y); y += 6;
                 pdf.setFontSize(8); pdf.setFont(undefined, 'normal');
                 for (const ag of pa.anomalies.slice(0, 3)) {
-                    for (const a of ag.anomalies.slice(0, 3)) {
+                    for (const a of (ag.anomalies || []).slice(0, 3)) {
                         if (y + 6 > H - M) { pdf.addPage(); y = M; }
                         pdf.setTextColor(a.type === 'high' ? 239 : 59, a.type === 'high' ? 68 : 130, a.type === 'high' ? 68 : 246);
-                        pdf.text(`[${a.type.toUpperCase()}] ${ag.column} at "${a.label}": ${formatKpiValue(a.value)} (Z=${a.zScore})`, M, y);
+                        pdf.text(`[${(a.type || '').toUpperCase()}] ${ag.column || ''} at "${a.label || ''}": ${formatKpiValue(a.value)} (Z=${a.zScore || 0})`, M, y);
                         y += 5;
                     }
                 }
@@ -1212,9 +1213,9 @@ window.exportDashboardPDF = async function() {
             if (y + 30 > H - M) { pdf.addPage(); y = M; }
             pdf.setTextColor(30, 41, 59);
             pdf.setFontSize(10); pdf.setFont(undefined, 'bold');
-            pdf.text(`Data Table: ${firstChart.sheetName} (${firstChart.rowCount} rows)`, M, y); y += 6;
+            pdf.text(`Data Table: ${firstChart.sheetName || 'Sheet'} (${firstChart.rowCount || firstChart.labels?.length || 0} rows)`, M, y); y += 6;
             pdf.setFontSize(7); pdf.setFont(undefined, 'normal');
-            const cols = [firstChart.labelColumn, ...firstChart.dataColumns.slice(0, 5)];
+            const cols = [firstChart.labelColumn || 'Label', ...(firstChart.dataColumns || []).slice(0, 5)];
             const colW = (W - M * 2) / cols.length;
             // Header
             pdf.setFillColor(241, 245, 249);
@@ -1222,13 +1223,13 @@ window.exportDashboardPDF = async function() {
             pdf.setTextColor(51, 65, 85); pdf.setFont(undefined, 'bold');
             cols.forEach((c, ci) => pdf.text(c.substring(0, 15), M + ci * colW + 2, y + 4));
             y += 7; pdf.setFont(undefined, 'normal');
-            const maxRows = Math.min(firstChart.labels.length, 25);
+            const maxRows = Math.min((firstChart.labels || []).length, 25);
             for (let ri = 0; ri < maxRows; ri++) {
                 if (y + 5 > H - M) { pdf.addPage(); y = M; }
                 if (ri % 2 === 0) { pdf.setFillColor(248, 250, 252); pdf.rect(M, y - 1, W - M * 2, 5, 'F'); }
                 pdf.setTextColor(51, 65, 85);
-                pdf.text(String(firstChart.labels[ri] || '').substring(0, 18), M + 2, y + 3);
-                firstChart.datasets.slice(0, 5).forEach((ds, di) => {
+                pdf.text(String((firstChart.labels || [])[ri] || '').substring(0, 18), M + 2, y + 3);
+                (firstChart.datasets || []).slice(0, 5).forEach((ds, di) => {
                     pdf.text(String(formatKpiValue(ds.data[ri])), M + (di + 1) * colW + 2, y + 3);
                 });
                 y += 5;
