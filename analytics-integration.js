@@ -817,8 +817,8 @@ function getDashboardViewHTML() {
                             <tr><td class="ad-corr-label">${pa.correlations.columns[ri].length > 12 ? pa.correlations.columns[ri].substring(0, 10) + '..' : pa.correlations.columns[ri]}</td>
                             ${row.map((val, ci) => {
                                 const abs = Math.abs(val);
-                                const bg = ri === ci ? 'rgba(99,102,241,.15)' : val > 0 ? \`rgba(16,185,129,\${abs * 0.4})\` : \`rgba(239,68,68,\${abs * 0.4})\`;
-                                return \`<td style="background:\${bg};font-weight:\${abs > 0.7 ? 700 : 400};color:\${abs > 0.5 ? '#1e293b' : '#64748b'}" title="\${pa.correlations.columns[ri]} vs \${pa.correlations.columns[ci]}">\${val.toFixed(2)}</td>\`;
+                                const bg = ri === ci ? 'rgba(99,102,241,.15)' : val > 0 ? `rgba(16,185,129,${abs * 0.4})` : `rgba(239,68,68,${abs * 0.4})`;
+                                return `<td style="background:${bg};font-weight:${abs > 0.7 ? 700 : 400};color:${abs > 0.5 ? '#1e293b' : '#64748b'}" title="${pa.correlations.columns[ri]} vs ${pa.correlations.columns[ci]}">${val.toFixed(2)}</td>`;
                             }).join('')}</tr>
                         `).join('')}
                     </tbody>

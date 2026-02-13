@@ -1136,11 +1136,15 @@ function showEstimatesLoading(show) {
 }
 
 function showEmptyEstimatesState() {
-    document.getElementById('estimations-list').innerHTML = `<div class="empty-state premium-empty"><div class="empty-icon"><i class="fas fa-calculator"></i></div><h3>Start Your First AI Estimation</h3><p>Upload your project drawings to get accurate cost estimates from our AI-powered system.</p><button class="btn btn-primary btn-large" onclick="renderAppSection('estimation-tool')"><i class="fas fa-rocket"></i> Create First Estimation</button></div>`;
+    const el = document.getElementById('estimations-list');
+    if (!el) return;
+    el.innerHTML = `<div class="empty-state premium-empty"><div class="empty-icon"><i class="fas fa-calculator"></i></div><h3>Start Your First AI Estimation</h3><p>Upload your project drawings to get accurate cost estimates from our AI-powered system.</p><button class="btn btn-primary btn-large" onclick="renderAppSection('estimation-tool')"><i class="fas fa-rocket"></i> Create First Estimation</button></div>`;
 }
 
 function showEstimatesError() {
-    document.getElementById('estimations-list').innerHTML = `<div class="error-state premium-error"><div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div><h3>Unable to Load Estimations</h3><p>We're having trouble loading your requests. Please try again.</p><button class="btn btn-primary" onclick="fetchAndRenderMyEstimations()"><i class="fas fa-redo"></i> Try Again</button></div>`;
+    const el = document.getElementById('estimations-list');
+    if (!el) return;
+    el.innerHTML = `<div class="error-state premium-error"><div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div><h3>Unable to Load Estimations</h3><p>We're having trouble loading your requests. Please try again.</p><button class="btn btn-primary" onclick="fetchAndRenderMyEstimations()"><i class="fas fa-redo"></i> Try Again</button></div>`;
 }
 
 function viewEstimationDetails(estimationId) {
@@ -2904,6 +2908,7 @@ async function checkProfileAndRoute() {
 function renderAppSection(sectionId) {
     const container = document.getElementById('app-container');
     document.querySelectorAll('.sidebar-nav-link').forEach(link => link.classList.toggle('active', link.dataset.section === sectionId));
+    if (!appState.currentUser) return;
     const profileStatus = appState.currentUser.profileStatus;
     const isApproved = profileStatus === 'approved';
     const restrictedSections = ['post-job', 'jobs', 'my-quotes', 'approved-jobs', 'estimation-tool', 'my-estimations', 'messages', 'ai-analytics', 'project-tracking', 'community-feed', 'quote-analysis'];
