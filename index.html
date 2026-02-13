@@ -47,7 +47,7 @@
         /* --- PREMIUM BUSINESS ANALYTICS SECTION --- */
         .business-analytics-section {
             padding: 140px 0;
-            background: linear-gradient(165deg, #020617 0%, #0f172a 25%, #1a1145 50%, #0f172a 75%, #020617 100%);
+            background: linear-gradient(180deg, #f8fafc 0%, #ffffff 25%, #f0f4ff 50%, #ffffff 75%, #f8fafc 100%);
             position: relative;
             overflow: hidden;
         }
@@ -56,25 +56,25 @@
             position: absolute;
             inset: 0;
             background:
-                radial-gradient(ellipse at 20% 0%, rgba(102, 126, 234, 0.2) 0%, transparent 50%),
-                radial-gradient(ellipse at 80% 100%, rgba(118, 75, 162, 0.15) 0%, transparent 50%),
-                radial-gradient(ellipse at 50% 50%, rgba(99, 102, 241, 0.06) 0%, transparent 60%);
+                radial-gradient(ellipse at 20% 0%, rgba(37, 99, 235, 0.06) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 100%, rgba(99, 102, 241, 0.05) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 50%, rgba(37, 99, 235, 0.03) 0%, transparent 60%);
             z-index: 0;
         }
         .ba-grid-pattern {
             position: absolute;
             inset: 0;
             background-image:
-                linear-gradient(rgba(102, 126, 234, 0.04) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(102, 126, 234, 0.04) 1px, transparent 1px);
+                linear-gradient(rgba(37, 99, 235, 0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(37, 99, 235, 0.04) 1px, transparent 1px);
             background-size: 80px 80px;
             mask-image: radial-gradient(ellipse at 50% 50%, black 20%, transparent 70%);
             -webkit-mask-image: radial-gradient(ellipse at 50% 50%, black 20%, transparent 70%);
         }
-        .ba-orb { position: absolute; border-radius: 50%; filter: blur(120px); opacity: 0.4; pointer-events: none; }
-        .ba-orb-1 { width: 500px; height: 500px; background: rgba(102, 126, 234, 0.3); top: -15%; right: -5%; animation: baOrb1 16s ease-in-out infinite alternate; }
-        .ba-orb-2 { width: 400px; height: 400px; background: rgba(118, 75, 162, 0.25); bottom: -10%; left: -5%; animation: baOrb2 14s ease-in-out infinite alternate; }
-        .ba-orb-3 { width: 300px; height: 300px; background: rgba(79, 172, 254, 0.2); top: 50%; left: 40%; animation: baOrb3 12s ease-in-out infinite alternate; }
+        .ba-orb { position: absolute; border-radius: 50%; filter: blur(120px); opacity: 0.3; pointer-events: none; }
+        .ba-orb-1 { width: 500px; height: 500px; background: rgba(37, 99, 235, 0.1); top: -15%; right: -5%; animation: baOrb1 16s ease-in-out infinite alternate; }
+        .ba-orb-2 { width: 400px; height: 400px; background: rgba(99, 102, 241, 0.08); bottom: -10%; left: -5%; animation: baOrb2 14s ease-in-out infinite alternate; }
+        .ba-orb-3 { width: 300px; height: 300px; background: rgba(59, 130, 246, 0.06); top: 50%; left: 40%; animation: baOrb3 12s ease-in-out infinite alternate; }
         @keyframes baOrb1 { 0% { transform: translate(0, 0); } 100% { transform: translate(-30px, 40px); } }
         @keyframes baOrb2 { 0% { transform: translate(0, 0); } 100% { transform: translate(40px, -30px); } }
         @keyframes baOrb3 { 0% { transform: scale(1); } 100% { transform: scale(1.3); } }
@@ -92,21 +92,21 @@
             align-items: center;
             gap: 8px;
             padding: 8px 20px;
-            background: rgba(102, 126, 234, 0.12);
+            background: rgba(37, 99, 235, 0.08);
             backdrop-filter: blur(12px);
-            border: 1px solid rgba(102, 126, 234, 0.25);
+            border: 1px solid rgba(37, 99, 235, 0.15);
             border-radius: 40px;
             margin-bottom: 24px;
             font-size: 13px;
             font-weight: 600;
-            color: #a5b4fc;
+            color: #2563eb;
             letter-spacing: 0.5px;
         }
-        .ba-badge i { color: #818cf8; }
+        .ba-badge i { color: #3b82f6; }
         .analytics-title {
             font-size: 56px;
             font-weight: 900;
-            background: linear-gradient(135deg, #ffffff 0%, #c7d2fe 30%, #a78bfa 60%, #818cf8 100%);
+            background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 30%, #2563eb 60%, #3b82f6 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             margin-bottom: 24px;
@@ -115,7 +115,7 @@
         }
         .analytics-subtitle {
             font-size: 19px;
-            color: #94a3b8;
+            color: #64748b;
             max-width: 700px;
             margin: 0 auto;
             line-height: 1.7;
@@ -130,32 +130,30 @@
         }
         @media (max-width: 1024px) { .analytics-grid { grid-template-columns: 1fr; } }
         .analytics-card {
-            background: rgba(255, 255, 255, 0.04);
-            backdrop-filter: blur(16px);
+            background: #ffffff;
             border-radius: 20px;
             padding: 32px;
-            border: 1px solid rgba(255, 255, 255, 0.07);
+            border: 1px solid #e2e8f0;
             transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
             position: relative;
             overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
         }
         .analytics-card::before {
             content: '';
             position: absolute;
-            inset: 0;
-            border-radius: 20px;
-            padding: 1px;
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.4), transparent 50%, rgba(118, 75, 162, 0.3));
-            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            -webkit-mask-composite: xor;
-            mask-composite: exclude;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #2563eb, #6366f1);
             opacity: 0;
             transition: opacity 0.4s ease;
         }
         .analytics-card:hover {
-            background: rgba(255, 255, 255, 0.07);
             transform: translateY(-6px);
-            box-shadow: 0 24px 64px rgba(102, 126, 234, 0.12);
+            box-shadow: 0 20px 50px rgba(37, 99, 235, 0.1), 0 8px 16px rgba(0, 0, 0, 0.04);
+            border-color: rgba(37, 99, 235, 0.2);
         }
         .analytics-card:hover::before { opacity: 1; }
 
@@ -164,7 +162,7 @@
             align-items: center;
             margin-bottom: 28px;
             padding-bottom: 20px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            border-bottom: 1px solid #f1f5f9;
         }
         .analytics-icon {
             width: 52px;
@@ -182,7 +180,7 @@
         .analytics-icon.purple { background: linear-gradient(135deg, #667eea, #764ba2); }
         .analytics-icon.blue { background: linear-gradient(135deg, #4facfe, #00f2fe); }
         .analytics-icon.pink { background: linear-gradient(135deg, #f093fb, #f5576c); }
-        .analytics-card-title { font-size: 20px; font-weight: 700; color: #f1f5f9; }
+        .analytics-card-title { font-size: 20px; font-weight: 700; color: #0f172a; }
 
         .analytics-metric {
             display: flex;
@@ -190,8 +188,8 @@
             align-items: center;
             padding: 14px 0;
         }
-        .metric-label { color: #94a3b8; font-size: 13px; font-weight: 500; }
-        .metric-value { font-size: 22px; font-weight: 800; color: #f1f5f9; }
+        .metric-label { color: #64748b; font-size: 13px; font-weight: 500; }
+        .metric-value { font-size: 22px; font-weight: 800; color: #0f172a; }
         .metric-badge {
             display: inline-flex;
             align-items: center;
@@ -202,37 +200,28 @@
             margin-left: 10px;
             letter-spacing: 0.3px;
         }
-        .metric-badge.positive { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.2); }
-        .metric-badge.negative { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.2); }
+        .metric-badge.positive { background: rgba(34, 197, 94, 0.1); color: #16a34a; border: 1px solid rgba(34, 197, 94, 0.2); }
+        .metric-badge.negative { background: rgba(239, 68, 68, 0.1); color: #dc2626; border: 1px solid rgba(239, 68, 68, 0.2); }
 
         /* Dashboard Mockup */
         .dashboard-mockup {
             position: relative;
             border-radius: 20px;
             overflow: hidden;
-            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.06);
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(0, 0, 0, 0.04);
             margin-bottom: 60px;
+            border: 1px solid #e2e8f0;
         }
         .dashboard-mockup::before {
-            content: '';
-            position: absolute;
-            inset: -1px;
-            border-radius: 21px;
-            padding: 1px;
-            background: linear-gradient(160deg, rgba(102, 126, 234, 0.5), transparent 40%, transparent 60%, rgba(118, 75, 162, 0.3));
-            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            -webkit-mask-composite: xor;
-            mask-composite: exclude;
-            z-index: 2;
-            pointer-events: none;
+            display: none;
         }
         .mockup-toolbar {
-            background: rgba(15, 23, 42, 0.95);
+            background: #f8fafc;
             padding: 14px 20px;
             display: flex;
             align-items: center;
             gap: 8px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            border-bottom: 1px solid #e2e8f0;
         }
         .mockup-dot { width: 12px; height: 12px; border-radius: 50%; }
         .mockup-dot.red { background: #ef4444; }
@@ -240,8 +229,8 @@
         .mockup-dot.green { background: #22c55e; }
         .mockup-url {
             flex: 1;
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
             border-radius: 8px;
             padding: 6px 14px;
             font-size: 12px;
@@ -250,38 +239,39 @@
         }
 
         .analytics-dashboard-preview {
-            background: linear-gradient(180deg, #0f172a 0%, #0d1424 100%);
+            background: #ffffff;
             padding: 40px;
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; flex-wrap: wrap; gap: 20px; }
-        .dashboard-title { font-size: 24px; font-weight: 700; color: #f1f5f9; }
+        .dashboard-title { font-size: 24px; font-weight: 700; color: #0f172a; }
         .dashboard-actions { display: flex; gap: 12px; }
         .dashboard-btn {
             padding: 10px 20px; border-radius: 10px; font-weight: 600; cursor: pointer;
             transition: all 0.3s ease; border: none; font-size: 13px; letter-spacing: 0.3px;
         }
-        .dashboard-btn.primary { background: linear-gradient(135deg, #667eea, #764ba2); color: white; box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3); }
-        .dashboard-btn.primary:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4); }
-        .dashboard-btn.secondary { background: rgba(255, 255, 255, 0.06); color: #94a3b8; border: 1px solid rgba(255, 255, 255, 0.1); }
-        .dashboard-btn.secondary:hover { background: rgba(255, 255, 255, 0.1); color: #f1f5f9; transform: translateY(-2px); }
+        .dashboard-btn.primary { background: linear-gradient(135deg, #2563eb, #4f46e5); color: white; box-shadow: 0 4px 16px rgba(37, 99, 235, 0.25); }
+        .dashboard-btn.primary:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(37, 99, 235, 0.35); }
+        .dashboard-btn.secondary { background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; }
+        .dashboard-btn.secondary:hover { background: #f1f5f9; color: #0f172a; transform: translateY(-2px); }
 
-        .chart-container { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 16px; padding: 30px; margin-bottom: 30px; position: relative; height: 400px; }
+        .chart-container { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px; padding: 30px; margin-bottom: 30px; position: relative; height: 400px; }
 
         .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-top: 30px; }
         @media (max-width: 768px) { .kpi-grid { grid-template-columns: 1fr 1fr; } }
         .kpi-card {
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid rgba(255, 255, 255, 0.07);
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
             border-radius: 16px;
             padding: 24px;
             transition: all 0.3s ease;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
         }
-        .kpi-card:hover { background: rgba(255, 255, 255, 0.07); transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2); }
+        .kpi-card:hover { background: #ffffff; transform: translateY(-4px); box-shadow: 0 12px 32px rgba(37, 99, 235, 0.08); border-color: rgba(37, 99, 235, 0.2); }
         .kpi-label { color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600; margin-bottom: 10px; }
         .kpi-value {
             font-size: 36px; font-weight: 900; line-height: 1.1;
-            background: linear-gradient(135deg, #c7d2fe 0%, #818cf8 50%, #667eea 100%);
+            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 50%, #3b82f6 100%);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         }
         .kpi-trend { display: flex; align-items: center; margin-top: 12px; font-size: 13px; font-weight: 600; }
@@ -307,46 +297,44 @@
             font-size: 40px;
             font-weight: 900;
             margin-bottom: 16px;
-            background: linear-gradient(135deg, #ffffff 0%, #c7d2fe 50%, #a78bfa 100%);
+            background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #2563eb 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             line-height: 1.2;
         }
-        .charts-subtitle { font-size: 17px; color: #94a3b8; max-width: 600px; margin: 0 auto; line-height: 1.7; }
+        .charts-subtitle { font-size: 17px; color: #64748b; max-width: 600px; margin: 0 auto; line-height: 1.7; }
         .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 60px; }
         @media (max-width: 968px) { .charts-grid { grid-template-columns: 1fr; } }
         .chart-card {
-            background: rgba(255, 255, 255, 0.04);
-            backdrop-filter: blur(16px);
+            background: #ffffff;
             border-radius: 20px;
             padding: 36px;
-            border: 1px solid rgba(255, 255, 255, 0.07);
+            border: 1px solid #e2e8f0;
             transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
             position: relative;
             overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
         }
         .chart-card::before {
             content: '';
             position: absolute;
-            inset: 0;
-            border-radius: 20px;
-            padding: 1px;
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.3), transparent 50%, rgba(118, 75, 162, 0.2));
-            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            -webkit-mask-composite: xor;
-            mask-composite: exclude;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #2563eb, #6366f1);
             opacity: 0;
             transition: opacity 0.4s ease;
         }
         .chart-card:hover {
-            background: rgba(255, 255, 255, 0.07);
             transform: translateY(-6px);
-            box-shadow: 0 24px 64px rgba(102, 126, 234, 0.12);
+            box-shadow: 0 20px 50px rgba(37, 99, 235, 0.1), 0 8px 16px rgba(0, 0, 0, 0.04);
+            border-color: rgba(37, 99, 235, 0.2);
         }
         .chart-card:hover::before { opacity: 1; }
         .chart-header { margin-bottom: 24px; }
         .chart-title {
-            font-size: 22px; font-weight: 800; color: #f1f5f9;
+            font-size: 22px; font-weight: 800; color: #0f172a;
             margin-bottom: 8px; display: flex; align-items: center; gap: 14px;
         }
         .chart-icon {
@@ -355,30 +343,28 @@
             font-size: 20px; color: white;
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
         }
-        .chart-description { color: #94a3b8; font-size: 14px; line-height: 1.6; }
+        .chart-description { color: #64748b; font-size: 14px; line-height: 1.6; }
         .chart-wrapper { position: relative; height: 360px; margin: 24px 0; }
         .chart-stats {
             display: grid; grid-template-columns: repeat(3, 1fr);
-            gap: 16px; padding-top: 24px; border-top: 1px solid rgba(255, 255, 255, 0.06);
+            gap: 16px; padding-top: 24px; border-top: 1px solid #f1f5f9;
         }
         .chart-stat { text-align: center; transition: transform 0.3s ease; }
         .chart-stat:hover { transform: scale(1.08); }
         .stat-value {
             font-size: 28px; font-weight: 900;
-            background: linear-gradient(135deg, #c7d2fe 0%, #818cf8 100%);
+            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
             display: block; margin-bottom: 4px;
         }
         .stat-label {
-            color: #64748b; font-size: 12px; font-weight: 600;
+            color: #94a3b8; font-size: 12px; font-weight: 600;
             text-transform: uppercase; letter-spacing: 1px;
         }
 
         /* Metrics Strip */
         .metrics-strip {
-            background: rgba(255, 255, 255, 0.04);
-            backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.07);
+            background: linear-gradient(135deg, #2563eb 0%, #4f46e5 50%, #6366f1 100%);
             border-radius: 20px;
             padding: 48px;
             color: white;
@@ -387,6 +373,7 @@
             gap: 40px;
             position: relative;
             overflow: hidden;
+            box-shadow: 0 20px 50px rgba(37, 99, 235, 0.2);
         }
         @media (max-width: 768px) { .metrics-strip { grid-template-columns: 1fr 1fr; padding: 32px; } }
         .metrics-strip::after {
@@ -396,17 +383,16 @@
             right: -10%;
             width: 400px;
             height: 400px;
-            background: radial-gradient(circle, rgba(102, 126, 234, 0.1) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 70%);
             border-radius: 50%;
         }
         .metric-item { text-align: center; position: relative; z-index: 1; }
         .metric-item-value {
             font-size: 44px; font-weight: 900; margin-bottom: 8px;
-            background: linear-gradient(135deg, #ffffff 0%, #c7d2fe 50%, #818cf8 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            color: #ffffff;
+            -webkit-text-fill-color: #ffffff;
         }
-        .metric-item-label { font-size: 15px; color: #94a3b8; font-weight: 500; }
+        .metric-item-label { font-size: 15px; color: rgba(255, 255, 255, 0.8); font-weight: 500; }
 
         /* Keyframes */
         @keyframes pulse {
@@ -1241,9 +1227,9 @@
                 <div class="section-container">
                     <h2 class="section-title reveal">Industry Excellence Showcase</h2>
                     <div class="showcase-grid">
-                        <div class="showcase-card reveal reveal-delay-1"><img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2940&auto=format&fit=crop" alt="Modern skyscraper" class="showcase-image" onerror="this.onerror=null;this.src='https://placehold.co/400x240/1e293b/ffffff?text=High-Rise';"><div class="showcase-content"><h3>High-Rise Construction</h3><p>Structural design for towers and commercial buildings with advanced seismic engineering and wind load analysis.</p></div></div>
-                        <div class="showcase-card reveal reveal-delay-2"><img src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?q=80&w=2940&auto=format&fit=crop" alt="Steel bridge" class="showcase-image" onerror="this.onerror=null;this.src='https://placehold.co/400x240/1e293b/ffffff?text=Bridge';"><div class="showcase-content"><h3>Infrastructure Projects</h3><p>Complex bridge design, highway infrastructure, and transportation networks engineered for safety and longevity.</p></div></div>
-                        <div class="showcase-card reveal reveal-delay-3"><img src="https://images.unsplash.com/photo-1565008447742-97f6f38c985c?q=80&w=2940&auto=format&fit=crop" alt="Industrial facility" class="showcase-image" onerror="this.onerror=null;this.src='https://placehold.co/400x240/1e293b/ffffff?text=Industrial';"><div class="showcase-content"><h3>Industrial Facilities</h3><p>Manufacturing plants, warehouses, and industrial complexes with specialized frame solutions and heavy load engineering.</p></div></div>
+                        <div class="showcase-card reveal reveal-delay-1"><img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2940&auto=format&fit=crop" alt="Modern skyscraper" class="showcase-image" onerror="this.onerror=null;this.src='https://placehold.co/400x240/f1f5f9/64748b?text=High-Rise';"><div class="showcase-content"><h3>High-Rise Construction</h3><p>Structural design for towers and commercial buildings with advanced seismic engineering and wind load analysis.</p></div></div>
+                        <div class="showcase-card reveal reveal-delay-2"><img src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?q=80&w=2940&auto=format&fit=crop" alt="Steel bridge" class="showcase-image" onerror="this.onerror=null;this.src='https://placehold.co/400x240/f1f5f9/64748b?text=Bridge';"><div class="showcase-content"><h3>Infrastructure Projects</h3><p>Complex bridge design, highway infrastructure, and transportation networks engineered for safety and longevity.</p></div></div>
+                        <div class="showcase-card reveal reveal-delay-3"><img src="https://images.unsplash.com/photo-1565008447742-97f6f38c985c?q=80&w=2940&auto=format&fit=crop" alt="Industrial facility" class="showcase-image" onerror="this.onerror=null;this.src='https://placehold.co/400x240/f1f5f9/64748b?text=Industrial';"><div class="showcase-content"><h3>Industrial Facilities</h3><p>Manufacturing plants, warehouses, and industrial complexes with specialized frame solutions and heavy load engineering.</p></div></div>
                     </div>
                 </div>
             </section>
@@ -1251,7 +1237,7 @@
             <!-- Testimonials Carousel -->
             <section class="testimonials-section">
                 <div class="testimonials-container">
-                    <h2 class="section-title reveal" style="background: linear-gradient(135deg, var(--text-dark), var(--primary-color)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">What Our Clients Say</h2>
+                    <h2 class="section-title reveal" style="background: linear-gradient(135deg, #0f172a, #1e3a8a, #2563eb); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">What Our Clients Say</h2>
                     <p class="section-subtitle reveal reveal-delay-1">Hear from professionals who transformed their business with SteelConnect.</p>
                     <div class="testimonials-carousel reveal-scale" id="testimonials-carousel">
                         <div class="testimonials-track" id="testimonials-track">
@@ -1412,11 +1398,11 @@
                     options: {
                         responsive: true, maintainAspectRatio: false,
                         plugins: {
-                            legend: { display: true, position: 'top', labels: { usePointStyle: true, padding: 20, color: '#94a3b8' }},
+                            legend: { display: true, position: 'top', labels: { usePointStyle: true, padding: 20, color: '#64748b' }},
                             tooltip: {
-                                backgroundColor: 'rgba(15, 23, 42, 0.95)', borderColor: 'rgba(102, 126, 234, 0.3)', borderWidth: 1,
+                                backgroundColor: '#ffffff', borderColor: '#e2e8f0', borderWidth: 1,
                                 padding: 12, cornerRadius: 8,
-                                titleFont: { size: 14, weight: '600' }, titleColor: '#f1f5f9', bodyColor: '#cbd5e1',
+                                titleFont: { size: 14, weight: '600' }, titleColor: '#0f172a', bodyColor: '#64748b',
                                 callbacks: {
                                     label: function(context) {
                                         let label = context.dataset.label || '';
@@ -1429,8 +1415,8 @@
                             }
                         },
                         scales: {
-                            y: { beginAtZero: true, grid: { borderDash: [3, 3], color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#64748b' }},
-                            x: { grid: { display: false }, ticks: { color: '#64748b' }}
+                            y: { beginAtZero: true, grid: { borderDash: [3, 3], color: 'rgba(0, 0, 0, 0.06)' }, ticks: { color: '#94a3b8' }},
+                            x: { grid: { display: false }, ticks: { color: '#94a3b8' }}
                         }
                     }
                 });
@@ -1692,18 +1678,18 @@
                         datasets: [{
                             data: [35, 25, 20, 15, 5],
                             backgroundColor: ['rgba(102, 126, 234, 0.9)', 'rgba(118, 75, 162, 0.9)', 'rgba(240, 147, 251, 0.9)', 'rgba(245, 87, 108, 0.9)', 'rgba(79, 172, 254, 0.9)'],
-                            borderColor: ['rgba(15, 23, 42, 0.8)', 'rgba(15, 23, 42, 0.8)', 'rgba(15, 23, 42, 0.8)', 'rgba(15, 23, 42, 0.8)', 'rgba(15, 23, 42, 0.8)'],
+                            borderColor: ['#ffffff', '#ffffff', '#ffffff', '#ffffff', '#ffffff'],
                             borderWidth: 3, hoverOffset: 20
                         }]
                     },
                     options: {
                         responsive: true, maintainAspectRatio: false, cutout: '60%',
                         plugins: {
-                            legend: { display: true, position: 'bottom', labels: { padding: 20, usePointStyle: true, color: '#94a3b8', font: { size: 13, weight: '500' }}},
+                            legend: { display: true, position: 'bottom', labels: { padding: 20, usePointStyle: true, color: '#64748b', font: { size: 13, weight: '500' }}},
                             tooltip: {
-                                backgroundColor: 'rgba(15, 23, 42, 0.95)', borderColor: 'rgba(102, 126, 234, 0.3)', borderWidth: 1,
+                                backgroundColor: '#ffffff', borderColor: '#e2e8f0', borderWidth: 1,
                                 padding: 15, titleFont: { size: 14, weight: 'bold' }, bodyFont: { size: 13 },
-                                titleColor: '#f1f5f9', bodyColor: '#cbd5e1',
+                                titleColor: '#0f172a', bodyColor: '#64748b',
                                 cornerRadius: 10, displayColors: true,
                                 callbacks: { label: function(context) { return context.label + ': ' + context.parsed + '%'; } }
                             }
@@ -1733,11 +1719,11 @@
                     options: {
                         responsive: true, maintainAspectRatio: false,
                         plugins: {
-                            legend: { display: true, position: 'top', labels: { padding: 20, usePointStyle: true, color: '#94a3b8', font: { size: 13, weight: '500' }}},
+                            legend: { display: true, position: 'top', labels: { padding: 20, usePointStyle: true, color: '#64748b', font: { size: 13, weight: '500' }}},
                             tooltip: {
-                                backgroundColor: 'rgba(15, 23, 42, 0.95)', borderColor: 'rgba(102, 126, 234, 0.3)', borderWidth: 1,
+                                backgroundColor: '#ffffff', borderColor: '#e2e8f0', borderWidth: 1,
                                 padding: 15, titleFont: { size: 14, weight: 'bold' }, bodyFont: { size: 13 },
-                                titleColor: '#f1f5f9', bodyColor: '#cbd5e1',
+                                titleColor: '#0f172a', bodyColor: '#64748b',
                                 cornerRadius: 10, displayColors: true,
                                 callbacks: {
                                     label: function(context) {
@@ -1751,8 +1737,8 @@
                             }
                         },
                         scales: {
-                            y: { beginAtZero: true, grid: { borderDash: [5, 5], color: 'rgba(255, 255, 255, 0.05)', drawBorder: false }, ticks: { color: '#64748b' }},
-                            x: { grid: { display: false, drawBorder: false }, ticks: { color: '#64748b' }}
+                            y: { beginAtZero: true, grid: { borderDash: [5, 5], color: 'rgba(0, 0, 0, 0.06)', drawBorder: false }, ticks: { color: '#94a3b8' }},
+                            x: { grid: { display: false, drawBorder: false }, ticks: { color: '#94a3b8' }}
                         },
                         animation: {
                             duration: 2000, easing: 'easeInOutQuart',
