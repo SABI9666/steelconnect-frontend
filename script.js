@@ -553,6 +553,172 @@ async function handleLogin(event) {
 
 
 // ========================================
+// FORGOT / RESET PASSWORD HANDLERS
+// ========================================
+
+async function handleForgotPassword(event) {
+    event.preventDefault();
+    const form = event.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+
+    submitBtn.innerHTML = '<div class="btn-spinner"></div> Sending...';
+    submitBtn.disabled = true;
+
+    const email = form.resetEmail.value.trim();
+
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+        const response = await fetch(BACKEND_URL + '/auth/forgot-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email }),
+            signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Failed to send reset code');
+        }
+
+        // Store email for reset form
+        window._resetEmail = email;
+
+        // Show success message
+        const successContainer = document.getElementById('auth-success-container');
+        if (successContainer) {
+            successContainer.innerHTML = `
+                <div class="auth-inline-success">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Reset code sent! Check your email inbox.</span>
+                </div>`;
+        }
+
+        // Auto-navigate to reset password form after a brief delay
+        setTimeout(() => {
+            renderAuthForm('reset-password');
+        }, 2000);
+
+    } catch (error) {
+        let errorMsg = error.message || 'Failed to send reset code. Please try again.';
+        if (error.name === 'AbortError') {
+            errorMsg = 'Request timeout. Please check your connection and try again.';
+        }
+        const errorContainer = document.getElementById('auth-error-container');
+        if (errorContainer) {
+            errorContainer.innerHTML = `
+                <div class="auth-inline-error">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span>${errorMsg}</span>
+                    <button class="auth-error-dismiss" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>
+                </div>`;
+        }
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    }
+}
+
+async function handleResetPassword(event) {
+    event.preventDefault();
+    const form = event.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+
+    const email = form.resetEmail.value.trim();
+    const code = form.resetCode.value.trim();
+    const newPassword = form.newPassword.value;
+    const confirmPassword = form.confirmPassword.value;
+
+    // Validate passwords match
+    if (newPassword !== confirmPassword) {
+        const errorContainer = document.getElementById('auth-error-container');
+        if (errorContainer) {
+            errorContainer.innerHTML = `
+                <div class="auth-inline-error">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span>Passwords do not match</span>
+                    <button class="auth-error-dismiss" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>
+                </div>`;
+        }
+        return;
+    }
+
+    if (newPassword.length < 6) {
+        const errorContainer = document.getElementById('auth-error-container');
+        if (errorContainer) {
+            errorContainer.innerHTML = `
+                <div class="auth-inline-error">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span>Password must be at least 6 characters</span>
+                    <button class="auth-error-dismiss" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>
+                </div>`;
+        }
+        return;
+    }
+
+    submitBtn.innerHTML = '<div class="btn-spinner"></div> Resetting...';
+    submitBtn.disabled = true;
+
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+        const response = await fetch(BACKEND_URL + '/auth/reset-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, code, newPassword }),
+            signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Failed to reset password');
+        }
+
+        // Show success
+        const successContainer = document.getElementById('auth-success-container');
+        if (successContainer) {
+            successContainer.innerHTML = `
+                <div class="auth-inline-success">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Password reset successful! Redirecting to login...</span>
+                </div>`;
+        }
+
+        // Clear stored email
+        window._resetEmail = '';
+
+        // Redirect to login
+        setTimeout(() => {
+            renderAuthForm('login');
+        }, 2000);
+
+    } catch (error) {
+        let errorMsg = error.message || 'Failed to reset password. Please try again.';
+        if (error.name === 'AbortError') {
+            errorMsg = 'Request timeout. Please check your connection and try again.';
+        }
+        const errorContainer = document.getElementById('auth-error-container');
+        if (errorContainer) {
+            errorContainer.innerHTML = `
+                <div class="auth-inline-error">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span>${errorMsg}</span>
+                    <button class="auth-error-dismiss" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>
+                </div>`;
+        }
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    }
+}
+
+// ========================================
 // START: NEW NOTIFICATION SYSTEM
 // ========================================
 
@@ -2783,10 +2949,19 @@ function showAuthModal(view) {
 function renderAuthForm(view) {
     const container = document.getElementById('modal-form-container');
     if (!container) return;
-    container.innerHTML = view === 'login' ? getLoginTemplate() : getRegisterTemplate();
-    const formId = view === 'login' ? 'login-form' : 'register-form';
-    const handler = view === 'login' ? handleLogin : handleRegister;
-    document.getElementById(formId).addEventListener('submit', handler);
+    if (view === 'login') {
+        container.innerHTML = getLoginTemplate();
+        document.getElementById('login-form').addEventListener('submit', handleLogin);
+    } else if (view === 'register') {
+        container.innerHTML = getRegisterTemplate();
+        document.getElementById('register-form').addEventListener('submit', handleRegister);
+    } else if (view === 'forgot-password') {
+        container.innerHTML = getForgotPasswordTemplate();
+        document.getElementById('forgot-password-form').addEventListener('submit', handleForgotPassword);
+    } else if (view === 'reset-password') {
+        container.innerHTML = getResetPasswordTemplate(window._resetEmail || '');
+        document.getElementById('reset-password-form').addEventListener('submit', handleResetPassword);
+    }
 }
 
 function showGenericModal(innerHTML, style = '') {
@@ -3441,7 +3616,15 @@ function showRestrictedFeature(featureName) {
 
 // --- TEMPLATE GETTERS ---
 function getLoginTemplate() {
-    return `<div class="auth-header premium-auth-header"><div class="auth-logo"><i class="fas fa-drafting-compass"></i></div><h2>Welcome Back</h2><p>Sign in to your account</p></div><div id="auth-error-container"></div><form id="login-form" class="premium-form"><div class="form-group"><label class="form-label"><i class="fas fa-envelope"></i> Email</label><input type="email" class="form-input" name="loginEmail" required></div><div class="form-group"><label class="form-label"><i class="fas fa-lock"></i> Password</label><input type="password" class="form-input" name="loginPassword" required></div><button type="submit" class="btn btn-primary btn-full"><i class="fas fa-sign-in-alt"></i> Sign In</button></form><div class="auth-switch">Don't have an account? <a onclick="renderAuthForm('register')">Create one</a></div>`;
+    return `<div class="auth-header premium-auth-header"><div class="auth-logo"><i class="fas fa-drafting-compass"></i></div><h2>Welcome Back</h2><p>Sign in to your account</p></div><div id="auth-error-container"></div><form id="login-form" class="premium-form"><div class="form-group"><label class="form-label"><i class="fas fa-envelope"></i> Email</label><input type="email" class="form-input" name="loginEmail" required></div><div class="form-group"><label class="form-label"><i class="fas fa-lock"></i> Password</label><input type="password" class="form-input" name="loginPassword" required></div><button type="submit" class="btn btn-primary btn-full"><i class="fas fa-sign-in-alt"></i> Sign In</button></form><div class="auth-forgot-password"><a onclick="renderAuthForm('forgot-password')"><i class="fas fa-key"></i> Forgot Password?</a></div><div class="auth-switch">Don't have an account? <a onclick="renderAuthForm('register')">Create one</a></div>`;
+}
+
+function getForgotPasswordTemplate() {
+    return `<div class="auth-header premium-auth-header"><div class="auth-logo"><i class="fas fa-key"></i></div><h2>Forgot Password</h2><p>Enter your email to receive a reset code</p></div><div id="auth-error-container"></div><div id="auth-success-container"></div><form id="forgot-password-form" class="premium-form"><div class="form-group"><label class="form-label"><i class="fas fa-envelope"></i> Email Address</label><input type="email" class="form-input" name="resetEmail" required placeholder="Enter your registered email"></div><button type="submit" class="btn btn-primary btn-full"><i class="fas fa-paper-plane"></i> Send Reset Code</button></form><div class="auth-switch">Remember your password? <a onclick="renderAuthForm('login')">Sign In</a></div>`;
+}
+
+function getResetPasswordTemplate(email) {
+    return `<div class="auth-header premium-auth-header"><div class="auth-logo"><i class="fas fa-shield-alt"></i></div><h2>Reset Password</h2><p>Enter the code sent to your email</p></div><div id="auth-error-container"></div><div id="auth-success-container"></div><form id="reset-password-form" class="premium-form"><input type="hidden" name="resetEmail" value="${email}"><div class="form-group"><label class="form-label"><i class="fas fa-hashtag"></i> Verification Code</label><input type="text" class="form-input reset-code-input" name="resetCode" required placeholder="Enter 6-digit code" maxlength="6" autocomplete="off"></div><div class="form-group"><label class="form-label"><i class="fas fa-lock"></i> New Password</label><input type="password" class="form-input" name="newPassword" required placeholder="Enter new password (min 6 chars)" minlength="6"></div><div class="form-group"><label class="form-label"><i class="fas fa-lock"></i> Confirm Password</label><input type="password" class="form-input" name="confirmPassword" required placeholder="Confirm new password" minlength="6"></div><button type="submit" class="btn btn-primary btn-full"><i class="fas fa-check-circle"></i> Reset Password</button></form><div class="auth-switch">Didn't receive the code? <a onclick="renderAuthForm('forgot-password')">Resend</a> | <a onclick="renderAuthForm('login')">Back to Login</a></div>`;
 }
 
 function getRegisterTemplate() {
