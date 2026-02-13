@@ -79,28 +79,28 @@ const headerFeatures = [
         title: 'AI Cost Estimation',
         subtitle: 'Advanced algorithms for precise cost analysis',
         description: 'Upload your drawings and get instant, accurate estimates powered by machine learning',
-        gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+        gradient: 'linear-gradient(135deg, #4338ca 0%, #7c3aed 100%)'
     },
     {
         icon: 'fa-drafting-compass',
         title: 'Expert Engineering',
         subtitle: 'Connect with certified professionals',
         description: 'Access a network of qualified structural engineers and designers worldwide',
-        gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
+        gradient: 'linear-gradient(135deg, #a855f7 0%, #f43f5e 100%)'
     },
     {
         icon: 'fa-comments',
         title: 'Real-time Collaboration',
         subtitle: 'Seamless project communication',
         description: 'Built-in messaging system for efficient project coordination and updates',
-        gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'
+        gradient: 'linear-gradient(135deg, #2563eb 0%, #06b6d4 100%)'
     },
     {
         icon: 'fa-shield-alt',
         title: 'Secure & Reliable',
         subtitle: 'Enterprise-grade security',
         description: 'Your project data is protected with bank-level encryption and security',
-        gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)'
+        gradient: 'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)'
     }
 ];
 

@@ -13,9 +13,9 @@
     <style>
         /* Base and Original Variables */
         :root {
-            --analytics-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            --production-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            --sales-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --analytics-gradient: linear-gradient(135deg, #4338ca 0%, #7c3aed 100%);
+            --production-gradient: linear-gradient(135deg, #a855f7 0%, #f43f5e 100%);
+            --sales-gradient: linear-gradient(135deg, #2563eb 0%, #06b6d4 100%);
         }
         
         /* Sidebar and Original Component Styles */
@@ -47,7 +47,7 @@
         /* --- PREMIUM BUSINESS ANALYTICS SECTION --- */
         .business-analytics-section {
             padding: 140px 0;
-            background: linear-gradient(180deg, #f8fafc 0%, #ffffff 25%, #f0f4ff 50%, #ffffff 75%, #f8fafc 100%);
+            background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 15%, #e0e7ff 35%, #c7d2fe 50%, #e0e7ff 65%, #eef2ff 85%, #f8fafc 100%);
             position: relative;
             overflow: hidden;
         }
@@ -56,9 +56,9 @@
             position: absolute;
             inset: 0;
             background:
-                radial-gradient(ellipse at 20% 0%, rgba(37, 99, 235, 0.06) 0%, transparent 50%),
-                radial-gradient(ellipse at 80% 100%, rgba(99, 102, 241, 0.05) 0%, transparent 50%),
-                radial-gradient(ellipse at 50% 50%, rgba(37, 99, 235, 0.03) 0%, transparent 60%);
+                radial-gradient(ellipse at 20% 0%, rgba(99, 102, 241, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 100%, rgba(124, 58, 237, 0.06) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 50%, rgba(67, 56, 202, 0.04) 0%, transparent 60%);
             z-index: 0;
         }
         .ba-grid-pattern {
@@ -72,9 +72,9 @@
             -webkit-mask-image: radial-gradient(ellipse at 50% 50%, black 20%, transparent 70%);
         }
         .ba-orb { position: absolute; border-radius: 50%; filter: blur(120px); opacity: 0.3; pointer-events: none; }
-        .ba-orb-1 { width: 500px; height: 500px; background: rgba(37, 99, 235, 0.1); top: -15%; right: -5%; animation: baOrb1 16s ease-in-out infinite alternate; }
-        .ba-orb-2 { width: 400px; height: 400px; background: rgba(99, 102, 241, 0.08); bottom: -10%; left: -5%; animation: baOrb2 14s ease-in-out infinite alternate; }
-        .ba-orb-3 { width: 300px; height: 300px; background: rgba(59, 130, 246, 0.06); top: 50%; left: 40%; animation: baOrb3 12s ease-in-out infinite alternate; }
+        .ba-orb-1 { width: 500px; height: 500px; background: rgba(67, 56, 202, 0.12); top: -15%; right: -5%; animation: baOrb1 16s ease-in-out infinite alternate; }
+        .ba-orb-2 { width: 400px; height: 400px; background: rgba(124, 58, 237, 0.08); bottom: -10%; left: -5%; animation: baOrb2 14s ease-in-out infinite alternate; }
+        .ba-orb-3 { width: 300px; height: 300px; background: rgba(99, 102, 241, 0.06); top: 50%; left: 40%; animation: baOrb3 12s ease-in-out infinite alternate; }
         @keyframes baOrb1 { 0% { transform: translate(0, 0); } 100% { transform: translate(-30px, 40px); } }
         @keyframes baOrb2 { 0% { transform: translate(0, 0); } 100% { transform: translate(40px, -30px); } }
         @keyframes baOrb3 { 0% { transform: scale(1); } 100% { transform: scale(1.3); } }
@@ -92,21 +92,21 @@
             align-items: center;
             gap: 8px;
             padding: 8px 20px;
-            background: rgba(37, 99, 235, 0.08);
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(67, 56, 202, 0.06));
             backdrop-filter: blur(12px);
-            border: 1px solid rgba(37, 99, 235, 0.15);
+            border: 1px solid rgba(99, 102, 241, 0.18);
             border-radius: 40px;
             margin-bottom: 24px;
             font-size: 13px;
             font-weight: 600;
-            color: #2563eb;
+            color: #4338ca;
             letter-spacing: 0.5px;
         }
-        .ba-badge i { color: #3b82f6; }
+        .ba-badge i { color: #6366f1; }
         .analytics-title {
             font-size: 56px;
             font-weight: 900;
-            background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 30%, #2563eb 60%, #3b82f6 100%);
+            background: linear-gradient(135deg, #0f172a 0%, #312e81 25%, #4338ca 50%, #6366f1 75%, #818cf8 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             margin-bottom: 24px;
@@ -146,14 +146,14 @@
             left: 0;
             right: 0;
             height: 3px;
-            background: linear-gradient(90deg, #2563eb, #6366f1);
+            background: linear-gradient(90deg, #4338ca, #6366f1, #818cf8);
             opacity: 0;
             transition: opacity 0.4s ease;
         }
         .analytics-card:hover {
             transform: translateY(-6px);
-            box-shadow: 0 20px 50px rgba(37, 99, 235, 0.1), 0 8px 16px rgba(0, 0, 0, 0.04);
-            border-color: rgba(37, 99, 235, 0.2);
+            box-shadow: 0 20px 50px rgba(99, 102, 241, 0.12), 0 8px 16px rgba(0, 0, 0, 0.04);
+            border-color: rgba(99, 102, 241, 0.2);
         }
         .analytics-card:hover::before { opacity: 1; }
 
@@ -177,9 +177,9 @@
             flex-shrink: 0;
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
         }
-        .analytics-icon.purple { background: linear-gradient(135deg, #667eea, #764ba2); }
-        .analytics-icon.blue { background: linear-gradient(135deg, #4facfe, #00f2fe); }
-        .analytics-icon.pink { background: linear-gradient(135deg, #f093fb, #f5576c); }
+        .analytics-icon.purple { background: linear-gradient(135deg, #4338ca, #7c3aed); }
+        .analytics-icon.blue { background: linear-gradient(135deg, #2563eb, #06b6d4); }
+        .analytics-icon.pink { background: linear-gradient(135deg, #a855f7, #f43f5e); }
         .analytics-card-title { font-size: 20px; font-weight: 700; color: #0f172a; }
 
         .analytics-metric {
@@ -250,8 +250,8 @@
             padding: 10px 20px; border-radius: 10px; font-weight: 600; cursor: pointer;
             transition: all 0.3s ease; border: none; font-size: 13px; letter-spacing: 0.3px;
         }
-        .dashboard-btn.primary { background: linear-gradient(135deg, #2563eb, #4f46e5); color: white; box-shadow: 0 4px 16px rgba(37, 99, 235, 0.25); }
-        .dashboard-btn.primary:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(37, 99, 235, 0.35); }
+        .dashboard-btn.primary { background: linear-gradient(135deg, #4338ca, #6366f1); color: white; box-shadow: 0 4px 16px rgba(99, 102, 241, 0.25); }
+        .dashboard-btn.primary:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(99, 102, 241, 0.35); }
         .dashboard-btn.secondary { background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; }
         .dashboard-btn.secondary:hover { background: #f1f5f9; color: #0f172a; transform: translateY(-2px); }
 
@@ -267,11 +267,11 @@
             transition: all 0.3s ease;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
         }
-        .kpi-card:hover { background: #ffffff; transform: translateY(-4px); box-shadow: 0 12px 32px rgba(37, 99, 235, 0.08); border-color: rgba(37, 99, 235, 0.2); }
+        .kpi-card:hover { background: #ffffff; transform: translateY(-4px); box-shadow: 0 12px 32px rgba(99, 102, 241, 0.1); border-color: rgba(99, 102, 241, 0.2); }
         .kpi-label { color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600; margin-bottom: 10px; }
         .kpi-value {
             font-size: 36px; font-weight: 900; line-height: 1.1;
-            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 50%, #3b82f6 100%);
+            background: linear-gradient(135deg, #312e81 0%, #4338ca 40%, #6366f1 100%);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         }
         .kpi-trend { display: flex; align-items: center; margin-top: 12px; font-size: 13px; font-weight: 600; }
@@ -297,7 +297,7 @@
             font-size: 40px;
             font-weight: 900;
             margin-bottom: 16px;
-            background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #2563eb 100%);
+            background: linear-gradient(135deg, #0f172a 0%, #312e81 40%, #4f46e5 70%, #6366f1 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             line-height: 1.2;
@@ -322,14 +322,14 @@
             left: 0;
             right: 0;
             height: 3px;
-            background: linear-gradient(90deg, #2563eb, #6366f1);
+            background: linear-gradient(90deg, #4338ca, #6366f1, #a78bfa);
             opacity: 0;
             transition: opacity 0.4s ease;
         }
         .chart-card:hover {
             transform: translateY(-6px);
-            box-shadow: 0 20px 50px rgba(37, 99, 235, 0.1), 0 8px 16px rgba(0, 0, 0, 0.04);
-            border-color: rgba(37, 99, 235, 0.2);
+            box-shadow: 0 20px 50px rgba(99, 102, 241, 0.12), 0 8px 16px rgba(0, 0, 0, 0.04);
+            border-color: rgba(99, 102, 241, 0.2);
         }
         .chart-card:hover::before { opacity: 1; }
         .chart-header { margin-bottom: 24px; }
@@ -353,7 +353,7 @@
         .chart-stat:hover { transform: scale(1.08); }
         .stat-value {
             font-size: 28px; font-weight: 900;
-            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+            background: linear-gradient(135deg, #312e81 0%, #4f46e5 50%, #6366f1 100%);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
             display: block; margin-bottom: 4px;
         }
@@ -364,7 +364,7 @@
 
         /* Metrics Strip */
         .metrics-strip {
-            background: linear-gradient(135deg, #2563eb 0%, #4f46e5 50%, #6366f1 100%);
+            background: linear-gradient(135deg, #312e81 0%, #3730a3 25%, #4338ca 50%, #4f46e5 75%, #6366f1 100%);
             border-radius: 20px;
             padding: 48px;
             color: white;
@@ -373,7 +373,7 @@
             gap: 40px;
             position: relative;
             overflow: hidden;
-            box-shadow: 0 20px 50px rgba(37, 99, 235, 0.2);
+            box-shadow: 0 25px 60px rgba(67, 56, 202, 0.25);
         }
         @media (max-width: 768px) { .metrics-strip { grid-template-columns: 1fr 1fr; padding: 32px; } }
         .metrics-strip::after {
@@ -950,7 +950,7 @@
                         <div class="chart-card tilt-card reveal-left">
                             <div class="chart-header">
                                 <div class="chart-title">
-                                    <div class="chart-icon" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);"><i class="fas fa-chart-pie"></i></div>
+                                    <div class="chart-icon" style="background: linear-gradient(135deg, #a855f7 0%, #f43f5e 100%);"><i class="fas fa-chart-pie"></i></div>
                                     Market Distribution
                                 </div>
                                 <p class="chart-description">Real-time breakdown of project categories and market segments.</p>
@@ -965,7 +965,7 @@
                         <div class="chart-card tilt-card reveal-right">
                             <div class="chart-header">
                                 <div class="chart-title">
-                                    <div class="chart-icon" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);"><i class="fas fa-chart-bar"></i></div>
+                                    <div class="chart-icon" style="background: linear-gradient(135deg, #4338ca 0%, #06b6d4 100%);"><i class="fas fa-chart-bar"></i></div>
                                     Performance Trends
                                 </div>
                                 <p class="chart-description">Monthly performance metrics and growth trajectory analysis.</p>
@@ -1008,7 +1008,7 @@
                                 <div class="hiw-step-pulse"></div>
                             </div>
                             <div class="hiw-step-card">
-                                <div class="hiw-step-icon" style="background: linear-gradient(135deg, #667eea, #764ba2);"><i class="fas fa-pencil-ruler"></i></div>
+                                <div class="hiw-step-icon" style="background: linear-gradient(135deg, #4338ca, #7c3aed);"><i class="fas fa-pencil-ruler"></i></div>
                                 <div class="hiw-step-content">
                                     <h3>Post Your Project</h3>
                                     <p class="hiw-step-desc">Define your construction requirements with our intelligent project builder. Our AI assists in categorizing scope and estimating preliminary budgets.</p>
@@ -1095,7 +1095,7 @@
                             <p>Upload drawings or enter project details. Get instant, accurate cost and timeline estimates powered by machine learning trained on 12,000+ real projects.</p>
                         </div>
                         <div class="hiw-portal-card reveal reveal-delay-1">
-                            <div class="hiw-portal-icon" style="background: linear-gradient(135deg, #667eea, #764ba2);"><i class="fas fa-tachometer-alt"></i></div>
+                            <div class="hiw-portal-icon" style="background: linear-gradient(135deg, #4338ca, #7c3aed);"><i class="fas fa-tachometer-alt"></i></div>
                             <h4>Smart Dashboard</h4>
                             <p>Real-time analytics, project tracking, financial overview, and team performance metrics — all in a single, beautiful command center.</p>
                         </div>
@@ -1387,11 +1387,11 @@
                         labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
                         datasets: [{
                             label: 'Revenue', data: [1.2, 1.3, 1.5, 1.4, 1.7, 1.8, 1.9, 2.1, 2.2, 2.4, 2.5, 2.8],
-                            borderColor: '#667eea', backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            borderColor: '#4338ca', backgroundColor: 'rgba(67, 56, 202, 0.1)',
                             borderWidth: 3, tension: 0.4, fill: true
                         }, {
                             label: 'Projects', data: [85, 92, 88, 95, 102, 108, 115, 124, 128, 135, 142, 158],
-                            borderColor: '#764ba2', backgroundColor: 'rgba(118, 75, 162, 0.1)',
+                            borderColor: '#7c3aed', backgroundColor: 'rgba(124, 58, 237, 0.1)',
                             borderWidth: 3, tension: 0.4, fill: true
                         }]
                     },
@@ -1677,7 +1677,7 @@
                         labels: ['Commercial', 'Residential', 'Industrial', 'Infrastructure', 'Institutional'],
                         datasets: [{
                             data: [35, 25, 20, 15, 5],
-                            backgroundColor: ['rgba(102, 126, 234, 0.9)', 'rgba(118, 75, 162, 0.9)', 'rgba(240, 147, 251, 0.9)', 'rgba(245, 87, 108, 0.9)', 'rgba(79, 172, 254, 0.9)'],
+                            backgroundColor: ['rgba(67, 56, 202, 0.9)', 'rgba(124, 58, 237, 0.9)', 'rgba(168, 85, 247, 0.9)', 'rgba(244, 63, 94, 0.9)', 'rgba(6, 182, 212, 0.9)'],
                             borderColor: ['#ffffff', '#ffffff', '#ffffff', '#ffffff', '#ffffff'],
                             borderWidth: 3, hoverOffset: 20
                         }]
@@ -1701,19 +1701,19 @@
             const barCtx = document.getElementById('attractive-bar-chart');
             if (barCtx) {
                 const gradient1 = barCtx.getContext('2d').createLinearGradient(0, 0, 0, 400);
-                gradient1.addColorStop(0, 'rgba(102, 126, 234, 0.9)'); gradient1.addColorStop(1, 'rgba(102, 126, 234, 0.3)');
+                gradient1.addColorStop(0, 'rgba(67, 56, 202, 0.9)'); gradient1.addColorStop(1, 'rgba(67, 56, 202, 0.3)');
                 const gradient2 = barCtx.getContext('2d').createLinearGradient(0, 0, 0, 400);
-                gradient2.addColorStop(0, 'rgba(240, 147, 251, 0.9)'); gradient2.addColorStop(1, 'rgba(240, 147, 251, 0.3)');
+                gradient2.addColorStop(0, 'rgba(168, 85, 247, 0.9)'); gradient2.addColorStop(1, 'rgba(168, 85, 247, 0.3)');
                 new Chart(barCtx, {
                     type: 'bar',
                     data: {
                         labels: ['Q1', 'Q2', 'Q3', 'Q4'],
                         datasets: [{
                             label: 'Revenue ($M)', data: [1.8, 2.3, 2.9, 3.5], backgroundColor: gradient1,
-                            borderColor: 'rgba(102, 126, 234, 1)', borderWidth: 2, borderRadius: 10, borderSkipped: false
+                            borderColor: 'rgba(67, 56, 202, 1)', borderWidth: 2, borderRadius: 10, borderSkipped: false
                         }, {
                             label: 'Projects', data: [245, 312, 389, 425], backgroundColor: gradient2,
-                            borderColor: 'rgba(240, 147, 251, 1)', borderWidth: 2, borderRadius: 10, borderSkipped: false
+                            borderColor: 'rgba(168, 85, 247, 1)', borderWidth: 2, borderRadius: 10, borderSkipped: false
                         }]
                     },
                     options: {
