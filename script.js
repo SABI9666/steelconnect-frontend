@@ -3062,6 +3062,8 @@ async function checkProfileAndRoute() {
         appState.currentUser.profileStatus = profileStatus;
         appState.currentUser.canAccess = canAccess;
         appState.currentUser.rejectionReason = rejectionReason;
+        // Sync updated profile status to localStorage so page refreshes show correct state
+        localStorage.setItem('currentUser', JSON.stringify(appState.currentUser));
         document.querySelector('.sidebar').style.display = 'flex';
         document.getElementById('sidebarUserName').textContent = appState.currentUser.name;
         document.getElementById('sidebarUserType').textContent = appState.currentUser.type;
@@ -3779,7 +3781,7 @@ function getDashboardTemplate(user) {
 
     let profileStatusCard = '';
     if (profileStatus === 'incomplete') profileStatusCard = `<div class="db-status-card db-status-warning"><div class="db-status-icon"><i class="fas fa-exclamation-triangle"></i></div><div class="db-status-info"><h4>Complete Your Profile</h4><p>Complete your profile to unlock all platform features and start ${isContractor ? 'posting projects' : 'submitting quotes'}.</p></div><button class="db-status-btn" onclick="renderAppSection('profile-completion')"><i class="fas fa-user-edit"></i> Complete Now</button></div>`;
-    else if (profileStatus === 'pending') profileStatusCard = `<div class="db-status-card db-status-info-state"><div class="db-status-icon"><i class="fas fa-clock"></i></div><div class="db-status-info"><h4>Profile Under Review</h4><p>Your profile is being reviewed by our team. You'll get full access once approved.</p></div><div class="db-status-badge"><i class="fas fa-hourglass-half"></i> Reviewing</div></div>`;
+    else if (profileStatus === 'pending') profileStatusCard = `<div class="db-status-card db-status-info-state"><div class="db-status-icon"><i class="fas fa-clock"></i></div><div class="db-status-info"><h4>Profile Under Review</h4><p>Your profile is being reviewed by our team. You'll get full access once approved.</p></div><div style="display:flex;align-items:center;gap:10px;"><button class="db-status-btn" onclick="renderAppSection('profile-completion')" style="white-space:nowrap;"><i class="fas fa-eye"></i> View Profile</button><div class="db-status-badge"><i class="fas fa-hourglass-half"></i> Reviewing</div></div></div>`;
     else if (profileStatus === 'rejected') profileStatusCard = `<div class="db-status-card db-status-danger"><div class="db-status-icon"><i class="fas fa-exclamation-circle"></i></div><div class="db-status-info"><h4>Profile Needs Update</h4><p>Please update your profile. ${user.rejectionReason ? `<strong>Reason:</strong> ${user.rejectionReason}` : 'Review the feedback and resubmit.'}</p></div><button class="db-status-btn db-btn-danger" onclick="renderAppSection('profile-completion')"><i class="fas fa-edit"></i> Update Profile</button></div>`;
 
     // Quick action cards for contractor
@@ -4196,7 +4198,7 @@ function getSettingsTemplate(user) {
     const profileStatus = user.profileStatus || 'incomplete';
     let profileSection = '';
     if (profileStatus === 'incomplete') profileSection = `<div class="settings-card"><h3><i class="fas fa-user-edit"></i> Complete Your Profile</h3><p>Your profile is incomplete. Complete it to unlock all features.</p><button class="btn btn-primary" onclick="renderAppSection('profile-completion')"><i class="fas fa-edit"></i> Complete Profile</button></div>`;
-    else if (profileStatus === 'pending') profileSection = `<div class="settings-card"><h3><i class="fas fa-clock"></i> Profile Under Review</h3><p>Your profile is under review by our admin team.</p></div>`;
+    else if (profileStatus === 'pending') profileSection = `<div class="settings-card"><h3><i class="fas fa-clock"></i> Profile Under Review</h3><p>Your profile is under review by our admin team. You can view or update your profile while waiting.</p><button class="btn btn-outline" onclick="renderAppSection('profile-completion')"><i class="fas fa-eye"></i> View Profile</button></div>`;
     else if (profileStatus === 'rejected') profileSection = `<div class="settings-card"><h3><i class="fas fa-exclamation-triangle"></i> Profile Needs Update</h3><p>Your profile needs updates. ${user.rejectionReason ? `<strong>Reason:</strong> ${user.rejectionReason}` : ''}</p><button class="btn btn-primary" onclick="renderAppSection('profile-completion')"><i class="fas fa-edit"></i> Update Profile</button></div>`;
     else if (profileStatus === 'approved') profileSection = `<div class="settings-card"><h3><i class="fas fa-check-circle"></i> Profile Approved</h3><p>Your profile is approved.</p><button class="btn btn-outline" onclick="renderAppSection('profile-completion')"><i class="fas fa-edit"></i> Update Information</button></div>`;
     return `
@@ -4315,10 +4317,21 @@ function formatMessageDate(date) {
 function buildSidebarNav() {
     const nav = document.getElementById('sidebar-nav-menu');
     const role = appState.currentUser.type;
+    const profileStatus = appState.currentUser.profileStatus || 'incomplete';
+    const isApproved = profileStatus === 'approved';
     let links = `<a href="#" class="sidebar-nav-link" data-section="dashboard">
                     <i class="fas fa-tachometer-alt fa-fw"></i>
                     <span>Dashboard</span>
                  </a>`;
+    if (!isApproved) {
+        const profileLabel = profileStatus === 'incomplete' ? 'Complete Profile' : profileStatus === 'rejected' ? 'Update Profile' : 'My Profile';
+        const profileIcon = profileStatus === 'rejected' ? 'fa-exclamation-circle' : 'fa-user-edit';
+        links += `<a href="#" class="sidebar-nav-link sidebar-profile-link" data-section="profile-completion">
+                    <i class="fas ${profileIcon} fa-fw"></i>
+                    <span>${profileLabel}</span>
+                    ${profileStatus === 'rejected' ? '<span class="nav-badge" style="background:#ef4444;color:#fff;">!</span>' : ''}
+                 </a>`;
+    }
     if (role === 'designer') {
         links += `
             <a href="#" class="sidebar-nav-link" data-section="jobs">
