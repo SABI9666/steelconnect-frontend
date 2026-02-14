@@ -4450,14 +4450,12 @@ async function initDashboardCharts() {
     }
 }
 
-// --- PORTAL ANNOUNCEMENTS (Right-side Toast Slider) ---
+// --- PORTAL ANNOUNCEMENTS (Right-side Stacked Toasts) ---
 let annToastQueue = [];
-let annToastTimer = null;
-let annToastCycleTimer = null;
-let annToastIndex = 0;
-let annToastVisible = false;
-const ANN_DISPLAY_TIME = 10000;   // each toast visible for 10s
-const ANN_CYCLE_INTERVAL = 180000; // re-show every 3 minutes
+let annToastTimers = {};
+let annCycleTimer = null;
+const ANN_AUTO_HIDE = 15000;      // each toast auto-hides after 15s
+const ANN_CYCLE_INTERVAL = 180000; // re-show all every 3 minutes
 
 async function loadPortalAnnouncements() {
     try {
@@ -4466,22 +4464,20 @@ async function loadPortalAnnouncements() {
         if (announcements.length === 0) return;
 
         annToastQueue = announcements.slice(0, 10);
-        annToastIndex = 0;
-
-        // Show first toast after a short delay
-        setTimeout(() => showAnnouncementToast(), 1500);
+        setTimeout(() => showAllAnnouncementToasts(), 1500);
     } catch (error) {
         console.log('Announcements not available:', error.message);
     }
 }
 
-function showAnnouncementToast() {
-    if (annToastQueue.length === 0) return;
-    if (annToastIndex >= annToastQueue.length) annToastIndex = 0;
-
-    const ann = annToastQueue[annToastIndex];
+function showAllAnnouncementToasts() {
     const container = document.getElementById('announcement-popup-container');
-    if (!container) return;
+    if (!container || annToastQueue.length === 0) return;
+
+    // Clear previous
+    Object.values(annToastTimers).forEach(t => clearTimeout(t));
+    annToastTimers = {};
+    container.innerHTML = '';
 
     const typeConfig = {
         offer: { icon: 'fa-tags', gradient: 'linear-gradient(135deg, #10b981, #059669)', bgColor: '#ecfdf5', borderColor: '#10b981', label: 'Offer' },
@@ -4491,16 +4487,19 @@ function showAnnouncementToast() {
         alert: { icon: 'fa-exclamation-triangle', gradient: 'linear-gradient(135deg, #ef4444, #dc2626)', bgColor: '#fef2f2', borderColor: '#ef4444', label: 'Alert' }
     };
 
-    const cfg = typeConfig[ann.type] || typeConfig.general;
-    const isUrgent = ann.priority === 'urgent' || ann.priority === 'high';
-    const timeAgo = getAnnouncementTimeAgo(ann.createdAt);
-    const total = annToastQueue.length;
-    const current = annToastIndex + 1;
+    annToastQueue.forEach((ann, idx) => {
+        const cfg = typeConfig[ann.type] || typeConfig.general;
+        const isUrgent = ann.priority === 'urgent' || ann.priority === 'high';
+        const timeAgo = getAnnouncementTimeAgo(ann.createdAt);
+        const toastId = `ann-toast-${ann.id}`;
 
-    container.innerHTML = `
-        <div class="ann-toast ${isUrgent ? 'ann-toast-urgent' : ''}" id="annToast">
+        const toastEl = document.createElement('div');
+        toastEl.className = `ann-toast ${isUrgent ? 'ann-toast-urgent' : ''}`;
+        toastEl.id = toastId;
+        toastEl.style.animationDelay = `${idx * 0.12}s`;
+        toastEl.innerHTML = `
             <div class="ann-toast-accent" style="background: ${cfg.gradient}"></div>
-            <div class="ann-toast-progress" id="annToastProgress"></div>
+            <div class="ann-toast-progress" id="prog-${ann.id}"></div>
             <div class="ann-toast-header">
                 <div class="ann-toast-type" style="background: ${cfg.bgColor}; border-color: ${cfg.borderColor}">
                     <i class="fas ${cfg.icon}" style="color: ${cfg.borderColor}"></i>
@@ -4508,108 +4507,65 @@ function showAnnouncementToast() {
                 </div>
                 <div class="ann-toast-header-right">
                     ${isUrgent ? '<span class="ann-toast-urgent-tag">URGENT</span>' : ''}
-                    ${total > 1 ? `<span class="ann-toast-count">${current}/${total}</span>` : ''}
-                    <button class="ann-toast-close" onclick="closeAnnouncementToast()" title="Close"><i class="fas fa-times"></i></button>
+                    <button class="ann-toast-close" onclick="closeSingleToast('${ann.id}')" title="Close"><i class="fas fa-times"></i></button>
                 </div>
             </div>
             <div class="ann-toast-body">
                 <h4 class="ann-toast-title">${ann.title}</h4>
-                <p class="ann-toast-text">${ann.content.length > 140 ? ann.content.substring(0, 140) + '...' : ann.content}</p>
+                <p class="ann-toast-text">${ann.content.length > 120 ? ann.content.substring(0, 120) + '...' : ann.content}</p>
             </div>
             <div class="ann-toast-footer">
                 <span class="ann-toast-time"><i class="far fa-clock"></i> ${timeAgo}</span>
-                ${total > 1 ? `
-                    <div class="ann-toast-nav">
-                        <button class="ann-toast-nav-btn" onclick="annToastPrev()" title="Previous"><i class="fas fa-chevron-left"></i></button>
-                        <button class="ann-toast-nav-btn" onclick="annToastNext()" title="Next"><i class="fas fa-chevron-right"></i></button>
-                    </div>` : ''}
-            </div>
-        </div>`;
+                <span class="ann-toast-by"><i class="fas fa-user-shield"></i> ${ann.createdByName || 'Admin'}</span>
+            </div>`;
 
-    annToastVisible = true;
+        container.appendChild(toastEl);
 
-    // Slide in
-    requestAnimationFrame(() => {
-        const toast = document.getElementById('annToast');
-        if (toast) toast.classList.add('ann-toast-visible');
+        // Stagger the slide-in
+        setTimeout(() => {
+            toastEl.classList.add('ann-toast-visible');
+            // Start progress bar
+            const prog = document.getElementById(`prog-${ann.id}`);
+            if (prog) {
+                prog.style.transition = 'none';
+                prog.style.width = '100%';
+                requestAnimationFrame(() => {
+                    prog.style.transition = `width ${ANN_AUTO_HIDE}ms linear`;
+                    prog.style.width = '0%';
+                });
+            }
+        }, idx * 120 + 50);
+
+        // Auto-hide each toast individually
+        annToastTimers[ann.id] = setTimeout(() => {
+            closeSingleToast(ann.id);
+        }, ANN_AUTO_HIDE + (idx * 120));
     });
 
-    // Progress bar animation
-    const progressBar = document.getElementById('annToastProgress');
-    if (progressBar) {
-        progressBar.style.transition = 'none';
-        progressBar.style.width = '100%';
-        requestAnimationFrame(() => {
-            progressBar.style.transition = `width ${ANN_DISPLAY_TIME}ms linear`;
-            progressBar.style.width = '0%';
-        });
-    }
-
-    // Auto-hide after display time
-    if (annToastTimer) clearTimeout(annToastTimer);
-    annToastTimer = setTimeout(() => {
-        hideAnnouncementToast();
-    }, ANN_DISPLAY_TIME);
-}
-
-function hideAnnouncementToast(skipCycle) {
-    const toast = document.getElementById('annToast');
-    if (toast) {
-        toast.classList.remove('ann-toast-visible');
-        toast.classList.add('ann-toast-hiding');
-    }
-    annToastVisible = false;
-
-    setTimeout(() => {
-        const container = document.getElementById('announcement-popup-container');
-        if (container) container.innerHTML = '';
-    }, 500);
-
     // Schedule next cycle
-    if (!skipCycle) {
-        if (annToastCycleTimer) clearTimeout(annToastCycleTimer);
-        annToastCycleTimer = setTimeout(() => {
-            annToastIndex++;
-            if (annToastIndex >= annToastQueue.length) annToastIndex = 0;
-            showAnnouncementToast();
-        }, ANN_CYCLE_INTERVAL);
-    }
+    scheduleCycle();
 }
 
-function closeAnnouncementToast() {
-    if (annToastTimer) clearTimeout(annToastTimer);
-    hideAnnouncementToast(false);
-}
-window.closeAnnouncementToast = closeAnnouncementToast;
-
-function annToastNext() {
-    if (annToastTimer) clearTimeout(annToastTimer);
-    if (annToastCycleTimer) clearTimeout(annToastCycleTimer);
-    annToastIndex++;
-    if (annToastIndex >= annToastQueue.length) annToastIndex = 0;
-    // Quick swap
-    const toast = document.getElementById('annToast');
-    if (toast) {
-        toast.classList.remove('ann-toast-visible');
-        toast.classList.add('ann-toast-hiding');
+function closeSingleToast(annId) {
+    if (annToastTimers[annId]) {
+        clearTimeout(annToastTimers[annId]);
+        delete annToastTimers[annId];
     }
-    setTimeout(() => showAnnouncementToast(), 350);
-}
-window.annToastNext = annToastNext;
-
-function annToastPrev() {
-    if (annToastTimer) clearTimeout(annToastTimer);
-    if (annToastCycleTimer) clearTimeout(annToastCycleTimer);
-    annToastIndex--;
-    if (annToastIndex < 0) annToastIndex = annToastQueue.length - 1;
-    const toast = document.getElementById('annToast');
-    if (toast) {
-        toast.classList.remove('ann-toast-visible');
-        toast.classList.add('ann-toast-hiding');
+    const el = document.getElementById(`ann-toast-${annId}`);
+    if (el) {
+        el.classList.remove('ann-toast-visible');
+        el.classList.add('ann-toast-hiding');
+        setTimeout(() => el.remove(), 500);
     }
-    setTimeout(() => showAnnouncementToast(), 350);
 }
-window.annToastPrev = annToastPrev;
+window.closeSingleToast = closeSingleToast;
+
+function scheduleCycle() {
+    if (annCycleTimer) clearTimeout(annCycleTimer);
+    annCycleTimer = setTimeout(() => {
+        showAllAnnouncementToasts();
+    }, ANN_CYCLE_INTERVAL);
+}
 
 function getAnnouncementTimeAgo(dateStr) {
     try {
