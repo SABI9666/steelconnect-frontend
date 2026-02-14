@@ -4608,6 +4608,42 @@ body {
     font-family: inherit !important;
 }
 
+/* OTP verification input */
+.otp-code-input {
+    text-align: center;
+    font-size: 28px !important;
+    font-weight: 700 !important;
+    letter-spacing: 10px !important;
+    font-family: 'Courier New', monospace !important;
+    padding: 16px 14px !important;
+    border: 2px solid #2563eb !important;
+    background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%) !important;
+}
+.otp-code-input:focus {
+    border-color: #1d4ed8 !important;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15) !important;
+}
+.otp-code-input::placeholder {
+    font-size: 14px !important;
+    letter-spacing: normal !important;
+    font-weight: 400 !important;
+    font-family: inherit !important;
+}
+.otp-logo {
+    background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%) !important;
+    color: white !important;
+}
+.otp-timer-info {
+    text-align: center;
+    font-size: 13px;
+    color: #64748b;
+    margin: -4px 0 16px 0;
+}
+.otp-timer-info i {
+    color: #f59e0b;
+    margin-right: 4px;
+}
+
 /* ========================================   TOAST NOTIFICATIONS (Premium)   ======================================== */
 .notification-container {
     position: fixed;

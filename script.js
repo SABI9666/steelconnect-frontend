@@ -479,7 +479,6 @@ async function handleLogin(event) {
     const submitBtn = form.querySelector('button[type="submit"]');
     const originalText = submitBtn.innerHTML;
 
-    // Show loading state immediately
     submitBtn.innerHTML = '<div class="btn-spinner"></div> Signing in...';
     submitBtn.disabled = true;
 
@@ -489,15 +488,12 @@ async function handleLogin(event) {
      };
 
     try {
-        // Set a timeout for the login request
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
 
         const response = await fetch(BACKEND_URL + '/auth/login', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(authData),
             signal: controller.signal
         });
@@ -511,28 +507,22 @@ async function handleLogin(event) {
 
         const data = await response.json();
 
-        // Store credentials
-        appState.currentUser = data.user;
-        appState.jwtToken = data.token;
-        localStorage.setItem('currentUser', JSON.stringify(data.user));
-        localStorage.setItem('jwtToken', data.token);
+        // Check if 2FA is required
+        if (data.requires2FA) {
+            window._otpEmail = data.email;
+            window._otpLoginType = 'user';
+            renderAuthForm('otp-verify');
+            return;
+        }
 
-        // Close modal and transition to app view
-        closeModal();
-        showAppView();
-
-        // Show welcome notification after app has settled
-        setTimeout(() => {
-            showNotification(`Welcome to SteelConnect, ${data.user.name}!`, 'success');
-        }, 600);
+        // Direct login (fallback if 2FA not enabled)
+        completeLogin(data);
 
     } catch (error) {
         let errorMsg = error.message || 'Login failed. Please try again.';
         if (error.name === 'AbortError') {
             errorMsg = 'Login timeout. Please check your connection and try again.';
         }
-
-        // Show inline error inside the modal
         const errorContainer = document.getElementById('auth-error-container');
         if (errorContainer) {
             errorContainer.innerHTML = `
@@ -544,10 +534,103 @@ async function handleLogin(event) {
         } else {
             showNotification(errorMsg, 'error');
         }
-
-        // Reset button state
         submitBtn.innerHTML = originalText;
         submitBtn.disabled = false;
+    }
+}
+
+// Complete login after OTP verification or direct login
+function completeLogin(data) {
+    appState.currentUser = data.user;
+    appState.jwtToken = data.token;
+    localStorage.setItem('currentUser', JSON.stringify(data.user));
+    localStorage.setItem('jwtToken', data.token);
+    closeModal();
+    showAppView();
+    setTimeout(() => {
+        showNotification(`Welcome to SteelConnect, ${data.user.name}!`, 'success');
+    }, 600);
+}
+
+// Handle OTP verification
+async function handleOTPVerify(event) {
+    event.preventDefault();
+    const form = event.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+
+    const otpCode = form.otpCode.value.trim();
+    const email = window._otpEmail || '';
+    const loginType = window._otpLoginType || 'user';
+
+    if (!otpCode || otpCode.length !== 6) {
+        const errorContainer = document.getElementById('auth-error-container');
+        if (errorContainer) {
+            errorContainer.innerHTML = `<div class="auth-inline-error"><i class="fas fa-exclamation-circle"></i><span>Please enter the 6-digit code</span><button class="auth-error-dismiss" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button></div>`;
+        }
+        return;
+    }
+
+    submitBtn.innerHTML = '<div class="btn-spinner"></div> Verifying...';
+    submitBtn.disabled = true;
+
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+        const response = await fetch(BACKEND_URL + '/auth/verify-otp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, otp: otpCode, loginType }),
+            signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Verification failed');
+        }
+
+        // OTP verified - complete login
+        window._otpEmail = '';
+        window._otpLoginType = '';
+        completeLogin(data);
+
+    } catch (error) {
+        let errorMsg = error.message || 'Verification failed. Please try again.';
+        if (error.name === 'AbortError') {
+            errorMsg = 'Request timeout. Please check your connection.';
+        }
+        const errorContainer = document.getElementById('auth-error-container');
+        if (errorContainer) {
+            errorContainer.innerHTML = `<div class="auth-inline-error"><i class="fas fa-exclamation-circle"></i><span>${errorMsg}</span><button class="auth-error-dismiss" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button></div>`;
+        }
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    }
+}
+
+// Resend OTP code
+async function resendOTP() {
+    const email = window._otpEmail || '';
+    const loginType = window._otpLoginType || 'user';
+    if (!email) return;
+
+    try {
+        const response = await fetch(BACKEND_URL + '/auth/resend-otp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, loginType })
+        });
+        const data = await response.json();
+        const successContainer = document.getElementById('auth-success-container');
+        if (successContainer) {
+            successContainer.innerHTML = `<div class="auth-inline-success"><i class="fas fa-check-circle"></i><span>${data.message || 'New code sent!'}</span></div>`;
+            setTimeout(() => { successContainer.innerHTML = ''; }, 5000);
+        }
+    } catch (error) {
+        showNotification('Failed to resend code.', 'error');
     }
 }
 
@@ -2961,6 +3044,12 @@ function renderAuthForm(view) {
     } else if (view === 'reset-password') {
         container.innerHTML = getResetPasswordTemplate(window._resetEmail || '');
         document.getElementById('reset-password-form').addEventListener('submit', handleResetPassword);
+    } else if (view === 'otp-verify') {
+        container.innerHTML = getOTPVerifyTemplate();
+        document.getElementById('otp-verify-form').addEventListener('submit', handleOTPVerify);
+        // Auto-focus the OTP input
+        const otpInput = document.querySelector('.otp-code-input');
+        if (otpInput) setTimeout(() => otpInput.focus(), 100);
     }
 }
 
@@ -3623,6 +3712,11 @@ function getLoginTemplate() {
 
 function getForgotPasswordTemplate() {
     return `<div class="auth-header premium-auth-header"><div class="auth-logo"><i class="fas fa-key"></i></div><h2>Forgot Password</h2><p>Enter your email to receive a reset code</p></div><div id="auth-error-container"></div><div id="auth-success-container"></div><form id="forgot-password-form" class="premium-form"><div class="form-group"><label class="form-label"><i class="fas fa-envelope"></i> Email Address</label><input type="email" class="form-input" name="resetEmail" required placeholder="Enter your registered email"></div><button type="submit" class="btn btn-primary btn-full"><i class="fas fa-paper-plane"></i> Send Reset Code</button></form><div class="auth-switch">Remember your password? <a onclick="renderAuthForm('login')">Sign In</a></div>`;
+}
+
+function getOTPVerifyTemplate() {
+    const maskedEmail = (window._otpEmail || '').replace(/(.{2})(.*)(@.*)/, '$1***$3');
+    return `<div class="auth-header premium-auth-header"><div class="auth-logo otp-logo"><i class="fas fa-shield-alt"></i></div><h2>Verify Your Identity</h2><p>Enter the 6-digit code sent to <strong>${maskedEmail}</strong></p></div><div id="auth-error-container"></div><div id="auth-success-container"></div><form id="otp-verify-form" class="premium-form"><div class="form-group"><label class="form-label"><i class="fas fa-hashtag"></i> Verification Code</label><input type="text" class="form-input otp-code-input" name="otpCode" required placeholder="Enter 6-digit code" maxlength="6" autocomplete="one-time-code" inputmode="numeric"></div><div class="otp-timer-info"><i class="fas fa-clock"></i> Code expires in 5 minutes</div><button type="submit" class="btn btn-primary btn-full"><i class="fas fa-check-circle"></i> Verify & Sign In</button></form><div class="auth-switch">Didn't receive the code? <a onclick="resendOTP()">Resend Code</a> | <a onclick="renderAuthForm('login')">Back to Login</a></div>`;
 }
 
 function getResetPasswordTemplate(email) {
