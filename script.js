@@ -3186,6 +3186,7 @@ function renderAppSection(sectionId) {
     if (sectionId === 'settings') { container.innerHTML = getSettingsTemplate(appState.currentUser); return; }
     if (sectionId === 'dashboard') {
         container.innerHTML = getDashboardTemplate(appState.currentUser);
+        loadPortalAnnouncements();
         if (isApproved) { renderRecentActivityWidgets(); initDashboardCharts(); }
     } else if (sectionId === 'jobs') {
         const role = appState.currentUser.type;
@@ -3972,6 +3973,24 @@ function getDashboardTemplate(user) {
                     <canvas id="dashboard-pie-chart"></canvas>
                 </div>
             </div>
+            <div class="dashboard-chart-card">
+                <div class="chart-card-header">
+                    <h4><i class="fas fa-chart-line"></i> Activity Trend</h4>
+                    <span class="chart-badge">6 Months</span>
+                </div>
+                <div class="chart-canvas-wrapper">
+                    <canvas id="dashboard-line-chart"></canvas>
+                </div>
+            </div>
+            <div class="dashboard-chart-card">
+                <div class="chart-card-header">
+                    <h4><i class="fas fa-chart-area"></i> Performance Score</h4>
+                    <span class="chart-badge">Current</span>
+                </div>
+                <div class="chart-canvas-wrapper">
+                    <canvas id="dashboard-radar-chart"></canvas>
+                </div>
+            </div>
         </div>
         <div class="db-kpi-row" id="dashboard-kpi-stats">
             <div class="db-kpi db-kpi-blue">
@@ -4014,6 +4033,9 @@ function getDashboardTemplate(user) {
                 </div>
             </div>
 
+            <!-- Announcements Ticker -->
+            <div id="portal-announcements" class="portal-announcements-container"></div>
+
             ${profileStatusCard}
             ${chartsSection}
 
@@ -4034,6 +4056,8 @@ function getDashboardTemplate(user) {
 // Dashboard charts initialization
 let dashboardBarChart = null;
 let dashboardPieChart = null;
+let dashboardLineChart = null;
+let dashboardRadarChart = null;
 
 async function initDashboardCharts() {
     const isContractor = appState.currentUser.type === 'contractor';
@@ -4203,6 +4227,7 @@ async function initDashboardCharts() {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                animation: { duration: 1500, easing: 'easeOutBounce' },
                 plugins: {
                     legend: { position: 'top', labels: { usePointStyle: true, padding: 20, font: { family: 'Inter', size: 12, weight: '500' } } },
                     tooltip: {
@@ -4263,6 +4288,7 @@ async function initDashboardCharts() {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                animation: { animateRotate: true, animateScale: true, duration: 1500 },
                 cutout: '65%',
                 plugins: {
                     legend: {
@@ -4287,6 +4313,219 @@ async function initDashboardCharts() {
                 }
             }
         });
+    }
+
+    // Line chart - Activity Trend
+    const lineCanvas = document.getElementById('dashboard-line-chart');
+    if (lineCanvas) {
+        const lineCtx = lineCanvas.getContext('2d');
+        if (dashboardLineChart) dashboardLineChart.destroy();
+
+        const lineLabels = stats.monthlyActivity.map(m => m.month);
+        const lineData = isContractor
+            ? stats.monthlyActivity.map(m => (m.projects || 0) + (m.quotes || 0))
+            : stats.monthlyActivity.map(m => (m.quotes || 0) + (m.approved || 0));
+
+        dashboardLineChart = new Chart(lineCtx, {
+            type: 'line',
+            data: {
+                labels: lineLabels,
+                datasets: [{
+                    label: 'Total Activity',
+                    data: lineData,
+                    borderColor: '#7c3aed',
+                    backgroundColor: (context) => {
+                        const ctx = context.chart.ctx;
+                        const gradient = ctx.createLinearGradient(0, 0, 0, 250);
+                        gradient.addColorStop(0, 'rgba(124, 58, 237, 0.3)');
+                        gradient.addColorStop(1, 'rgba(124, 58, 237, 0.01)');
+                        return gradient;
+                    },
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: '#7c3aed',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 5,
+                    pointHoverRadius: 8,
+                    pointHoverBackgroundColor: '#7c3aed',
+                    pointHoverBorderWidth: 3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 2000, easing: 'easeOutQuart' },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                        titleFont: { family: 'Inter', size: 13, weight: '600' },
+                        bodyFont: { family: 'Inter', size: 12 },
+                        padding: 12, cornerRadius: 8
+                    }
+                },
+                scales: {
+                    x: { grid: { display: false }, ticks: { font: { family: 'Inter', size: 12 } } },
+                    y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { family: 'Inter', size: 12 }, stepSize: 1 } }
+                }
+            }
+        });
+    }
+
+    // Radar chart - Performance Score
+    const radarCanvas = document.getElementById('dashboard-radar-chart');
+    if (radarCanvas) {
+        const radarCtx = radarCanvas.getContext('2d');
+        if (dashboardRadarChart) dashboardRadarChart.destroy();
+
+        let radarLabels, radarData;
+        if (isContractor) {
+            radarLabels = ['Projects', 'Quotes', 'Completion', 'Response', 'Activity'];
+            const total = Math.max(stats.projects.total, 1);
+            radarData = [
+                Math.min(stats.projects.total * 15, 100),
+                Math.min(stats.quotes.total * 10, 100),
+                stats.projects.total > 0 ? Math.round((stats.projects.completed / total) * 100) : 0,
+                Math.min(stats.projects.assigned * 20, 100),
+                Math.min(stats.monthlyActivity.reduce((s, m) => s + (m.projects || 0), 0) * 12, 100)
+            ];
+        } else {
+            radarLabels = ['Quotes', 'Approvals', 'Success Rate', 'Activity', 'Engagement'];
+            const total = Math.max(stats.quotes.total, 1);
+            radarData = [
+                Math.min(stats.quotes.total * 12, 100),
+                Math.min(stats.quotes.approved * 20, 100),
+                stats.quotes.total > 0 ? Math.round((stats.quotes.approved / total) * 100) : 0,
+                Math.min(stats.monthlyActivity.reduce((s, m) => s + (m.quotes || 0), 0) * 10, 100),
+                Math.min((stats.quotes.submitted || 0) * 15, 100)
+            ];
+        }
+
+        dashboardRadarChart = new Chart(radarCtx, {
+            type: 'radar',
+            data: {
+                labels: radarLabels,
+                datasets: [{
+                    label: 'Performance',
+                    data: radarData,
+                    borderColor: '#06b6d4',
+                    backgroundColor: 'rgba(6, 182, 212, 0.15)',
+                    borderWidth: 2.5,
+                    pointBackgroundColor: '#06b6d4',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 4,
+                    pointHoverRadius: 7
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 1800, easing: 'easeOutQuart' },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                        titleFont: { family: 'Inter', size: 13, weight: '600' },
+                        bodyFont: { family: 'Inter', size: 12 },
+                        padding: 12, cornerRadius: 8,
+                        callbacks: {
+                            label: function(context) {
+                                return ` ${context.label}: ${context.parsed.r}%`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    r: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: { display: false, stepSize: 20 },
+                        grid: { color: 'rgba(0,0,0,0.06)', circular: true },
+                        angleLines: { color: 'rgba(0,0,0,0.06)' },
+                        pointLabels: { font: { family: 'Inter', size: 11, weight: '500' }, color: '#475569' }
+                    }
+                }
+            }
+        });
+    }
+}
+
+// --- PORTAL ANNOUNCEMENTS ---
+async function loadPortalAnnouncements() {
+    const container = document.getElementById('portal-announcements');
+    if (!container) return;
+
+    try {
+        const response = await apiCall('/announcements', 'GET');
+        const announcements = response.data || [];
+        if (announcements.length === 0) {
+            container.innerHTML = '';
+            return;
+        }
+
+        const typeConfig = {
+            offer: { icon: 'fa-tags', gradient: 'linear-gradient(135deg, #10b981, #059669)', bgGradient: 'linear-gradient(135deg, #ecfdf5, #d1fae5)', accentColor: '#059669' },
+            maintenance: { icon: 'fa-tools', gradient: 'linear-gradient(135deg, #f59e0b, #d97706)', bgGradient: 'linear-gradient(135deg, #fffbeb, #fef3c7)', accentColor: '#d97706' },
+            update: { icon: 'fa-sync-alt', gradient: 'linear-gradient(135deg, #3b82f6, #2563eb)', bgGradient: 'linear-gradient(135deg, #eff6ff, #dbeafe)', accentColor: '#2563eb' },
+            general: { icon: 'fa-info-circle', gradient: 'linear-gradient(135deg, #6366f1, #4f46e5)', bgGradient: 'linear-gradient(135deg, #eef2ff, #e0e7ff)', accentColor: '#4f46e5' },
+            alert: { icon: 'fa-exclamation-triangle', gradient: 'linear-gradient(135deg, #ef4444, #dc2626)', bgGradient: 'linear-gradient(135deg, #fef2f2, #fee2e2)', accentColor: '#dc2626' }
+        };
+
+        let html = '<div class="portal-ann-wrapper">';
+        html += '<div class="portal-ann-header"><i class="fas fa-bullhorn"></i> Latest Updates</div>';
+        html += '<div class="portal-ann-cards">';
+
+        announcements.slice(0, 5).forEach((ann, idx) => {
+            const cfg = typeConfig[ann.type] || typeConfig.general;
+            const timeAgo = getAnnouncementTimeAgo(ann.createdAt);
+            const isUrgent = ann.priority === 'urgent' || ann.priority === 'high';
+
+            html += `
+                <div class="portal-ann-card ${isUrgent ? 'portal-ann-urgent' : ''}" style="animation-delay: ${idx * 0.1}s">
+                    <div class="portal-ann-accent" style="background: ${cfg.gradient}"></div>
+                    <div class="portal-ann-icon-wrap" style="background: ${cfg.bgGradient}">
+                        <i class="fas ${cfg.icon}" style="color: ${cfg.accentColor}"></i>
+                    </div>
+                    <div class="portal-ann-body">
+                        <div class="portal-ann-title">
+                            ${ann.title}
+                            ${isUrgent ? '<span class="portal-ann-urgent-badge">URGENT</span>' : ''}
+                        </div>
+                        <div class="portal-ann-text">${ann.content.length > 120 ? ann.content.substring(0, 120) + '...' : ann.content}</div>
+                        <div class="portal-ann-footer">
+                            <span class="portal-ann-type" style="color: ${cfg.accentColor}; background: ${cfg.bgGradient}">${ann.type.charAt(0).toUpperCase() + ann.type.slice(1)}</span>
+                            <span class="portal-ann-time"><i class="far fa-clock"></i> ${timeAgo}</span>
+                        </div>
+                    </div>
+                </div>`;
+        });
+
+        html += '</div></div>';
+        container.innerHTML = html;
+    } catch (error) {
+        console.log('Announcements not available:', error.message);
+        container.innerHTML = '';
+    }
+}
+
+function getAnnouncementTimeAgo(dateStr) {
+    try {
+        const date = new Date(dateStr);
+        const now = new Date();
+        const diffMs = now - date;
+        const diffMins = Math.floor(diffMs / 60000);
+        if (diffMins < 1) return 'Just now';
+        if (diffMins < 60) return `${diffMins}m ago`;
+        const diffHours = Math.floor(diffMins / 60);
+        if (diffHours < 24) return `${diffHours}h ago`;
+        const diffDays = Math.floor(diffHours / 24);
+        if (diffDays < 7) return `${diffDays}d ago`;
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    } catch (e) {
+        return '';
     }
 }
 
