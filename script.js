@@ -4450,11 +4450,14 @@ async function initDashboardCharts() {
     }
 }
 
-// --- PORTAL ANNOUNCEMENTS (Popup Toast System) ---
-let annPopupQueue = [];
-let annPopupTimer = null;
-let annPopupIndex = 0;
-let annPopupDismissed = new Set();
+// --- PORTAL ANNOUNCEMENTS (Right-side Toast Slider) ---
+let annToastQueue = [];
+let annToastTimer = null;
+let annToastCycleTimer = null;
+let annToastIndex = 0;
+let annToastVisible = false;
+const ANN_DISPLAY_TIME = 10000;   // each toast visible for 10s
+const ANN_CYCLE_INTERVAL = 180000; // re-show every 3 minutes
 
 async function loadPortalAnnouncements() {
     try {
@@ -4462,152 +4465,151 @@ async function loadPortalAnnouncements() {
         const announcements = response.data || [];
         if (announcements.length === 0) return;
 
-        // Only show announcements not dismissed this session
-        annPopupQueue = announcements.filter(a => !annPopupDismissed.has(a.id)).slice(0, 8);
-        annPopupIndex = 0;
+        annToastQueue = announcements.slice(0, 10);
+        annToastIndex = 0;
 
-        if (annPopupQueue.length > 0) {
-            // Small delay so dashboard renders first
-            setTimeout(() => showNextAnnouncementPopup(), 1200);
-        }
+        // Show first toast after a short delay
+        setTimeout(() => showAnnouncementToast(), 1500);
     } catch (error) {
         console.log('Announcements not available:', error.message);
     }
 }
 
-function showNextAnnouncementPopup() {
-    if (annPopupTimer) clearTimeout(annPopupTimer);
-    if (annPopupIndex >= annPopupQueue.length) return;
+function showAnnouncementToast() {
+    if (annToastQueue.length === 0) return;
+    if (annToastIndex >= annToastQueue.length) annToastIndex = 0;
 
-    const ann = annPopupQueue[annPopupIndex];
+    const ann = annToastQueue[annToastIndex];
     const container = document.getElementById('announcement-popup-container');
     if (!container) return;
 
     const typeConfig = {
-        offer: { icon: 'fa-tags', gradient: 'linear-gradient(135deg, #10b981, #059669)', bgColor: '#ecfdf5', borderColor: '#10b981', label: 'Special Offer', emoji: '' },
-        maintenance: { icon: 'fa-tools', gradient: 'linear-gradient(135deg, #f59e0b, #d97706)', bgColor: '#fffbeb', borderColor: '#f59e0b', label: 'Maintenance', emoji: '' },
-        update: { icon: 'fa-rocket', gradient: 'linear-gradient(135deg, #3b82f6, #2563eb)', bgColor: '#eff6ff', borderColor: '#3b82f6', label: 'Platform Update', emoji: '' },
-        general: { icon: 'fa-bullhorn', gradient: 'linear-gradient(135deg, #6366f1, #4f46e5)', bgColor: '#eef2ff', borderColor: '#6366f1', label: 'Announcement', emoji: '' },
-        alert: { icon: 'fa-exclamation-triangle', gradient: 'linear-gradient(135deg, #ef4444, #dc2626)', bgColor: '#fef2f2', borderColor: '#ef4444', label: 'Important Alert', emoji: '' }
+        offer: { icon: 'fa-tags', gradient: 'linear-gradient(135deg, #10b981, #059669)', bgColor: '#ecfdf5', borderColor: '#10b981', label: 'Offer' },
+        maintenance: { icon: 'fa-tools', gradient: 'linear-gradient(135deg, #f59e0b, #d97706)', bgColor: '#fffbeb', borderColor: '#f59e0b', label: 'Maintenance' },
+        update: { icon: 'fa-rocket', gradient: 'linear-gradient(135deg, #3b82f6, #2563eb)', bgColor: '#eff6ff', borderColor: '#3b82f6', label: 'Update' },
+        general: { icon: 'fa-bullhorn', gradient: 'linear-gradient(135deg, #6366f1, #4f46e5)', bgColor: '#eef2ff', borderColor: '#6366f1', label: 'News' },
+        alert: { icon: 'fa-exclamation-triangle', gradient: 'linear-gradient(135deg, #ef4444, #dc2626)', bgColor: '#fef2f2', borderColor: '#ef4444', label: 'Alert' }
     };
 
     const cfg = typeConfig[ann.type] || typeConfig.general;
     const isUrgent = ann.priority === 'urgent' || ann.priority === 'high';
     const timeAgo = getAnnouncementTimeAgo(ann.createdAt);
-    const hasMultiple = annPopupQueue.length > 1;
-    const counter = hasMultiple ? `<span class="ann-popup-counter">${annPopupIndex + 1} / ${annPopupQueue.length}</span>` : '';
+    const total = annToastQueue.length;
+    const current = annToastIndex + 1;
 
     container.innerHTML = `
-        <div class="ann-popup-overlay" id="annPopupOverlay">
-            <div class="ann-popup ${isUrgent ? 'ann-popup-urgent' : ''}" id="annPopup">
-                <div class="ann-popup-glow" style="background: ${cfg.gradient}"></div>
-                <div class="ann-popup-progress" id="annPopupProgress"></div>
-                <div class="ann-popup-top">
-                    <div class="ann-popup-type-row">
-                        <div class="ann-popup-type-badge" style="background: ${cfg.bgColor}; border-color: ${cfg.borderColor}">
-                            <i class="fas ${cfg.icon}" style="background: ${cfg.gradient}; -webkit-background-clip: text; -webkit-text-fill-color: transparent;"></i>
-                            <span style="color: ${cfg.borderColor}">${cfg.label}</span>
-                        </div>
-                        ${isUrgent ? '<span class="ann-popup-urgent-pill">URGENT</span>' : ''}
-                        ${counter}
-                    </div>
-                    <button class="ann-popup-close" onclick="dismissAnnouncementPopup('${ann.id}')" title="Dismiss">
-                        <i class="fas fa-times"></i>
-                    </button>
+        <div class="ann-toast ${isUrgent ? 'ann-toast-urgent' : ''}" id="annToast">
+            <div class="ann-toast-accent" style="background: ${cfg.gradient}"></div>
+            <div class="ann-toast-progress" id="annToastProgress"></div>
+            <div class="ann-toast-header">
+                <div class="ann-toast-type" style="background: ${cfg.bgColor}; border-color: ${cfg.borderColor}">
+                    <i class="fas ${cfg.icon}" style="color: ${cfg.borderColor}"></i>
+                    <span style="color: ${cfg.borderColor}">${cfg.label}</span>
                 </div>
-                <div class="ann-popup-content">
-                    <h3 class="ann-popup-title">${ann.title}</h3>
-                    <p class="ann-popup-text">${ann.content.length > 200 ? ann.content.substring(0, 200) + '...' : ann.content}</p>
+                <div class="ann-toast-header-right">
+                    ${isUrgent ? '<span class="ann-toast-urgent-tag">URGENT</span>' : ''}
+                    ${total > 1 ? `<span class="ann-toast-count">${current}/${total}</span>` : ''}
+                    <button class="ann-toast-close" onclick="closeAnnouncementToast()" title="Close"><i class="fas fa-times"></i></button>
                 </div>
-                <div class="ann-popup-bottom">
-                    <div class="ann-popup-meta">
-                        <span><i class="far fa-clock"></i> ${timeAgo}</span>
-                        <span><i class="fas fa-user-shield"></i> ${ann.createdByName || 'Admin'}</span>
-                    </div>
-                    <div class="ann-popup-actions">
-                        ${hasMultiple && annPopupIndex < annPopupQueue.length - 1 ? '<button class="ann-popup-btn ann-popup-btn-next" onclick="skipToNextAnnouncement()"><i class="fas fa-arrow-right"></i> Next</button>' : ''}
-                        <button class="ann-popup-btn ann-popup-btn-ok" onclick="dismissAnnouncementPopup(\'${ann.id}\')">Got it</button>
-                    </div>
-                </div>
+            </div>
+            <div class="ann-toast-body">
+                <h4 class="ann-toast-title">${ann.title}</h4>
+                <p class="ann-toast-text">${ann.content.length > 140 ? ann.content.substring(0, 140) + '...' : ann.content}</p>
+            </div>
+            <div class="ann-toast-footer">
+                <span class="ann-toast-time"><i class="far fa-clock"></i> ${timeAgo}</span>
+                ${total > 1 ? `
+                    <div class="ann-toast-nav">
+                        <button class="ann-toast-nav-btn" onclick="annToastPrev()" title="Previous"><i class="fas fa-chevron-left"></i></button>
+                        <button class="ann-toast-nav-btn" onclick="annToastNext()" title="Next"><i class="fas fa-chevron-right"></i></button>
+                    </div>` : ''}
             </div>
         </div>`;
 
-    // Trigger entrance animation
+    annToastVisible = true;
+
+    // Slide in
     requestAnimationFrame(() => {
-        const overlay = document.getElementById('annPopupOverlay');
-        const popup = document.getElementById('annPopup');
-        if (overlay) overlay.classList.add('ann-popup-visible');
-        if (popup) popup.classList.add('ann-popup-enter');
+        const toast = document.getElementById('annToast');
+        if (toast) toast.classList.add('ann-toast-visible');
     });
 
-    // Start progress bar - auto-dismiss after 8 seconds
-    const progressBar = document.getElementById('annPopupProgress');
+    // Progress bar animation
+    const progressBar = document.getElementById('annToastProgress');
     if (progressBar) {
         progressBar.style.transition = 'none';
         progressBar.style.width = '100%';
         requestAnimationFrame(() => {
-            progressBar.style.transition = 'width 8s linear';
+            progressBar.style.transition = `width ${ANN_DISPLAY_TIME}ms linear`;
             progressBar.style.width = '0%';
         });
     }
 
-    annPopupTimer = setTimeout(() => {
-        autoAdvanceAnnouncement(ann.id);
-    }, 8000);
+    // Auto-hide after display time
+    if (annToastTimer) clearTimeout(annToastTimer);
+    annToastTimer = setTimeout(() => {
+        hideAnnouncementToast();
+    }, ANN_DISPLAY_TIME);
 }
 
-function autoAdvanceAnnouncement(id) {
-    annPopupDismissed.add(id);
-    annPopupIndex++;
-    if (annPopupIndex < annPopupQueue.length) {
-        hideAnnouncementPopup(() => showNextAnnouncementPopup());
-    } else {
-        hideAnnouncementPopup();
+function hideAnnouncementToast(skipCycle) {
+    const toast = document.getElementById('annToast');
+    if (toast) {
+        toast.classList.remove('ann-toast-visible');
+        toast.classList.add('ann-toast-hiding');
     }
-}
+    annToastVisible = false;
 
-function dismissAnnouncementPopup(id) {
-    if (annPopupTimer) clearTimeout(annPopupTimer);
-    annPopupDismissed.add(id);
-    annPopupIndex++;
-    if (annPopupIndex < annPopupQueue.length) {
-        hideAnnouncementPopup(() => {
-            setTimeout(() => showNextAnnouncementPopup(), 400);
-        });
-    } else {
-        hideAnnouncementPopup();
-    }
-}
-window.dismissAnnouncementPopup = dismissAnnouncementPopup;
-
-function skipToNextAnnouncement() {
-    if (annPopupTimer) clearTimeout(annPopupTimer);
-    const currentAnn = annPopupQueue[annPopupIndex];
-    if (currentAnn) annPopupDismissed.add(currentAnn.id);
-    annPopupIndex++;
-    hideAnnouncementPopup(() => {
-        setTimeout(() => showNextAnnouncementPopup(), 300);
-    });
-}
-window.skipToNextAnnouncement = skipToNextAnnouncement;
-
-function hideAnnouncementPopup(callback) {
-    const overlay = document.getElementById('annPopupOverlay');
-    const popup = document.getElementById('annPopup');
-    if (popup) {
-        popup.classList.remove('ann-popup-enter');
-        popup.classList.add('ann-popup-exit');
-    }
-    if (overlay) {
-        overlay.classList.remove('ann-popup-visible');
-        overlay.classList.add('ann-popup-hiding');
-    }
     setTimeout(() => {
         const container = document.getElementById('announcement-popup-container');
         if (container) container.innerHTML = '';
-        if (callback) callback();
-    }, 450);
+    }, 500);
+
+    // Schedule next cycle
+    if (!skipCycle) {
+        if (annToastCycleTimer) clearTimeout(annToastCycleTimer);
+        annToastCycleTimer = setTimeout(() => {
+            annToastIndex++;
+            if (annToastIndex >= annToastQueue.length) annToastIndex = 0;
+            showAnnouncementToast();
+        }, ANN_CYCLE_INTERVAL);
+    }
 }
+
+function closeAnnouncementToast() {
+    if (annToastTimer) clearTimeout(annToastTimer);
+    hideAnnouncementToast(false);
+}
+window.closeAnnouncementToast = closeAnnouncementToast;
+
+function annToastNext() {
+    if (annToastTimer) clearTimeout(annToastTimer);
+    if (annToastCycleTimer) clearTimeout(annToastCycleTimer);
+    annToastIndex++;
+    if (annToastIndex >= annToastQueue.length) annToastIndex = 0;
+    // Quick swap
+    const toast = document.getElementById('annToast');
+    if (toast) {
+        toast.classList.remove('ann-toast-visible');
+        toast.classList.add('ann-toast-hiding');
+    }
+    setTimeout(() => showAnnouncementToast(), 350);
+}
+window.annToastNext = annToastNext;
+
+function annToastPrev() {
+    if (annToastTimer) clearTimeout(annToastTimer);
+    if (annToastCycleTimer) clearTimeout(annToastCycleTimer);
+    annToastIndex--;
+    if (annToastIndex < 0) annToastIndex = annToastQueue.length - 1;
+    const toast = document.getElementById('annToast');
+    if (toast) {
+        toast.classList.remove('ann-toast-visible');
+        toast.classList.add('ann-toast-hiding');
+    }
+    setTimeout(() => showAnnouncementToast(), 350);
+}
+window.annToastPrev = annToastPrev;
 
 function getAnnouncementTimeAgo(dateStr) {
     try {
