@@ -4033,9 +4033,6 @@ function getDashboardTemplate(user) {
                 </div>
             </div>
 
-            <!-- Announcements Ticker -->
-            <div id="portal-announcements" class="portal-announcements-container"></div>
-
             ${profileStatusCard}
             ${chartsSection}
 
@@ -4453,62 +4450,163 @@ async function initDashboardCharts() {
     }
 }
 
-// --- PORTAL ANNOUNCEMENTS ---
-async function loadPortalAnnouncements() {
-    const container = document.getElementById('portal-announcements');
-    if (!container) return;
+// --- PORTAL ANNOUNCEMENTS (Popup Toast System) ---
+let annPopupQueue = [];
+let annPopupTimer = null;
+let annPopupIndex = 0;
+let annPopupDismissed = new Set();
 
+async function loadPortalAnnouncements() {
     try {
         const response = await apiCall('/announcements', 'GET');
         const announcements = response.data || [];
-        if (announcements.length === 0) {
-            container.innerHTML = '';
-            return;
+        if (announcements.length === 0) return;
+
+        // Only show announcements not dismissed this session
+        annPopupQueue = announcements.filter(a => !annPopupDismissed.has(a.id)).slice(0, 8);
+        annPopupIndex = 0;
+
+        if (annPopupQueue.length > 0) {
+            // Small delay so dashboard renders first
+            setTimeout(() => showNextAnnouncementPopup(), 1200);
         }
-
-        const typeConfig = {
-            offer: { icon: 'fa-tags', gradient: 'linear-gradient(135deg, #10b981, #059669)', bgGradient: 'linear-gradient(135deg, #ecfdf5, #d1fae5)', accentColor: '#059669' },
-            maintenance: { icon: 'fa-tools', gradient: 'linear-gradient(135deg, #f59e0b, #d97706)', bgGradient: 'linear-gradient(135deg, #fffbeb, #fef3c7)', accentColor: '#d97706' },
-            update: { icon: 'fa-sync-alt', gradient: 'linear-gradient(135deg, #3b82f6, #2563eb)', bgGradient: 'linear-gradient(135deg, #eff6ff, #dbeafe)', accentColor: '#2563eb' },
-            general: { icon: 'fa-info-circle', gradient: 'linear-gradient(135deg, #6366f1, #4f46e5)', bgGradient: 'linear-gradient(135deg, #eef2ff, #e0e7ff)', accentColor: '#4f46e5' },
-            alert: { icon: 'fa-exclamation-triangle', gradient: 'linear-gradient(135deg, #ef4444, #dc2626)', bgGradient: 'linear-gradient(135deg, #fef2f2, #fee2e2)', accentColor: '#dc2626' }
-        };
-
-        let html = '<div class="portal-ann-wrapper">';
-        html += '<div class="portal-ann-header"><i class="fas fa-bullhorn"></i> Latest Updates</div>';
-        html += '<div class="portal-ann-cards">';
-
-        announcements.slice(0, 5).forEach((ann, idx) => {
-            const cfg = typeConfig[ann.type] || typeConfig.general;
-            const timeAgo = getAnnouncementTimeAgo(ann.createdAt);
-            const isUrgent = ann.priority === 'urgent' || ann.priority === 'high';
-
-            html += `
-                <div class="portal-ann-card ${isUrgent ? 'portal-ann-urgent' : ''}" style="animation-delay: ${idx * 0.1}s">
-                    <div class="portal-ann-accent" style="background: ${cfg.gradient}"></div>
-                    <div class="portal-ann-icon-wrap" style="background: ${cfg.bgGradient}">
-                        <i class="fas ${cfg.icon}" style="color: ${cfg.accentColor}"></i>
-                    </div>
-                    <div class="portal-ann-body">
-                        <div class="portal-ann-title">
-                            ${ann.title}
-                            ${isUrgent ? '<span class="portal-ann-urgent-badge">URGENT</span>' : ''}
-                        </div>
-                        <div class="portal-ann-text">${ann.content.length > 120 ? ann.content.substring(0, 120) + '...' : ann.content}</div>
-                        <div class="portal-ann-footer">
-                            <span class="portal-ann-type" style="color: ${cfg.accentColor}; background: ${cfg.bgGradient}">${ann.type.charAt(0).toUpperCase() + ann.type.slice(1)}</span>
-                            <span class="portal-ann-time"><i class="far fa-clock"></i> ${timeAgo}</span>
-                        </div>
-                    </div>
-                </div>`;
-        });
-
-        html += '</div></div>';
-        container.innerHTML = html;
     } catch (error) {
         console.log('Announcements not available:', error.message);
-        container.innerHTML = '';
     }
+}
+
+function showNextAnnouncementPopup() {
+    if (annPopupTimer) clearTimeout(annPopupTimer);
+    if (annPopupIndex >= annPopupQueue.length) return;
+
+    const ann = annPopupQueue[annPopupIndex];
+    const container = document.getElementById('announcement-popup-container');
+    if (!container) return;
+
+    const typeConfig = {
+        offer: { icon: 'fa-tags', gradient: 'linear-gradient(135deg, #10b981, #059669)', bgColor: '#ecfdf5', borderColor: '#10b981', label: 'Special Offer', emoji: '' },
+        maintenance: { icon: 'fa-tools', gradient: 'linear-gradient(135deg, #f59e0b, #d97706)', bgColor: '#fffbeb', borderColor: '#f59e0b', label: 'Maintenance', emoji: '' },
+        update: { icon: 'fa-rocket', gradient: 'linear-gradient(135deg, #3b82f6, #2563eb)', bgColor: '#eff6ff', borderColor: '#3b82f6', label: 'Platform Update', emoji: '' },
+        general: { icon: 'fa-bullhorn', gradient: 'linear-gradient(135deg, #6366f1, #4f46e5)', bgColor: '#eef2ff', borderColor: '#6366f1', label: 'Announcement', emoji: '' },
+        alert: { icon: 'fa-exclamation-triangle', gradient: 'linear-gradient(135deg, #ef4444, #dc2626)', bgColor: '#fef2f2', borderColor: '#ef4444', label: 'Important Alert', emoji: '' }
+    };
+
+    const cfg = typeConfig[ann.type] || typeConfig.general;
+    const isUrgent = ann.priority === 'urgent' || ann.priority === 'high';
+    const timeAgo = getAnnouncementTimeAgo(ann.createdAt);
+    const hasMultiple = annPopupQueue.length > 1;
+    const counter = hasMultiple ? `<span class="ann-popup-counter">${annPopupIndex + 1} / ${annPopupQueue.length}</span>` : '';
+
+    container.innerHTML = `
+        <div class="ann-popup-overlay" id="annPopupOverlay">
+            <div class="ann-popup ${isUrgent ? 'ann-popup-urgent' : ''}" id="annPopup">
+                <div class="ann-popup-glow" style="background: ${cfg.gradient}"></div>
+                <div class="ann-popup-progress" id="annPopupProgress"></div>
+                <div class="ann-popup-top">
+                    <div class="ann-popup-type-row">
+                        <div class="ann-popup-type-badge" style="background: ${cfg.bgColor}; border-color: ${cfg.borderColor}">
+                            <i class="fas ${cfg.icon}" style="background: ${cfg.gradient}; -webkit-background-clip: text; -webkit-text-fill-color: transparent;"></i>
+                            <span style="color: ${cfg.borderColor}">${cfg.label}</span>
+                        </div>
+                        ${isUrgent ? '<span class="ann-popup-urgent-pill">URGENT</span>' : ''}
+                        ${counter}
+                    </div>
+                    <button class="ann-popup-close" onclick="dismissAnnouncementPopup('${ann.id}')" title="Dismiss">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="ann-popup-content">
+                    <h3 class="ann-popup-title">${ann.title}</h3>
+                    <p class="ann-popup-text">${ann.content.length > 200 ? ann.content.substring(0, 200) + '...' : ann.content}</p>
+                </div>
+                <div class="ann-popup-bottom">
+                    <div class="ann-popup-meta">
+                        <span><i class="far fa-clock"></i> ${timeAgo}</span>
+                        <span><i class="fas fa-user-shield"></i> ${ann.createdByName || 'Admin'}</span>
+                    </div>
+                    <div class="ann-popup-actions">
+                        ${hasMultiple && annPopupIndex < annPopupQueue.length - 1 ? '<button class="ann-popup-btn ann-popup-btn-next" onclick="skipToNextAnnouncement()"><i class="fas fa-arrow-right"></i> Next</button>' : ''}
+                        <button class="ann-popup-btn ann-popup-btn-ok" onclick="dismissAnnouncementPopup(\'${ann.id}\')">Got it</button>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+
+    // Trigger entrance animation
+    requestAnimationFrame(() => {
+        const overlay = document.getElementById('annPopupOverlay');
+        const popup = document.getElementById('annPopup');
+        if (overlay) overlay.classList.add('ann-popup-visible');
+        if (popup) popup.classList.add('ann-popup-enter');
+    });
+
+    // Start progress bar - auto-dismiss after 8 seconds
+    const progressBar = document.getElementById('annPopupProgress');
+    if (progressBar) {
+        progressBar.style.transition = 'none';
+        progressBar.style.width = '100%';
+        requestAnimationFrame(() => {
+            progressBar.style.transition = 'width 8s linear';
+            progressBar.style.width = '0%';
+        });
+    }
+
+    annPopupTimer = setTimeout(() => {
+        autoAdvanceAnnouncement(ann.id);
+    }, 8000);
+}
+
+function autoAdvanceAnnouncement(id) {
+    annPopupDismissed.add(id);
+    annPopupIndex++;
+    if (annPopupIndex < annPopupQueue.length) {
+        hideAnnouncementPopup(() => showNextAnnouncementPopup());
+    } else {
+        hideAnnouncementPopup();
+    }
+}
+
+function dismissAnnouncementPopup(id) {
+    if (annPopupTimer) clearTimeout(annPopupTimer);
+    annPopupDismissed.add(id);
+    annPopupIndex++;
+    if (annPopupIndex < annPopupQueue.length) {
+        hideAnnouncementPopup(() => {
+            setTimeout(() => showNextAnnouncementPopup(), 400);
+        });
+    } else {
+        hideAnnouncementPopup();
+    }
+}
+window.dismissAnnouncementPopup = dismissAnnouncementPopup;
+
+function skipToNextAnnouncement() {
+    if (annPopupTimer) clearTimeout(annPopupTimer);
+    const currentAnn = annPopupQueue[annPopupIndex];
+    if (currentAnn) annPopupDismissed.add(currentAnn.id);
+    annPopupIndex++;
+    hideAnnouncementPopup(() => {
+        setTimeout(() => showNextAnnouncementPopup(), 300);
+    });
+}
+window.skipToNextAnnouncement = skipToNextAnnouncement;
+
+function hideAnnouncementPopup(callback) {
+    const overlay = document.getElementById('annPopupOverlay');
+    const popup = document.getElementById('annPopup');
+    if (popup) {
+        popup.classList.remove('ann-popup-enter');
+        popup.classList.add('ann-popup-exit');
+    }
+    if (overlay) {
+        overlay.classList.remove('ann-popup-visible');
+        overlay.classList.add('ann-popup-hiding');
+    }
+    setTimeout(() => {
+        const container = document.getElementById('announcement-popup-container');
+        if (container) container.innerHTML = '';
+        if (callback) callback();
+    }, 450);
 }
 
 function getAnnouncementTimeAgo(dateStr) {
