@@ -4002,7 +4002,7 @@ function getDashboardTemplate(user) {
                         <div class="db-hero-avatar" style="background-color: ${avatarColor}">${initial}</div>
                         <div class="db-hero-info">
                             <h2>Welcome back, ${name}</h2>
-                            <p><i class="fas ${isContractor ? 'fa-hard-hat' : 'fa-drafting-compass'}"></i> ${isContractor ? 'Contractor' : 'Designer'} Portal</p>
+                            <p><i class="fas ${isContractor ? 'fa-hard-hat' : 'fa-drafting-compass'}"></i> ${isContractor ? 'Contractor' : 'Designer'} Portal <span class="db-hero-role-badge">${isContractor ? 'PRO' : 'PRO'}</span></p>
                         </div>
                     </div>
                     <div class="db-hero-right">
@@ -4019,11 +4019,13 @@ function getDashboardTemplate(user) {
 
             <div class="db-section-header">
                 <h3><i class="fas fa-bolt"></i> Quick Actions</h3>
+                <span class="db-section-badge">${isContractor ? 'Contractor Tools' : 'Designer Tools'}</span>
             </div>
             <div class="db-actions-grid">${isContractor ? contractorQuickActions : designerQuickActions}</div>
 
             <div class="db-section-header">
                 <h3><i class="fas fa-layer-group"></i> Overview</h3>
+                <span class="db-section-badge">Activity</span>
             </div>
             <div class="db-widgets-row">${isContractor ? contractorWidgets : designerWidgets}</div>
         </div>`;
