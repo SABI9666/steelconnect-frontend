@@ -12076,179 +12076,118 @@ textarea:focus-visible {
 }
 
 /* ==========================================
-   PORTAL ANNOUNCEMENTS - Animated Popup Toast
+   PORTAL ANNOUNCEMENTS - Right Side Toast
    ========================================== */
 #announcement-popup-container {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    top: 24px;
+    right: 24px;
     z-index: 99999;
     pointer-events: none;
+    width: 380px;
+    max-width: calc(100vw - 48px);
 }
 
-.ann-popup-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(15, 23, 42, 0);
-    display: flex;
-    align-items: flex-start;
-    justify-content: center;
-    padding-top: 80px;
-    pointer-events: none;
-    transition: background 0.4s ease;
-    z-index: 99999;
-}
-.ann-popup-overlay.ann-popup-visible {
-    background: rgba(15, 23, 42, 0.25);
-    pointer-events: auto;
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
-}
-.ann-popup-overlay.ann-popup-hiding {
-    background: rgba(15, 23, 42, 0);
-    pointer-events: none;
-    backdrop-filter: blur(0px);
-}
-
-.ann-popup {
+.ann-toast {
     background: white;
-    border-radius: 24px;
-    width: 90%;
-    max-width: 520px;
-    box-shadow: 0 25px 80px rgba(0, 0, 0, 0.15), 0 8px 32px rgba(79, 70, 229, 0.1);
+    border-radius: 18px;
+    box-shadow:
+        0 8px 40px rgba(0, 0, 0, 0.12),
+        0 2px 12px rgba(79, 70, 229, 0.06),
+        0 0 0 1px rgba(0, 0, 0, 0.03);
     position: relative;
     overflow: hidden;
-    opacity: 0;
-    transform: translateY(-40px) scale(0.92);
     pointer-events: auto;
+    transform: translateX(120%);
+    opacity: 0;
+    transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
 }
-.ann-popup.ann-popup-enter {
-    animation: annPopupIn 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+.ann-toast.ann-toast-visible {
+    transform: translateX(0);
+    opacity: 1;
 }
-.ann-popup.ann-popup-exit {
-    animation: annPopupOut 0.4s cubic-bezier(0.55, 0, 1, 0.45) forwards;
-}
-
-@keyframes annPopupIn {
-    0% {
-        opacity: 0;
-        transform: translateY(-50px) scale(0.88);
-        filter: blur(4px);
-    }
-    50% {
-        opacity: 1;
-        filter: blur(0px);
-    }
-    70% {
-        transform: translateY(4px) scale(1.01);
-    }
-    100% {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-        filter: blur(0px);
-    }
-}
-@keyframes annPopupOut {
-    0% {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
-    100% {
-        opacity: 0;
-        transform: translateY(-30px) scale(0.9);
-        filter: blur(4px);
-    }
+.ann-toast.ann-toast-hiding {
+    transform: translateX(120%);
+    opacity: 0;
+    transition: transform 0.45s cubic-bezier(0.55, 0, 1, 0.45), opacity 0.35s ease;
 }
 
-/* Glow accent at top */
-.ann-popup-glow {
+/* Left accent bar */
+.ann-toast-accent {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    border-radius: 0 4px 4px 0;
+}
+
+/* Progress bar at top */
+.ann-toast-progress {
     position: absolute;
     top: 0;
-    left: 0;
+    left: 4px;
     right: 0;
-    height: 4px;
-}
-.ann-popup-glow::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 40px;
-    background: inherit;
-    opacity: 0.06;
-    filter: blur(20px);
-}
-
-/* Auto-dismiss progress bar */
-.ann-popup-progress {
-    position: absolute;
-    top: 4px;
-    left: 0;
     height: 3px;
     background: linear-gradient(90deg, #4f46e5, #7c3aed, #06b6d4);
-    border-radius: 0 3px 3px 0;
     z-index: 2;
+    border-radius: 0 3px 0 0;
 }
 
-/* Top section */
-.ann-popup-top {
+/* Header */
+.ann-toast-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 1.25rem 1.5rem 0;
+    padding: 0.9rem 1rem 0;
+    gap: 0.5rem;
 }
-.ann-popup-type-row {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-}
-.ann-popup-type-badge {
+.ann-toast-type {
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
-    padding: 0.35rem 0.85rem;
-    border-radius: 12px;
-    font-size: 0.72rem;
+    gap: 0.35rem;
+    padding: 0.25rem 0.7rem;
+    border-radius: 10px;
+    font-size: 0.65rem;
     font-weight: 750;
     border: 1.5px solid;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
-.ann-popup-type-badge i {
-    font-size: 0.75rem;
+.ann-toast-type i {
+    font-size: 0.65rem;
 }
-.ann-popup-urgent-pill {
+.ann-toast-header-right {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+.ann-toast-urgent-tag {
     background: linear-gradient(135deg, #ef4444, #dc2626);
     color: white;
-    font-size: 0.6rem;
+    font-size: 0.55rem;
     font-weight: 800;
-    padding: 0.2rem 0.6rem;
-    border-radius: 8px;
-    letter-spacing: 1px;
-    animation: annUrgentPulse 2s ease-in-out infinite;
+    padding: 0.15rem 0.5rem;
+    border-radius: 6px;
+    letter-spacing: 0.8px;
+    animation: annToastPulse 2s infinite;
 }
-@keyframes annUrgentPulse {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
-    50% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+@keyframes annToastPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+    50% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
 }
-.ann-popup-counter {
-    font-size: 0.7rem;
+.ann-toast-count {
+    font-size: 0.65rem;
     color: #94a3b8;
     font-weight: 600;
     background: #f1f5f9;
-    padding: 0.2rem 0.6rem;
-    border-radius: 8px;
+    padding: 0.15rem 0.5rem;
+    border-radius: 6px;
 }
-.ann-popup-close {
-    width: 32px;
-    height: 32px;
-    border-radius: 10px;
+.ann-toast-close {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
     border: none;
     background: #f1f5f9;
     color: #64748b;
@@ -12256,120 +12195,122 @@ textarea:focus-visible {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.8rem;
+    font-size: 0.7rem;
     transition: all 0.2s ease;
+    flex-shrink: 0;
 }
-.ann-popup-close:hover {
+.ann-toast-close:hover {
     background: #e2e8f0;
     color: #0f172a;
     transform: rotate(90deg);
 }
 
-/* Content */
-.ann-popup-content {
-    padding: 1rem 1.5rem 0.75rem;
+/* Body */
+.ann-toast-body {
+    padding: 0.7rem 1rem 0.5rem;
 }
-.ann-popup-title {
-    font-size: 1.15rem;
-    font-weight: 800;
+.ann-toast-title {
+    font-size: 0.92rem;
+    font-weight: 750;
     color: #0f172a;
-    margin: 0 0 0.5rem;
+    margin: 0 0 0.3rem;
     line-height: 1.35;
-    letter-spacing: -0.3px;
+    letter-spacing: -0.2px;
 }
-.ann-popup-text {
-    font-size: 0.88rem;
-    color: #475569;
-    line-height: 1.65;
+.ann-toast-text {
+    font-size: 0.8rem;
+    color: #64748b;
+    line-height: 1.55;
     margin: 0;
 }
 
-/* Bottom bar */
-.ann-popup-bottom {
+/* Footer */
+.ann-toast-footer {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0.85rem 1.5rem 1.25rem;
+    padding: 0.6rem 1rem 0.85rem;
     border-top: 1px solid #f1f5f9;
-    margin-top: 0.75rem;
 }
-.ann-popup-meta {
-    display: flex;
-    gap: 1rem;
-}
-.ann-popup-meta span {
-    font-size: 0.72rem;
+.ann-toast-time {
+    font-size: 0.68rem;
     color: #94a3b8;
     display: flex;
     align-items: center;
     gap: 0.3rem;
     font-weight: 500;
 }
-.ann-popup-actions {
+.ann-toast-nav {
     display: flex;
-    gap: 0.5rem;
+    gap: 0.3rem;
 }
-.ann-popup-btn {
-    padding: 0.45rem 1rem;
-    border-radius: 10px;
-    font-size: 0.78rem;
-    font-weight: 700;
-    border: none;
+.ann-toast-nav-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    background: white;
+    color: #64748b;
     cursor: pointer;
-    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     display: flex;
     align-items: center;
-    gap: 0.35rem;
+    justify-content: center;
+    font-size: 0.65rem;
+    transition: all 0.2s ease;
 }
-.ann-popup-btn-ok {
-    background: linear-gradient(135deg, #4f46e5, #6366f1);
+.ann-toast-nav-btn:hover {
+    background: #4f46e5;
     color: white;
-    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
-}
-.ann-popup-btn-ok:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 16px rgba(79, 70, 229, 0.4);
-}
-.ann-popup-btn-next {
-    background: #f1f5f9;
-    color: #475569;
-}
-.ann-popup-btn-next:hover {
-    background: #e2e8f0;
-    color: #0f172a;
+    border-color: #4f46e5;
+    transform: scale(1.08);
 }
 
 /* Urgent variant */
-.ann-popup-urgent {
-    box-shadow: 0 25px 80px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(239, 68, 68, 0.15), 0 8px 32px rgba(239, 68, 68, 0.1);
+.ann-toast-urgent {
+    box-shadow:
+        0 8px 40px rgba(0, 0, 0, 0.12),
+        0 0 0 1px rgba(239, 68, 68, 0.12),
+        0 4px 20px rgba(239, 68, 68, 0.08);
+}
+.ann-toast-urgent .ann-toast-progress {
+    background: linear-gradient(90deg, #ef4444, #f59e0b, #ef4444);
+    background-size: 200% 100%;
+    animation: annUrgentProgress 2s linear infinite;
+}
+@keyframes annUrgentProgress {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 200% 50%; }
 }
 
-/* Shimmer effect on popup entrance */
-.ann-popup.ann-popup-enter::after {
+/* Shimmer on entrance */
+.ann-toast.ann-toast-visible::after {
     content: '';
     position: absolute;
     top: 0;
     left: -100%;
-    width: 60%;
+    width: 50%;
     height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
-    animation: annShimmer 1.2s 0.3s ease-out forwards;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+    animation: annToastShimmer 1s 0.4s ease-out forwards;
     pointer-events: none;
 }
-@keyframes annShimmer {
-    0% { left: -60%; }
+@keyframes annToastShimmer {
+    0% { left: -50%; }
     100% { left: 120%; }
 }
 
 @media (max-width: 640px) {
-    .ann-popup-overlay { padding-top: 20px; align-items: flex-start; }
-    .ann-popup { max-width: 95%; border-radius: 20px; }
-    .ann-popup-top { padding: 1rem 1.15rem 0; }
-    .ann-popup-content { padding: 0.85rem 1.15rem 0.5rem; }
-    .ann-popup-title { font-size: 1rem; }
-    .ann-popup-text { font-size: 0.82rem; }
-    .ann-popup-bottom { padding: 0.75rem 1.15rem 1rem; flex-direction: column; gap: 0.75rem; }
-    .ann-popup-actions { width: 100%; justify-content: flex-end; }
+    #announcement-popup-container {
+        top: 12px;
+        right: 12px;
+        left: 12px;
+        width: auto;
+        max-width: none;
+    }
+    .ann-toast { border-radius: 14px; }
+    .ann-toast-header { padding: 0.75rem 0.85rem 0; }
+    .ann-toast-body { padding: 0.6rem 0.85rem 0.4rem; }
+    .ann-toast-title { font-size: 0.85rem; }
+    .ann-toast-text { font-size: 0.75rem; }
+    .ann-toast-footer { padding: 0.5rem 0.85rem 0.7rem; }
 }
-
-
