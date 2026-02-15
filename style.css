@@ -3465,12 +3465,11 @@ body {
 .estimation-note { margin-top: 1rem; color: #64748b; font-size: 0.875rem; }
 #file-upload-input {
     position: absolute;
-    top: 0; left: 0;
-    width: 100%;
-    height: 100%;
+    width: 1px;
+    height: 1px;
     opacity: 0;
-    cursor: pointer;
-    z-index: 5;
+    overflow: hidden;
+    z-index: -1;
 }
 
 

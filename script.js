@@ -3523,10 +3523,36 @@ function setupEstimationToolEventListeners() {
     console.log('[EST-SETUP] Setting up estimation event listeners...');
     const uploadArea = document.getElementById('file-upload-area');
     const fileInput = document.getElementById('file-upload-input');
+    const browseBtn = document.getElementById('est-browse-btn');
+
+    if (fileInput) {
+        // Primary: programmatic change listener on file input
+        fileInput.addEventListener('change', function() {
+            console.log('[EST-FILE] Change event fired, files:', this.files?.length);
+            if (this.files && this.files.length > 0) {
+                handleFileSelect(this.files);
+                this.value = '';
+            }
+        });
+        // Prevent click event from bubbling to uploadArea (avoids infinite loop)
+        fileInput.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+        console.log('[EST-SETUP] File input change listener attached');
+    } else {
+        console.error('[EST-SETUP] File input not found!');
+    }
+
     if (uploadArea) {
-        // The file input is a full-size transparent overlay (opacity:0, z-index:5)
-        // so clicking anywhere on the upload area directly opens the file picker.
-        // We only need drag-and-drop handlers on the area.
+        // Click anywhere on upload area opens file picker
+        uploadArea.addEventListener('click', function(e) {
+            console.log('[EST-CLICK] Upload area clicked');
+            if (fileInput) {
+                fileInput.click();
+            }
+        });
+
+        // Drag and drop handlers
         uploadArea.addEventListener('dragover', (e) => { e.preventDefault(); uploadArea.classList.add('drag-over'); });
         uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('drag-over'));
         uploadArea.addEventListener('drop', (e) => {
@@ -3534,19 +3560,28 @@ function setupEstimationToolEventListeners() {
             e.stopPropagation();
             uploadArea.classList.remove('drag-over');
             if (e.dataTransfer.files.length > 0) {
-                console.log('[EST-SETUP] Files dropped:', e.dataTransfer.files.length);
+                console.log('[EST-DROP] Files dropped:', e.dataTransfer.files.length);
                 handleFileSelect(e.dataTransfer.files);
             }
         });
-        console.log('[EST-SETUP] Upload area drag/drop ready');
+        console.log('[EST-SETUP] Upload area click + drag/drop ready');
     } else {
         console.error('[EST-SETUP] Upload area not found!');
     }
 
-    if (fileInput) {
-        console.log('[EST-SETUP] File input found');
-    } else {
-        console.error('[EST-SETUP] File input not found!');
+    // Browse link also opens file picker
+    if (browseBtn) {
+        browseBtn.addEventListener('click', function(e) {
+            e.stopPropagation(); // Prevent double-trigger from uploadArea click
+            console.log('[EST-BROWSE] Browse button clicked');
+            if (fileInput) fileInput.click();
+        });
+    }
+
+    // Prevent form from submitting on Enter key (which causes page reload)
+    const form = document.getElementById('estimation-form');
+    if (form) {
+        form.addEventListener('submit', function(e) { e.preventDefault(); });
     }
 
     const submitBtn = document.getElementById('submit-estimation-btn');
@@ -3727,7 +3762,8 @@ async function handleEstimationSubmit() {
         updateEstimationStep(1);
         renderAppSection('my-estimations');
     } catch (error) {
-        addLocalNotification('Error', 'Failed to submit estimation.', 'error');
+        console.error('[EST-SUBMIT] Error:', error);
+        addLocalNotification('Error', 'Failed to submit estimation: ' + (error.message || 'Unknown error'), 'error');
         updateEstimationStep(2);
     } finally {
         submitBtn.disabled = false;
@@ -4305,11 +4341,11 @@ function getEstimationToolTemplate() {
                     </div>
                     <div class="file-upload-section premium-upload-section">
                         <div id="file-upload-area" class="file-upload-area premium-upload-area">
-                            <input type="file" id="file-upload-input" accept=".pdf,.dwg,.dxf,.doc,.docx,.xls,.xlsx,.csv,.jpg,.jpeg,.png,.tif,.tiff,.txt,.zip,.rar" multiple onchange="if(this.files.length>0){handleFileSelect(this.files);this.value='';}" />
+                            <input type="file" id="file-upload-input" accept=".pdf,.dwg,.dxf,.doc,.docx,.xls,.xlsx,.csv,.jpg,.jpeg,.png,.tif,.tiff,.txt,.zip,.rar" multiple />
                             <div class="upload-content">
                                 <div class="est-upload-icon-wrap"><i class="fas fa-cloud-upload-alt"></i></div>
                                 <h3>Drag & Drop Files Here</h3>
-                                <p>or <span class="est-browse-link">click to browse</span> from your computer</p>
+                                <p>or <span class="est-browse-link" id="est-browse-btn">click to browse</span> from your computer</p>
                                 <div class="est-format-tags">
                                     <span class="est-format-tag pdf"><i class="fas fa-file-pdf"></i> PDF</span>
                                     <span class="est-format-tag dwg"><i class="fas fa-drafting-compass"></i> DWG</span>
