@@ -3840,16 +3840,25 @@ async function submitAIQuestionnaire() {
     showAIGeneratingOverlay();
 
     try {
-        const resp = await apiCall('/estimation/ai/generate', 'POST', {
-            projectTitle: projectInfo.projectTitle,
-            description: projectInfo.description,
-            designStandard: projectInfo.designStandard,
-            projectType: projectInfo.projectType,
-            region: projectInfo.region,
-            totalArea: projectInfo.totalArea,
-            answers,
-            fileNames: projectInfo.fileNames
-        });
+        // Use FormData to include actual files alongside project info
+        const formData = new FormData();
+        formData.append('projectTitle', projectInfo.projectTitle || '');
+        formData.append('description', projectInfo.description || '');
+        formData.append('designStandard', projectInfo.designStandard || '');
+        formData.append('projectType', projectInfo.projectType || '');
+        formData.append('region', projectInfo.region || '');
+        formData.append('totalArea', projectInfo.totalArea || '');
+        formData.append('answers', JSON.stringify(answers));
+        formData.append('fileNames', JSON.stringify(projectInfo.fileNames || []));
+
+        // Attach actual files for upload to server
+        if (appState.uploadedFile && appState.uploadedFile.length > 0) {
+            for (let i = 0; i < appState.uploadedFile.length; i++) {
+                formData.append('files', appState.uploadedFile[i]);
+            }
+        }
+
+        const resp = await apiCall('/estimation/ai/generate', 'POST', formData);
         hideAIGeneratingOverlay();
         if (resp.success && resp.data) {
             renderAIEstimateResult(resp.data, projectInfo);
