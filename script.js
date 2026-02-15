@@ -1598,7 +1598,7 @@ async function viewEstimationFiles(estimationId) {
             <div class="files-list premium-files">
                 ${files.length === 0 ?
                     `<div class="empty-state"><i class="fas fa-file"></i><p>No files found.</p></div>` :
-                    files.map(file => `
+                    files.map((file, index) => `
                         <div class="file-item">
                             <div class="file-info">
                                 <i class="fas fa-file-pdf"></i>
@@ -1607,7 +1607,7 @@ async function viewEstimationFiles(estimationId) {
                                     <span class="file-date">Uploaded: ${new Date(file.uploadedAt).toLocaleDateString()}</span>
                                 </div>
                             </div>
-                            <button class="btn btn-outline btn-sm" onclick="downloadFileDirect('${escapeAttr(file.url)}', '${escapeAttr(file.name)}')">
+                            <button class="btn btn-outline btn-sm" onclick="downloadEstFileByIndex('${escapeAttr(estimationId)}', ${index}, '${escapeAttr(file.name)}')">
                                 <i class="fas fa-download"></i> Download
                             </button>
                         </div>
@@ -1617,6 +1617,20 @@ async function viewEstimationFiles(estimationId) {
         showGenericModal(content, 'max-width: 600px;');
     } catch (error) {
         addLocalNotification('Error', 'Failed to load estimation files.', 'error');
+    }
+}
+
+async function downloadEstFileByIndex(estimationId, fileIndex, fileName) {
+    try {
+        showNotification('Preparing download...', 'info');
+        const response = await apiCall(`/estimation/${estimationId}/files/${fileIndex}/download`, 'GET');
+        if (response.downloadUrl) {
+            downloadFileDirect(response.downloadUrl, fileName || response.filename || 'file.pdf');
+        } else {
+            showNotification('Could not generate download link.', 'error');
+        }
+    } catch (error) {
+        showNotification('Download failed: ' + (error.message || 'Please try again.'), 'error');
     }
 }
 
