@@ -319,7 +319,7 @@ function showAnalyticsUploadView() {
             <div class="ad-form-group">
                 <label><i class="fas fa-cloud-upload-alt"></i> Upload Spreadsheet File <span style="font-weight:400;color:#94a3b8">(for auto-generated dashboard)</span></label>
                 <div class="ad-file-drop" id="ad-file-drop" onclick="document.getElementById('ad-sheet-file').click()">
-                    <input type="file" id="ad-sheet-file" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleFileSelect(this)">
+                    <input type="file" id="ad-sheet-file" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleAnalyticsFileSelect(this)">
                     <div class="ad-file-drop-content" id="ad-file-drop-content">
                         <i class="fas fa-cloud-upload-alt"></i>
                         <span>Click to browse or drag & drop your file</span>
@@ -352,13 +352,13 @@ function showAnalyticsUploadView() {
             const fileInput = document.getElementById('ad-sheet-file');
             if (ev.dataTransfer.files.length > 0) {
                 fileInput.files = ev.dataTransfer.files;
-                handleFileSelect(fileInput);
+                handleAnalyticsFileSelect(fileInput);
             }
         });
     }, 200);
 }
 
-window.handleFileSelect = function(input) {
+window.handleAnalyticsFileSelect = function(input) {
     const content = document.getElementById('ad-file-drop-content');
     if (input.files && input.files[0]) {
         const f = input.files[0];
