@@ -4064,6 +4064,7 @@ function renderAIEstimateResult(estimate, projectInfo) {
     const insights = estimate.marketInsights || {};
     const structuralAnalysis = estimate.structuralAnalysis || {};
     const materialSummary = estimate.materialSummary || {};
+    const drawingExtraction = estimate.drawingExtraction || {};
 
     // Build trades rows
     let tradesHTML = '';
@@ -4212,6 +4213,27 @@ function renderAIEstimateResult(estimate, projectInfo) {
                     </div>
                     <div class="air-breakdown">${breakdownHTML}</div>
                 </div>
+
+                <!-- Drawing Extraction (Vision Analysis) -->
+                ${drawingExtraction.dimensionsFound && drawingExtraction.dimensionsFound.length > 0 ? `
+                <div class="air-section">
+                    <div class="air-section-header">
+                        <h3><i class="fas fa-ruler-combined"></i> Drawing Analysis - Extracted Dimensions</h3>
+                        <span class="air-vision-badge" style="background:#10b981;color:#fff;padding:3px 10px;border-radius:12px;font-size:0.75rem;font-weight:600;">VISION ANALYZED</span>
+                    </div>
+                    ${structuralAnalysis.analysisMethod ? `<div style="padding:8px 16px;background:#ecfdf5;color:#065f46;border-radius:8px;margin-bottom:12px;font-size:0.85rem;"><i class="fas fa-eye"></i> ${structuralAnalysis.analysisMethod}</div>` : ''}
+                    ${structuralAnalysis.filesAnalyzed && structuralAnalysis.filesAnalyzed.length > 0 ? `<div style="padding:6px 16px;color:#6b7280;font-size:0.8rem;margin-bottom:10px;"><i class="fas fa-file-pdf"></i> Files analyzed: ${structuralAnalysis.filesAnalyzed.join(', ')}</div>` : ''}
+                    <div class="air-structural-grid">
+                        ${drawingExtraction.dimensionsFound && drawingExtraction.dimensionsFound.length > 0 ? `<div class="air-struct-item" style="grid-column:span 2;"><div class="air-struct-icon"><i class="fas fa-ruler"></i></div><div><strong>Dimensions Found</strong><ul style="margin:4px 0;padding-left:18px;">${drawingExtraction.dimensionsFound.map(d => `<li style="font-size:0.85rem;">${d}</li>`).join('')}</ul></div></div>` : ''}
+                        ${drawingExtraction.memberSizesFound && drawingExtraction.memberSizesFound.length > 0 ? `<div class="air-struct-item" style="grid-column:span 2;"><div class="air-struct-icon"><i class="fas fa-columns"></i></div><div><strong>Member Sizes Found</strong><ul style="margin:4px 0;padding-left:18px;">${drawingExtraction.memberSizesFound.map(m => `<li style="font-size:0.85rem;">${m}</li>`).join('')}</ul></div></div>` : ''}
+                        ${drawingExtraction.schedulesFound && drawingExtraction.schedulesFound.length > 0 ? `<div class="air-struct-item" style="grid-column:span 2;"><div class="air-struct-icon"><i class="fas fa-table"></i></div><div><strong>Schedules Found</strong><ul style="margin:4px 0;padding-left:18px;">${drawingExtraction.schedulesFound.map(s => `<li style="font-size:0.85rem;">${s}</li>`).join('')}</ul></div></div>` : ''}
+                        ${drawingExtraction.materialsNoted && drawingExtraction.materialsNoted.length > 0 ? `<div class="air-struct-item"><div class="air-struct-icon"><i class="fas fa-flask"></i></div><div><strong>Materials Noted</strong><ul style="margin:4px 0;padding-left:18px;">${drawingExtraction.materialsNoted.map(m => `<li style="font-size:0.85rem;">${m}</li>`).join('')}</ul></div></div>` : ''}
+                        ${drawingExtraction.designLoads && drawingExtraction.designLoads.length > 0 ? `<div class="air-struct-item"><div class="air-struct-icon"><i class="fas fa-weight-hanging"></i></div><div><strong>Design Loads</strong><ul style="margin:4px 0;padding-left:18px;">${drawingExtraction.designLoads.map(l => `<li style="font-size:0.85rem;">${l}</li>`).join('')}</ul></div></div>` : ''}
+                        ${drawingExtraction.sheetsAnalyzed && drawingExtraction.sheetsAnalyzed.length > 0 ? `<div class="air-struct-item"><div class="air-struct-icon"><i class="fas fa-file-alt"></i></div><div><strong>Sheets Analyzed</strong><ul style="margin:4px 0;padding-left:18px;">${drawingExtraction.sheetsAnalyzed.map(s => `<li style="font-size:0.85rem;">${s}</li>`).join('')}</ul></div></div>` : ''}
+                        ${drawingExtraction.scaleUsed ? `<div class="air-struct-item"><div class="air-struct-icon"><i class="fas fa-expand-arrows-alt"></i></div><div><strong>Drawing Scale</strong><p>${drawingExtraction.scaleUsed}</p></div></div>` : ''}
+                        ${drawingExtraction.totalMembersCount ? `<div class="air-struct-item"><div class="air-struct-icon"><i class="fas fa-calculator"></i></div><div><strong>Members Count</strong><p>Beams: ${drawingExtraction.totalMembersCount.beams || 0} | Columns: ${drawingExtraction.totalMembersCount.columns || 0} | Bracing: ${drawingExtraction.totalMembersCount.bracing || 0} | Joists: ${drawingExtraction.totalMembersCount.joists || 0}</p></div></div>` : ''}
+                    </div>
+                </div>` : ''}
 
                 <!-- Structural Analysis -->
                 ${structuralAnalysis.structuralSystem || structuralAnalysis.foundationType ? `
