@@ -3225,6 +3225,8 @@ function renderAppSection(sectionId) {
     else if (sectionId === 'approved-jobs') fetchAndRenderApprovedJobs();
     else if (sectionId === 'messages') fetchAndRenderConversations();
     else if (sectionId === 'estimation-tool') {
+        appState.uploadedFile = null;
+        appState._aiProjectInfo = {};
         container.innerHTML = getEstimationToolTemplate();
         setupEstimationToolEventListeners();
     } else if (sectionId === 'my-estimations') fetchAndRenderMyEstimations();
@@ -3724,7 +3726,26 @@ async function handleEstimationSubmit() {
     const form = document.getElementById('estimation-form');
     const submitBtn = document.getElementById('submit-estimation-btn');
     if (!appState.uploadedFile || appState.uploadedFile.length === 0) {
-        showNotification('Please select files', 'warning');
+        showNotification('Please select at least one file (PDF, DWG, DOC, etc.)', 'warning');
+        return;
+    }
+    // Verify files are still valid File objects
+    let uploadedFiles;
+    try {
+        uploadedFiles = Array.from(appState.uploadedFile);
+        const invalidFiles = uploadedFiles.filter(f => !(f instanceof File) || !f.size);
+        if (invalidFiles.length > 0 || uploadedFiles.length === 0) {
+            showNotification('Selected files are no longer valid. Please re-select your files.', 'error');
+            appState.uploadedFile = null;
+            const fileInfoContainer = document.getElementById('file-info-container');
+            if (fileInfoContainer) fileInfoContainer.style.display = 'none';
+            submitBtn.disabled = true;
+            updateEstimationStep(1);
+            return;
+        }
+    } catch (e) {
+        showNotification('Error reading files. Please re-select your files.', 'error');
+        appState.uploadedFile = null;
         return;
     }
     const projectTitle = form.projectTitle.value.trim();
@@ -3737,6 +3758,7 @@ async function handleEstimationSubmit() {
         showNotification('Please fill in Project Title and Description', 'warning');
         return;
     }
+    if (submitBtn.disabled) return;
     updateEstimationStep(3);
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<div class="btn-spinner"></div> Uploading & Generating AI Estimate...';
@@ -3748,12 +3770,12 @@ async function handleEstimationSubmit() {
         formData.append('projectType', projectType);
         formData.append('region', region);
         formData.append('totalArea', totalArea);
-        formData.append('contractorName', appState.currentUser.name);
-        formData.append('contractorEmail', appState.currentUser.email);
-        const uploadedFiles = Array.from(appState.uploadedFile);
+        formData.append('contractorName', appState.currentUser.name || '');
+        formData.append('contractorEmail', appState.currentUser.email || '');
         const fileNames = uploadedFiles.map(f => f.name);
         formData.append('fileNames', JSON.stringify(fileNames));
         uploadedFiles.forEach(file => formData.append('files', file));
+        console.log('[EST-SUBMIT] Submitting', uploadedFiles.length, 'files, total size:', uploadedFiles.reduce((s, f) => s + f.size, 0), 'bytes');
         await apiCall('/estimation/contractor/submit', 'POST', formData, 'Estimation submitted successfully! AI estimate is being generated.');
         addLocalNotification('Submitted', `Estimation request for "${projectTitle}" submitted with AI analysis.`, 'estimation');
         form.reset();
@@ -3763,6 +3785,7 @@ async function handleEstimationSubmit() {
         renderAppSection('my-estimations');
     } catch (error) {
         console.error('[EST-SUBMIT] Error:', error);
+        showNotification('Upload failed: ' + (error.message || 'Please check your connection and try again.'), 'error');
         addLocalNotification('Error', 'Failed to submit estimation: ' + (error.message || 'Unknown error'), 'error');
         updateEstimationStep(2);
     } finally {
@@ -3776,7 +3799,22 @@ async function handleAIEstimate() {
     const form = document.getElementById('estimation-form');
     const aiBtn = document.getElementById('ai-estimate-btn');
     if (!appState.uploadedFile || appState.uploadedFile.length === 0) {
-        showNotification('Please upload project files first', 'warning');
+        showNotification('Please upload project files first (PDF, DWG, DOC, etc.)', 'warning');
+        return;
+    }
+    // Validate files are still valid
+    let filesArray;
+    try {
+        filesArray = Array.from(appState.uploadedFile);
+        const validFiles = filesArray.filter(f => f instanceof File && f.size > 0);
+        if (validFiles.length === 0) {
+            showNotification('Selected files are no longer valid. Please re-select your files.', 'error');
+            appState.uploadedFile = null;
+            return;
+        }
+    } catch (e) {
+        showNotification('Error reading files. Please re-select your files.', 'error');
+        appState.uploadedFile = null;
         return;
     }
     const projectTitle = form.projectTitle.value.trim();
@@ -3793,7 +3831,7 @@ async function handleAIEstimate() {
         showNotification('Please select a Design Standard', 'warning');
         return;
     }
-    const fileNames = Array.from(appState.uploadedFile).map(f => f.name);
+    const fileNames = filesArray.map(f => f.name);
     aiBtn.disabled = true;
     aiBtn.innerHTML = '<div class="btn-spinner"></div> Generating Questions...';
     try {
@@ -3947,25 +3985,39 @@ async function submitAIQuestionnaire() {
         formData.append('answers', JSON.stringify(answers));
         formData.append('fileNames', JSON.stringify(projectInfo.fileNames || []));
 
-        // Attach actual files for upload to server
+        // Attach actual files for upload to server - validate files are still valid
+        let fileCount = 0;
         if (appState.uploadedFile && appState.uploadedFile.length > 0) {
-            for (let i = 0; i < appState.uploadedFile.length; i++) {
-                formData.append('files', appState.uploadedFile[i]);
+            try {
+                const filesArray = Array.from(appState.uploadedFile);
+                for (let i = 0; i < filesArray.length; i++) {
+                    if (filesArray[i] instanceof File && filesArray[i].size > 0) {
+                        formData.append('files', filesArray[i]);
+                        fileCount++;
+                    }
+                }
+            } catch (fileErr) {
+                console.warn('[AI-SUBMIT] Error reading files:', fileErr);
             }
         }
+        console.log('[AI-SUBMIT] Submitting with', fileCount, 'valid files');
 
         const resp = await apiCall('/estimation/ai/generate', 'POST', formData);
         hideAIGeneratingOverlay();
         if (resp.success && resp.data) {
+            if (resp.warning) {
+                showNotification(resp.warning, 'warning');
+            }
             renderAIEstimateResult(resp.data, projectInfo);
         } else {
-            showNotification('AI estimate generation failed. Please try again.', 'error');
+            showNotification(resp.message || 'AI estimate generation failed. Please try again.', 'error');
             btn.disabled = false;
             btn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> Generate AI Estimate <span class="aiq-gen-badge">Powered by Claude AI</span>';
         }
     } catch (err) {
         hideAIGeneratingOverlay();
         console.error('AI Generate error:', err);
+        showNotification('AI generation failed: ' + (err.message || 'Please try again.'), 'error');
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> Generate AI Estimate <span class="aiq-gen-badge">Powered by Claude AI</span>';
     }
