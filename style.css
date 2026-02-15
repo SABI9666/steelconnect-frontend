@@ -3464,7 +3464,14 @@ body {
 .estimation-actions { text-align: center; padding: 2rem 0; }
 .estimation-note { margin-top: 1rem; color: #64748b; font-size: 0.875rem; }
 #file-upload-input {
-    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+    z-index: 10;
 }
 
 
