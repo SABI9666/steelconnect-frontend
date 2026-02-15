@@ -3,13 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>SteelConnect - Professional Steel & Rebar Design Marketplace</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" defer>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="analytics-styles.css">
+    <link rel="stylesheet" href="style.css?v=20260215a">
+    <link rel="stylesheet" href="analytics-styles.css?v=20260215a">
     <style>
         /* Base and Original Variables */
         :root {
@@ -1357,7 +1360,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
-    <script src="script.js" defer></script>
+    <script src="script.js?v=20260215a" defer></script>
     
     <script>
         // Analytics Integration Script
@@ -1365,7 +1368,7 @@
             setTimeout(function() {
                 if (typeof appState !== 'undefined' && typeof buildSidebarNav === 'function') {
                     const script = document.createElement('script');
-                    script.src = 'analytics-integration.js';
+                    script.src = 'analytics-integration.js?v=20260215a';
                     script.onload = function() {
                         if (appState.currentUser && appState.currentUser.type === 'contractor') {
                             buildSidebarNav();
