@@ -3529,11 +3529,14 @@ function setupEstimationToolEventListeners() {
     });
     const submitBtn = document.getElementById('submit-estimation-btn');
     if (submitBtn) submitBtn.addEventListener('click', handleEstimationSubmit);
+    const aiBtn = document.getElementById('ai-estimate-btn');
+    if (aiBtn) aiBtn.addEventListener('click', handleAIEstimate);
 }
 
 function handleFileSelect(files, isRerender) {
     const fileList = document.getElementById('selected-files-list');
     const submitBtn = document.getElementById('submit-estimation-btn');
+    const aiBtn = document.getElementById('ai-estimate-btn');
     const maxSize = 50 * 1024 * 1024; // 50MB
 
     // Accumulate files: merge new files with existing ones
@@ -3585,6 +3588,7 @@ function handleFileSelect(files, isRerender) {
     fileList.innerHTML = filesHTML;
     document.getElementById('file-info-container').style.display = 'block';
     submitBtn.disabled = false;
+    if (aiBtn) aiBtn.disabled = false;
     updateEstimationStep(2);
     if (!isRerender) showNotification(`${newFiles.length} file(s) added. Total: ${merged.length} file(s) (${totalMB} MB)`, 'success');
 }
@@ -3615,6 +3619,8 @@ function removeFile(index) {
         appState.uploadedFile = null;
         document.getElementById('file-info-container').style.display = 'none';
         document.getElementById('submit-estimation-btn').disabled = true;
+        const aiBtnRef = document.getElementById('ai-estimate-btn');
+        if (aiBtnRef) aiBtnRef.disabled = true;
         updateEstimationStep(1);
         showNotification('All files removed', 'info');
     } else {
@@ -3665,6 +3671,413 @@ async function handleEstimationSubmit() {
         submitBtn.disabled = false;
         submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Request';
     }
+}
+
+// --- AI ESTIMATION FUNCTIONS ---
+async function handleAIEstimate() {
+    const form = document.getElementById('estimation-form');
+    const aiBtn = document.getElementById('ai-estimate-btn');
+    if (!appState.uploadedFile || appState.uploadedFile.length === 0) {
+        showNotification('Please upload project files first', 'warning');
+        return;
+    }
+    const projectTitle = form.projectTitle.value.trim();
+    const description = form.description.value.trim();
+    if (!projectTitle || !description) {
+        showNotification('Please fill in Project Title and Description', 'warning');
+        return;
+    }
+    const fileNames = Array.from(appState.uploadedFile).map(f => f.name);
+    aiBtn.disabled = true;
+    aiBtn.innerHTML = '<div class="btn-spinner"></div> Generating Questions...';
+    try {
+        const resp = await apiCall('/estimation/ai/questions', 'POST', {
+            projectTitle,
+            description,
+            fileCount: appState.uploadedFile.length,
+            fileNames
+        });
+        if (resp.success && resp.data) {
+            renderAIQuestionnaire(resp.data, { projectTitle, description, fileNames });
+        } else {
+            showNotification('Failed to generate questionnaire. Please try again.', 'error');
+        }
+    } catch (err) {
+        console.error('AI Questions error:', err);
+    } finally {
+        aiBtn.disabled = false;
+        aiBtn.innerHTML = '<i class="fas fa-robot"></i> Get AI Estimate <span class="est-ai-badge">Instant</span>';
+    }
+}
+
+function renderAIQuestionnaire(questionData, projectInfo) {
+    const container = document.getElementById('app-content');
+    const groups = questionData.questionGroups || [];
+    let groupsHTML = '';
+    groups.forEach((group, gi) => {
+        let questionsHTML = '';
+        group.questions.forEach(q => {
+            let inputHTML = '';
+            if (q.type === 'select') {
+                const opts = (q.options || []).map(o => `<option value="${o}">${o}</option>`).join('');
+                inputHTML = `<select class="aiq-input aiq-select" name="${q.id}" ${q.required ? 'required' : ''}><option value="">-- Select --</option>${opts}</select>`;
+            } else if (q.type === 'multiselect') {
+                const checks = (q.options || []).map(o => `<label class="aiq-check-label"><input type="checkbox" name="${q.id}" value="${o}" class="aiq-checkbox" /><span>${o}</span></label>`).join('');
+                inputHTML = `<div class="aiq-checks-grid">${checks}</div>`;
+            } else if (q.type === 'textarea') {
+                inputHTML = `<textarea class="aiq-input aiq-textarea" name="${q.id}" placeholder="${q.placeholder || ''}" rows="3" ${q.required ? 'required' : ''}></textarea>`;
+            } else {
+                inputHTML = `<input type="${q.inputType || 'text'}" class="aiq-input" name="${q.id}" placeholder="${q.placeholder || ''}" ${q.required ? 'required' : ''} />`;
+            }
+            questionsHTML += `
+                <div class="aiq-question">
+                    <label class="aiq-label">${q.question} ${q.required ? '<span class="aiq-req">*</span>' : ''}</label>
+                    ${inputHTML}
+                    ${q.helpText ? `<small class="aiq-help">${q.helpText}</small>` : ''}
+                </div>`;
+        });
+        groupsHTML += `
+            <div class="aiq-group">
+                <div class="aiq-group-header">
+                    <div class="aiq-group-icon"><i class="fas ${group.groupIcon || 'fa-clipboard-list'}"></i></div>
+                    <h3 class="aiq-group-title">${group.groupTitle}</h3>
+                </div>
+                <div class="aiq-group-body">${questionsHTML}</div>
+            </div>`;
+    });
+
+    container.innerHTML = `
+        <div class="aiq-page">
+            <div class="aiq-hero">
+                <div class="aiq-hero-glow"></div>
+                <button class="aiq-back-btn" onclick="renderAppSection('estimation-tool')"><i class="fas fa-arrow-left"></i> Back</button>
+                <div class="aiq-hero-content">
+                    <div class="aiq-hero-badge"><i class="fas fa-brain"></i> AI Analysis</div>
+                    <h1 class="aiq-hero-title">Project Questionnaire</h1>
+                    <p class="aiq-hero-sub">Answer these questions to help our AI generate a comprehensive, world-class cost estimate for <strong>${projectInfo.projectTitle}</strong></p>
+                </div>
+            </div>
+            <div class="aiq-container">
+                <div class="aiq-progress-bar">
+                    <div class="aiq-progress-step active"><span class="aiq-prog-num">1</span><span class="aiq-prog-label">Upload</span></div>
+                    <div class="aiq-prog-line done"></div>
+                    <div class="aiq-progress-step active"><span class="aiq-prog-num">2</span><span class="aiq-prog-label">Details</span></div>
+                    <div class="aiq-prog-line done"></div>
+                    <div class="aiq-progress-step active current"><span class="aiq-prog-num">3</span><span class="aiq-prog-label">Questionnaire</span></div>
+                    <div class="aiq-prog-line"></div>
+                    <div class="aiq-progress-step"><span class="aiq-prog-num">4</span><span class="aiq-prog-label">AI Result</span></div>
+                </div>
+                <form id="aiq-form" class="aiq-form">
+                    ${groupsHTML}
+                    <div class="aiq-submit-section">
+                        <button type="button" id="aiq-generate-btn" class="aiq-generate-btn" onclick="submitAIQuestionnaire()">
+                            <i class="fas fa-wand-magic-sparkles"></i> Generate AI Estimate
+                            <span class="aiq-gen-badge">Powered by Claude AI</span>
+                        </button>
+                        <p class="aiq-note"><i class="fas fa-clock"></i> Generation takes 15-30 seconds for a comprehensive estimate</p>
+                    </div>
+                </form>
+            </div>
+        </div>`;
+    // Store project info for the generate step
+    appState._aiProjectInfo = projectInfo;
+}
+
+async function submitAIQuestionnaire() {
+    const form = document.getElementById('aiq-form');
+    const btn = document.getElementById('aiq-generate-btn');
+    if (!form || !btn) return;
+
+    // Collect answers
+    const answers = {};
+    const inputs = form.querySelectorAll('.aiq-input, .aiq-select, .aiq-textarea');
+    inputs.forEach(input => {
+        if (input.name && input.value) answers[input.name] = input.value;
+    });
+    // Collect multiselect checkboxes
+    const checkboxes = form.querySelectorAll('.aiq-checkbox:checked');
+    checkboxes.forEach(cb => {
+        if (!answers[cb.name]) answers[cb.name] = [];
+        if (typeof answers[cb.name] === 'string') answers[cb.name] = [answers[cb.name]];
+        answers[cb.name].push(cb.value);
+    });
+
+    // Validate required fields
+    const requiredFields = form.querySelectorAll('[required]');
+    let valid = true;
+    requiredFields.forEach(f => {
+        if (!f.value || f.value.trim() === '') {
+            f.classList.add('aiq-error');
+            valid = false;
+        } else {
+            f.classList.remove('aiq-error');
+        }
+    });
+    if (!valid) {
+        showNotification('Please fill in all required fields', 'warning');
+        return;
+    }
+
+    const projectInfo = appState._aiProjectInfo || {};
+    btn.disabled = true;
+    btn.innerHTML = '<div class="btn-spinner"></div> AI is analyzing your project...';
+
+    // Show immersive loading screen
+    showAIGeneratingOverlay();
+
+    try {
+        const resp = await apiCall('/estimation/ai/generate', 'POST', {
+            projectTitle: projectInfo.projectTitle,
+            description: projectInfo.description,
+            answers,
+            fileNames: projectInfo.fileNames
+        });
+        hideAIGeneratingOverlay();
+        if (resp.success && resp.data) {
+            renderAIEstimateResult(resp.data, projectInfo);
+        } else {
+            showNotification('AI estimate generation failed. Please try again.', 'error');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> Generate AI Estimate <span class="aiq-gen-badge">Powered by Claude AI</span>';
+        }
+    } catch (err) {
+        hideAIGeneratingOverlay();
+        console.error('AI Generate error:', err);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> Generate AI Estimate <span class="aiq-gen-badge">Powered by Claude AI</span>';
+    }
+}
+
+function showAIGeneratingOverlay() {
+    const overlay = document.createElement('div');
+    overlay.id = 'ai-gen-overlay';
+    overlay.className = 'ai-gen-overlay';
+    overlay.innerHTML = `
+        <div class="ai-gen-modal">
+            <div class="ai-gen-animation">
+                <div class="ai-gen-rings">
+                    <div class="ai-gen-ring ring-1"></div>
+                    <div class="ai-gen-ring ring-2"></div>
+                    <div class="ai-gen-ring ring-3"></div>
+                </div>
+                <div class="ai-gen-icon"><i class="fas fa-robot"></i></div>
+            </div>
+            <h2 class="ai-gen-title">AI Generating Your Estimate</h2>
+            <p class="ai-gen-subtitle">Our AI is analyzing your project requirements and calculating costs across all trades</p>
+            <div class="ai-gen-steps">
+                <div class="ai-gen-step active" id="aiStep1"><i class="fas fa-check-circle"></i> Analyzing project scope</div>
+                <div class="ai-gen-step" id="aiStep2"><i class="fas fa-spinner fa-spin"></i> Calculating material costs</div>
+                <div class="ai-gen-step" id="aiStep3"><i class="fas fa-circle"></i> Computing labor & equipment</div>
+                <div class="ai-gen-step" id="aiStep4"><i class="fas fa-circle"></i> Applying regional adjustments</div>
+                <div class="ai-gen-step" id="aiStep5"><i class="fas fa-circle"></i> Finalizing comprehensive estimate</div>
+            </div>
+        </div>`;
+    document.body.appendChild(overlay);
+    // Animate steps
+    const steps = ['aiStep2', 'aiStep3', 'aiStep4', 'aiStep5'];
+    steps.forEach((id, i) => {
+        setTimeout(() => {
+            const el = document.getElementById(id);
+            if (el) { el.classList.add('active'); el.querySelector('i').className = i < steps.length - 1 ? 'fas fa-check-circle' : 'fas fa-spinner fa-spin'; }
+            // Mark previous as done
+            const prevId = i === 0 ? 'aiStep1' : steps[i - 1];
+            const prevEl = document.getElementById(prevId);
+            if (prevEl) prevEl.querySelector('i').className = 'fas fa-check-circle';
+        }, (i + 1) * 4000);
+    });
+}
+
+function hideAIGeneratingOverlay() {
+    const overlay = document.getElementById('ai-gen-overlay');
+    if (overlay) { overlay.style.opacity = '0'; setTimeout(() => overlay.remove(), 300); }
+}
+
+function renderAIEstimateResult(estimate, projectInfo) {
+    const container = document.getElementById('app-content');
+    const s = estimate.summary || {};
+    const curr = s.currencySymbol || '$';
+    const trades = estimate.trades || [];
+    const breakdown = estimate.costBreakdown || {};
+    const assumptions = estimate.assumptions || [];
+    const exclusions = estimate.exclusions || [];
+    const notes = estimate.notes || [];
+    const insights = estimate.marketInsights || {};
+
+    // Build trades rows
+    let tradesHTML = '';
+    trades.forEach((trade, i) => {
+        let lineItemsHTML = '';
+        (trade.lineItems || []).forEach(item => {
+            lineItemsHTML += `
+                <tr class="air-line-row">
+                    <td class="air-li-desc">${item.description}</td>
+                    <td>${fmtNum(item.quantity)} ${item.unit}</td>
+                    <td>${curr}${fmtNum(item.materialCost)}</td>
+                    <td>${curr}${fmtNum(item.laborCost)}</td>
+                    <td>${curr}${fmtNum(item.equipmentCost)}</td>
+                    <td class="air-li-total">${curr}${fmtNum(item.lineTotal)}</td>
+                </tr>`;
+        });
+        const tradeColors = ['#3b82f6','#8b5cf6','#06b6d4','#10b981','#f59e0b','#ef4444','#ec4899','#6366f1','#14b8a6','#f97316','#84cc16','#a855f7','#0ea5e9','#d946ef','#22d3ee'];
+        const color = tradeColors[i % tradeColors.length];
+        tradesHTML += `
+            <div class="air-trade-card">
+                <div class="air-trade-header" onclick="this.parentElement.classList.toggle('expanded')">
+                    <div class="air-trade-left">
+                        <div class="air-trade-icon" style="background:${color}20;color:${color}"><i class="fas ${trade.tradeIcon || 'fa-hard-hat'}"></i></div>
+                        <div>
+                            <h4 class="air-trade-name">${trade.tradeName}</h4>
+                            <span class="air-trade-div">Division ${trade.division}</span>
+                        </div>
+                    </div>
+                    <div class="air-trade-right">
+                        <span class="air-trade-pct" style="color:${color}">${(trade.percentOfTotal || 0).toFixed(1)}%</span>
+                        <span class="air-trade-total">${curr}${fmtNum(trade.subtotal)}</span>
+                        <i class="fas fa-chevron-down air-trade-chevron"></i>
+                    </div>
+                </div>
+                <div class="air-trade-body">
+                    <table class="air-line-table">
+                        <thead><tr><th>Description</th><th>Qty</th><th>Material</th><th>Labor</th><th>Equipment</th><th>Total</th></tr></thead>
+                        <tbody>${lineItemsHTML}</tbody>
+                    </table>
+                </div>
+            </div>`;
+    });
+
+    // Breakdown items
+    const breakdownHTML = `
+        <div class="air-breakdown-row"><span>Direct Costs</span><span class="air-bd-val">${curr}${fmtNum(breakdown.directCosts)}</span></div>
+        <div class="air-breakdown-row"><span>General Conditions (${breakdown.generalConditionsPercent || 0}%)</span><span class="air-bd-val">${curr}${fmtNum(breakdown.generalConditions)}</span></div>
+        <div class="air-breakdown-row"><span>Overhead (${breakdown.overheadPercent || 0}%)</span><span class="air-bd-val">${curr}${fmtNum(breakdown.overhead)}</span></div>
+        <div class="air-breakdown-row"><span>Profit (${breakdown.profitPercent || 0}%)</span><span class="air-bd-val">${curr}${fmtNum(breakdown.profit)}</span></div>
+        <div class="air-breakdown-row"><span>Contingency (${breakdown.contingencyPercent || 0}%)</span><span class="air-bd-val">${curr}${fmtNum(breakdown.contingency)}</span></div>
+        <div class="air-breakdown-row"><span>Escalation (${breakdown.escalationPercent || 0}%)</span><span class="air-bd-val">${curr}${fmtNum(breakdown.escalation)}</span></div>
+        <div class="air-breakdown-row air-breakdown-total"><span>Total with Markups</span><span>${curr}${fmtNum(breakdown.totalWithMarkups)}</span></div>`;
+
+    // Top 5 trades for visual chart bars
+    const sortedTrades = [...(estimate.tradesSummary || [])].sort((a, b) => b.amount - a.amount).slice(0, 8);
+    const maxAmt = sortedTrades[0]?.amount || 1;
+    let chartBarsHTML = '';
+    sortedTrades.forEach((t, i) => {
+        const pct = ((t.amount / maxAmt) * 100).toFixed(0);
+        const clr = ['#3b82f6','#8b5cf6','#06b6d4','#10b981','#f59e0b','#ef4444','#ec4899','#6366f1'][i % 8];
+        chartBarsHTML += `
+            <div class="air-chart-bar-row">
+                <span class="air-chart-label">${t.tradeName}</span>
+                <div class="air-chart-bar-bg"><div class="air-chart-bar-fill" style="width:${pct}%;background:${clr}"></div></div>
+                <span class="air-chart-val">${curr}${fmtNum(t.amount)}</span>
+            </div>`;
+    });
+
+    container.innerHTML = `
+        <div class="air-page">
+            <div class="air-hero">
+                <div class="air-hero-glow"></div>
+                <button class="air-back-btn" onclick="renderAppSection('estimation-tool')"><i class="fas fa-arrow-left"></i> New Estimate</button>
+                <div class="air-hero-content">
+                    <div class="air-hero-badge"><i class="fas fa-check-circle"></i> AI Estimate Complete</div>
+                    <h1 class="air-hero-title">${s.projectTitle || projectInfo.projectTitle}</h1>
+                    <p class="air-hero-sub">${s.projectType || ''} ${s.location ? '| ' + s.location : ''}</p>
+                </div>
+            </div>
+
+            <div class="air-container">
+                <!-- Summary Cards -->
+                <div class="air-summary-grid">
+                    <div class="air-summary-card air-card-primary">
+                        <div class="air-sc-icon"><i class="fas fa-coins"></i></div>
+                        <div class="air-sc-label">Grand Total</div>
+                        <div class="air-sc-value">${curr}${fmtNum(s.grandTotal)}</div>
+                        <div class="air-sc-sub">${s.currency || ''}</div>
+                    </div>
+                    <div class="air-summary-card air-card-indigo">
+                        <div class="air-sc-icon"><i class="fas fa-ruler-combined"></i></div>
+                        <div class="air-sc-label">Cost per Unit</div>
+                        <div class="air-sc-value">${curr}${fmtNum(s.costPerUnit)}</div>
+                        <div class="air-sc-sub">${s.unitLabel || 'per sq ft'}</div>
+                    </div>
+                    <div class="air-summary-card air-card-green">
+                        <div class="air-sc-icon"><i class="fas fa-chart-pie"></i></div>
+                        <div class="air-sc-label">Total Area</div>
+                        <div class="air-sc-value">${s.totalArea || 'N/A'}</div>
+                        <div class="air-sc-sub">${s.estimateClass || ''}</div>
+                    </div>
+                    <div class="air-summary-card air-card-amber">
+                        <div class="air-sc-icon"><i class="fas fa-signal"></i></div>
+                        <div class="air-sc-label">Confidence</div>
+                        <div class="air-sc-value">${s.confidenceLevel || 'Medium'}</div>
+                        <div class="air-sc-sub">${s.estimateDate || new Date().toLocaleDateString()}</div>
+                    </div>
+                </div>
+
+                <!-- Cost Distribution Chart -->
+                <div class="air-section">
+                    <div class="air-section-header">
+                        <h3><i class="fas fa-chart-bar"></i> Cost Distribution by Trade</h3>
+                    </div>
+                    <div class="air-chart-container">${chartBarsHTML}</div>
+                </div>
+
+                <!-- Cost Breakdown -->
+                <div class="air-section">
+                    <div class="air-section-header">
+                        <h3><i class="fas fa-layer-group"></i> Cost Breakdown & Markups</h3>
+                    </div>
+                    <div class="air-breakdown">${breakdownHTML}</div>
+                </div>
+
+                <!-- Trade Details -->
+                <div class="air-section">
+                    <div class="air-section-header">
+                        <h3><i class="fas fa-hard-hat"></i> Detailed Trade Breakdown</h3>
+                        <span class="air-trade-count">${trades.length} Trades</span>
+                    </div>
+                    <div class="air-trades-list">${tradesHTML}</div>
+                </div>
+
+                <!-- Market Insights -->
+                ${insights.regionalFactor || insights.materialTrends || insights.laborMarket ? `
+                <div class="air-section">
+                    <div class="air-section-header"><h3><i class="fas fa-globe"></i> Market Insights</h3></div>
+                    <div class="air-insights-grid">
+                        ${insights.regionalFactor ? `<div class="air-insight-card"><div class="air-insight-icon"><i class="fas fa-map-marker-alt"></i></div><h4>Regional Factor</h4><p>${insights.regionalFactor}</p></div>` : ''}
+                        ${insights.materialTrends ? `<div class="air-insight-card"><div class="air-insight-icon"><i class="fas fa-chart-line"></i></div><h4>Material Trends</h4><p>${insights.materialTrends}</p></div>` : ''}
+                        ${insights.laborMarket ? `<div class="air-insight-card"><div class="air-insight-icon"><i class="fas fa-users"></i></div><h4>Labor Market</h4><p>${insights.laborMarket}</p></div>` : ''}
+                    </div>
+                </div>` : ''}
+
+                <!-- Assumptions, Exclusions, Notes -->
+                <div class="air-info-grid">
+                    ${assumptions.length ? `<div class="air-info-card"><h4><i class="fas fa-clipboard-check"></i> Key Assumptions</h4><ul>${assumptions.map(a => `<li>${a}</li>`).join('')}</ul></div>` : ''}
+                    ${exclusions.length ? `<div class="air-info-card air-info-warn"><h4><i class="fas fa-exclamation-triangle"></i> Exclusions</h4><ul>${exclusions.map(e => `<li>${e}</li>`).join('')}</ul></div>` : ''}
+                    ${notes.length ? `<div class="air-info-card air-info-blue"><h4><i class="fas fa-info-circle"></i> Important Notes</h4><ul>${notes.map(n => `<li>${n}</li>`).join('')}</ul></div>` : ''}
+                </div>
+
+                <!-- Actions -->
+                <div class="air-actions">
+                    <button class="air-action-btn air-btn-primary" onclick="printAIEstimate()"><i class="fas fa-print"></i> Print Estimate</button>
+                    <button class="air-action-btn air-btn-secondary" onclick="renderAppSection('estimation-tool')"><i class="fas fa-plus"></i> New Estimate</button>
+                </div>
+
+                <div class="air-footer">
+                    <p><i class="fas fa-robot"></i> This estimate was generated by SteelConnect AI and should be validated by a qualified estimator for final budgeting.</p>
+                </div>
+            </div>
+        </div>`;
+}
+
+function fmtNum(n) {
+    if (n === undefined || n === null) return '0';
+    const num = typeof n === 'string' ? parseFloat(n) : n;
+    if (isNaN(num)) return '0';
+    if (num >= 1000000) return (num / 1000000).toFixed(2) + 'M';
+    if (num >= 1000) return num.toLocaleString('en-US', { maximumFractionDigits: 0 });
+    return num.toLocaleString('en-US', { maximumFractionDigits: 2 });
+}
+
+function printAIEstimate() {
+    window.print();
 }
 
 function showNotification(message, type = 'info', duration = 4000) {
@@ -3849,16 +4262,22 @@ function getEstimationToolTemplate() {
                 </div>
 
                 <div class="est-info-banner">
-                    <div class="est-info-icon"><i class="fas fa-shield-alt"></i></div>
+                    <div class="est-info-icon"><i class="fas fa-robot"></i></div>
                     <div>
-                        <strong>How it works:</strong> Our team reviews your files and project details, then provides a detailed cost breakdown. Typical turnaround is 1-3 business days.
+                        <strong>Two options:</strong> Get an <b>instant AI estimate</b> powered by advanced AI, or <b>submit for manual review</b> by our engineering team (1-3 business days).
                     </div>
                 </div>
 
                 <div class="est-submit-section">
-                    <button type="button" id="submit-estimation-btn" class="est-submit-btn" disabled>
-                        <i class="fas fa-paper-plane"></i> Submit Estimation Request
-                    </button>
+                    <div class="est-dual-buttons">
+                        <button type="button" id="ai-estimate-btn" class="est-ai-btn" disabled>
+                            <i class="fas fa-robot"></i> Get AI Estimate
+                            <span class="est-ai-badge">Instant</span>
+                        </button>
+                        <button type="button" id="submit-estimation-btn" class="est-submit-btn" disabled>
+                            <i class="fas fa-paper-plane"></i> Submit for Manual Review
+                        </button>
+                    </div>
                     <p class="est-submit-note"><i class="fas fa-lock"></i> All uploaded files are securely stored and only accessible to authorized engineers</p>
                 </div>
             </form>
