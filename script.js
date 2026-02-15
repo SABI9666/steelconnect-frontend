@@ -3523,11 +3523,12 @@ function setupEstimationToolEventListeners() {
     console.log('[EST-SETUP] Setting up estimation event listeners...');
     const uploadArea = document.getElementById('file-upload-area');
     const fileInput = document.getElementById('file-upload-input');
-
     if (uploadArea) {
-        // Drag and drop support
-        uploadArea.addEventListener('dragover', (e) => { e.preventDefault(); e.stopPropagation(); uploadArea.classList.add('drag-over'); });
-        uploadArea.addEventListener('dragleave', (e) => { e.preventDefault(); e.stopPropagation(); uploadArea.classList.remove('drag-over'); });
+        // The file input is a full-size transparent overlay (opacity:0, z-index:5)
+        // so clicking anywhere on the upload area directly opens the file picker.
+        // We only need drag-and-drop handlers on the area.
+        uploadArea.addEventListener('dragover', (e) => { e.preventDefault(); uploadArea.classList.add('drag-over'); });
+        uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('drag-over'));
         uploadArea.addEventListener('drop', (e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -4303,8 +4304,8 @@ function getEstimationToolTemplate() {
                         </div>
                     </div>
                     <div class="file-upload-section premium-upload-section">
-                        <div id="file-upload-area" class="file-upload-area premium-upload-area" onclick="document.getElementById('file-upload-input').click()">
-                            <input type="file" id="file-upload-input" accept=".pdf,.dwg,.dxf,.doc,.docx,.xls,.xlsx,.csv,.jpg,.jpeg,.png,.tif,.tiff,.txt,.zip,.rar" multiple onchange="if(this.files.length>0){handleFileSelect(this.files);this.value='';}" onclick="event.stopPropagation()" />
+                        <div id="file-upload-area" class="file-upload-area premium-upload-area">
+                            <input type="file" id="file-upload-input" accept=".pdf,.dwg,.dxf,.doc,.docx,.xls,.xlsx,.csv,.jpg,.jpeg,.png,.tif,.tiff,.txt,.zip,.rar" multiple onchange="if(this.files.length>0){handleFileSelect(this.files);this.value='';}" />
                             <div class="upload-content">
                                 <div class="est-upload-icon-wrap"><i class="fas fa-cloud-upload-alt"></i></div>
                                 <h3>Drag & Drop Files Here</h3>
