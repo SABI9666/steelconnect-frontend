@@ -3521,29 +3521,52 @@ async function toggleWidgetDetails(itemId, itemType) {
 }
 
 // --- ESTIMATION TOOL FUNCTIONS ---
+// Global inline handler for file input onchange (most reliable - cannot be missed)
+window._onEstFileChange = function(input) {
+    console.log('[EST-FILE] onchange fired, files:', input.files?.length);
+    try {
+        if (input.files && input.files.length > 0) {
+            handleFileSelect(input.files);
+            input.value = '';
+        }
+    } catch (err) {
+        console.error('[EST-FILE] Error in onchange:', err);
+        alert('Error selecting files: ' + err.message);
+    }
+};
+
 function setupEstimationToolEventListeners() {
     console.log('[EST-SETUP] Setting up estimation event listeners...');
     const uploadArea = document.getElementById('file-upload-area');
-    const fileInput = document.getElementById('file-upload-input');
 
-    if (!fileInput) {
-        console.error('[EST-SETUP] CRITICAL: #file-upload-input not found!');
-        return;
-    }
-
-    // The <label for="file-upload-input"> in the template handles opening
-    // the file picker natively in ALL browsers. No JS click hack needed.
-    // We only need to listen for the change event after files are selected.
-    fileInput.addEventListener('change', function() {
-        console.log('[EST-FILE] Files selected:', this.files?.length);
-        if (this.files && this.files.length > 0) {
-            handleFileSelect(this.files);
-            this.value = '';
-        }
-    });
-
-    // Drag and drop on the upload area
     if (uploadArea) {
+        // Click handler - creates a dynamic file input for maximum reliability
+        // This avoids all issues with display:none inputs not firing change events
+        uploadArea.addEventListener('click', function(e) {
+            if (e.target.closest('.remove-file-btn')) return;
+            console.log('[EST-CLICK] Upload area clicked, opening file dialog...');
+            var tempInput = document.createElement('input');
+            tempInput.type = 'file';
+            tempInput.accept = '.pdf,.dwg,.dxf,.doc,.docx,.xls,.xlsx,.csv,.jpg,.jpeg,.png,.tif,.tiff,.txt,.zip,.rar';
+            tempInput.multiple = true;
+            tempInput.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;';
+            document.body.appendChild(tempInput);
+            tempInput.addEventListener('change', function() {
+                console.log('[EST-FILE] File selected via dynamic input, count:', tempInput.files ? tempInput.files.length : 0);
+                try {
+                    if (tempInput.files && tempInput.files.length > 0) {
+                        handleFileSelect(tempInput.files);
+                    }
+                } catch (err) {
+                    console.error('[EST-FILE] Error handling files:', err);
+                    alert('Error selecting files: ' + err.message);
+                }
+                setTimeout(function() { if (tempInput.parentNode) document.body.removeChild(tempInput); }, 100);
+            });
+            tempInput.click();
+        });
+
+        // Drag and drop on the upload area
         ['dragover', 'dragenter'].forEach(evt => {
             uploadArea.addEventListener(evt, (e) => { e.preventDefault(); e.stopPropagation(); uploadArea.classList.add('drag-over'); });
         });
@@ -3568,7 +3591,7 @@ function setupEstimationToolEventListeners() {
     if (submitBtn) {
         submitBtn.addEventListener('click', handleEstimationSubmit);
     }
-    console.log('[EST-SETUP] Ready - label-for handles file picker, change listener attached');
+    console.log('[EST-SETUP] Ready');
 }
 
 function handleFileSelect(files, isRerender) {
@@ -4369,7 +4392,7 @@ function getEstimationToolTemplate() {
                     <div class="file-upload-section premium-upload-section">
                         <div id="file-upload-area" class="file-upload-area premium-upload-area">
                             <input type="file" id="file-upload-input" accept=".pdf,.dwg,.dxf,.doc,.docx,.xls,.xlsx,.csv,.jpg,.jpeg,.png,.tif,.tiff,.txt,.zip,.rar" multiple style="display:none" />
-                            <label for="file-upload-input" class="upload-content" style="cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:3rem 2rem;min-height:280px;margin:0;">
+                            <div class="upload-content" style="cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:3rem 2rem;min-height:280px;margin:0;">
                                 <div class="est-upload-icon-wrap"><i class="fas fa-cloud-upload-alt"></i></div>
                                 <h3 style="margin:0.5rem 0">Drag & Drop Files Here</h3>
                                 <p style="margin:0.5rem 0">or <span class="est-browse-link">click to browse</span> from your computer</p>
@@ -4381,7 +4404,7 @@ function getEstimationToolTemplate() {
                                     <span class="est-format-tag img"><i class="fas fa-file-image"></i> IMG</span>
                                 </div>
                                 <small class="upload-limit"><i class="fas fa-info-circle"></i> Max 20 files, 50MB each. PDF, DWG, DOC, XLS, Images & more.</small>
-                            </label>
+                            </div>
                         </div>
                         <div id="file-info-container" class="selected-files-container" style="display: none;">
                             <h4><i class="fas fa-paperclip"></i> Selected Files</h4>
