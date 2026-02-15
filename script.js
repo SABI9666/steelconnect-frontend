@@ -3743,7 +3743,6 @@ async function handleEstimationSubmit() {
     const designStandard = form.designStandard ? form.designStandard.value : '';
     const projectType = form.projectType ? form.projectType.value : '';
     const region = form.region ? form.region.value.trim() : '';
-    const totalArea = form.totalArea ? form.totalArea.value.trim() : '';
     if (!projectTitle || !description) {
         showNotification('Please fill in Project Title and Description', 'warning');
         return;
@@ -3759,7 +3758,6 @@ async function handleEstimationSubmit() {
         formData.append('designStandard', designStandard);
         formData.append('projectType', projectType);
         formData.append('region', region);
-        formData.append('totalArea', totalArea);
         formData.append('contractorName', appState.currentUser.name || '');
         formData.append('contractorEmail', appState.currentUser.email || '');
         const fileNames = uploadedFiles.map(f => f.name);
@@ -3812,7 +3810,6 @@ async function handleAIEstimate() {
     const designStandard = form.designStandard ? form.designStandard.value : '';
     const projectType = form.projectType ? form.projectType.value : '';
     const region = form.region ? form.region.value.trim() : '';
-    const totalArea = form.totalArea ? form.totalArea.value.trim() : '';
     if (!projectTitle || !description) {
         showNotification('Please fill in Project Title and Description', 'warning');
         return;
@@ -3831,12 +3828,11 @@ async function handleAIEstimate() {
             designStandard,
             projectType,
             region,
-            totalArea,
             fileCount: appState.uploadedFile.length,
             fileNames
         });
         if (resp.success && resp.data) {
-            renderAIQuestionnaire(resp.data, { projectTitle, description, designStandard, projectType, region, totalArea, fileNames });
+            renderAIQuestionnaire(resp.data, { projectTitle, description, designStandard, projectType, region, fileNames });
         } else {
             showNotification('Failed to generate questionnaire. Please try again.', 'error');
         }
@@ -3971,7 +3967,6 @@ async function submitAIQuestionnaire() {
         formData.append('designStandard', projectInfo.designStandard || '');
         formData.append('projectType', projectInfo.projectType || '');
         formData.append('region', projectInfo.region || '');
-        formData.append('totalArea', projectInfo.totalArea || '');
         formData.append('answers', JSON.stringify(answers));
         formData.append('fileNames', JSON.stringify(projectInfo.fileNames || []));
 
@@ -4067,6 +4062,8 @@ function renderAIEstimateResult(estimate, projectInfo) {
     const exclusions = estimate.exclusions || [];
     const notes = estimate.notes || [];
     const insights = estimate.marketInsights || {};
+    const structuralAnalysis = estimate.structuralAnalysis || {};
+    const materialSummary = estimate.materialSummary || {};
 
     // Build trades rows
     let tradesHTML = '';
@@ -4075,7 +4072,7 @@ function renderAIEstimateResult(estimate, projectInfo) {
         (trade.lineItems || []).forEach(item => {
             lineItemsHTML += `
                 <tr class="air-line-row">
-                    <td class="air-li-desc">${item.description}</td>
+                    <td class="air-li-desc">${item.description}${item.materialDetails ? `<div class="air-li-spec">${item.materialDetails}</div>` : ''}</td>
                     <td>${fmtNum(item.quantity)} ${item.unit}</td>
                     <td>${curr}${fmtNum(item.materialCost)}</td>
                     <td>${curr}${fmtNum(item.laborCost)}</td>
@@ -4083,6 +4080,29 @@ function renderAIEstimateResult(estimate, projectInfo) {
                     <td class="air-li-total">${curr}${fmtNum(item.lineTotal)}</td>
                 </tr>`;
         });
+
+        // Material schedule for this trade
+        let matScheduleHTML = '';
+        if (trade.materialSchedule && trade.materialSchedule.length > 0) {
+            matScheduleHTML = `
+                <div class="air-mat-schedule">
+                    <h5 class="air-mat-schedule-title"><i class="fas fa-boxes"></i> Material Schedule</h5>
+                    <table class="air-line-table air-mat-table">
+                        <thead><tr><th>Material</th><th>Specification</th><th>Qty</th><th>Unit</th><th>Unit Rate</th><th>Total</th></tr></thead>
+                        <tbody>${trade.materialSchedule.map(m => `
+                            <tr class="air-line-row">
+                                <td class="air-li-desc"><strong>${m.material}</strong></td>
+                                <td>${m.specification || '-'}</td>
+                                <td>${fmtNum(m.quantity)}</td>
+                                <td>${m.unit}</td>
+                                <td>${curr}${fmtNum(m.unitRate)}</td>
+                                <td class="air-li-total">${curr}${fmtNum(m.totalCost)}</td>
+                            </tr>`).join('')}
+                        </tbody>
+                    </table>
+                </div>`;
+        }
+
         const tradeColors = ['#3b82f6','#8b5cf6','#06b6d4','#10b981','#f59e0b','#ef4444','#ec4899','#6366f1','#14b8a6','#f97316','#84cc16','#a855f7','#0ea5e9','#d946ef','#22d3ee'];
         const color = tradeColors[i % tradeColors.length];
         tradesHTML += `
@@ -4102,6 +4122,7 @@ function renderAIEstimateResult(estimate, projectInfo) {
                     </div>
                 </div>
                 <div class="air-trade-body">
+                    ${matScheduleHTML}
                     <table class="air-line-table">
                         <thead><tr><th>Description</th><th>Qty</th><th>Material</th><th>Labor</th><th>Equipment</th><th>Total</th></tr></thead>
                         <tbody>${lineItemsHTML}</tbody>
@@ -4191,6 +4212,47 @@ function renderAIEstimateResult(estimate, projectInfo) {
                     </div>
                     <div class="air-breakdown">${breakdownHTML}</div>
                 </div>
+
+                <!-- Structural Analysis -->
+                ${structuralAnalysis.structuralSystem || structuralAnalysis.foundationType ? `
+                <div class="air-section">
+                    <div class="air-section-header"><h3><i class="fas fa-drafting-compass"></i> Structural Analysis</h3></div>
+                    <div class="air-structural-grid">
+                        ${structuralAnalysis.structuralSystem ? `<div class="air-struct-item"><div class="air-struct-icon"><i class="fas fa-building"></i></div><div><strong>Structural System</strong><p>${structuralAnalysis.structuralSystem}</p></div></div>` : ''}
+                        ${structuralAnalysis.foundationType ? `<div class="air-struct-item"><div class="air-struct-icon"><i class="fas fa-mountain"></i></div><div><strong>Foundation Type</strong><p>${structuralAnalysis.foundationType}</p></div></div>` : ''}
+                        ${structuralAnalysis.primaryMembers ? `<div class="air-struct-item"><div class="air-struct-icon"><i class="fas fa-columns"></i></div><div><strong>Primary Members</strong><p>${structuralAnalysis.primaryMembers}</p></div></div>` : ''}
+                        ${structuralAnalysis.secondaryMembers ? `<div class="air-struct-item"><div class="air-struct-icon"><i class="fas fa-grip-lines"></i></div><div><strong>Secondary Members</strong><p>${structuralAnalysis.secondaryMembers}</p></div></div>` : ''}
+                        ${structuralAnalysis.connectionTypes ? `<div class="air-struct-item"><div class="air-struct-icon"><i class="fas fa-link"></i></div><div><strong>Connection Types</strong><p>${structuralAnalysis.connectionTypes}</p></div></div>` : ''}
+                        ${structuralAnalysis.steelTonnage ? `<div class="air-struct-item"><div class="air-struct-icon"><i class="fas fa-weight-hanging"></i></div><div><strong>Steel Tonnage</strong><p>${structuralAnalysis.steelTonnage}</p></div></div>` : ''}
+                        ${structuralAnalysis.concreteVolume ? `<div class="air-struct-item"><div class="air-struct-icon"><i class="fas fa-cube"></i></div><div><strong>Concrete Volume</strong><p>${structuralAnalysis.concreteVolume}</p></div></div>` : ''}
+                        ${structuralAnalysis.rebarTonnage ? `<div class="air-struct-item"><div class="air-struct-icon"><i class="fas fa-bars"></i></div><div><strong>Rebar Tonnage</strong><p>${structuralAnalysis.rebarTonnage}</p></div></div>` : ''}
+                    </div>
+                    ${structuralAnalysis.drawingNotes ? `<div class="air-drawing-notes"><i class="fas fa-file-alt"></i> <strong>Drawing Analysis:</strong> ${structuralAnalysis.drawingNotes}</div>` : ''}
+                </div>` : ''}
+
+                <!-- Material Summary -->
+                ${materialSummary.keyMaterials && materialSummary.keyMaterials.length > 0 ? `
+                <div class="air-section">
+                    <div class="air-section-header"><h3><i class="fas fa-boxes"></i> Material Summary</h3></div>
+                    <div class="air-mat-summary-costs">
+                        <div class="air-msc-item"><span>Total Material Cost</span><strong>${curr}${fmtNum(materialSummary.totalMaterialCost)}</strong></div>
+                        <div class="air-msc-item"><span>Total Labor Cost</span><strong>${curr}${fmtNum(materialSummary.totalLaborCost)}</strong></div>
+                        <div class="air-msc-item"><span>Total Equipment Cost</span><strong>${curr}${fmtNum(materialSummary.totalEquipmentCost)}</strong></div>
+                    </div>
+                    <table class="air-line-table air-mat-table">
+                        <thead><tr><th>Material</th><th>Specification</th><th>Total Qty</th><th>Unit</th><th>Est. Cost</th><th>Supplier</th></tr></thead>
+                        <tbody>${materialSummary.keyMaterials.map(m => `
+                            <tr class="air-line-row">
+                                <td class="air-li-desc"><strong>${m.material}</strong></td>
+                                <td>${m.specification || '-'}</td>
+                                <td>${fmtNum(m.totalQuantity)}</td>
+                                <td>${m.unit}</td>
+                                <td class="air-li-total">${curr}${fmtNum(m.estimatedCost)}</td>
+                                <td>${m.supplier || '-'}</td>
+                            </tr>`).join('')}
+                        </tbody>
+                    </table>
+                </div>` : ''}
 
                 <!-- Trade Details -->
                 <div class="air-section">
@@ -4484,17 +4546,10 @@ function getEstimationToolTemplate() {
                                 <small class="est-field-hint">Type of construction project</small>
                             </div>
                         </div>
-                        <div class="est-form-row">
-                            <div class="form-group">
-                                <label class="form-label est-label">Region / Location</label>
-                                <input type="text" class="form-input premium-input" name="region" placeholder="e.g., California, USA / Dubai, UAE / Mumbai, India" />
-                                <small class="est-field-hint">Helps AI apply regional cost factors & labor rates</small>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label est-label">Total Area (approx.)</label>
-                                <input type="text" class="form-input premium-input" name="totalArea" placeholder="e.g., 50,000 sq ft / 4,600 sq m" />
-                                <small class="est-field-hint">Approximate total built-up area</small>
-                            </div>
+                        <div class="form-group">
+                            <label class="form-label est-label">Region / Location</label>
+                            <input type="text" class="form-input premium-input" name="region" placeholder="e.g., California, USA / Dubai, UAE / Mumbai, India" />
+                            <small class="est-field-hint">Helps AI apply regional cost factors & labor rates</small>
                         </div>
                     </div>
                 </div>
