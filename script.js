@@ -3520,84 +3520,124 @@ async function toggleWidgetDetails(itemId, itemType) {
 
 // --- ESTIMATION TOOL FUNCTIONS ---
 function setupEstimationToolEventListeners() {
+    console.log('[EST-SETUP] Setting up estimation event listeners...');
     const uploadArea = document.getElementById('file-upload-area');
     const fileInput = document.getElementById('file-upload-input');
     if (uploadArea) {
-        // The file input is now a full-size transparent overlay (opacity:0, z-index:5)
+        // The file input is a full-size transparent overlay (opacity:0, z-index:5)
         // so clicking anywhere on the upload area directly opens the file picker.
         // We only need drag-and-drop handlers on the area.
         uploadArea.addEventListener('dragover', (e) => { e.preventDefault(); uploadArea.classList.add('drag-over'); });
         uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('drag-over'));
         uploadArea.addEventListener('drop', (e) => {
             e.preventDefault();
+            e.stopPropagation();
             uploadArea.classList.remove('drag-over');
-            if (e.dataTransfer.files.length > 0) handleFileSelect(e.dataTransfer.files);
+            if (e.dataTransfer.files.length > 0) {
+                console.log('[EST-SETUP] Files dropped:', e.dataTransfer.files.length);
+                handleFileSelect(e.dataTransfer.files);
+            }
         });
+        console.log('[EST-SETUP] Upload area drag/drop ready');
+    } else {
+        console.error('[EST-SETUP] Upload area not found!');
     }
-    if (fileInput) fileInput.addEventListener('change', (e) => {
-        if (e.target.files.length > 0) handleFileSelect(e.target.files);
-        e.target.value = ''; // Reset so user can select more files again
-    });
+
+    if (fileInput) {
+        console.log('[EST-SETUP] File input found');
+    } else {
+        console.error('[EST-SETUP] File input not found!');
+    }
+
     const submitBtn = document.getElementById('submit-estimation-btn');
-    if (submitBtn) submitBtn.addEventListener('click', handleEstimationSubmit);
+    if (submitBtn) {
+        submitBtn.addEventListener('click', handleEstimationSubmit);
+        console.log('[EST-SETUP] Submit button ready');
+    } else {
+        console.error('[EST-SETUP] Submit button not found!');
+    }
+    console.log('[EST-SETUP] All estimation listeners set up');
 }
 
 function handleFileSelect(files, isRerender) {
-    const fileList = document.getElementById('selected-files-list');
-    const submitBtn = document.getElementById('submit-estimation-btn');
-    const maxSize = 50 * 1024 * 1024; // 50MB
+    try {
+        console.log('[FILE-SELECT] Called with', files?.length, 'files, isRerender:', isRerender);
+        const fileList = document.getElementById('selected-files-list');
+        const submitBtn = document.getElementById('submit-estimation-btn');
+        const fileInfoContainer = document.getElementById('file-info-container');
+        const maxSize = 50 * 1024 * 1024; // 50MB
 
-    // Accumulate files: merge new files with existing ones
-    let existing = [];
-    if (!isRerender && appState.uploadedFile) {
-        existing = Array.from(appState.uploadedFile);
+        if (!files || files.length === 0) {
+            console.log('[FILE-SELECT] No files provided');
+            return;
+        }
+
+        // Accumulate files: merge new files with existing ones
+        let existing = [];
+        if (!isRerender && appState.uploadedFile) {
+            try { existing = Array.from(appState.uploadedFile); } catch (e) { existing = []; }
+        }
+        const newFiles = Array.from(files);
+
+        // Validate individual file sizes
+        const oversized = newFiles.filter(f => f.size > maxSize);
+        if (oversized.length > 0) {
+            showNotification('Some files exceed 50MB limit: ' + oversized.map(f => f.name).join(', '), 'error');
+            return;
+        }
+
+        // Merge and deduplicate by name+size
+        const merged = isRerender ? newFiles : [...existing];
+        if (!isRerender) {
+            newFiles.forEach(nf => {
+                const dup = merged.find(ef => ef.name === nf.name && ef.size === nf.size);
+                if (!dup) merged.push(nf);
+            });
+        }
+
+        // Validate total file count
+        if (merged.length > 20) {
+            showNotification('Maximum 20 files allowed. Please remove some first.', 'warning');
+            return;
+        }
+
+        // Store files - use DataTransfer if available, otherwise store as array
+        try {
+            const dt = new DataTransfer();
+            merged.forEach(file => dt.items.add(file));
+            appState.uploadedFile = dt.files;
+        } catch (dtError) {
+            console.warn('[FILE-SELECT] DataTransfer not available, using array fallback');
+            appState.uploadedFile = merged;
+        }
+
+        console.log('[FILE-SELECT] Stored', merged.length, 'files in appState');
+
+        // Render file list
+        let filesHTML = '';
+        let totalSize = 0;
+        for (let i = 0; i < merged.length; i++) {
+            const file = merged[i];
+            const fileSize = (file.size / 1024 / 1024).toFixed(2);
+            totalSize += file.size;
+            const ext = file.name.split('.').pop().toLowerCase();
+            const iconMap = { 'pdf': 'fa-file-pdf', 'dwg': 'fa-drafting-compass', 'dxf': 'fa-drafting-compass', 'doc': 'fa-file-word', 'docx': 'fa-file-word', 'xls': 'fa-file-excel', 'xlsx': 'fa-file-excel', 'csv': 'fa-file-csv', 'jpg': 'fa-file-image', 'jpeg': 'fa-file-image', 'png': 'fa-file-image', 'tif': 'fa-file-image', 'tiff': 'fa-file-image', 'txt': 'fa-file-alt', 'zip': 'fa-file-archive', 'rar': 'fa-file-archive' };
+            const icon = iconMap[ext] || 'fa-file';
+            filesHTML += '<div class="selected-file-item"><div class="file-info"><i class="fas ' + icon + '"></i><div class="file-details"><span class="file-name">' + file.name + '</span><span class="file-size">' + fileSize + ' MB</span></div></div><button type="button" class="remove-file-btn" onclick="removeFile(' + i + ')"><i class="fas fa-times"></i></button></div>';
+        }
+        const totalMB = (totalSize / 1024 / 1024).toFixed(2);
+        filesHTML += '<div class="selected-files-total"><strong>' + merged.length + ' file(s)</strong> &middot; Total: ' + totalMB + ' MB</div>';
+
+        if (fileList) fileList.innerHTML = filesHTML;
+        if (fileInfoContainer) fileInfoContainer.style.display = 'block';
+        if (submitBtn) submitBtn.disabled = false;
+        updateEstimationStep(2);
+        if (!isRerender) showNotification(newFiles.length + ' file(s) added. Total: ' + merged.length + ' file(s) (' + totalMB + ' MB)', 'success');
+        console.log('[FILE-SELECT] Rendered', merged.length, 'files successfully');
+    } catch (error) {
+        console.error('[FILE-SELECT] Error:', error);
+        showNotification('Error processing files: ' + error.message, 'error');
     }
-    const newFiles = Array.from(files);
-
-    // Validate individual file sizes
-    const oversized = newFiles.filter(f => f.size > maxSize);
-    if (oversized.length > 0) {
-        showNotification(`Some files exceed 50MB limit: ${oversized.map(f => f.name).join(', ')}`, 'error');
-        return;
-    }
-
-    // Merge and deduplicate by name+size
-    const merged = isRerender ? newFiles : [...existing];
-    if (!isRerender) {
-        newFiles.forEach(nf => {
-            const dup = merged.find(ef => ef.name === nf.name && ef.size === nf.size);
-            if (!dup) merged.push(nf);
-        });
-    }
-
-    // Validate total file count
-    if (merged.length > 20) {
-        showNotification(`Maximum 20 files allowed. You have ${existing.length} + ${newFiles.length} = ${merged.length} files. Please remove some first.`, 'warning');
-        return;
-    }
-
-    // Store as DataTransfer FileList so it works with FormData
-    const dt = new DataTransfer();
-    merged.forEach(file => dt.items.add(file));
-    appState.uploadedFile = dt.files;
-
-    // Render file list
-    let filesHTML = '';
-    let totalSize = 0;
-    for (let i = 0; i < merged.length; i++) {
-        const file = merged[i];
-        const fileSize = (file.size / 1024 / 1024).toFixed(2);
-        totalSize += file.size;
-        const fileType = getFileTypeIcon(file.type, file.name);
-        filesHTML += `<div class="selected-file-item"><div class="file-info"><i class="fas ${fileType.icon}"></i><div class="file-details"><span class="file-name">${file.name}</span><span class="file-size">${fileSize} MB</span></div></div><button type="button" class="remove-file-btn" onclick="removeFile(${i})"><i class="fas fa-times"></i></button></div>`;
-    }
-    const totalMB = (totalSize / 1024 / 1024).toFixed(2);
-    filesHTML += `<div class="selected-files-total"><strong>${merged.length} file(s)</strong> &middot; Total: ${totalMB} MB</div>`;
-    fileList.innerHTML = filesHTML;
-    document.getElementById('file-info-container').style.display = 'block';
-    submitBtn.disabled = false;
-    updateEstimationStep(2);
-    if (!isRerender) showNotification(`${newFiles.length} file(s) added. Total: ${merged.length} file(s) (${totalMB} MB)`, 'success');
 }
 
 function getFileTypeIcon(mimeType, fileName) {
@@ -3620,20 +3660,28 @@ function updateEstimationStep(activeStep) {
 }
 
 function removeFile(index) {
-    const filesArray = Array.from(appState.uploadedFile);
-    filesArray.splice(index, 1);
-    if (filesArray.length === 0) {
-        appState.uploadedFile = null;
-        document.getElementById('file-info-container').style.display = 'none';
-        document.getElementById('submit-estimation-btn').disabled = true;
-        updateEstimationStep(1);
-        showNotification('All files removed', 'info');
-    } else {
-        const dt = new DataTransfer();
-        filesArray.forEach(file => dt.items.add(file));
-        appState.uploadedFile = dt.files;
-        handleFileSelect(filesArray, true);
-        showNotification(`File removed. ${filesArray.length} file(s) remaining`, 'info');
+    try {
+        const filesArray = Array.from(appState.uploadedFile);
+        filesArray.splice(index, 1);
+        if (filesArray.length === 0) {
+            appState.uploadedFile = null;
+            document.getElementById('file-info-container').style.display = 'none';
+            document.getElementById('submit-estimation-btn').disabled = true;
+            updateEstimationStep(1);
+            showNotification('All files removed', 'info');
+        } else {
+            try {
+                const dt = new DataTransfer();
+                filesArray.forEach(file => dt.items.add(file));
+                appState.uploadedFile = dt.files;
+            } catch (e) {
+                appState.uploadedFile = filesArray;
+            }
+            handleFileSelect(filesArray, true);
+            showNotification('File removed. ' + filesArray.length + ' file(s) remaining', 'info');
+        }
+    } catch (error) {
+        console.error('[REMOVE-FILE] Error:', error);
     }
 }
 
@@ -3667,11 +3715,10 @@ async function handleEstimationSubmit() {
         formData.append('totalArea', totalArea);
         formData.append('contractorName', appState.currentUser.name);
         formData.append('contractorEmail', appState.currentUser.email);
-        const fileNames = Array.from(appState.uploadedFile).map(f => f.name);
+        const uploadedFiles = Array.from(appState.uploadedFile);
+        const fileNames = uploadedFiles.map(f => f.name);
         formData.append('fileNames', JSON.stringify(fileNames));
-        for (let i = 0; i < appState.uploadedFile.length; i++) {
-            formData.append('files', appState.uploadedFile[i]);
-        }
+        uploadedFiles.forEach(file => formData.append('files', file));
         await apiCall('/estimation/contractor/submit', 'POST', formData, 'Estimation submitted successfully! AI estimate is being generated.');
         addLocalNotification('Submitted', `Estimation request for "${projectTitle}" submitted with AI analysis.`, 'estimation');
         form.reset();
@@ -4258,7 +4305,7 @@ function getEstimationToolTemplate() {
                     </div>
                     <div class="file-upload-section premium-upload-section">
                         <div id="file-upload-area" class="file-upload-area premium-upload-area">
-                            <input type="file" id="file-upload-input" accept=".pdf,.dwg,.dxf,.doc,.docx,.xls,.xlsx,.csv,.jpg,.jpeg,.png,.tif,.tiff,.txt,.zip,.rar" multiple />
+                            <input type="file" id="file-upload-input" accept=".pdf,.dwg,.dxf,.doc,.docx,.xls,.xlsx,.csv,.jpg,.jpeg,.png,.tif,.tiff,.txt,.zip,.rar" multiple onchange="if(this.files.length>0){handleFileSelect(this.files);this.value='';}" />
                             <div class="upload-content">
                                 <div class="est-upload-icon-wrap"><i class="fas fa-cloud-upload-alt"></i></div>
                                 <h3>Drag & Drop Files Here</h3>
