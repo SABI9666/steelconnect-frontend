@@ -3528,7 +3528,9 @@ function setupEstimationToolEventListeners() {
     const browseBtn = document.getElementById('est-browse-btn');
 
     if (fileInput) {
-        // Primary: programmatic change listener on file input
+        // File input now overlays the entire upload area (opacity:0, z-index:10, 100% w/h)
+        // so clicking anywhere on the upload area directly clicks the file input.
+        // This is the most reliable cross-browser approach for file uploads.
         fileInput.addEventListener('change', function() {
             console.log('[EST-FILE] Change event fired, files:', this.files?.length);
             if (this.files && this.files.length > 0) {
@@ -3536,27 +3538,16 @@ function setupEstimationToolEventListeners() {
                 this.value = '';
             }
         });
-        // Prevent click event from bubbling to uploadArea (avoids infinite loop)
-        fileInput.addEventListener('click', function(e) {
-            e.stopPropagation();
-        });
-        console.log('[EST-SETUP] File input change listener attached');
+        console.log('[EST-SETUP] File input change listener attached (overlay mode)');
     } else {
-        console.error('[EST-SETUP] File input not found!');
+        console.error('[EST-SETUP] CRITICAL: File input element #file-upload-input not found!');
     }
 
     if (uploadArea) {
-        // Click anywhere on upload area opens file picker
-        uploadArea.addEventListener('click', function(e) {
-            console.log('[EST-CLICK] Upload area clicked');
-            if (fileInput) {
-                fileInput.click();
-            }
-        });
-
-        // Drag and drop handlers
-        uploadArea.addEventListener('dragover', (e) => { e.preventDefault(); uploadArea.classList.add('drag-over'); });
-        uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('drag-over'));
+        // Drag and drop handlers (drag events need to be on the area, not the input)
+        uploadArea.addEventListener('dragover', (e) => { e.preventDefault(); e.stopPropagation(); uploadArea.classList.add('drag-over'); });
+        uploadArea.addEventListener('dragenter', (e) => { e.preventDefault(); e.stopPropagation(); uploadArea.classList.add('drag-over'); });
+        uploadArea.addEventListener('dragleave', (e) => { e.preventDefault(); e.stopPropagation(); uploadArea.classList.remove('drag-over'); });
         uploadArea.addEventListener('drop', (e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -3566,18 +3557,9 @@ function setupEstimationToolEventListeners() {
                 handleFileSelect(e.dataTransfer.files);
             }
         });
-        console.log('[EST-SETUP] Upload area click + drag/drop ready');
+        console.log('[EST-SETUP] Upload area drag/drop ready');
     } else {
-        console.error('[EST-SETUP] Upload area not found!');
-    }
-
-    // Browse link also opens file picker
-    if (browseBtn) {
-        browseBtn.addEventListener('click', function(e) {
-            e.stopPropagation(); // Prevent double-trigger from uploadArea click
-            console.log('[EST-BROWSE] Browse button clicked');
-            if (fileInput) fileInput.click();
-        });
+        console.error('[EST-SETUP] CRITICAL: Upload area #file-upload-area not found!');
     }
 
     // Prevent form from submitting on Enter key (which causes page reload)
@@ -3592,6 +3574,14 @@ function setupEstimationToolEventListeners() {
         console.log('[EST-SETUP] Submit button ready');
     } else {
         console.error('[EST-SETUP] Submit button not found!');
+    }
+
+    const aiBtn = document.getElementById('ai-estimate-btn');
+    if (aiBtn) {
+        aiBtn.addEventListener('click', handleAIEstimate);
+        console.log('[EST-SETUP] AI Estimate button ready');
+    } else {
+        console.error('[EST-SETUP] AI Estimate button not found!');
     }
     console.log('[EST-SETUP] All estimation listeners set up');
 }
@@ -3668,6 +3658,8 @@ function handleFileSelect(files, isRerender) {
         if (fileList) fileList.innerHTML = filesHTML;
         if (fileInfoContainer) fileInfoContainer.style.display = 'block';
         if (submitBtn) submitBtn.disabled = false;
+        const aiBtnEl = document.getElementById('ai-estimate-btn');
+        if (aiBtnEl) aiBtnEl.disabled = false;
         updateEstimationStep(2);
         if (!isRerender) showNotification(newFiles.length + ' file(s) added. Total: ' + merged.length + ' file(s) (' + totalMB + ' MB)', 'success');
         console.log('[FILE-SELECT] Rendered', merged.length, 'files successfully');
@@ -3704,6 +3696,8 @@ function removeFile(index) {
             appState.uploadedFile = null;
             document.getElementById('file-info-container').style.display = 'none';
             document.getElementById('submit-estimation-btn').disabled = true;
+            const rmAiBtn = document.getElementById('ai-estimate-btn');
+            if (rmAiBtn) rmAiBtn.disabled = true;
             updateEstimationStep(1);
             showNotification('All files removed', 'info');
         } else {
@@ -4517,9 +4511,14 @@ function getEstimationToolTemplate() {
                 </div>
 
                 <div class="est-submit-section">
-                    <button type="button" id="submit-estimation-btn" class="est-submit-btn" disabled>
-                        <i class="fas fa-paper-plane"></i> Submit Estimation Request
-                    </button>
+                    <div class="est-btn-group">
+                        <button type="button" id="ai-estimate-btn" class="est-submit-btn est-ai-btn" disabled>
+                            <i class="fas fa-robot"></i> Get AI Estimate <span class="est-ai-badge">Instant</span>
+                        </button>
+                        <button type="button" id="submit-estimation-btn" class="est-submit-btn est-manual-btn" disabled>
+                            <i class="fas fa-paper-plane"></i> Submit Estimation Request
+                        </button>
+                    </div>
                     <p class="est-submit-note"><i class="fas fa-lock"></i> All uploaded files are securely stored and only accessible to authorized engineers</p>
                 </div>
             </form>
