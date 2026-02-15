@@ -3513,10 +3513,10 @@ async function toggleWidgetDetails(itemId, itemType) {
 function setupEstimationToolEventListeners() {
     const uploadArea = document.getElementById('file-upload-area');
     const fileInput = document.getElementById('file-upload-input');
-    if (uploadArea && fileInput) {
-        // Prevent double-trigger: stop clicks on the input from bubbling to the area
-        fileInput.addEventListener('click', (e) => e.stopPropagation());
-        uploadArea.addEventListener('click', () => fileInput.click());
+    if (uploadArea) {
+        // The file input is now a full-size transparent overlay (opacity:0, z-index:5)
+        // so clicking anywhere on the upload area directly opens the file picker.
+        // We only need drag-and-drop handlers on the area.
         uploadArea.addEventListener('dragover', (e) => { e.preventDefault(); uploadArea.classList.add('drag-over'); });
         uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('drag-over'));
         uploadArea.addEventListener('drop', (e) => {
