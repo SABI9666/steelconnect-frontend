@@ -3527,66 +3527,48 @@ function setupEstimationToolEventListeners() {
     const fileInput = document.getElementById('file-upload-input');
 
     if (!fileInput) {
-        console.error('[EST-SETUP] CRITICAL: File input #file-upload-input not found!');
-        return;
-    }
-    if (!uploadArea) {
-        console.error('[EST-SETUP] CRITICAL: Upload area #file-upload-area not found!');
+        console.error('[EST-SETUP] CRITICAL: #file-upload-input not found!');
         return;
     }
 
-    // Listen for file selection changes
-    fileInput.addEventListener('change', function(e) {
-        console.log('[EST-FILE] Change event fired, files:', this.files?.length);
+    // The <label for="file-upload-input"> in the template handles opening
+    // the file picker natively in ALL browsers. No JS click hack needed.
+    // We only need to listen for the change event after files are selected.
+    fileInput.addEventListener('change', function() {
+        console.log('[EST-FILE] Files selected:', this.files?.length);
         if (this.files && this.files.length > 0) {
             handleFileSelect(this.files);
-            this.value = ''; // Reset so same file can be re-selected
+            this.value = '';
         }
     });
 
-    // FALLBACK: If CSS overlay doesn't work in some browsers, JS click handler
-    // catches clicks on the upload area and programmatically opens file picker
-    uploadArea.addEventListener('click', function(e) {
-        // Only trigger if the click wasn't directly on the file input
-        if (e.target !== fileInput && e.target.tagName !== 'INPUT') {
-            console.log('[EST-CLICK] Upload area clicked, opening file picker');
-            fileInput.click();
-        }
-    });
-
-    // Prevent file input clicks from bubbling (avoids double-trigger)
-    fileInput.addEventListener('click', function(e) {
-        e.stopPropagation();
-    });
-
-    // Drag and drop handlers
-    ['dragover', 'dragenter'].forEach(evt => {
-        uploadArea.addEventListener(evt, (e) => { e.preventDefault(); e.stopPropagation(); uploadArea.classList.add('drag-over'); });
-    });
-    ['dragleave', 'drop'].forEach(evt => {
-        uploadArea.addEventListener(evt, (e) => { e.preventDefault(); e.stopPropagation(); uploadArea.classList.remove('drag-over'); });
-    });
-    uploadArea.addEventListener('drop', (e) => {
-        if (e.dataTransfer.files.length > 0) {
-            console.log('[EST-DROP] Files dropped:', e.dataTransfer.files.length);
-            handleFileSelect(e.dataTransfer.files);
-        }
-    });
+    // Drag and drop on the upload area
+    if (uploadArea) {
+        ['dragover', 'dragenter'].forEach(evt => {
+            uploadArea.addEventListener(evt, (e) => { e.preventDefault(); e.stopPropagation(); uploadArea.classList.add('drag-over'); });
+        });
+        uploadArea.addEventListener('dragleave', (e) => { e.preventDefault(); e.stopPropagation(); uploadArea.classList.remove('drag-over'); });
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            uploadArea.classList.remove('drag-over');
+            if (e.dataTransfer && e.dataTransfer.files.length > 0) {
+                console.log('[EST-DROP] Files dropped:', e.dataTransfer.files.length);
+                handleFileSelect(e.dataTransfer.files);
+            }
+        });
+    }
 
     // Prevent form submit on Enter key
     const form = document.getElementById('estimation-form');
-    if (form) {
-        form.addEventListener('submit', function(e) { e.preventDefault(); });
-    }
+    if (form) form.addEventListener('submit', (e) => e.preventDefault());
 
+    // Submit button
     const submitBtn = document.getElementById('submit-estimation-btn');
     if (submitBtn) {
         submitBtn.addEventListener('click', handleEstimationSubmit);
-        console.log('[EST-SETUP] Submit button ready');
-    } else {
-        console.error('[EST-SETUP] Submit button not found!');
     }
-    console.log('[EST-SETUP] All estimation listeners set up successfully');
+    console.log('[EST-SETUP] Ready - label-for handles file picker, change listener attached');
 }
 
 function handleFileSelect(files, isRerender) {
@@ -4386,11 +4368,11 @@ function getEstimationToolTemplate() {
                     </div>
                     <div class="file-upload-section premium-upload-section">
                         <div id="file-upload-area" class="file-upload-area premium-upload-area">
-                            <input type="file" id="file-upload-input" accept=".pdf,.dwg,.dxf,.doc,.docx,.xls,.xlsx,.csv,.jpg,.jpeg,.png,.tif,.tiff,.txt,.zip,.rar" multiple />
-                            <div class="upload-content">
+                            <input type="file" id="file-upload-input" accept=".pdf,.dwg,.dxf,.doc,.docx,.xls,.xlsx,.csv,.jpg,.jpeg,.png,.tif,.tiff,.txt,.zip,.rar" multiple style="display:none" />
+                            <label for="file-upload-input" class="upload-content" style="cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:3rem 2rem;min-height:280px;margin:0;">
                                 <div class="est-upload-icon-wrap"><i class="fas fa-cloud-upload-alt"></i></div>
-                                <h3>Drag & Drop Files Here</h3>
-                                <p>or <span class="est-browse-link" id="est-browse-btn">click to browse</span> from your computer</p>
+                                <h3 style="margin:0.5rem 0">Drag & Drop Files Here</h3>
+                                <p style="margin:0.5rem 0">or <span class="est-browse-link">click to browse</span> from your computer</p>
                                 <div class="est-format-tags">
                                     <span class="est-format-tag pdf"><i class="fas fa-file-pdf"></i> PDF</span>
                                     <span class="est-format-tag dwg"><i class="fas fa-drafting-compass"></i> DWG</span>
@@ -4399,7 +4381,7 @@ function getEstimationToolTemplate() {
                                     <span class="est-format-tag img"><i class="fas fa-file-image"></i> IMG</span>
                                 </div>
                                 <small class="upload-limit"><i class="fas fa-info-circle"></i> Max 20 files, 50MB each. PDF, DWG, DOC, XLS, Images & more.</small>
-                            </div>
+                            </label>
                         </div>
                         <div id="file-info-container" class="selected-files-container" style="display: none;">
                             <h4><i class="fas fa-paperclip"></i> Selected Files</h4>
