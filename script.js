@@ -1338,7 +1338,9 @@ function renderEstimatesGrid(filteredEstimates = null) {
         const statusConfig = getEstimationStatusConfig(est.status);
         const createdDate = formatEstimationDate(est.createdAt);
         const hasFiles = est.uploadedFiles && est.uploadedFiles.length > 0;
-        const canDownloadResult = est.status === 'completed';
+        const isCompleted = est.status === 'completed';
+        const hasManualResult = est.resultFile;
+        const hasAIReport = est.aiEstimate && (est.resultType === 'ai-report' || isCompleted);
         const progress = getEstimationProgress(est.status);
         const canEdit = est.status === 'pending';
         return `
@@ -1355,7 +1357,8 @@ function renderEstimatesGrid(filteredEstimates = null) {
                 ${est.estimatedAmount ? `<div class="estimation-amount-section"><span class="amount-label">Estimated Cost</span><span class="amount-value">$${Number(est.estimatedAmount).toLocaleString()}</span></div>` : ''}
                 <div class="estimation-actions">
                     ${hasFiles ? `<button class="btn btn-outline btn-sm" onclick="viewEstimationFiles('${est._id}')"><i class="fas fa-folder-open"></i> View Files</button>` : ''}
-                    ${canDownloadResult ? `<button class="btn btn-success btn-sm" onclick="downloadEstimationResult('${est._id}')"><i class="fas fa-download"></i> Download Result</button>` : ''}
+                    ${isCompleted && hasAIReport ? `<button class="btn btn-success btn-sm" onclick="viewMyAIReport('${est._id}')"><i class="fas fa-robot"></i> View AI Report</button>` : ''}
+                    ${isCompleted && hasManualResult ? `<button class="btn btn-success btn-sm" onclick="downloadEstimationResult('${est._id}')"><i class="fas fa-download"></i> Download Result</button>` : ''}
                     <button class="btn btn-outline btn-sm" onclick="viewEstimationDetails('${est._id}')"><i class="fas fa-eye"></i> Details</button>
                     ${canEdit ? `<button class="btn btn-outline btn-sm" onclick="editEstimation('${est._id}')"><i class="fas fa-edit"></i> Edit</button>` : ''}
                     <button class="btn btn-danger btn-sm" onclick="deleteEstimation('${est._id}')"><i class="fas fa-trash"></i> Delete</button>
@@ -1394,6 +1397,12 @@ function showEstimatesError() {
     const el = document.getElementById('estimations-list');
     if (!el) return;
     el.innerHTML = `<div class="error-state premium-error"><div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div><h3>Unable to Load Estimations</h3><p>We're having trouble loading your requests. Please try again.</p><button class="btn btn-primary" onclick="fetchAndRenderMyEstimations()"><i class="fas fa-redo"></i> Try Again</button></div>`;
+}
+
+function viewMyAIReport(estimationId) {
+    const estimation = appState.myEstimations.find(e => e._id === estimationId);
+    if (!estimation || !estimation.aiEstimate) { showNotification('AI report not available.', 'error'); return; }
+    renderAIEstimateResult(estimation.aiEstimate, { projectTitle: estimation.projectTitle, description: estimation.description });
 }
 
 function viewEstimationDetails(estimationId) {
@@ -3531,14 +3540,11 @@ function setupEstimationToolEventListeners() {
     });
     const submitBtn = document.getElementById('submit-estimation-btn');
     if (submitBtn) submitBtn.addEventListener('click', handleEstimationSubmit);
-    const aiBtn = document.getElementById('ai-estimate-btn');
-    if (aiBtn) aiBtn.addEventListener('click', handleAIEstimate);
 }
 
 function handleFileSelect(files, isRerender) {
     const fileList = document.getElementById('selected-files-list');
     const submitBtn = document.getElementById('submit-estimation-btn');
-    const aiBtn = document.getElementById('ai-estimate-btn');
     const maxSize = 50 * 1024 * 1024; // 50MB
 
     // Accumulate files: merge new files with existing ones
@@ -3590,7 +3596,6 @@ function handleFileSelect(files, isRerender) {
     fileList.innerHTML = filesHTML;
     document.getElementById('file-info-container').style.display = 'block';
     submitBtn.disabled = false;
-    if (aiBtn) aiBtn.disabled = false;
     updateEstimationStep(2);
     if (!isRerender) showNotification(`${newFiles.length} file(s) added. Total: ${merged.length} file(s) (${totalMB} MB)`, 'success');
 }
@@ -3621,8 +3626,6 @@ function removeFile(index) {
         appState.uploadedFile = null;
         document.getElementById('file-info-container').style.display = 'none';
         document.getElementById('submit-estimation-btn').disabled = true;
-        const aiBtnRef = document.getElementById('ai-estimate-btn');
-        if (aiBtnRef) aiBtnRef.disabled = true;
         updateEstimationStep(1);
         showNotification('All files removed', 'info');
     } else {
@@ -3643,24 +3646,34 @@ async function handleEstimationSubmit() {
     }
     const projectTitle = form.projectTitle.value.trim();
     const description = form.description.value.trim();
+    const designStandard = form.designStandard ? form.designStandard.value : '';
+    const projectType = form.projectType ? form.projectType.value : '';
+    const region = form.region ? form.region.value.trim() : '';
+    const totalArea = form.totalArea ? form.totalArea.value.trim() : '';
     if (!projectTitle || !description) {
-        showNotification('Please fill in all fields', 'warning');
+        showNotification('Please fill in Project Title and Description', 'warning');
         return;
     }
     updateEstimationStep(3);
     submitBtn.disabled = true;
-    submitBtn.innerHTML = '<div class="btn-spinner"></div> Submitting...';
+    submitBtn.innerHTML = '<div class="btn-spinner"></div> Uploading & Generating AI Estimate...';
     try {
         const formData = new FormData();
         formData.append('projectTitle', projectTitle);
         formData.append('description', description);
+        formData.append('designStandard', designStandard);
+        formData.append('projectType', projectType);
+        formData.append('region', region);
+        formData.append('totalArea', totalArea);
         formData.append('contractorName', appState.currentUser.name);
         formData.append('contractorEmail', appState.currentUser.email);
+        const fileNames = Array.from(appState.uploadedFile).map(f => f.name);
+        formData.append('fileNames', JSON.stringify(fileNames));
         for (let i = 0; i < appState.uploadedFile.length; i++) {
             formData.append('files', appState.uploadedFile[i]);
         }
-        await apiCall('/estimation/contractor/submit', 'POST', formData, 'Estimation request submitted!');
-        addLocalNotification('Submitted', `Estimation request for "${projectTitle}" submitted.`, 'estimation');
+        await apiCall('/estimation/contractor/submit', 'POST', formData, 'Estimation submitted successfully! AI estimate is being generated.');
+        addLocalNotification('Submitted', `Estimation request for "${projectTitle}" submitted with AI analysis.`, 'estimation');
         form.reset();
         appState.uploadedFile = null;
         document.getElementById('file-info-container').style.display = 'none';
@@ -3671,7 +3684,7 @@ async function handleEstimationSubmit() {
         updateEstimationStep(2);
     } finally {
         submitBtn.disabled = false;
-        submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Request';
+        submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Estimation Request';
     }
 }
 
@@ -4364,20 +4377,14 @@ function getEstimationToolTemplate() {
                 <div class="est-info-banner">
                     <div class="est-info-icon"><i class="fas fa-robot"></i></div>
                     <div>
-                        <strong>Two options:</strong> Get an <b>instant AI estimate</b> powered by advanced AI, or <b>submit for manual review</b> by our engineering team (1-3 business days).
+                        <strong>AI-Powered:</strong> Your files will be securely uploaded and an <b>instant AI cost estimate</b> will be generated automatically. Our engineering team will review and send you the final report.
                     </div>
                 </div>
 
                 <div class="est-submit-section">
-                    <div class="est-dual-buttons">
-                        <button type="button" id="ai-estimate-btn" class="est-ai-btn" disabled>
-                            <i class="fas fa-robot"></i> Get AI Estimate
-                            <span class="est-ai-badge">Instant</span>
-                        </button>
-                        <button type="button" id="submit-estimation-btn" class="est-submit-btn" disabled>
-                            <i class="fas fa-paper-plane"></i> Submit for Manual Review
-                        </button>
-                    </div>
+                    <button type="button" id="submit-estimation-btn" class="est-submit-btn" disabled>
+                        <i class="fas fa-paper-plane"></i> Submit Estimation Request
+                    </button>
                     <p class="est-submit-note"><i class="fas fa-lock"></i> All uploaded files are securely stored and only accessible to authorized engineers</p>
                 </div>
             </form>
