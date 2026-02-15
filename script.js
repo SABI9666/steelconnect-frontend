@@ -3513,7 +3513,9 @@ async function toggleWidgetDetails(itemId, itemType) {
 function setupEstimationToolEventListeners() {
     const uploadArea = document.getElementById('file-upload-area');
     const fileInput = document.getElementById('file-upload-input');
-    if (uploadArea) {
+    if (uploadArea && fileInput) {
+        // Prevent double-trigger: stop clicks on the input from bubbling to the area
+        fileInput.addEventListener('click', (e) => e.stopPropagation());
         uploadArea.addEventListener('click', () => fileInput.click());
         uploadArea.addEventListener('dragover', (e) => { e.preventDefault(); uploadArea.classList.add('drag-over'); });
         uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('drag-over'));
@@ -3595,7 +3597,7 @@ function handleFileSelect(files, isRerender) {
 
 function getFileTypeIcon(mimeType, fileName) {
     const ext = fileName.split('.').pop().toLowerCase();
-    const types = { 'pdf': { icon: 'fa-file-pdf' }, 'dwg': { icon: 'fa-drafting-compass' }, 'doc': { icon: 'fa-file-word' }, 'docx': { icon: 'fa-file-word' }, 'jpg': { icon: 'fa-file-image' }, 'jpeg': { icon: 'fa-file-image' }, 'png': { icon: 'fa-file-image' } };
+    const types = { 'pdf': { icon: 'fa-file-pdf' }, 'dwg': { icon: 'fa-drafting-compass' }, 'dxf': { icon: 'fa-drafting-compass' }, 'doc': { icon: 'fa-file-word' }, 'docx': { icon: 'fa-file-word' }, 'xls': { icon: 'fa-file-excel' }, 'xlsx': { icon: 'fa-file-excel' }, 'csv': { icon: 'fa-file-csv' }, 'jpg': { icon: 'fa-file-image' }, 'jpeg': { icon: 'fa-file-image' }, 'png': { icon: 'fa-file-image' }, 'tif': { icon: 'fa-file-image' }, 'tiff': { icon: 'fa-file-image' }, 'txt': { icon: 'fa-file-alt' }, 'zip': { icon: 'fa-file-archive' }, 'rar': { icon: 'fa-file-archive' } };
     return types[ext] || { icon: 'fa-file' };
 }
 
@@ -3683,8 +3685,16 @@ async function handleAIEstimate() {
     }
     const projectTitle = form.projectTitle.value.trim();
     const description = form.description.value.trim();
+    const designStandard = form.designStandard ? form.designStandard.value : '';
+    const projectType = form.projectType ? form.projectType.value : '';
+    const region = form.region ? form.region.value.trim() : '';
+    const totalArea = form.totalArea ? form.totalArea.value.trim() : '';
     if (!projectTitle || !description) {
         showNotification('Please fill in Project Title and Description', 'warning');
+        return;
+    }
+    if (!designStandard) {
+        showNotification('Please select a Design Standard', 'warning');
         return;
     }
     const fileNames = Array.from(appState.uploadedFile).map(f => f.name);
@@ -3694,11 +3704,15 @@ async function handleAIEstimate() {
         const resp = await apiCall('/estimation/ai/questions', 'POST', {
             projectTitle,
             description,
+            designStandard,
+            projectType,
+            region,
+            totalArea,
             fileCount: appState.uploadedFile.length,
             fileNames
         });
         if (resp.success && resp.data) {
-            renderAIQuestionnaire(resp.data, { projectTitle, description, fileNames });
+            renderAIQuestionnaire(resp.data, { projectTitle, description, designStandard, projectType, region, totalArea, fileNames });
         } else {
             showNotification('Failed to generate questionnaire. Please try again.', 'error');
         }
@@ -3829,6 +3843,10 @@ async function submitAIQuestionnaire() {
         const resp = await apiCall('/estimation/ai/generate', 'POST', {
             projectTitle: projectInfo.projectTitle,
             description: projectInfo.description,
+            designStandard: projectInfo.designStandard,
+            projectType: projectInfo.projectType,
+            region: projectInfo.region,
+            totalArea: projectInfo.totalArea,
             answers,
             fileNames: projectInfo.fileNames
         });
@@ -4218,7 +4236,7 @@ function getEstimationToolTemplate() {
                     </div>
                     <div class="file-upload-section premium-upload-section">
                         <div id="file-upload-area" class="file-upload-area premium-upload-area">
-                            <input type="file" id="file-upload-input" accept=".pdf,.dwg,.doc,.docx,.jpg,.jpeg,.png" multiple />
+                            <input type="file" id="file-upload-input" accept=".pdf,.dwg,.dxf,.doc,.docx,.xls,.xlsx,.csv,.jpg,.jpeg,.png,.tif,.tiff,.txt,.zip,.rar" multiple />
                             <div class="upload-content">
                                 <div class="est-upload-icon-wrap"><i class="fas fa-cloud-upload-alt"></i></div>
                                 <h3>Drag & Drop Files Here</h3>
@@ -4227,9 +4245,10 @@ function getEstimationToolTemplate() {
                                     <span class="est-format-tag pdf"><i class="fas fa-file-pdf"></i> PDF</span>
                                     <span class="est-format-tag dwg"><i class="fas fa-drafting-compass"></i> DWG</span>
                                     <span class="est-format-tag doc"><i class="fas fa-file-word"></i> DOC</span>
+                                    <span class="est-format-tag xls"><i class="fas fa-file-excel"></i> XLS</span>
                                     <span class="est-format-tag img"><i class="fas fa-file-image"></i> IMG</span>
                                 </div>
-                                <small class="upload-limit"><i class="fas fa-info-circle"></i> Max 20 files, 50MB each. You can add files multiple times.</small>
+                                <small class="upload-limit"><i class="fas fa-info-circle"></i> Max 20 files, 50MB each. PDF, DWG, DOC, XLS, Images & more.</small>
                             </div>
                         </div>
                         <div id="file-info-container" class="selected-files-container" style="display: none;">
@@ -4257,6 +4276,78 @@ function getEstimationToolTemplate() {
                             <label class="form-label est-label">Project Description <span class="est-req-star">*</span></label>
                             <textarea class="form-textarea premium-textarea" name="description" required rows="5" placeholder="Describe the scope, materials, dimensions, and any special requirements for your project..."></textarea>
                             <small class="est-field-hint">The more detail you provide, the more accurate your estimate will be</small>
+                        </div>
+                        <div class="est-form-row">
+                            <div class="form-group">
+                                <label class="form-label est-label">Design Standard <span class="est-req-star">*</span></label>
+                                <select class="form-input premium-input est-select" name="designStandard" required>
+                                    <option value="">-- Select Design Standard --</option>
+                                    <optgroup label="North America">
+                                        <option value="AISC 360">AISC 360 - Steel Construction (USA)</option>
+                                        <option value="AISC 341">AISC 341 - Seismic Steel (USA)</option>
+                                        <option value="ACI 318">ACI 318 - Concrete Design (USA)</option>
+                                        <option value="ASCE 7">ASCE 7 - Loads & Structural (USA)</option>
+                                        <option value="CSA S16">CSA S16 - Steel Structures (Canada)</option>
+                                        <option value="CSA A23.3">CSA A23.3 - Concrete (Canada)</option>
+                                        <option value="IBC">IBC - International Building Code</option>
+                                    </optgroup>
+                                    <optgroup label="Europe">
+                                        <option value="Eurocode 3">Eurocode 3 (EN 1993) - Steel</option>
+                                        <option value="Eurocode 2">Eurocode 2 (EN 1992) - Concrete</option>
+                                        <option value="Eurocode 1">Eurocode 1 (EN 1991) - Actions/Loads</option>
+                                        <option value="Eurocode 8">Eurocode 8 (EN 1998) - Seismic</option>
+                                        <option value="BS 5950">BS 5950 - British Steel (Legacy)</option>
+                                    </optgroup>
+                                    <optgroup label="India & Asia">
+                                        <option value="IS 800">IS 800 - Steel Structures (India)</option>
+                                        <option value="IS 456">IS 456 - Concrete Design (India)</option>
+                                        <option value="IS 1893">IS 1893 - Seismic Design (India)</option>
+                                        <option value="JIS">JIS - Japanese Industrial Standard</option>
+                                        <option value="GB 50017">GB 50017 - Steel Structures (China)</option>
+                                        <option value="KBC">KBC - Korean Building Code</option>
+                                    </optgroup>
+                                    <optgroup label="Oceania & Middle East">
+                                        <option value="AS 4100">AS 4100 - Steel Structures (Australia)</option>
+                                        <option value="NZS 3404">NZS 3404 - Steel Structures (NZ)</option>
+                                        <option value="SBC">SBC - Saudi Building Code</option>
+                                        <option value="UAE Fire Code">UAE Fire & Life Safety Code</option>
+                                    </optgroup>
+                                    <optgroup label="Other">
+                                        <option value="SANS 10162">SANS 10162 - Steel (South Africa)</option>
+                                        <option value="NBR 8800">NBR 8800 - Steel (Brazil)</option>
+                                        <option value="Other">Other / Multiple Standards</option>
+                                    </optgroup>
+                                </select>
+                                <small class="est-field-hint">Select the primary design code for your project region</small>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label est-label">Project Type</label>
+                                <select class="form-input premium-input est-select" name="projectType">
+                                    <option value="">-- Select Type --</option>
+                                    <option value="Commercial">Commercial Building</option>
+                                    <option value="Industrial">Industrial / Warehouse</option>
+                                    <option value="Residential">Residential</option>
+                                    <option value="Infrastructure">Infrastructure / Bridge</option>
+                                    <option value="Institutional">Institutional (School, Hospital)</option>
+                                    <option value="Mixed-Use">Mixed-Use Development</option>
+                                    <option value="Renovation">Renovation / Retrofit</option>
+                                    <option value="Heavy Industrial">Heavy Industrial / Plant</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                                <small class="est-field-hint">Type of construction project</small>
+                            </div>
+                        </div>
+                        <div class="est-form-row">
+                            <div class="form-group">
+                                <label class="form-label est-label">Region / Location</label>
+                                <input type="text" class="form-input premium-input" name="region" placeholder="e.g., California, USA / Dubai, UAE / Mumbai, India" />
+                                <small class="est-field-hint">Helps AI apply regional cost factors & labor rates</small>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label est-label">Total Area (approx.)</label>
+                                <input type="text" class="form-input premium-input" name="totalArea" placeholder="e.g., 50,000 sq ft / 4,600 sq m" />
+                                <small class="est-field-hint">Approximate total built-up area</small>
+                            </div>
                         </div>
                     </div>
                 </div>
