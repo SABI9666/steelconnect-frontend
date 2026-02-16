@@ -12747,3 +12747,128 @@ textarea:focus-visible {
     .ann-toast-text { font-size: 0.7rem; }
     .ann-toast-footer { padding: 0.4rem 0.75rem 0.55rem; }
 }
+
+/* ========== PORTAL BREADCRUMB NAVIGATION ========== */
+.portal-breadcrumb-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%);
+    border-bottom: 1px solid #e2e8f0;
+    border-radius: 12px 12px 0 0;
+    margin-bottom: 0;
+    font-size: 0.875rem;
+    flex-wrap: wrap;
+}
+.portal-breadcrumb-nav a {
+    color: #2563eb;
+    text-decoration: none;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+.portal-breadcrumb-nav a:hover {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+.portal-breadcrumb-nav a i {
+    font-size: 0.8rem;
+}
+.breadcrumb-sep {
+    color: #94a3b8;
+    font-size: 0.7rem;
+}
+.breadcrumb-current {
+    color: #64748b;
+    font-weight: 600;
+}
+
+/* Navigation buttons in hero sections */
+.air-hero-nav-buttons {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+.air-hero-nav-buttons .air-back-btn,
+.air-hero-nav-buttons .aiq-back-btn {
+    position: relative;
+    top: auto;
+    left: auto;
+}
+
+/* Back to Portal button in estimation tool */
+.est-back-to-portal-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 18px;
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: #fff;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.2s;
+    margin-bottom: 14px;
+    backdrop-filter: blur(10px);
+}
+.est-back-to-portal-btn:hover {
+    background: rgba(255,255,255,0.25);
+    border-color: rgba(255,255,255,0.5);
+    transform: translateX(-3px);
+}
+
+/* Requirement card green icon */
+.est-card-icon.green {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: #fff;
+}
+
+/* Prominent scope textarea */
+.est-scope-textarea {
+    min-height: 200px;
+    font-size: 0.95rem;
+    line-height: 1.7;
+    border: 2px solid #e2e8f0;
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+.est-scope-textarea:focus {
+    border-color: #10b981;
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.12);
+}
+
+/* Field error state for mandatory requirements */
+.est-field-error {
+    border-color: #ef4444 !important;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15) !important;
+    animation: est-shake 0.4s ease;
+}
+@keyframes est-shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
+}
+
+/* Mobile responsiveness for breadcrumb & nav */
+@media (max-width: 768px) {
+    .portal-breadcrumb-nav {
+        padding: 10px 16px;
+        font-size: 0.8rem;
+        gap: 4px;
+    }
+    .air-hero-nav-buttons {
+        flex-direction: column;
+        gap: 8px;
+    }
+    .est-back-to-portal-btn {
+        font-size: 0.8rem;
+        padding: 6px 14px;
+    }
+}

@@ -3743,8 +3743,15 @@ async function handleEstimationSubmit() {
     const designStandard = form.designStandard ? form.designStandard.value : '';
     const projectType = form.projectType ? form.projectType.value : '';
     const region = form.region ? form.region.value.trim() : '';
+    const scopeOfWork = form.scopeOfWork ? form.scopeOfWork.value.trim() : '';
     if (!projectTitle || !description) {
         showNotification('Please fill in Project Title and Description', 'warning');
+        return;
+    }
+    if (!scopeOfWork) {
+        showNotification('Please fill in your Scope of Estimation Requirement - this field is mandatory', 'warning');
+        var scopeEl = form.querySelector('[name="scopeOfWork"]');
+        if (scopeEl) { scopeEl.classList.add('est-field-error'); scopeEl.focus(); scopeEl.addEventListener('input', function() { scopeEl.classList.remove('est-field-error'); }, { once: true }); }
         return;
     }
     if (submitBtn.disabled) return;
@@ -3758,6 +3765,7 @@ async function handleEstimationSubmit() {
         formData.append('designStandard', designStandard);
         formData.append('projectType', projectType);
         formData.append('region', region);
+        formData.append('scopeOfWork', scopeOfWork);
         formData.append('contractorName', appState.currentUser.name || '');
         formData.append('contractorEmail', appState.currentUser.email || '');
         const fileNames = uploadedFiles.map(f => f.name);
@@ -3810,12 +3818,19 @@ async function handleAIEstimate() {
     const designStandard = form.designStandard ? form.designStandard.value : '';
     const projectType = form.projectType ? form.projectType.value : '';
     const region = form.region ? form.region.value.trim() : '';
+    const scopeOfWork = form.scopeOfWork ? form.scopeOfWork.value.trim() : '';
     if (!projectTitle || !description) {
         showNotification('Please fill in Project Title and Description', 'warning');
         return;
     }
     if (!designStandard) {
         showNotification('Please select a Design Standard', 'warning');
+        return;
+    }
+    if (!scopeOfWork) {
+        showNotification('Please fill in your Scope of Estimation Requirement - this field is mandatory', 'warning');
+        var scopeEl = form.querySelector('[name="scopeOfWork"]');
+        if (scopeEl) { scopeEl.classList.add('est-field-error'); scopeEl.focus(); scopeEl.addEventListener('input', function() { scopeEl.classList.remove('est-field-error'); }, { once: true }); }
         return;
     }
     const fileNames = filesArray.map(f => f.name);
@@ -3828,11 +3843,12 @@ async function handleAIEstimate() {
             designStandard,
             projectType,
             region,
+            scopeOfWork,
             fileCount: appState.uploadedFile.length,
             fileNames
         });
         if (resp.success && resp.data) {
-            renderAIQuestionnaire(resp.data, { projectTitle, description, designStandard, projectType, region, fileNames });
+            renderAIQuestionnaire(resp.data, { projectTitle, description, designStandard, projectType, region, scopeOfWork, fileNames });
         } else {
             showNotification('Failed to generate questionnaire. Please try again.', 'error');
         }
@@ -3882,9 +3898,19 @@ function renderAIQuestionnaire(questionData, projectInfo) {
 
     container.innerHTML = `
         <div class="aiq-page">
+            <div class="portal-breadcrumb-nav">
+                <a href="#" onclick="renderAppSection('dashboard'); return false;"><i class="fas fa-home"></i> Dashboard</a>
+                <span class="breadcrumb-sep"><i class="fas fa-chevron-right"></i></span>
+                <a href="#" onclick="renderAppSection('estimation-tool'); return false;">AI Estimation</a>
+                <span class="breadcrumb-sep"><i class="fas fa-chevron-right"></i></span>
+                <span class="breadcrumb-current">Questionnaire</span>
+            </div>
             <div class="aiq-hero">
                 <div class="aiq-hero-glow"></div>
-                <button class="aiq-back-btn" onclick="renderAppSection('estimation-tool')"><i class="fas fa-arrow-left"></i> Back</button>
+                <div class="air-hero-nav-buttons">
+                    <button class="aiq-back-btn" onclick="renderAppSection('dashboard')"><i class="fas fa-home"></i> Main Portal</button>
+                    <button class="aiq-back-btn" onclick="renderAppSection('estimation-tool')"><i class="fas fa-arrow-left"></i> Back</button>
+                </div>
                 <div class="aiq-hero-content">
                     <div class="aiq-hero-badge"><i class="fas fa-brain"></i> AI Analysis</div>
                     <h1 class="aiq-hero-title">Project Questionnaire</h1>
@@ -3967,6 +3993,7 @@ async function submitAIQuestionnaire() {
         formData.append('designStandard', projectInfo.designStandard || '');
         formData.append('projectType', projectInfo.projectType || '');
         formData.append('region', projectInfo.region || '');
+        formData.append('scopeOfWork', projectInfo.scopeOfWork || '');
         formData.append('answers', JSON.stringify(answers));
         formData.append('fileNames', JSON.stringify(projectInfo.fileNames || []));
 
@@ -4159,9 +4186,20 @@ function renderAIEstimateResult(estimate, projectInfo) {
 
     container.innerHTML = `
         <div class="air-page">
+            <div class="portal-breadcrumb-nav">
+                <a href="#" onclick="renderAppSection('dashboard'); return false;"><i class="fas fa-home"></i> Dashboard</a>
+                <span class="breadcrumb-sep"><i class="fas fa-chevron-right"></i></span>
+                <a href="#" onclick="renderAppSection('estimation-tool'); return false;">AI Estimation</a>
+                <span class="breadcrumb-sep"><i class="fas fa-chevron-right"></i></span>
+                <span class="breadcrumb-current">Estimate Result</span>
+            </div>
             <div class="air-hero">
                 <div class="air-hero-glow"></div>
-                <button class="air-back-btn" onclick="renderAppSection('estimation-tool')"><i class="fas fa-arrow-left"></i> New Estimate</button>
+                <div class="air-hero-nav-buttons">
+                    <button class="air-back-btn" onclick="renderAppSection('dashboard')"><i class="fas fa-home"></i> Main Portal</button>
+                    <button class="air-back-btn" onclick="renderAppSection('estimation-tool')"><i class="fas fa-arrow-left"></i> New Estimate</button>
+                    <button class="air-back-btn" onclick="renderAppSection('my-estimations')"><i class="fas fa-list"></i> My Estimations</button>
+                </div>
                 <div class="air-hero-content">
                     <div class="air-hero-badge"><i class="fas fa-check-circle"></i> AI Estimate Complete</div>
                     <h1 class="air-hero-title">${s.projectTitle || projectInfo.projectTitle}</h1>
@@ -4307,6 +4345,7 @@ function renderAIEstimateResult(estimate, projectInfo) {
                 <div class="air-actions">
                     <button class="air-action-btn air-btn-primary" onclick="printAIEstimate()"><i class="fas fa-print"></i> Print Estimate</button>
                     <button class="air-action-btn air-btn-secondary" onclick="renderAppSection('estimation-tool')"><i class="fas fa-plus"></i> New Estimate</button>
+                    <button class="air-action-btn air-btn-secondary" onclick="renderAppSection('dashboard')"><i class="fas fa-home"></i> Back to Dashboard</button>
                 </div>
 
                 <div class="air-footer">
@@ -4430,10 +4469,16 @@ function getPostJobTemplate() {
 
 function getEstimationToolTemplate() {
     return `
+        <div class="portal-breadcrumb-nav">
+            <a href="#" onclick="renderAppSection('dashboard'); return false;"><i class="fas fa-home"></i> Dashboard</a>
+            <span class="breadcrumb-sep"><i class="fas fa-chevron-right"></i></span>
+            <span class="breadcrumb-current">AI Estimation</span>
+        </div>
         <div id="dynamic-feature-header" class="dynamic-feature-header"></div>
         <div class="est-hero">
             <div class="est-hero-glow"></div>
             <div class="est-hero-content">
+                <button class="est-back-to-portal-btn" onclick="renderAppSection('dashboard')"><i class="fas fa-arrow-left"></i> Back to Main Portal</button>
                 <div class="est-hero-badge"><i class="fas fa-bolt"></i> AI-Powered</div>
                 <h1 class="est-hero-title">Smart Cost Estimation</h1>
                 <p class="est-hero-subtitle">Upload your project drawings and receive an accurate, AI-generated cost breakdown from our engineering experts</p>
@@ -4572,6 +4617,35 @@ function getEstimationToolTemplate() {
                             <label class="form-label est-label">Region / Location</label>
                             <input type="text" class="form-input premium-input" name="region" placeholder="e.g., California, USA / Dubai, UAE / Mumbai, India" />
                             <small class="est-field-hint">Helps AI apply regional cost factors & labor rates</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="est-card">
+                    <div class="est-card-header">
+                        <div class="est-card-icon green"><i class="fas fa-clipboard-check"></i></div>
+                        <div>
+                            <h3>Estimation Requirement <span class="est-mandatory">* Required</span></h3>
+                            <p class="est-card-desc">Write your exact estimation requirement so the AI generates an accurate estimate from your drawings</p>
+                        </div>
+                    </div>
+                    <div class="est-form-body">
+                        <div class="form-group">
+                            <label class="form-label est-label">Scope of Estimation Requirement <span class="est-req-star">*</span></label>
+                            <textarea class="form-textarea premium-textarea est-scope-textarea" name="scopeOfWork" required rows="8" placeholder="Write your exact requirement here. For example:
+
+1. Fabrication & erection of steel structure as per drawing
+2. Roofing with color coated profile sheets
+3. Wall cladding with insulated sandwich panels
+4. Painting - primer + 2 coats epoxy paint
+5. Foundation - RCC isolated footings as per drawing
+6. Flooring - M25 grade concrete with VDF finish
+7. MEP works - electrical conduit & plumbing rough-in
+8. Structural connections - bolted/welded as per design
+9. Surface preparation - sand blasting SA 2.5
+
+Include quantities, specifications, material preferences, and any other details that will help generate an accurate cost estimate."></textarea>
+                            <small class="est-field-hint"><i class="fas fa-exclamation-circle"></i> <strong>Mandatory:</strong> Please write your complete estimation requirement in detail. The more specific you are, the more accurate the AI estimate will be.</small>
                         </div>
                     </div>
                 </div>
