@@ -3854,20 +3854,22 @@ function renderAIQuestionnaire(questionData, projectInfo) {
         let questionsHTML = '';
         group.questions.forEach(q => {
             let inputHTML = '';
+            const hasDefault = q.defaultValue && q.defaultValue.trim();
+            const autoDetectedBadge = hasDefault ? `<span class="aiq-auto-badge"><i class="fas fa-magic"></i> Auto-detected from drawings</span>` : '';
             if (q.type === 'select') {
-                const opts = (q.options || []).map(o => `<option value="${o}">${o}</option>`).join('');
-                inputHTML = `<select class="aiq-input aiq-select" name="${q.id}" ${q.required ? 'required' : ''}><option value="">-- Select --</option>${opts}</select>`;
+                const opts = (q.options || []).map(o => `<option value="${o}" ${q.defaultValue === o ? 'selected' : ''}>${o}</option>`).join('');
+                inputHTML = `<select class="aiq-input aiq-select ${hasDefault ? 'aiq-prefilled' : ''}" name="${q.id}" ${q.required ? 'required' : ''}><option value="">-- Select --</option>${opts}</select>`;
             } else if (q.type === 'multiselect') {
                 const checks = (q.options || []).map(o => `<label class="aiq-check-label"><input type="checkbox" name="${q.id}" value="${o}" class="aiq-checkbox" /><span>${o}</span></label>`).join('');
                 inputHTML = `<div class="aiq-checks-grid">${checks}</div>`;
             } else if (q.type === 'textarea') {
-                inputHTML = `<textarea class="aiq-input aiq-textarea" name="${q.id}" placeholder="${q.placeholder || ''}" rows="3" ${q.required ? 'required' : ''}></textarea>`;
+                inputHTML = `<textarea class="aiq-input aiq-textarea ${hasDefault ? 'aiq-prefilled' : ''}" name="${q.id}" placeholder="${q.placeholder || ''}" rows="3" ${q.required ? 'required' : ''}>${q.defaultValue || ''}</textarea>`;
             } else {
-                inputHTML = `<input type="${q.inputType || 'text'}" class="aiq-input" name="${q.id}" placeholder="${q.placeholder || ''}" ${q.required ? 'required' : ''} />`;
+                inputHTML = `<input type="${q.inputType || 'text'}" class="aiq-input ${hasDefault ? 'aiq-prefilled' : ''}" name="${q.id}" placeholder="${q.placeholder || ''}" value="${q.defaultValue || ''}" ${q.required ? 'required' : ''} />`;
             }
             questionsHTML += `
                 <div class="aiq-question">
-                    <label class="aiq-label">${q.question} ${q.required ? '<span class="aiq-req">*</span>' : ''}</label>
+                    <label class="aiq-label">${q.question} ${q.required ? '<span class="aiq-req">*</span>' : ''} ${autoDetectedBadge}</label>
                     ${inputHTML}
                     ${q.helpText ? `<small class="aiq-help">${q.helpText}</small>` : ''}
                 </div>`;
@@ -4034,34 +4036,53 @@ function showAIGeneratingOverlay() {
                 </div>
                 <div class="ai-gen-icon"><i class="fas fa-robot"></i></div>
             </div>
-            <h2 class="ai-gen-title">AI Generating Your Estimate</h2>
-            <p class="ai-gen-subtitle">Our AI is analyzing your project requirements and calculating costs across all trades</p>
+            <h2 class="ai-gen-title">Multi-Pass AI Estimation Engine</h2>
+            <p class="ai-gen-subtitle">Our AI is running a 5-pass analysis pipeline for maximum accuracy</p>
             <div class="ai-gen-steps">
-                <div class="ai-gen-step active" id="aiStep1"><i class="fas fa-check-circle"></i> Analyzing project scope</div>
-                <div class="ai-gen-step" id="aiStep2"><i class="fas fa-spinner fa-spin"></i> Calculating material costs</div>
-                <div class="ai-gen-step" id="aiStep3"><i class="fas fa-circle"></i> Computing labor & equipment</div>
-                <div class="ai-gen-step" id="aiStep4"><i class="fas fa-circle"></i> Applying regional adjustments</div>
-                <div class="ai-gen-step" id="aiStep5"><i class="fas fa-circle"></i> Finalizing comprehensive estimate</div>
+                <div class="ai-gen-step active" id="aiStep1"><i class="fas fa-spinner fa-spin"></i> <span>Pass 1: Classifying drawing sheets</span></div>
+                <div class="ai-gen-step" id="aiStep2"><i class="fas fa-circle"></i> <span>Pass 2: Extracting structural details</span></div>
+                <div class="ai-gen-step" id="aiStep3"><i class="fas fa-circle"></i> <span>Pass 3: Quantity takeoff & cross-reference</span></div>
+                <div class="ai-gen-step" id="aiStep4"><i class="fas fa-circle"></i> <span>Pass 4: Applying database-backed rates</span></div>
+                <div class="ai-gen-step" id="aiStep5"><i class="fas fa-circle"></i> <span>Pass 5: Validation & benchmarking</span></div>
             </div>
+            <div class="ai-gen-progress-bar"><div class="ai-gen-progress-fill" id="aiProgressFill"></div></div>
+            <p class="ai-gen-timer" id="aiGenTimer">Elapsed: 0s</p>
         </div>`;
     document.body.appendChild(overlay);
-    // Animate steps
-    const steps = ['aiStep2', 'aiStep3', 'aiStep4', 'aiStep5'];
+    // Timer
+    let elapsed = 0;
+    const timerInterval = setInterval(() => {
+        elapsed++;
+        const timerEl = document.getElementById('aiGenTimer');
+        if (timerEl) timerEl.textContent = `Elapsed: ${elapsed}s`;
+        else clearInterval(timerInterval);
+    }, 1000);
+    overlay._timerInterval = timerInterval;
+    // Animate steps through passes
+    const steps = ['aiStep1', 'aiStep2', 'aiStep3', 'aiStep4', 'aiStep5'];
+    const durations = [8000, 25000, 45000, 60000, 75000]; // cumulative timing
     steps.forEach((id, i) => {
+        if (i === 0) return; // first already active
         setTimeout(() => {
             const el = document.getElementById(id);
-            if (el) { el.classList.add('active'); el.querySelector('i').className = i < steps.length - 1 ? 'fas fa-check-circle' : 'fas fa-spinner fa-spin'; }
+            if (el) { el.classList.add('active'); el.querySelector('i').className = 'fas fa-spinner fa-spin'; }
             // Mark previous as done
-            const prevId = i === 0 ? 'aiStep1' : steps[i - 1];
-            const prevEl = document.getElementById(prevId);
-            if (prevEl) prevEl.querySelector('i').className = 'fas fa-check-circle';
-        }, (i + 1) * 4000);
+            const prevEl = document.getElementById(steps[i - 1]);
+            if (prevEl) { prevEl.classList.add('done'); prevEl.querySelector('i').className = 'fas fa-check-circle'; }
+            // Update progress bar
+            const fill = document.getElementById('aiProgressFill');
+            if (fill) fill.style.width = `${(i / (steps.length - 1)) * 100}%`;
+        }, durations[i - 1]);
     });
 }
 
 function hideAIGeneratingOverlay() {
     const overlay = document.getElementById('ai-gen-overlay');
-    if (overlay) { overlay.style.opacity = '0'; setTimeout(() => overlay.remove(), 300); }
+    if (overlay) {
+        if (overlay._timerInterval) clearInterval(overlay._timerInterval);
+        overlay.style.opacity = '0';
+        setTimeout(() => overlay.remove(), 300);
+    }
 }
 
 function renderAIEstimateResult(estimate, projectInfo) {
@@ -4076,17 +4097,91 @@ function renderAIEstimateResult(estimate, projectInfo) {
     const insights = estimate.marketInsights || {};
     const structuralAnalysis = estimate.structuralAnalysis || {};
     const drawingExtraction = estimate.drawingExtraction || {};
+    const validation = estimate.validationReport || {};
+    const confidenceScore = validation.confidenceScore || 0;
+    const confidenceLevel = validation.confidenceLevel || s.confidenceLevel || 'Medium';
+    const benchmark = validation.benchmarkComparison || {};
+    const rateSource = validation.rateSourceSummary || {};
+    const validationIssues = validation.issues || [];
+
+    // Build confidence ring SVG
+    const confPct = Math.min(100, Math.max(0, confidenceScore));
+    const confColor = confPct >= 70 ? '#10b981' : confPct >= 40 ? '#f59e0b' : '#ef4444';
+    const confDash = (confPct / 100) * 251.2;
+    const confidenceRingHTML = confidenceScore > 0 ? `
+        <div class="air-confidence-ring-wrap">
+            <svg class="air-confidence-ring" viewBox="0 0 90 90">
+                <circle cx="45" cy="45" r="40" fill="none" stroke="#e5e7eb" stroke-width="6"/>
+                <circle cx="45" cy="45" r="40" fill="none" stroke="${confColor}" stroke-width="6" stroke-dasharray="${confDash} 251.2" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 45 45)"/>
+                <text x="45" y="42" text-anchor="middle" font-size="18" font-weight="700" fill="${confColor}">${confPct}</text>
+                <text x="45" y="56" text-anchor="middle" font-size="8" fill="#6b7280">${confidenceLevel}</text>
+            </svg>
+            <div class="air-confidence-label">Confidence Score</div>
+        </div>` : '';
+
+    // Build benchmark bar
+    const benchmarkHTML = benchmark.benchmarkLow ? `
+        <div class="air-benchmark-section">
+            <h4><i class="fas fa-chart-bar"></i> Benchmark Comparison</h4>
+            <div class="air-benchmark-bar-wrap">
+                <div class="air-benchmark-range">
+                    <span class="air-bm-low">${curr}${fmtNum(benchmark.benchmarkLow)}</span>
+                    <span class="air-bm-high">${curr}${fmtNum(benchmark.benchmarkHigh)}</span>
+                </div>
+                <div class="air-benchmark-track">
+                    <div class="air-benchmark-zone" style="left:0;width:100%;background:linear-gradient(90deg,#fecaca 0%,#bbf7d0 30%,#bbf7d0 70%,#fecaca 100%)"></div>
+                    <div class="air-benchmark-marker" style="left:${Math.min(100, Math.max(0, ((benchmark.costPerUnit - benchmark.benchmarkLow) / (benchmark.benchmarkHigh - benchmark.benchmarkLow)) * 100))}%">
+                        <div class="air-bm-marker-dot"></div>
+                        <span class="air-bm-marker-label">${curr}${fmtNum(benchmark.costPerUnit)}/${benchmark.unit || 'sqft'}</span>
+                    </div>
+                </div>
+                <div class="air-benchmark-status air-bm-${benchmark.status || 'within'}">${benchmark.status === 'within' ? 'Within typical range' : benchmark.status === 'above' ? 'Above typical range' : 'Below typical range'}</div>
+            </div>
+        </div>` : '';
+
+    // Build validation issues panel
+    const criticalIssues = validationIssues.filter(i => i.severity === 'critical');
+    const warningIssues = validationIssues.filter(i => i.severity === 'warning');
+    const validationHTML = validationIssues.length > 0 ? `
+        <div class="air-validation-panel">
+            <div class="air-validation-header" onclick="this.parentElement.classList.toggle('expanded')">
+                <h4><i class="fas fa-shield-alt"></i> Validation Report</h4>
+                <div class="air-validation-badges">
+                    ${criticalIssues.length > 0 ? `<span class="air-val-badge air-val-critical">${criticalIssues.length} Critical</span>` : ''}
+                    ${warningIssues.length > 0 ? `<span class="air-val-badge air-val-warning">${warningIssues.length} Warning</span>` : ''}
+                    <i class="fas fa-chevron-down air-val-chevron"></i>
+                </div>
+            </div>
+            <div class="air-validation-body">
+                ${validationIssues.map(issue => `
+                    <div class="air-val-issue air-val-${issue.severity}">
+                        <i class="fas ${issue.severity === 'critical' ? 'fa-exclamation-circle' : issue.severity === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle'}"></i>
+                        <span>${issue.message}</span>
+                        ${issue.autoFixed ? '<span class="air-val-fixed">Auto-fixed</span>' : ''}
+                    </div>`).join('')}
+            </div>
+        </div>` : '';
+
+    // Rate source summary
+    const rateSourceHTML = rateSource.total > 0 ? `
+        <div class="air-rate-source-summary">
+            <span class="air-rs-badge air-rs-db"><i class="fas fa-database"></i> ${rateSource.dbBacked || 0} DB-Backed</span>
+            <span class="air-rs-badge air-rs-est"><i class="fas fa-robot"></i> ${rateSource.aiEstimated || 0} AI-Estimated</span>
+            <span class="air-rs-pct">${rateSource.dbPercentage || 0}% database coverage</span>
+        </div>` : '';
 
     // Build trades rows
     let tradesHTML = '';
     trades.forEach((trade, i) => {
         let lineItemsHTML = '';
         (trade.lineItems || []).forEach(item => {
+            const rsBadge = item.rateSource === 'DB' ? '<span class="air-li-rs air-li-rs-db" title="Rate from cost database">DB</span>'
+                : item.rateSource === 'EST' ? '<span class="air-li-rs air-li-rs-est" title="AI-estimated rate">EST</span>' : '';
             lineItemsHTML += `
                 <tr class="air-line-row">
-                    <td class="air-li-desc">${item.description}${item.materialDetails ? `<div class="air-li-spec">${item.materialDetails}</div>` : ''}</td>
+                    <td class="air-li-desc">${item.description}${item.materialDetails ? `<div class="air-li-spec">${item.materialDetails}</div>` : ''}${item.quantitySource ? `<div class="air-li-source">${item.quantitySource}</div>` : ''}</td>
                     <td>${fmtNum(item.quantity)} ${item.unit}</td>
-                    <td>${curr}${fmtNum(item.unitRate || item.unitTotal || 0)}</td>
+                    <td>${curr}${fmtNum(item.unitRate || item.unitTotal || 0)} ${rsBadge}</td>
                     <td class="air-li-total">${curr}${fmtNum(item.lineTotal)}</td>
                 </tr>`;
         });
@@ -4167,33 +4262,39 @@ function renderAIEstimateResult(estimate, projectInfo) {
             </div>
 
             <div class="air-container">
-                <!-- Summary Cards -->
-                <div class="air-summary-grid">
-                    <div class="air-summary-card air-card-primary">
-                        <div class="air-sc-icon"><i class="fas fa-coins"></i></div>
-                        <div class="air-sc-label">Grand Total</div>
-                        <div class="air-sc-value">${curr}${fmtNum(s.grandTotal)}</div>
-                        <div class="air-sc-sub">${s.currency || ''}</div>
-                    </div>
-                    <div class="air-summary-card air-card-indigo">
-                        <div class="air-sc-icon"><i class="fas fa-ruler-combined"></i></div>
-                        <div class="air-sc-label">Cost per Unit</div>
-                        <div class="air-sc-value">${curr}${fmtNum(s.costPerUnit)}</div>
-                        <div class="air-sc-sub">${s.unitLabel || 'per sq ft'}</div>
-                    </div>
-                    <div class="air-summary-card air-card-green">
-                        <div class="air-sc-icon"><i class="fas fa-chart-pie"></i></div>
-                        <div class="air-sc-label">Total Area</div>
-                        <div class="air-sc-value">${s.totalArea || 'N/A'}</div>
-                        <div class="air-sc-sub">${s.estimateClass || ''}</div>
-                    </div>
-                    <div class="air-summary-card air-card-amber">
-                        <div class="air-sc-icon"><i class="fas fa-signal"></i></div>
-                        <div class="air-sc-label">Confidence</div>
-                        <div class="air-sc-value">${s.confidenceLevel || 'Medium'}</div>
-                        <div class="air-sc-sub">${s.estimateDate || new Date().toLocaleDateString()}</div>
+                <!-- Summary Cards with Confidence Ring -->
+                <div class="air-summary-top">
+                    ${confidenceRingHTML}
+                    <div class="air-summary-grid">
+                        <div class="air-summary-card air-card-primary">
+                            <div class="air-sc-icon"><i class="fas fa-coins"></i></div>
+                            <div class="air-sc-label">Grand Total</div>
+                            <div class="air-sc-value">${curr}${fmtNum(s.grandTotal)}</div>
+                            <div class="air-sc-sub">${s.currency || ''}</div>
+                        </div>
+                        <div class="air-summary-card air-card-indigo">
+                            <div class="air-sc-icon"><i class="fas fa-ruler-combined"></i></div>
+                            <div class="air-sc-label">Cost per Unit</div>
+                            <div class="air-sc-value">${curr}${fmtNum(s.costPerUnit)}</div>
+                            <div class="air-sc-sub">${s.unitLabel || 'per sq ft'}</div>
+                        </div>
+                        <div class="air-summary-card air-card-green">
+                            <div class="air-sc-icon"><i class="fas fa-chart-pie"></i></div>
+                            <div class="air-sc-label">Total Area</div>
+                            <div class="air-sc-value">${s.totalArea || 'N/A'}</div>
+                            <div class="air-sc-sub">${s.estimateClass || ''}</div>
+                        </div>
+                        <div class="air-summary-card air-card-amber">
+                            <div class="air-sc-icon"><i class="fas fa-signal"></i></div>
+                            <div class="air-sc-label">Confidence</div>
+                            <div class="air-sc-value">${confidenceLevel || 'Medium'}</div>
+                            <div class="air-sc-sub">${s.estimateDate || new Date().toLocaleDateString()}</div>
+                        </div>
                     </div>
                 </div>
+                ${benchmarkHTML}
+                ${rateSourceHTML}
+                ${validationHTML}
 
                 <!-- Cost Distribution Chart -->
                 <div class="air-section">
@@ -4250,10 +4351,10 @@ function renderAIEstimateResult(estimate, projectInfo) {
                 </div>` : ''}
 
                 <!-- Benchmark Check -->
-                ${summary.benchmarkCheck ? `
+                ${s.benchmarkCheck ? `
                 <div class="air-section">
                     <div class="air-section-header"><h3><i class="fas fa-check-circle"></i> Cost Benchmark</h3></div>
-                    <div class="air-drawing-notes" style="color:#059669"><i class="fas fa-chart-bar"></i> ${summary.benchmarkCheck}</div>
+                    <div class="air-drawing-notes" style="color:#059669"><i class="fas fa-chart-bar"></i> ${s.benchmarkCheck}</div>
                 </div>` : ''}
 
                 <!-- Trade Details -->
