@@ -3743,25 +3743,15 @@ async function handleEstimationSubmit() {
     const designStandard = form.designStandard ? form.designStandard.value : '';
     const projectType = form.projectType ? form.projectType.value : '';
     const region = form.region ? form.region.value.trim() : '';
-    const buildingArea = form.buildingArea ? form.buildingArea.value.trim() : '';
-    const numberOfFloors = form.numberOfFloors ? form.numberOfFloors.value.trim() : '';
-    const structureType = form.structureType ? form.structureType.value : '';
-    const materialGrade = form.materialGrade ? form.materialGrade.value : '';
     const scopeOfWork = form.scopeOfWork ? form.scopeOfWork.value.trim() : '';
-    const expectedTimeline = form.expectedTimeline ? form.expectedTimeline.value : '';
-    const budgetRange = form.budgetRange ? form.budgetRange.value : '';
-    const specialRequirements = form.specialRequirements ? form.specialRequirements.value.trim() : '';
     if (!projectTitle || !description) {
         showNotification('Please fill in Project Title and Description', 'warning');
         return;
     }
-    if (!buildingArea || !numberOfFloors || !structureType || !materialGrade || !scopeOfWork || !expectedTimeline || !budgetRange) {
-        showNotification('Please fill in all mandatory Project Requirements fields', 'warning');
-        // Highlight missing fields
-        ['buildingArea','numberOfFloors','structureType','materialGrade','scopeOfWork','expectedTimeline','budgetRange'].forEach(function(fname) {
-            var el = form.querySelector('[name="' + fname + '"]');
-            if (el && !el.value.trim()) { el.classList.add('est-field-error'); el.addEventListener('input', function() { el.classList.remove('est-field-error'); }, { once: true }); el.addEventListener('change', function() { el.classList.remove('est-field-error'); }, { once: true }); }
-        });
+    if (!scopeOfWork) {
+        showNotification('Please fill in your Scope of Estimation Requirement - this field is mandatory', 'warning');
+        var scopeEl = form.querySelector('[name="scopeOfWork"]');
+        if (scopeEl) { scopeEl.classList.add('est-field-error'); scopeEl.focus(); scopeEl.addEventListener('input', function() { scopeEl.classList.remove('est-field-error'); }, { once: true }); }
         return;
     }
     if (submitBtn.disabled) return;
@@ -3775,14 +3765,7 @@ async function handleEstimationSubmit() {
         formData.append('designStandard', designStandard);
         formData.append('projectType', projectType);
         formData.append('region', region);
-        formData.append('buildingArea', buildingArea);
-        formData.append('numberOfFloors', numberOfFloors);
-        formData.append('structureType', structureType);
-        formData.append('materialGrade', materialGrade);
         formData.append('scopeOfWork', scopeOfWork);
-        formData.append('expectedTimeline', expectedTimeline);
-        formData.append('budgetRange', budgetRange);
-        formData.append('specialRequirements', specialRequirements);
         formData.append('contractorName', appState.currentUser.name || '');
         formData.append('contractorEmail', appState.currentUser.email || '');
         const fileNames = uploadedFiles.map(f => f.name);
@@ -3835,14 +3818,7 @@ async function handleAIEstimate() {
     const designStandard = form.designStandard ? form.designStandard.value : '';
     const projectType = form.projectType ? form.projectType.value : '';
     const region = form.region ? form.region.value.trim() : '';
-    const buildingArea = form.buildingArea ? form.buildingArea.value.trim() : '';
-    const numberOfFloors = form.numberOfFloors ? form.numberOfFloors.value.trim() : '';
-    const structureType = form.structureType ? form.structureType.value : '';
-    const materialGrade = form.materialGrade ? form.materialGrade.value : '';
     const scopeOfWork = form.scopeOfWork ? form.scopeOfWork.value.trim() : '';
-    const expectedTimeline = form.expectedTimeline ? form.expectedTimeline.value : '';
-    const budgetRange = form.budgetRange ? form.budgetRange.value : '';
-    const specialRequirements = form.specialRequirements ? form.specialRequirements.value.trim() : '';
     if (!projectTitle || !description) {
         showNotification('Please fill in Project Title and Description', 'warning');
         return;
@@ -3851,12 +3827,10 @@ async function handleAIEstimate() {
         showNotification('Please select a Design Standard', 'warning');
         return;
     }
-    if (!buildingArea || !numberOfFloors || !structureType || !materialGrade || !scopeOfWork || !expectedTimeline || !budgetRange) {
-        showNotification('Please fill in all mandatory Project Requirements fields', 'warning');
-        ['buildingArea','numberOfFloors','structureType','materialGrade','scopeOfWork','expectedTimeline','budgetRange'].forEach(function(fname) {
-            var el = form.querySelector('[name="' + fname + '"]');
-            if (el && !el.value.trim()) { el.classList.add('est-field-error'); el.addEventListener('input', function() { el.classList.remove('est-field-error'); }, { once: true }); el.addEventListener('change', function() { el.classList.remove('est-field-error'); }, { once: true }); }
-        });
+    if (!scopeOfWork) {
+        showNotification('Please fill in your Scope of Estimation Requirement - this field is mandatory', 'warning');
+        var scopeEl = form.querySelector('[name="scopeOfWork"]');
+        if (scopeEl) { scopeEl.classList.add('est-field-error'); scopeEl.focus(); scopeEl.addEventListener('input', function() { scopeEl.classList.remove('est-field-error'); }, { once: true }); }
         return;
     }
     const fileNames = filesArray.map(f => f.name);
@@ -3869,19 +3843,12 @@ async function handleAIEstimate() {
             designStandard,
             projectType,
             region,
-            buildingArea,
-            numberOfFloors,
-            structureType,
-            materialGrade,
             scopeOfWork,
-            expectedTimeline,
-            budgetRange,
-            specialRequirements,
             fileCount: appState.uploadedFile.length,
             fileNames
         });
         if (resp.success && resp.data) {
-            renderAIQuestionnaire(resp.data, { projectTitle, description, designStandard, projectType, region, buildingArea, numberOfFloors, structureType, materialGrade, scopeOfWork, expectedTimeline, budgetRange, specialRequirements, fileNames });
+            renderAIQuestionnaire(resp.data, { projectTitle, description, designStandard, projectType, region, scopeOfWork, fileNames });
         } else {
             showNotification('Failed to generate questionnaire. Please try again.', 'error');
         }
@@ -4657,97 +4624,27 @@ function getEstimationToolTemplate() {
                     <div class="est-card-header">
                         <div class="est-card-icon green"><i class="fas fa-clipboard-check"></i></div>
                         <div>
-                            <h3>Project Requirements <span class="est-mandatory">* Required</span></h3>
-                            <p class="est-card-desc">Fill in exact requirements so the AI can generate an accurate estimate from your drawings</p>
+                            <h3>Estimation Requirement <span class="est-mandatory">* Required</span></h3>
+                            <p class="est-card-desc">Write your exact estimation requirement so the AI generates an accurate estimate from your drawings</p>
                         </div>
                     </div>
                     <div class="est-form-body">
-                        <div class="est-form-row">
-                            <div class="form-group">
-                                <label class="form-label est-label">Building Area (sq ft) <span class="est-req-star">*</span></label>
-                                <input type="number" class="form-input premium-input" name="buildingArea" required placeholder="e.g., 5000" min="1" />
-                                <small class="est-field-hint">Total built-up area of the project</small>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label est-label">Number of Floors <span class="est-req-star">*</span></label>
-                                <input type="number" class="form-input premium-input" name="numberOfFloors" required placeholder="e.g., 3" min="1" />
-                                <small class="est-field-hint">Total number of floors including basement</small>
-                            </div>
-                        </div>
-                        <div class="est-form-row">
-                            <div class="form-group">
-                                <label class="form-label est-label">Structure Type <span class="est-req-star">*</span></label>
-                                <select class="form-input premium-input est-select" name="structureType" required>
-                                    <option value="">-- Select Structure Type --</option>
-                                    <option value="Steel Frame">Steel Frame</option>
-                                    <option value="RCC Frame">RCC Frame</option>
-                                    <option value="Composite (Steel + Concrete)">Composite (Steel + Concrete)</option>
-                                    <option value="Pre-Engineered Building (PEB)">Pre-Engineered Building (PEB)</option>
-                                    <option value="Load Bearing">Load Bearing</option>
-                                    <option value="Timber Frame">Timber Frame</option>
-                                    <option value="Other">Other</option>
-                                </select>
-                                <small class="est-field-hint">Primary structural system of the building</small>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label est-label">Material Grade <span class="est-req-star">*</span></label>
-                                <select class="form-input premium-input est-select" name="materialGrade" required>
-                                    <option value="">-- Select Material Grade --</option>
-                                    <optgroup label="Steel">
-                                        <option value="ASTM A36">ASTM A36 (Mild Steel)</option>
-                                        <option value="ASTM A572 Gr.50">ASTM A572 Grade 50</option>
-                                        <option value="ASTM A992">ASTM A992 (W-Shapes)</option>
-                                        <option value="IS 2062 E250">IS 2062 E250</option>
-                                        <option value="Fe 500">Fe 500</option>
-                                    </optgroup>
-                                    <optgroup label="Concrete">
-                                        <option value="M20">M20 Concrete</option>
-                                        <option value="M25">M25 Concrete</option>
-                                        <option value="M30">M30 Concrete</option>
-                                        <option value="M40">M40 Concrete</option>
-                                    </optgroup>
-                                    <option value="Other">Other</option>
-                                </select>
-                                <small class="est-field-hint">Primary material grade for the structure</small>
-                            </div>
-                        </div>
                         <div class="form-group">
-                            <label class="form-label est-label">Scope of Work <span class="est-req-star">*</span></label>
-                            <textarea class="form-textarea premium-textarea" name="scopeOfWork" required rows="4" placeholder="Describe the detailed scope of work - e.g., Fabrication & erection of steel structure, roofing, cladding, painting, MEP works, foundation, flooring, etc."></textarea>
-                            <small class="est-field-hint">Provide detailed scope so AI generates accurate cost estimates per trade</small>
-                        </div>
-                        <div class="est-form-row">
-                            <div class="form-group">
-                                <label class="form-label est-label">Expected Timeline <span class="est-req-star">*</span></label>
-                                <select class="form-input premium-input est-select" name="expectedTimeline" required>
-                                    <option value="">-- Select Timeline --</option>
-                                    <option value="1-3 months">1-3 Months</option>
-                                    <option value="3-6 months">3-6 Months</option>
-                                    <option value="6-12 months">6-12 Months</option>
-                                    <option value="12-18 months">12-18 Months</option>
-                                    <option value="18+ months">18+ Months</option>
-                                </select>
-                                <small class="est-field-hint">Expected project duration</small>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label est-label">Budget Range <span class="est-req-star">*</span></label>
-                                <select class="form-input premium-input est-select" name="budgetRange" required>
-                                    <option value="">-- Select Budget Range --</option>
-                                    <option value="Under $50K">Under $50,000</option>
-                                    <option value="$50K - $100K">$50,000 - $100,000</option>
-                                    <option value="$100K - $500K">$100,000 - $500,000</option>
-                                    <option value="$500K - $1M">$500,000 - $1,000,000</option>
-                                    <option value="$1M - $5M">$1,000,000 - $5,000,000</option>
-                                    <option value="$5M - $10M">$5,000,000 - $10,000,000</option>
-                                    <option value="Above $10M">Above $10,000,000</option>
-                                </select>
-                                <small class="est-field-hint">Approximate budget range for the project</small>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label est-label">Special Requirements</label>
-                            <textarea class="form-textarea premium-textarea" name="specialRequirements" rows="3" placeholder="Any special requirements - e.g., fire rating, seismic zone, environmental compliance, specific brand preferences, etc."></textarea>
-                            <small class="est-field-hint">Optional: Any additional requirements or constraints</small>
+                            <label class="form-label est-label">Scope of Estimation Requirement <span class="est-req-star">*</span></label>
+                            <textarea class="form-textarea premium-textarea est-scope-textarea" name="scopeOfWork" required rows="8" placeholder="Write your exact requirement here. For example:
+
+1. Fabrication & erection of steel structure as per drawing
+2. Roofing with color coated profile sheets
+3. Wall cladding with insulated sandwich panels
+4. Painting - primer + 2 coats epoxy paint
+5. Foundation - RCC isolated footings as per drawing
+6. Flooring - M25 grade concrete with VDF finish
+7. MEP works - electrical conduit & plumbing rough-in
+8. Structural connections - bolted/welded as per design
+9. Surface preparation - sand blasting SA 2.5
+
+Include quantities, specifications, material preferences, and any other details that will help generate an accurate cost estimate."></textarea>
+                            <small class="est-field-hint"><i class="fas fa-exclamation-circle"></i> <strong>Mandatory:</strong> Please write your complete estimation requirement in detail. The more specific you are, the more accurate the AI estimate will be.</small>
                         </div>
                     </div>
                 </div>

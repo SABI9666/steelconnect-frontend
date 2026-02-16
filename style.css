@@ -12831,6 +12831,19 @@ textarea:focus-visible {
     color: #fff;
 }
 
+/* Prominent scope textarea */
+.est-scope-textarea {
+    min-height: 200px;
+    font-size: 0.95rem;
+    line-height: 1.7;
+    border: 2px solid #e2e8f0;
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+.est-scope-textarea:focus {
+    border-color: #10b981;
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.12);
+}
+
 /* Field error state for mandatory requirements */
 .est-field-error {
     border-color: #ef4444 !important;
