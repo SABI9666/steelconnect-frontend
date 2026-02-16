@@ -4265,6 +4265,34 @@ function renderAIEstimateResult(estimate, projectInfo) {
                     <div class="air-trades-list">${tradesHTML}</div>
                 </div>
 
+                <!-- Material BOQ -->
+                ${estimate.materialBOQ && estimate.materialBOQ.length > 0 ? `
+                <div class="air-section">
+                    <div class="air-section-header">
+                        <h3><i class="fas fa-clipboard-list"></i> Material Bill of Quantities (BOQ)</h3>
+                        <span class="air-trade-count">${estimate.materialBOQ.length} Items</span>
+                    </div>
+                    <table class="air-line-table">
+                        <thead><tr><th>#</th><th>Material</th><th>Specification</th><th>Quantity</th><th>Unit Rate</th><th>Amount</th><th>Remarks</th></tr></thead>
+                        <tbody>${estimate.materialBOQ.map((item, idx) => `
+                            <tr class="air-line-row">
+                                <td>${item.sNo || idx + 1}</td>
+                                <td class="air-li-desc"><strong>${item.material}</strong></td>
+                                <td>${item.specification || '-'}</td>
+                                <td>${fmtNum(item.quantity)} ${item.unit || ''}</td>
+                                <td>${curr}${fmtNum(item.unitRate)}</td>
+                                <td class="air-li-total">${curr}${fmtNum(item.amount)}</td>
+                                <td style="font-size:0.8rem;color:#6b7280">${item.remarks || ''}</td>
+                            </tr>`).join('')}
+                            <tr class="air-line-row" style="font-weight:700;background:#f0f4ff;">
+                                <td colspan="5" style="text-align:right">Total Material Cost</td>
+                                <td class="air-li-total">${curr}${fmtNum(estimate.materialBOQ.reduce((s, m) => s + (Number(m.amount) || 0), 0))}</td>
+                                <td></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>` : ''}
+
                 <!-- Market Insights -->
                 ${insights.regionalFactor || insights.materialTrends || insights.laborMarket ? `
                 <div class="air-section">
