@@ -4075,7 +4075,6 @@ function renderAIEstimateResult(estimate, projectInfo) {
     const notes = estimate.notes || [];
     const insights = estimate.marketInsights || {};
     const structuralAnalysis = estimate.structuralAnalysis || {};
-    const materialSummary = estimate.materialSummary || {};
     const drawingExtraction = estimate.drawingExtraction || {};
 
     // Build trades rows
@@ -4087,34 +4086,10 @@ function renderAIEstimateResult(estimate, projectInfo) {
                 <tr class="air-line-row">
                     <td class="air-li-desc">${item.description}${item.materialDetails ? `<div class="air-li-spec">${item.materialDetails}</div>` : ''}</td>
                     <td>${fmtNum(item.quantity)} ${item.unit}</td>
-                    <td>${curr}${fmtNum(item.materialCost)}</td>
-                    <td>${curr}${fmtNum(item.laborCost)}</td>
-                    <td>${curr}${fmtNum(item.equipmentCost)}</td>
+                    <td>${curr}${fmtNum(item.unitRate || item.unitTotal || 0)}</td>
                     <td class="air-li-total">${curr}${fmtNum(item.lineTotal)}</td>
                 </tr>`;
         });
-
-        // Material schedule for this trade
-        let matScheduleHTML = '';
-        if (trade.materialSchedule && trade.materialSchedule.length > 0) {
-            matScheduleHTML = `
-                <div class="air-mat-schedule">
-                    <h5 class="air-mat-schedule-title"><i class="fas fa-boxes"></i> Material Schedule</h5>
-                    <table class="air-line-table air-mat-table">
-                        <thead><tr><th>Material</th><th>Specification</th><th>Qty</th><th>Unit</th><th>Unit Rate</th><th>Total</th></tr></thead>
-                        <tbody>${trade.materialSchedule.map(m => `
-                            <tr class="air-line-row">
-                                <td class="air-li-desc"><strong>${m.material}</strong></td>
-                                <td>${m.specification || '-'}</td>
-                                <td>${fmtNum(m.quantity)}</td>
-                                <td>${m.unit}</td>
-                                <td>${curr}${fmtNum(m.unitRate)}</td>
-                                <td class="air-li-total">${curr}${fmtNum(m.totalCost)}</td>
-                            </tr>`).join('')}
-                        </tbody>
-                    </table>
-                </div>`;
-        }
 
         const tradeColors = ['#3b82f6','#8b5cf6','#06b6d4','#10b981','#f59e0b','#ef4444','#ec4899','#6366f1','#14b8a6','#f97316','#84cc16','#a855f7','#0ea5e9','#d946ef','#22d3ee'];
         const color = tradeColors[i % tradeColors.length];
@@ -4135,9 +4110,8 @@ function renderAIEstimateResult(estimate, projectInfo) {
                     </div>
                 </div>
                 <div class="air-trade-body">
-                    ${matScheduleHTML}
                     <table class="air-line-table">
-                        <thead><tr><th>Description</th><th>Qty</th><th>Material</th><th>Labor</th><th>Equipment</th><th>Total</th></tr></thead>
+                        <thead><tr><th>Description</th><th>Quantity</th><th>Unit Rate</th><th>Total</th></tr></thead>
                         <tbody>${lineItemsHTML}</tbody>
                     </table>
                 </div>
@@ -4275,28 +4249,11 @@ function renderAIEstimateResult(estimate, projectInfo) {
                     ${structuralAnalysis.drawingNotes ? `<div class="air-drawing-notes"><i class="fas fa-file-alt"></i> <strong>Drawing Analysis:</strong> ${structuralAnalysis.drawingNotes}</div>` : ''}
                 </div>` : ''}
 
-                <!-- Material Summary -->
-                ${materialSummary.keyMaterials && materialSummary.keyMaterials.length > 0 ? `
+                <!-- Benchmark Check -->
+                ${summary.benchmarkCheck ? `
                 <div class="air-section">
-                    <div class="air-section-header"><h3><i class="fas fa-boxes"></i> Material Summary</h3></div>
-                    <div class="air-mat-summary-costs">
-                        <div class="air-msc-item"><span>Total Material Cost</span><strong>${curr}${fmtNum(materialSummary.totalMaterialCost)}</strong></div>
-                        <div class="air-msc-item"><span>Total Labor Cost</span><strong>${curr}${fmtNum(materialSummary.totalLaborCost)}</strong></div>
-                        <div class="air-msc-item"><span>Total Equipment Cost</span><strong>${curr}${fmtNum(materialSummary.totalEquipmentCost)}</strong></div>
-                    </div>
-                    <table class="air-line-table air-mat-table">
-                        <thead><tr><th>Material</th><th>Specification</th><th>Total Qty</th><th>Unit</th><th>Est. Cost</th><th>Supplier</th></tr></thead>
-                        <tbody>${materialSummary.keyMaterials.map(m => `
-                            <tr class="air-line-row">
-                                <td class="air-li-desc"><strong>${m.material}</strong></td>
-                                <td>${m.specification || '-'}</td>
-                                <td>${fmtNum(m.totalQuantity)}</td>
-                                <td>${m.unit}</td>
-                                <td class="air-li-total">${curr}${fmtNum(m.estimatedCost)}</td>
-                                <td>${m.supplier || '-'}</td>
-                            </tr>`).join('')}
-                        </tbody>
-                    </table>
+                    <div class="air-section-header"><h3><i class="fas fa-check-circle"></i> Cost Benchmark</h3></div>
+                    <div class="air-drawing-notes" style="color:#059669"><i class="fas fa-chart-bar"></i> ${summary.benchmarkCheck}</div>
                 </div>` : ''}
 
                 <!-- Trade Details -->
