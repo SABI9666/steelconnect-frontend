@@ -3993,6 +3993,7 @@ async function submitAIQuestionnaire() {
         formData.append('designStandard', projectInfo.designStandard || '');
         formData.append('projectType', projectInfo.projectType || '');
         formData.append('region', projectInfo.region || '');
+        formData.append('scopeOfWork', projectInfo.scopeOfWork || '');
         formData.append('answers', JSON.stringify(answers));
         formData.append('fileNames', JSON.stringify(projectInfo.fileNames || []));
 
