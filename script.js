@@ -3745,15 +3745,8 @@ async function handleEstimationSubmit() {
     const designStandard = form.designStandard ? form.designStandard.value : '';
     const projectType = form.projectType ? form.projectType.value : '';
     const region = form.region ? form.region.value.trim() : '';
-    const scopeOfWork = form.scopeOfWork ? form.scopeOfWork.value.trim() : '';
     if (!projectTitle || !description) {
         showNotification('Please fill in Project Title and Description', 'warning');
-        return;
-    }
-    if (!scopeOfWork) {
-        showNotification('Please fill in your Scope of Estimation Requirement - this field is mandatory', 'warning');
-        var scopeEl = form.querySelector('[name="scopeOfWork"]');
-        if (scopeEl) { scopeEl.classList.add('est-field-error'); scopeEl.focus(); scopeEl.addEventListener('input', function() { scopeEl.classList.remove('est-field-error'); }, { once: true }); }
         return;
     }
     if (submitBtn.disabled) return;
@@ -3767,7 +3760,6 @@ async function handleEstimationSubmit() {
         formData.append('designStandard', designStandard);
         formData.append('projectType', projectType);
         formData.append('region', region);
-        formData.append('scopeOfWork', scopeOfWork);
         formData.append('contractorName', appState.currentUser.name || '');
         formData.append('contractorEmail', appState.currentUser.email || '');
         const fileNames = uploadedFiles.map(f => f.name);
@@ -3820,19 +3812,12 @@ async function handleAIEstimate() {
     const designStandard = form.designStandard ? form.designStandard.value : '';
     const projectType = form.projectType ? form.projectType.value : '';
     const region = form.region ? form.region.value.trim() : '';
-    const scopeOfWork = form.scopeOfWork ? form.scopeOfWork.value.trim() : '';
     if (!projectTitle || !description) {
         showNotification('Please fill in Project Title and Description', 'warning');
         return;
     }
     if (!designStandard) {
         showNotification('Please select a Design Standard', 'warning');
-        return;
-    }
-    if (!scopeOfWork) {
-        showNotification('Please fill in your Scope of Estimation Requirement - this field is mandatory', 'warning');
-        var scopeEl = form.querySelector('[name="scopeOfWork"]');
-        if (scopeEl) { scopeEl.classList.add('est-field-error'); scopeEl.focus(); scopeEl.addEventListener('input', function() { scopeEl.classList.remove('est-field-error'); }, { once: true }); }
         return;
     }
     const fileNames = filesArray.map(f => f.name);
@@ -3845,12 +3830,11 @@ async function handleAIEstimate() {
             designStandard,
             projectType,
             region,
-            scopeOfWork,
             fileCount: appState.uploadedFile.length,
             fileNames
         });
         if (resp.success && resp.data) {
-            renderAIQuestionnaire(resp.data, { projectTitle, description, designStandard, projectType, region, scopeOfWork, fileNames });
+            renderAIQuestionnaire(resp.data, { projectTitle, description, designStandard, projectType, region, fileNames });
         } else {
             showNotification('Failed to generate questionnaire. Please try again.', 'error');
         }
@@ -3995,7 +3979,6 @@ async function submitAIQuestionnaire() {
         formData.append('designStandard', projectInfo.designStandard || '');
         formData.append('projectType', projectInfo.projectType || '');
         formData.append('region', projectInfo.region || '');
-        formData.append('scopeOfWork', projectInfo.scopeOfWork || '');
         formData.append('answers', JSON.stringify(answers));
         formData.append('fileNames', JSON.stringify(projectInfo.fileNames || []));
 
@@ -4619,35 +4602,6 @@ function getEstimationToolTemplate() {
                             <label class="form-label est-label">Region / Location</label>
                             <input type="text" class="form-input premium-input" name="region" placeholder="e.g., California, USA / Dubai, UAE / Mumbai, India" />
                             <small class="est-field-hint">Helps AI apply regional cost factors & labor rates</small>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="est-card">
-                    <div class="est-card-header">
-                        <div class="est-card-icon green"><i class="fas fa-clipboard-check"></i></div>
-                        <div>
-                            <h3>Estimation Requirement <span class="est-mandatory">* Required</span></h3>
-                            <p class="est-card-desc">Write your exact estimation requirement so the AI generates an accurate estimate from your drawings</p>
-                        </div>
-                    </div>
-                    <div class="est-form-body">
-                        <div class="form-group">
-                            <label class="form-label est-label">Scope of Estimation Requirement <span class="est-req-star">*</span></label>
-                            <textarea class="form-textarea premium-textarea est-scope-textarea" name="scopeOfWork" required rows="8" placeholder="Write your exact requirement here. For example:
-
-1. Fabrication & erection of steel structure as per drawing
-2. Roofing with color coated profile sheets
-3. Wall cladding with insulated sandwich panels
-4. Painting - primer + 2 coats epoxy paint
-5. Foundation - RCC isolated footings as per drawing
-6. Flooring - M25 grade concrete with VDF finish
-7. MEP works - electrical conduit & plumbing rough-in
-8. Structural connections - bolted/welded as per design
-9. Surface preparation - sand blasting SA 2.5
-
-Include quantities, specifications, material preferences, and any other details that will help generate an accurate cost estimate."></textarea>
-                            <small class="est-field-hint"><i class="fas fa-exclamation-circle"></i> <strong>Mandatory:</strong> Please write your complete estimation requirement in detail. The more specific you are, the more accurate the AI estimate will be.</small>
                         </div>
                     </div>
                 </div>
