@@ -3196,6 +3196,8 @@ async function checkProfileAndRoute() {
 
 function renderAppSection(sectionId) {
     const container = document.getElementById('app-container');
+    // Smooth scroll to top on section change
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     document.querySelectorAll('.sidebar-nav-link').forEach(link => link.classList.toggle('active', link.dataset.section === sectionId));
     if (!appState.currentUser) return;
     const profileStatus = appState.currentUser.profileStatus;
@@ -3861,7 +3863,7 @@ async function handleAIEstimate() {
 }
 
 function renderAIQuestionnaire(questionData, projectInfo) {
-    const container = document.getElementById('app-content');
+    const container = document.getElementById('app-container');
     const groups = questionData.questionGroups || [];
     let groupsHTML = '';
     groups.forEach((group, gi) => {
@@ -4080,7 +4082,7 @@ function hideAIGeneratingOverlay() {
 }
 
 function renderAIEstimateResult(estimate, projectInfo) {
-    const container = document.getElementById('app-content');
+    const container = document.getElementById('app-container');
     const s = estimate.summary || {};
     const curr = s.currencySymbol || '$';
     const trades = estimate.trades || [];
