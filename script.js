@@ -4084,7 +4084,7 @@ function renderAIEstimateResult(estimate, projectInfo) {
         (trade.lineItems || []).forEach(item => {
             lineItemsHTML += `
                 <tr class="air-line-row">
-                    <td class="air-li-desc">${item.description}${item.materialDetails ? `<div class="air-li-spec">${item.materialDetails}</div>` : ''}</td>
+                    <td class="air-li-desc">${item.description}${item.materialDetails ? `<div class="air-li-spec">${item.materialDetails}</div>` : ''}${item.quantityBasis ? `<div class="air-li-spec" style="color:#6366f1"><i class="fas fa-calculator" style="margin-right:3px"></i>${item.quantityBasis}</div>` : ''}</td>
                     <td>${fmtNum(item.quantity)} ${item.unit}</td>
                     <td>${curr}${fmtNum(item.unitRate || item.unitTotal || 0)}</td>
                     <td class="air-li-total">${curr}${fmtNum(item.lineTotal)}</td>
