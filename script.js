@@ -4098,11 +4098,15 @@ function renderAIEstimateResult(estimate, projectInfo) {
     const structuralAnalysis = estimate.structuralAnalysis || {};
     const drawingExtraction = estimate.drawingExtraction || {};
     const validation = estimate.validationReport || {};
-    const confidenceScore = validation.confidenceScore || 0;
+    const confidenceScore = validation.finalConfidenceScore || validation.confidenceScore || 0;
     const confidenceLevel = validation.confidenceLevel || s.confidenceLevel || 'Medium';
+    const confidenceFactors = validation.confidenceFactors || [];
     const benchmark = validation.benchmarkComparison || {};
     const rateSource = validation.rateSourceSummary || {};
+    const rateSourceBreakdown = (estimate.structuralAnalysis || {}).rateSourceBreakdown || {};
     const validationIssues = validation.issues || [];
+    const multiPassMeta = estimate._multiPassMeta || {};
+    const passesCompleted = (estimate.structuralAnalysis || {}).passesCompleted || 0;
 
     // Build confidence ring SVG
     const confPct = Math.min(100, Math.max(0, confidenceScore));
@@ -4163,11 +4167,42 @@ function renderAIEstimateResult(estimate, projectInfo) {
         </div>` : '';
 
     // Rate source summary
-    const rateSourceHTML = rateSource.total > 0 ? `
+    const dbCount = rateSource.dbBacked || rateSourceBreakdown.database || 0;
+    const estCount = rateSource.aiEstimated || rateSourceBreakdown.estimated || 0;
+    const totalRateCount = dbCount + estCount;
+    const dbPctVal = rateSource.dbPercentage || (totalRateCount > 0 ? Math.round((dbCount / totalRateCount) * 100) : 0);
+    const rateSourceHTML = totalRateCount > 0 ? `
         <div class="air-rate-source-summary">
-            <span class="air-rs-badge air-rs-db"><i class="fas fa-database"></i> ${rateSource.dbBacked || 0} DB-Backed</span>
-            <span class="air-rs-badge air-rs-est"><i class="fas fa-robot"></i> ${rateSource.aiEstimated || 0} AI-Estimated</span>
-            <span class="air-rs-pct">${rateSource.dbPercentage || 0}% database coverage</span>
+            <span class="air-rs-badge air-rs-db"><i class="fas fa-database"></i> ${dbCount} DB-Backed</span>
+            <span class="air-rs-badge air-rs-est"><i class="fas fa-robot"></i> ${estCount} AI-Estimated</span>
+            <span class="air-rs-pct">${dbPctVal}% database coverage</span>
+        </div>` : '';
+
+    // Confidence factors breakdown
+    const confidenceFactorsHTML = confidenceFactors.length > 0 ? `
+        <div class="air-section" style="padding:16px;">
+            <div class="air-section-header"><h3><i class="fas fa-tasks"></i> Confidence Score Breakdown</h3></div>
+            <div style="display:grid;gap:8px;">
+                ${confidenceFactors.map(f => {
+                    const fColor = f.score >= 70 ? '#10b981' : f.score >= 40 ? '#f59e0b' : '#ef4444';
+                    return `<div style="display:flex;align-items:center;gap:12px;">
+                        <span style="width:140px;font-size:0.85rem;color:#475569;">${f.name}</span>
+                        <div style="flex:1;height:8px;background:#e5e7eb;border-radius:4px;overflow:hidden;">
+                            <div style="height:100%;width:${f.score}%;background:${fColor};border-radius:4px;transition:width 0.5s;"></div>
+                        </div>
+                        <span style="width:40px;text-align:right;font-size:0.85rem;font-weight:700;color:${fColor};">${f.score}%</span>
+                        <span style="width:20px;font-size:0.7rem;color:#94a3b8;">w:${f.weight}</span>
+                    </div>`;
+                }).join('')}
+            </div>
+        </div>` : '';
+
+    // Multi-pass metadata bar
+    const multiPassBarHTML = (passesCompleted > 0 || multiPassMeta.engineVersion) ? `
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 16px;font-size:0.78rem;">
+            ${passesCompleted > 0 ? `<span style="background:#eff6ff;color:#1e40af;padding:4px 12px;border-radius:16px;"><i class="fas fa-layer-group"></i> ${passesCompleted}/5 Passes Completed</span>` : ''}
+            ${multiPassMeta.totalDurationSeconds ? `<span style="background:#f0fdf4;color:#166534;padding:4px 12px;border-radius:16px;"><i class="fas fa-clock"></i> ${multiPassMeta.totalDurationSeconds}s analysis</span>` : ''}
+            ${multiPassMeta.engineVersion ? `<span style="background:#f8fafc;color:#64748b;padding:4px 12px;border-radius:16px;">${multiPassMeta.engineVersion}</span>` : ''}
         </div>` : '';
 
     // Build trades rows
@@ -4292,8 +4327,10 @@ function renderAIEstimateResult(estimate, projectInfo) {
                         </div>
                     </div>
                 </div>
+                ${multiPassBarHTML}
                 ${benchmarkHTML}
                 ${rateSourceHTML}
+                ${confidenceFactorsHTML}
                 ${validationHTML}
 
                 <!-- Cost Distribution Chart -->
