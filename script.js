@@ -4273,16 +4273,21 @@ function renderAIEstimateResult(estimate, projectInfo) {
     const archSum = matSchedule.architecturalSummary || {};
     const hasMaterialSchedule = steelMembers.length > 0 || concreteItems.length > 0 || mepItems.length > 0 || archItems.length > 0 || roofItems.length > 0 || otherMaterials.length > 0;
 
-    // Helper to build a generic material table with qty + price columns
+    // Helper to build a generic material table with material cost + labor + total columns
     function buildMatTable(items, columns, colorAccent) {
         if (!items || items.length === 0) return '';
+        let totalMatCost = items.reduce((s, i) => s + (Number(i.materialCost) || 0), 0);
+        let totalLabCost = items.reduce((s, i) => s + (Number(i.laborCost) || 0), 0);
+        let totalLabHrs = items.reduce((s, i) => s + (Number(i.laborHours) || 0), 0);
         let totalCost = items.reduce((s, i) => s + (Number(i.totalCost) || 0), 0);
+        const hasLabor = totalLabHrs > 0 || totalLabCost > 0;
         return `<div style="overflow-x:auto;"><table class="air-line-table" style="font-size:0.82rem;width:100%;">
-            <thead><tr>${columns.map(c => `<th style="${c.align ? 'text-align:'+c.align : ''}">${c.label}</th>`).join('')}<th style="text-align:right;">Unit Rate</th><th style="text-align:right;">Total Cost</th></tr></thead>
+            <thead><tr>${columns.map(c => `<th style="${c.align ? 'text-align:'+c.align : ''}">${c.label}</th>`).join('')}<th style="text-align:right;">Material</th>${hasLabor ? '<th style="text-align:right;">Labor Hrs</th><th style="text-align:right;">Labor Cost</th>' : ''}<th style="text-align:right;">Total Cost</th></tr></thead>
             <tbody>${items.map(item => `<tr>${columns.map(c => `<td style="${c.style || ''}">${c.render ? c.render(item) : (item[c.key] || '-')}</td>`).join('')}
-                <td style="text-align:right;">${curr}${fmtNum(item.unitRate || 0)}</td>
+                <td style="text-align:right;">${curr}${fmtNum(item.materialCost || item.unitRate || 0)}</td>
+                ${hasLabor ? `<td style="text-align:right;color:#6b7280;">${fmtNum(item.laborHours || 0)}</td><td style="text-align:right;">${curr}${fmtNum(item.laborCost || 0)}</td>` : ''}
                 <td style="text-align:right;font-weight:600;">${curr}${fmtNum(item.totalCost || 0)}</td></tr>`).join('')}</tbody>
-            ${totalCost > 0 ? `<tfoot><tr style="background:${colorAccent}10;font-weight:700;"><td colspan="${columns.length}">Subtotal</td><td></td><td style="text-align:right;color:${colorAccent};">${curr}${fmtNum(totalCost)}</td></tr></tfoot>` : ''}
+            ${totalCost > 0 ? `<tfoot><tr style="background:${colorAccent}10;font-weight:700;"><td colspan="${columns.length}">Subtotal</td><td style="text-align:right;">${curr}${fmtNum(totalMatCost)}</td>${hasLabor ? `<td style="text-align:right;">${fmtNum(totalLabHrs)}</td><td style="text-align:right;">${curr}${fmtNum(totalLabCost)}</td>` : ''}<td style="text-align:right;color:${colorAccent};">${curr}${fmtNum(totalCost)}</td></tr></tfoot>` : ''}
         </table></div>`;
     }
 
@@ -4292,10 +4297,12 @@ function renderAIEstimateResult(estimate, projectInfo) {
         let steelTableHTML = '';
         if (steelMembers.length > 0) {
             let steelCost = steelSum.totalSteelCost || steelMembers.reduce((s, m) => s + (Number(m.totalCost) || 0), 0);
+            const steelHasLabor = steelMembers.some(m => m.laborHours > 0 || m.laborCost > 0);
+            const steelColSpan = steelHasLabor ? 12 : 9;
             steelTableHTML = `<div style="margin-bottom:16px;">
                 <h4 style="margin-bottom:8px;color:#1e40af;"><i class="fas fa-i-cursor"></i> Structural Steel ${steelSum.totalSteelTons ? `<span style="font-size:0.8rem;font-weight:400;color:#6b7280;"> - ${fmtNum(steelSum.totalSteelTons)} tons</span>` : ''} ${steelCost ? `<span style="font-size:0.8rem;font-weight:600;color:#1e40af;float:right;">${curr}${fmtNum(steelCost)}</span>` : ''}</h4>
                 <div style="overflow-x:auto;"><table class="air-line-table" style="font-size:0.82rem;width:100%;">
-                    <thead><tr><th>Mark</th><th>Section</th><th>Grade</th><th>Count</th><th>Length</th><th>Wt/ft</th><th style="text-align:right;">Weight (tons)</th><th style="text-align:right;">Rate</th><th style="text-align:right;">Cost</th></tr></thead>
+                    <thead><tr><th>Mark</th><th>Section</th><th>Grade</th><th>Count</th><th>Length</th><th>Wt/ft</th><th style="text-align:right;">Weight (tons)</th><th style="text-align:right;">Material</th>${steelHasLabor ? '<th style="text-align:right;">Labor Hrs</th><th style="text-align:right;">Labor Cost</th><th style="text-align:right;">Equip</th>' : ''}<th style="text-align:right;">Total Cost</th></tr></thead>
                     <tbody>${steelMembers.map(m => `<tr>
                         <td><strong>${m.mark || '-'}</strong> <span style="color:#94a3b8;font-size:0.75rem;">${m.type || ''}</span></td>
                         <td style="color:#6366f1;font-weight:600;">${m.section || '-'}</td>
@@ -4304,14 +4311,17 @@ function renderAIEstimateResult(estimate, projectInfo) {
                         <td>${m.lengthEach || (m.lengthFt ? m.lengthFt + "'" : '-')}</td>
                         <td>${m.weightPerFt || '-'}</td>
                         <td style="text-align:right;">${fmtNum(m.totalWeightTons)}</td>
-                        <td style="text-align:right;">${m.unitRate ? curr + fmtNum(m.unitRate) : '-'}</td>
+                        <td style="text-align:right;">${m.materialCost ? curr + fmtNum(m.materialCost) : (m.unitRate ? curr + fmtNum(m.unitRate) : '-')}</td>
+                        ${steelHasLabor ? `<td style="text-align:right;color:#6b7280;">${fmtNum(m.laborHours || 0)}</td><td style="text-align:right;">${curr}${fmtNum(m.laborCost || 0)}</td><td style="text-align:right;">${m.equipmentCost ? curr + fmtNum(m.equipmentCost) : '-'}</td>` : ''}
                         <td style="text-align:right;font-weight:600;">${m.totalCost ? curr + fmtNum(m.totalCost) : '-'}</td>
-                    </tr>${m.calculation ? `<tr><td colspan="9" style="padding:2px 8px;font-size:0.72rem;color:#6b7280;border-bottom:1px solid #e5e7eb;"><i class="fas fa-calculator"></i> ${m.calculation}</td></tr>` : ''}`).join('')}</tbody>
+                    </tr>${m.calculation ? `<tr><td colspan="${steelColSpan}" style="padding:2px 8px;font-size:0.72rem;color:#6b7280;border-bottom:1px solid #e5e7eb;"><i class="fas fa-calculator"></i> ${m.calculation}</td></tr>` : ''}`).join('')}</tbody>
                     ${steelSum.totalSteelTons ? `<tfoot><tr style="background:#eff6ff;font-weight:700;">
                         <td colspan="6">Total (Main: ${fmtNum(steelSum.mainSteelTons)} + Misc: ${fmtNum(steelSum.connectionMiscTons)})</td>
                         <td style="text-align:right;color:#1e40af;">${fmtNum(steelSum.totalSteelTons)} tons</td>
-                        <td></td><td style="text-align:right;color:#1e40af;">${curr}${fmtNum(steelCost)}</td>
-                    </tr>${steelSum.steelPSF ? `<tr style="background:#f0f9ff;"><td colspan="9" style="font-size:0.78rem;color:#3b82f6;">Steel intensity: ${fmtNum(steelSum.steelPSF)} PSF</td></tr>` : ''}</tfoot>` : ''}
+                        <td style="text-align:right;">${steelSum.totalMaterialCost ? curr + fmtNum(steelSum.totalMaterialCost) : ''}</td>
+                        ${steelHasLabor ? `<td></td><td style="text-align:right;">${steelSum.totalLaborCost ? curr + fmtNum(steelSum.totalLaborCost) : ''}</td><td></td>` : ''}
+                        <td style="text-align:right;color:#1e40af;">${curr}${fmtNum(steelCost)}</td>
+                    </tr>${steelSum.steelPSF ? `<tr style="background:#f0f9ff;"><td colspan="${steelColSpan}" style="font-size:0.78rem;color:#3b82f6;">Steel intensity: ${fmtNum(steelSum.steelPSF)} PSF</td></tr>` : ''}</tfoot>` : ''}
                 </table></div></div>`;
         }
 
@@ -4319,10 +4329,12 @@ function renderAIEstimateResult(estimate, projectInfo) {
         let concreteTableHTML = '';
         if (concreteItems.length > 0) {
             let concCost = concreteSum.totalConcreteCost || concreteItems.reduce((s, c) => s + (Number(c.totalCost) || 0), 0);
+            const concHasLabor = concreteItems.some(c => c.laborHours > 0 || c.laborCost > 0);
+            const concColSpan = concHasLabor ? 12 : 9;
             concreteTableHTML = `<div style="margin-bottom:16px;">
                 <h4 style="margin-bottom:8px;color:#166534;"><i class="fas fa-cube"></i> Concrete & Rebar ${concreteSum.totalConcreteCY ? `<span style="font-size:0.8rem;font-weight:400;color:#6b7280;"> - ${fmtNum(concreteSum.totalConcreteCY)} CY</span>` : ''} ${concCost ? `<span style="font-size:0.8rem;font-weight:600;color:#166534;float:right;">${curr}${fmtNum(concCost)}</span>` : ''}</h4>
                 <div style="overflow-x:auto;"><table class="air-line-table" style="font-size:0.82rem;width:100%;">
-                    <thead><tr><th>Element</th><th>Dimensions</th><th>Count</th><th style="text-align:right;">Vol/ea</th><th style="text-align:right;">Total CY</th><th>Grade</th><th style="text-align:right;">Rebar lbs</th><th style="text-align:right;">Rate</th><th style="text-align:right;">Cost</th></tr></thead>
+                    <thead><tr><th>Element</th><th>Dimensions</th><th>Count</th><th style="text-align:right;">Vol/ea</th><th style="text-align:right;">Total CY</th><th>Grade</th><th style="text-align:right;">Rebar lbs</th><th style="text-align:right;">Material</th>${concHasLabor ? '<th style="text-align:right;">Labor Hrs</th><th style="text-align:right;">Labor Cost</th><th style="text-align:right;">Equip</th>' : ''}<th style="text-align:right;">Total Cost</th></tr></thead>
                     <tbody>${concreteItems.map(c => `<tr>
                         <td><strong>${c.element || '-'}</strong> <span style="color:#94a3b8;font-size:0.75rem;">${c.type || ''}</span></td>
                         <td style="color:#059669;">${c.dimensions || '-'}</td>
@@ -4331,13 +4343,16 @@ function renderAIEstimateResult(estimate, projectInfo) {
                         <td style="text-align:right;font-weight:600;">${fmtNum(c.totalCY)}</td>
                         <td>${c.concreteGrade || '-'}</td>
                         <td style="text-align:right;">${fmtNum(c.rebarTotalLbs)}</td>
-                        <td style="text-align:right;">${c.unitRate ? curr + fmtNum(c.unitRate) : '-'}</td>
+                        <td style="text-align:right;">${c.materialCost ? curr + fmtNum(c.materialCost) : (c.unitRate ? curr + fmtNum(c.unitRate) : '-')}</td>
+                        ${concHasLabor ? `<td style="text-align:right;color:#6b7280;">${fmtNum(c.laborHours || 0)}</td><td style="text-align:right;">${curr}${fmtNum(c.laborCost || 0)}</td><td style="text-align:right;">${c.equipmentCost ? curr + fmtNum(c.equipmentCost) : '-'}</td>` : ''}
                         <td style="text-align:right;font-weight:600;">${c.totalCost ? curr + fmtNum(c.totalCost) : '-'}</td>
-                    </tr>${c.calculation ? `<tr><td colspan="9" style="padding:2px 8px;font-size:0.72rem;color:#6b7280;border-bottom:1px solid #e5e7eb;"><i class="fas fa-calculator"></i> ${c.calculation}</td></tr>` : ''}`).join('')}</tbody>
+                    </tr>${c.calculation ? `<tr><td colspan="${concColSpan}" style="padding:2px 8px;font-size:0.72rem;color:#6b7280;border-bottom:1px solid #e5e7eb;"><i class="fas fa-calculator"></i> ${c.calculation}</td></tr>` : ''}`).join('')}</tbody>
                     ${concreteSum.totalConcreteCY ? `<tfoot><tr style="background:#f0fdf4;font-weight:700;">
                         <td colspan="4">Totals</td><td style="text-align:right;color:#166534;">${fmtNum(concreteSum.totalConcreteCY)} CY</td><td></td>
                         <td style="text-align:right;">${concreteSum.totalRebarTons ? fmtNum(concreteSum.totalRebarTons) + ' tons' : '-'}</td>
-                        <td></td><td style="text-align:right;color:#166534;">${curr}${fmtNum(concCost)}</td>
+                        <td style="text-align:right;">${concreteSum.totalMaterialCost ? curr + fmtNum(concreteSum.totalMaterialCost) : ''}</td>
+                        ${concHasLabor ? `<td></td><td style="text-align:right;">${concreteSum.totalLaborCost ? curr + fmtNum(concreteSum.totalLaborCost) : ''}</td><td></td>` : ''}
+                        <td style="text-align:right;color:#166534;">${curr}${fmtNum(concCost)}</td>
                     </tr></tfoot>` : ''}
                 </table></div></div>`;
         }
@@ -4414,6 +4429,77 @@ function renderAIEstimateResult(estimate, projectInfo) {
                 ], '#92400e')}</div>`;
         }
 
+        // Manpower Summary
+        const manpower = matSchedule.manpowerSummary || {};
+        const crewBreakdown = manpower.crewBreakdown || [];
+        let manpowerHTML = '';
+        if (manpower.totalLaborHours > 0 || crewBreakdown.length > 0) {
+            manpowerHTML = `<div style="margin-top:20px;padding:16px;background:#faf5ff;border:1px solid #e9d5ff;border-radius:10px;">
+                <h4 style="margin-bottom:12px;color:#7c3aed;"><i class="fas fa-hard-hat"></i> Manpower / Labor Summary</h4>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:12px;">
+                    <div style="background:#fff;padding:10px;border-radius:8px;text-align:center;border:1px solid #e9d5ff;">
+                        <div style="font-size:0.72rem;color:#6b7280;">Total Labor Hours</div>
+                        <div style="font-size:1.1rem;font-weight:700;color:#7c3aed;">${fmtNum(manpower.totalLaborHours || 0)}</div>
+                    </div>
+                    <div style="background:#fff;padding:10px;border-radius:8px;text-align:center;border:1px solid #e9d5ff;">
+                        <div style="font-size:0.72rem;color:#6b7280;">Total Labor Cost</div>
+                        <div style="font-size:1.1rem;font-weight:700;color:#7c3aed;">${curr}${fmtNum(manpower.totalLaborCost || 0)}</div>
+                    </div>
+                    <div style="background:#fff;padding:10px;border-radius:8px;text-align:center;border:1px solid #e9d5ff;">
+                        <div style="font-size:0.72rem;color:#6b7280;">Total Material Cost</div>
+                        <div style="font-size:1.1rem;font-weight:700;color:#1e40af;">${curr}${fmtNum(manpower.totalMaterialCost || 0)}</div>
+                    </div>
+                    <div style="background:#fff;padding:10px;border-radius:8px;text-align:center;border:1px solid #e9d5ff;">
+                        <div style="font-size:0.72rem;color:#6b7280;">Equipment Cost</div>
+                        <div style="font-size:1.1rem;font-weight:700;color:#b45309;">${curr}${fmtNum(manpower.totalEquipmentCost || 0)}</div>
+                    </div>
+                </div>
+                ${manpower.estimatedProjectDuration ? `<div style="font-size:0.85rem;color:#475569;margin-bottom:10px;"><i class="fas fa-calendar-alt"></i> Est. Duration: <strong>${manpower.estimatedProjectDuration}</strong></div>` : ''}
+                ${crewBreakdown.length > 0 ? `<div style="overflow-x:auto;"><table class="air-line-table" style="font-size:0.82rem;width:100%;">
+                    <thead><tr><th>Trade</th><th>Crew</th><th style="text-align:center;">Headcount</th><th style="text-align:center;">Weeks</th><th style="text-align:right;">Labor Hours</th><th style="text-align:right;">Labor Cost</th></tr></thead>
+                    <tbody>${crewBreakdown.map(c => `<tr>
+                        <td style="font-weight:600;">${c.trade || '-'}</td>
+                        <td style="color:#6b7280;">${c.crew || '-'}</td>
+                        <td style="text-align:center;">${c.headcount || 0}</td>
+                        <td style="text-align:center;">${c.durationWeeks || 0}</td>
+                        <td style="text-align:right;">${fmtNum(c.laborHours || 0)}</td>
+                        <td style="text-align:right;font-weight:600;">${curr}${fmtNum(c.laborCost || 0)}</td>
+                    </tr>`).join('')}</tbody>
+                    <tfoot><tr style="background:#f5f3ff;font-weight:700;"><td colspan="4">Total</td><td style="text-align:right;">${fmtNum(manpower.totalLaborHours || 0)}</td><td style="text-align:right;color:#7c3aed;">${curr}${fmtNum(manpower.totalLaborCost || 0)}</td></tr></tfoot>
+                </table></div>` : ''}
+            </div>`;
+        }
+
+        // BOQ Markups
+        const markups = matSchedule.boqMarkups || {};
+        let markupsHTML = '';
+        if (markups.grandTotalWithMarkups > 0 || markups.subtotalDirectCost > 0) {
+            const mkItems = [
+                {label:'General Conditions', pct:markups.generalConditionsPercent, amt:markups.generalConditions},
+                {label:'Overhead', pct:markups.overheadPercent, amt:markups.overhead},
+                {label:'Profit', pct:markups.profitPercent, amt:markups.profit},
+                {label:'Contingency', pct:markups.contingencyPercent, amt:markups.contingency},
+                {label:'Escalation', pct:markups.escalationPercent, amt:markups.escalation},
+            ];
+            markupsHTML = `<div style="margin-top:20px;padding:16px;background:#fefce8;border:1px solid #fde68a;border-radius:10px;">
+                <h4 style="margin-bottom:12px;color:#92400e;"><i class="fas fa-percentage"></i> BOQ Markups & Final Total</h4>
+                <div style="display:flex;flex-direction:column;gap:6px;">
+                    <div style="display:flex;justify-content:space-between;padding:8px 12px;background:#fff;border-radius:6px;font-weight:600;">
+                        <span>Subtotal (Direct Costs)</span><span style="color:#1e40af;">${curr}${fmtNum(markups.subtotalDirectCost || 0)}</span>
+                    </div>
+                    ${mkItems.filter(m => m.amt > 0 || m.pct > 0).map(m => `<div style="display:flex;justify-content:space-between;padding:6px 12px;font-size:0.88rem;">
+                        <span>${m.label} <span style="color:#6b7280;">(${m.pct || 0}%)</span></span><span>${curr}${fmtNum(m.amt || 0)}</span>
+                    </div>`).join('')}
+                    <div style="display:flex;justify-content:space-between;padding:6px 12px;font-size:0.88rem;border-top:1px solid #fde68a;">
+                        <span style="font-weight:600;">Total Markups</span><span style="font-weight:600;">${curr}${fmtNum(markups.totalMarkups || 0)}</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;padding:10px 12px;background:#92400e;color:#fff;border-radius:6px;font-weight:700;font-size:1.05rem;">
+                        <span>Grand Total (with Markups)</span><span>${curr}${fmtNum(markups.grandTotalWithMarkups || 0)}</span>
+                    </div>
+                </div>
+            </div>`;
+        }
+
         const grandMatCost = matSchedule.grandTotalMaterialCost || 0;
         materialScheduleHTML = `
             <div class="air-section">
@@ -4431,6 +4517,8 @@ function renderAIEstimateResult(estimate, projectInfo) {
                 ${roofTableHTML}
                 ${siteTableHTML}
                 ${otherMatHTML}
+                ${manpowerHTML}
+                ${markupsHTML}
             </div>`;
     }
 
