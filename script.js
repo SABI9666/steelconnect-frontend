@@ -3918,17 +3918,72 @@ function renderAIQuestionnaire(questionData, projectInfo) {
                 <form id="aiq-form" class="aiq-form">
                     ${groupsHTML}
                     <div class="aiq-submit-section">
+                        <div class="aiq-tier-section">
+                            <h3 class="aiq-tier-title"><i class="fas fa-layer-group"></i> Choose Estimation Mode</h3>
+                            <div class="aiq-tier-cards">
+                                <label class="aiq-tier-card" data-tier="quick">
+                                    <input type="radio" name="estimationTier" value="quick" class="aiq-tier-radio" />
+                                    <div class="aiq-tier-icon"><i class="fas fa-bolt"></i></div>
+                                    <div class="aiq-tier-name">Quick</div>
+                                    <div class="aiq-tier-cost">Free</div>
+                                    <div class="aiq-tier-desc">Instant estimate from regional cost database. No AI cost. Best for feasibility studies.</div>
+                                    <div class="aiq-tier-accuracy">Accuracy: ~30-50%</div>
+                                    <div class="aiq-tier-time"><i class="fas fa-clock"></i> Instant</div>
+                                </label>
+                                <label class="aiq-tier-card selected" data-tier="standard">
+                                    <input type="radio" name="estimationTier" value="standard" class="aiq-tier-radio" checked />
+                                    <div class="aiq-tier-badge">Recommended</div>
+                                    <div class="aiq-tier-icon"><i class="fas fa-brain"></i></div>
+                                    <div class="aiq-tier-name">Standard</div>
+                                    <div class="aiq-tier-cost">Low AI Cost</div>
+                                    <div class="aiq-tier-desc">AI analyzes your drawings in a single pass. Great balance of cost and accuracy.</div>
+                                    <div class="aiq-tier-accuracy">Accuracy: ~15-25%</div>
+                                    <div class="aiq-tier-time"><i class="fas fa-clock"></i> 15-30 seconds</div>
+                                </label>
+                                <label class="aiq-tier-card" data-tier="detailed">
+                                    <input type="radio" name="estimationTier" value="detailed" class="aiq-tier-radio" />
+                                    <div class="aiq-tier-icon"><i class="fas fa-microscope"></i></div>
+                                    <div class="aiq-tier-name">Detailed</div>
+                                    <div class="aiq-tier-cost">Higher AI Cost</div>
+                                    <div class="aiq-tier-desc">5-pass deep analysis with sheet classification, extraction, takeoff, costing & validation.</div>
+                                    <div class="aiq-tier-accuracy">Accuracy: ~5-15%</div>
+                                    <div class="aiq-tier-time"><i class="fas fa-clock"></i> 1-3 minutes</div>
+                                </label>
+                            </div>
+                        </div>
                         <button type="button" id="aiq-generate-btn" class="aiq-generate-btn" onclick="submitAIQuestionnaire()">
-                            <i class="fas fa-wand-magic-sparkles"></i> Generate AI Estimate
+                            <i class="fas fa-wand-magic-sparkles"></i> Generate Estimate
                             <span class="aiq-gen-badge">Powered by Claude AI</span>
                         </button>
-                        <p class="aiq-note"><i class="fas fa-clock"></i> Generation takes 15-30 seconds for a comprehensive estimate</p>
+                        <p class="aiq-note" id="aiq-tier-note"><i class="fas fa-clock"></i> Standard mode: 15-30 seconds for a comprehensive estimate</p>
                     </div>
                 </form>
             </div>
         </div>`;
     // Store project info for the generate step
     appState._aiProjectInfo = projectInfo;
+
+    // Setup tier card selection
+    document.querySelectorAll('.aiq-tier-card').forEach(card => {
+        card.addEventListener('click', function() {
+            document.querySelectorAll('.aiq-tier-card').forEach(c => c.classList.remove('selected'));
+            this.classList.add('selected');
+            this.querySelector('.aiq-tier-radio').checked = true;
+            const tier = this.dataset.tier;
+            const note = document.getElementById('aiq-tier-note');
+            const btn = document.getElementById('aiq-generate-btn');
+            if (tier === 'quick') {
+                note.innerHTML = '<i class="fas fa-bolt"></i> Quick mode: Instant estimate using cost database (zero AI cost)';
+                btn.innerHTML = '<i class="fas fa-bolt"></i> Generate Quick Estimate <span class="aiq-gen-badge">Free - No AI Cost</span>';
+            } else if (tier === 'standard') {
+                note.innerHTML = '<i class="fas fa-clock"></i> Standard mode: 15-30 seconds for a comprehensive estimate';
+                btn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> Generate Estimate <span class="aiq-gen-badge">Powered by Claude AI</span>';
+            } else {
+                note.innerHTML = '<i class="fas fa-clock"></i> Detailed mode: 1-3 minutes for maximum accuracy multi-pass analysis';
+                btn.innerHTML = '<i class="fas fa-microscope"></i> Generate Detailed Estimate <span class="aiq-gen-badge">Multi-Pass AI Analysis</span>';
+            }
+        });
+    });
 }
 
 async function submitAIQuestionnaire() {
@@ -3967,11 +4022,19 @@ async function submitAIQuestionnaire() {
     }
 
     const projectInfo = appState._aiProjectInfo || {};
+    const selectedTier = form.querySelector('input[name="estimationTier"]:checked')?.value || 'standard';
     btn.disabled = true;
-    btn.innerHTML = '<div class="btn-spinner"></div> AI is analyzing your project...';
 
-    // Show immersive loading screen
-    showAIGeneratingOverlay();
+    if (selectedTier === 'quick') {
+        btn.innerHTML = '<div class="btn-spinner"></div> Generating quick estimate...';
+    } else {
+        btn.innerHTML = '<div class="btn-spinner"></div> AI is analyzing your project...';
+    }
+
+    // Show immersive loading screen (skip for quick mode)
+    if (selectedTier !== 'quick') {
+        showAIGeneratingOverlay();
+    }
 
     try {
         // Use FormData to include actual files alongside project info
@@ -3981,8 +4044,10 @@ async function submitAIQuestionnaire() {
         formData.append('designStandard', projectInfo.designStandard || '');
         formData.append('projectType', projectInfo.projectType || '');
         formData.append('region', projectInfo.region || '');
+        formData.append('totalArea', answers.totalArea || projectInfo.totalArea || '');
         formData.append('answers', JSON.stringify(answers));
         formData.append('fileNames', JSON.stringify(projectInfo.fileNames || []));
+        formData.append('estimationTier', selectedTier);
 
         // Attach actual files for upload to server - validate files are still valid
         let fileCount = 0;
@@ -4002,23 +4067,26 @@ async function submitAIQuestionnaire() {
         console.log('[AI-SUBMIT] Submitting with', fileCount, 'valid files');
 
         const resp = await apiCall('/estimation/ai/generate', 'POST', formData);
-        hideAIGeneratingOverlay();
+        if (selectedTier !== 'quick') hideAIGeneratingOverlay();
         if (resp.success && resp.data) {
             if (resp.warning) {
                 showNotification(resp.warning, 'warning');
             }
+            if (resp.cached) {
+                showNotification('Loaded from cache - no additional AI cost!', 'success');
+            }
             renderAIEstimateResult(resp.data, projectInfo);
         } else {
-            showNotification(resp.message || 'AI estimate generation failed. Please try again.', 'error');
+            showNotification(resp.message || 'Estimate generation failed. Please try again.', 'error');
             btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> Generate AI Estimate <span class="aiq-gen-badge">Powered by Claude AI</span>';
+            btn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> Generate Estimate <span class="aiq-gen-badge">Powered by Claude AI</span>';
         }
     } catch (err) {
-        hideAIGeneratingOverlay();
-        console.error('AI Generate error:', err);
-        showNotification('AI generation failed: ' + (err.message || 'Please try again.'), 'error');
+        if (selectedTier !== 'quick') hideAIGeneratingOverlay();
+        console.error('Estimate error:', err);
+        showNotification('Estimation failed: ' + (err.message || 'Please try again.'), 'error');
         btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> Generate AI Estimate <span class="aiq-gen-badge">Powered by Claude AI</span>';
+        btn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> Generate Estimate <span class="aiq-gen-badge">Powered by Claude AI</span>';
     }
 }
 

@@ -5929,6 +5929,34 @@ body {
 
 /* Generate button */
 .aiq-submit-section { text-align: center; padding: 1rem 0; }
+
+/* Estimation Tier Selection Cards */
+.aiq-tier-section { margin-bottom: 2rem; text-align: left; }
+.aiq-tier-title { font-size: 1.1rem; font-weight: 700; color: #1e293b; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px; justify-content: center; }
+.aiq-tier-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 1.5rem; }
+.aiq-tier-card {
+    position: relative; padding: 20px 16px; border: 2px solid #e2e8f0; border-radius: 16px;
+    background: #fff; cursor: pointer; transition: all 0.3s; text-align: center;
+}
+.aiq-tier-card:hover { border-color: #818cf8; box-shadow: 0 4px 20px rgba(99,102,241,0.15); transform: translateY(-2px); }
+.aiq-tier-card.selected { border-color: #6366f1; background: linear-gradient(135deg, #f5f3ff, #ede9fe); box-shadow: 0 4px 20px rgba(99,102,241,0.25); }
+.aiq-tier-radio { display: none; }
+.aiq-tier-icon { font-size: 2rem; margin-bottom: 8px; color: #6366f1; }
+.aiq-tier-card.selected .aiq-tier-icon { color: #4f46e5; }
+.aiq-tier-name { font-size: 1.1rem; font-weight: 700; color: #1e293b; margin-bottom: 4px; }
+.aiq-tier-cost { font-size: 0.85rem; font-weight: 600; color: #059669; margin-bottom: 8px; }
+.aiq-tier-card[data-tier="detailed"] .aiq-tier-cost { color: #d97706; }
+.aiq-tier-desc { font-size: 0.8rem; color: #64748b; line-height: 1.4; margin-bottom: 8px; min-height: 52px; }
+.aiq-tier-accuracy { font-size: 0.75rem; font-weight: 600; color: #475569; background: #f1f5f9; padding: 4px 10px; border-radius: 12px; display: inline-block; margin-bottom: 6px; }
+.aiq-tier-time { font-size: 0.75rem; color: #94a3b8; }
+.aiq-tier-badge {
+    position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: linear-gradient(135deg, #7c3aed, #6366f1);
+    color: #fff; font-size: 0.7rem; font-weight: 700; padding: 3px 12px; border-radius: 12px; white-space: nowrap;
+}
+@media (max-width: 768px) {
+    .aiq-tier-cards { grid-template-columns: 1fr; gap: 12px; }
+    .aiq-tier-desc { min-height: auto; }
+}
 .aiq-generate-btn {
     display: inline-flex; align-items: center; gap: 12px; padding: 18px 44px; font-size: 1.1rem;
     font-weight: 700; color: #fff; border: none; border-radius: 16px; cursor: pointer;
