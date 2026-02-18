@@ -704,40 +704,24 @@
                                 </div>
                             </div>
 
-                            <!-- Background music (royalty-free energetic track) -->
-                            <audio id="demoBgMusic" preload="auto" loop>
-                                <source src="https://cdn.pixabay.com/audio/2022/10/25/audio_33f0f26491.mp3" type="audio/mpeg">
-                                <source src="https://cdn.pixabay.com/audio/2023/07/06/audio_e4dfc2adf5.mp3" type="audio/mpeg">
-                            </audio>
-
                             <!-- ===== STATE 2: SLIDESHOW + AI HUD ===== -->
                             <div class="demo-state demo-state-slides" id="demoStateSlides" style="display:none">
                                 <!-- Slides -->
                                 <div class="demo-slides" id="demoSlides">
-                                    <div class="demo-slide demo-slide-active" style="background-image:url('https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1920&q=90')">
-                                        <div class="demo-slide-caption"><span class="demo-caption-tag"><i class="fas fa-tachometer-alt"></i> Smart Dashboard</span><span class="demo-caption-text">Personalized dashboard — real-time activity, notifications &amp; quick actions</span></div>
-                                    </div>
-                                    <div class="demo-slide" style="background-image:url('https://images.unsplash.com/photo-1677442136019-21780ecad995?w=1920&q=90')">
-                                        <div class="demo-slide-caption"><span class="demo-caption-tag"><i class="fas fa-brain"></i> AI Estimation</span><span class="demo-caption-text">Upload PDF drawings — AI generates cost estimates, BOQ &amp; timelines instantly</span></div>
-                                    </div>
-                                    <div class="demo-slide" style="background-image:url('https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=1920&q=90')">
-                                        <div class="demo-slide-caption"><span class="demo-caption-tag"><i class="fas fa-file-pdf"></i> PDF Analysis</span><span class="demo-caption-text">AI reads your drawings — extracts dimensions, quantities &amp; material lists automatically</span></div>
-                                    </div>
-                                    <div class="demo-slide" style="background-image:url('https://images.unsplash.com/photo-1552664730-d307ca884978?w=1920&q=90')">
-                                        <div class="demo-slide-caption"><span class="demo-caption-tag"><i class="fas fa-briefcase"></i> Project Marketplace</span><span class="demo-caption-text">Post projects, receive competitive quotes &amp; hire verified steel designers</span></div>
-                                    </div>
-                                    <div class="demo-slide" style="background-image:url('https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=1920&q=90')">
-                                        <div class="demo-slide-caption"><span class="demo-caption-tag"><i class="fas fa-comments"></i> Real-Time Messaging</span><span class="demo-caption-text">Chat with designers &amp; contractors — file sharing, project context &amp; instant delivery</span></div>
-                                    </div>
-                                    <div class="demo-slide" style="background-image:url('https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=1920&q=90')">
-                                        <div class="demo-slide-caption"><span class="demo-caption-tag"><i class="fas fa-users"></i> Community Hub</span><span class="demo-caption-text">Professional network — share updates, showcase work &amp; connect with steel industry experts</span></div>
-                                    </div>
-                                    <div class="demo-slide" style="background-image:url('https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1920&q=90')">
-                                        <div class="demo-slide-caption"><span class="demo-caption-tag"><i class="fas fa-chart-bar"></i> Analytics &amp; Reports</span><span class="demo-caption-text">Business analytics dashboards — track projects, revenue &amp; performance metrics</span></div>
-                                    </div>
-                                    <div class="demo-slide" style="background-image:url('https://images.unsplash.com/photo-1507925921958-8a62f3d1a50d?w=1920&q=90')">
-                                        <div class="demo-slide-caption"><span class="demo-caption-tag"><i class="fas fa-tasks"></i> Project Tracking</span><span class="demo-caption-text">Monitor milestones, timelines &amp; progress — real-time collaboration with your team</span></div>
-                                    </div>
+                                    <div class="demo-slide demo-slide-active" style="background-image:url('https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1920&q=90')"></div>
+                                    <div class="demo-slide" style="background-image:url('https://images.unsplash.com/photo-1677442136019-21780ecad995?w=1920&q=90')"></div>
+                                    <div class="demo-slide" style="background-image:url('https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=1920&q=90')"></div>
+                                    <div class="demo-slide" style="background-image:url('https://images.unsplash.com/photo-1552664730-d307ca884978?w=1920&q=90')"></div>
+                                    <div class="demo-slide" style="background-image:url('https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=1920&q=90')"></div>
+                                    <div class="demo-slide" style="background-image:url('https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=1920&q=90')"></div>
+                                    <div class="demo-slide" style="background-image:url('https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1920&q=90')"></div>
+                                    <div class="demo-slide" style="background-image:url('https://images.unsplash.com/photo-1507925921958-8a62f3d1a50d?w=1920&q=90')"></div>
+                                </div>
+                                <!-- CAPTION BAR — separate overlay, highest z-index, always on top -->
+                                <div class="demo-caption-bar" id="demoCaptionBar">
+                                    <div class="demo-caption-num" id="demoCaptionNum">1 / 8</div>
+                                    <span class="demo-caption-tag" id="demoCaptionTag"><i class="fas fa-tachometer-alt"></i> Smart Dashboard</span>
+                                    <span class="demo-caption-text" id="demoCaptionText">Personalized dashboard — real-time activity, notifications &amp; quick actions</span>
                                 </div>
                                 <!-- AI HUD overlay -->
                                 <div class="demo-ai-hud">
@@ -2297,9 +2281,140 @@
             var stateSlides = document.getElementById('demoStateSlides');
             var stateGate   = document.getElementById('demoStateGate');
 
-            // ---- Helpers ----
+            // Caption data for each slide
+            var captions = [
+                { icon: 'fa-tachometer-alt', tag: 'Smart Dashboard', text: 'Personalized dashboard \u2014 real-time activity, notifications & quick actions' },
+                { icon: 'fa-brain', tag: 'AI Estimation', text: 'Upload PDF drawings \u2014 AI generates cost estimates, BOQ & timelines instantly' },
+                { icon: 'fa-file-pdf', tag: 'PDF Analysis', text: 'AI reads your drawings \u2014 extracts dimensions, quantities & material lists' },
+                { icon: 'fa-briefcase', tag: 'Project Marketplace', text: 'Post projects, receive competitive quotes & hire verified steel designers' },
+                { icon: 'fa-comments', tag: 'Real-Time Messaging', text: 'Chat with designers & contractors \u2014 file sharing & instant delivery' },
+                { icon: 'fa-users', tag: 'Community Hub', text: 'Professional network \u2014 share updates, showcase work & connect with experts' },
+                { icon: 'fa-chart-bar', tag: 'Analytics & Reports', text: 'Business analytics dashboards \u2014 track projects, revenue & performance' },
+                { icon: 'fa-tasks', tag: 'Project Tracking', text: 'Monitor milestones, timelines & progress \u2014 real-time team collaboration' }
+            ];
+
+            // ======== WEB AUDIO API MUSIC ENGINE ========
+            var audioCtx = null;
+            var musicGain = null;
+            var musicPlaying = false;
+            var musicMuted = false;
+            var beatInterval = null;
+
+            function initMusic() {
+                if (audioCtx) return;
+                try {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    musicGain = audioCtx.createGain();
+                    musicGain.gain.value = 0.25;
+                    musicGain.connect(audioCtx.destination);
+                } catch(e) { audioCtx = null; }
+            }
+
+            function playNote(freq, startT, dur, type, vol) {
+                if (!audioCtx || !musicGain) return;
+                var osc = audioCtx.createOscillator();
+                var g = audioCtx.createGain();
+                osc.type = type || 'sine';
+                osc.frequency.value = freq;
+                g.gain.setValueAtTime(vol || 0.3, startT);
+                g.gain.exponentialRampToValueAtTime(0.001, startT + dur);
+                osc.connect(g);
+                g.connect(musicGain);
+                osc.start(startT);
+                osc.stop(startT + dur);
+            }
+
+            function playNoise(startT, dur, vol) {
+                if (!audioCtx || !musicGain) return;
+                var bufSize = audioCtx.sampleRate * dur;
+                var buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+                var data = buf.getChannelData(0);
+                for (var i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
+                var src = audioCtx.createBufferSource();
+                src.buffer = buf;
+                var hp = audioCtx.createBiquadFilter();
+                hp.type = 'highpass';
+                hp.frequency.value = 8000;
+                var g = audioCtx.createGain();
+                g.gain.setValueAtTime(vol || 0.08, startT);
+                g.gain.exponentialRampToValueAtTime(0.001, startT + dur);
+                src.connect(hp);
+                hp.connect(g);
+                g.connect(musicGain);
+                src.start(startT);
+            }
+
+            function scheduleBeat() {
+                if (!audioCtx) return;
+                var bpm = 120;
+                var beat = 60 / bpm;
+                var now = audioCtx.currentTime + 0.05;
+                // 2-bar loop (8 beats)
+                for (var i = 0; i < 8; i++) {
+                    var t = now + i * beat;
+                    // Kick on 1 and 5
+                    if (i === 0 || i === 4) {
+                        playNote(55, t, 0.3, 'sine', 0.5);
+                        playNote(110, t, 0.08, 'sine', 0.3);
+                    }
+                    // Snare on 3 and 7
+                    if (i === 2 || i === 6) {
+                        playNoise(t, 0.12, 0.1);
+                        playNote(180, t, 0.08, 'triangle', 0.15);
+                    }
+                    // Hi-hat every beat
+                    playNoise(t, 0.04, 0.05);
+                    // Off-beat hi-hat
+                    playNoise(t + beat * 0.5, 0.03, 0.03);
+                    // Bass line
+                    if (i === 0) playNote(82.4, t, beat * 2, 'sawtooth', 0.08);
+                    if (i === 2) playNote(73.4, t, beat * 1.5, 'sawtooth', 0.06);
+                    if (i === 4) playNote(98, t, beat * 2, 'sawtooth', 0.08);
+                    if (i === 6) playNote(110, t, beat * 1.5, 'sawtooth', 0.06);
+                }
+                // Pad chord (ambient)
+                playNote(261.6, now, beat * 8, 'sine', 0.04);
+                playNote(329.6, now, beat * 8, 'sine', 0.03);
+                playNote(392, now, beat * 8, 'sine', 0.03);
+            }
+
+            function startMusic() {
+                initMusic();
+                if (!audioCtx) return;
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                musicPlaying = true;
+                scheduleBeat();
+                beatInterval = setInterval(function() {
+                    if (musicPlaying && !musicMuted) scheduleBeat();
+                }, (60 / 120) * 8 * 1000); // schedule every 8 beats
+            }
+
+            function stopMusic() {
+                musicPlaying = false;
+                if (beatInterval) { clearInterval(beatInterval); beatInterval = null; }
+            }
+
+            // ======== HELPERS ========
             function getSlides() {
                 return document.querySelectorAll('#demoSlides .demo-slide');
+            }
+
+            function updateCaption(idx) {
+                var c = captions[idx];
+                if (!c) return;
+                var tag = document.getElementById('demoCaptionTag');
+                var txt = document.getElementById('demoCaptionText');
+                var num = document.getElementById('demoCaptionNum');
+                var bar = document.getElementById('demoCaptionBar');
+                if (tag) tag.innerHTML = '<i class="fas ' + c.icon + '"></i> ' + c.tag;
+                if (txt) txt.textContent = c.text;
+                if (num) num.textContent = (idx + 1) + ' / ' + TOTAL_SLIDES;
+                // Retrigger animation
+                if (bar) {
+                    bar.classList.remove('demo-caption-animate');
+                    void bar.offsetWidth;
+                    bar.classList.add('demo-caption-animate');
+                }
             }
 
             function goToSlide(idx) {
@@ -2312,6 +2427,7 @@
                     }
                 });
                 currentSlide = idx;
+                updateCaption(idx);
             }
 
             function animateCounters() {
@@ -2347,11 +2463,11 @@
 
             function resetToStart() {
                 stopTimers();
+                stopMusic();
                 var fill = document.getElementById('demoProgressFill');
                 if (fill) fill.style.width = '0%';
                 goToSlide(0);
                 slideTransitions = 0;
-                // Show STATE 1
                 if (stateSlides) stateSlides.style.display = 'none';
                 if (stateGate) stateGate.style.display = 'none';
                 if (statePlay) statePlay.style.display = 'flex';
@@ -2367,9 +2483,7 @@
                     // Gate check
                     if (!demoUnlocked && slideTransitions >= GATE_AFTER) {
                         stopTimers();
-                        // Pause music
-                        var m = document.getElementById('demoBgMusic');
-                        if (m) m.pause();
+                        stopMusic();
                         // STATE 2 -> STATE 3
                         if (stateSlides) stateSlides.style.display = 'none';
                         if (stateGate) stateGate.style.display = 'flex';
@@ -2382,7 +2496,6 @@
 
                     if (nextSlide >= TOTAL_SLIDES) {
                         if (demoUnlocked) {
-                            // After unlock: loop continuously
                             goToSlide(0);
                             currentSlide = 0;
                         } else {
@@ -2397,7 +2510,6 @@
             // ---- demoPlay: STATE 1 -> STATE 2 ----
             window.demoPlay = function() {
                 if (!statePlay || !stateSlides) return;
-                // Hide STATE 1, show STATE 2
                 statePlay.style.display = 'none';
                 stateSlides.style.display = 'flex';
 
@@ -2406,14 +2518,7 @@
                 goToSlide(0);
                 animateCounters();
                 startSlideshow();
-
-                // Start background music
-                var music = document.getElementById('demoBgMusic');
-                if (music) {
-                    music.volume = 0.35;
-                    music.currentTime = 0;
-                    music.play().catch(function(){});
-                }
+                startMusic();
             };
 
             // ---- demoUnlock: STATE 3 -> STATE 2, resume ----
@@ -2438,14 +2543,12 @@
                     });
                 } catch (err) { /* silent */ }
 
-                // Sync all gates via localStorage
                 localStorage.setItem('sc_video_unlocked', 'true');
                 localStorage.setItem('sc_prospect_captured', 'true');
                 localStorage.setItem('sc_popup_dismissed', 'true');
                 localStorage.setItem('sc_bar_dismissed', 'true');
                 demoUnlocked = true;
 
-                // Hide other gates on the page
                 var contentGate = document.getElementById('contentGate');
                 var gatedContent = document.getElementById('gatedContent');
                 if (contentGate) contentGate.style.display = 'none';
@@ -2455,25 +2558,22 @@
                 var pPopup = document.getElementById('prospectPopup');
                 if (pPopup) pPopup.style.display = 'none';
 
-                // STATE 3 -> STATE 2, resume slideshow
+                // STATE 3 -> STATE 2, resume slideshow + music
                 if (stateGate) stateGate.style.display = 'none';
                 if (stateSlides) stateSlides.style.display = 'flex';
                 startSlideshow();
-
-                // Resume music
-                var music = document.getElementById('demoBgMusic');
-                if (music) music.play().catch(function(){});
+                startMusic();
 
                 return false;
             };
 
             // ---- Music mute toggle ----
             window.demoToggleMute = function() {
-                var music = document.getElementById('demoBgMusic');
                 var btn = document.getElementById('demoMuteBtn');
-                if (!music || !btn) return;
-                music.muted = !music.muted;
-                btn.innerHTML = music.muted ? '<i class="fas fa-volume-mute"></i>' : '<i class="fas fa-volume-up"></i>';
+                if (!btn) return;
+                musicMuted = !musicMuted;
+                if (musicGain) musicGain.gain.value = musicMuted ? 0 : 0.25;
+                btn.innerHTML = musicMuted ? '<i class="fas fa-volume-mute"></i>' : '<i class="fas fa-volume-up"></i>';
             };
 
             // ---- Fullscreen toggle ----
