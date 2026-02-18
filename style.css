@@ -8681,10 +8681,10 @@ body {
     0% { transform: scale(1.0); }
     100% { transform: scale(1.06); }
 }
-/* ===== CAPTION BAR — separate overlay, ABOVE all video layers ===== */
+/* ===== CAPTION BAR — TOP of video, above all layers ===== */
 .demo-caption-bar {
     position: absolute;
-    bottom: 0;
+    top: 0;
     left: 0;
     right: 0;
     z-index: 8;
@@ -8692,10 +8692,10 @@ body {
     align-items: center;
     gap: 14px;
     background: linear-gradient(90deg, rgba(15,23,42,0.97) 0%, rgba(30,27,75,0.95) 100%);
-    padding: 14px 20px;
-    border-top: 2px solid rgba(96,165,250,0.3);
+    padding: 16px 20px;
+    border-bottom: 2px solid rgba(96,165,250,0.3);
     opacity: 0;
-    transform: translateY(100%);
+    transform: translateY(-100%);
 }
 .demo-caption-bar.demo-caption-animate {
     animation: demo-caption-slide 0.5s cubic-bezier(0.22,1,0.36,1) forwards;
@@ -8733,10 +8733,11 @@ body {
 }
 .demo-caption-tag i { font-size: 11px; }
 .demo-caption-text {
-    font-size: 16px;
-    font-weight: 600;
+    font-size: 17px;
+    font-weight: 700;
     color: #fff;
-    line-height: 1.3;
+    line-height: 1.35;
+    letter-spacing: 0.2px;
 }
 
 /* AI HUD overlay */
@@ -8748,7 +8749,7 @@ body {
 }
 .demo-ai-lines {
     position: absolute;
-    top: 16px;
+    top: 62px;
     right: 16px;
     display: flex;
     flex-direction: column;
@@ -8792,7 +8793,7 @@ body {
 
 .demo-ai-counters {
     position: absolute;
-    bottom: 80px;
+    bottom: 36px;
     left: 16px;
     display: flex;
     gap: 16px;
@@ -8825,13 +8826,14 @@ body {
     font-weight: 600;
 }
 
-/* Progress bar — sits just above the caption bar */
+/* Progress bar — bottom of player */
 .demo-progress {
     position: absolute;
-    bottom: 50px;
+    bottom: 0;
     left: 0; right: 0;
     z-index: 9;
-    padding: 0 12px 4px;
+    padding: 0 12px 10px;
+    background: linear-gradient(transparent, rgba(0,0,0,0.5));
 }
 .demo-progress-track {
     position: relative;
@@ -8868,7 +8870,7 @@ body {
 /* Controls bar (mute + fullscreen) */
 .demo-controls {
     position: absolute;
-    top: 12px;
+    bottom: 32px;
     right: 12px;
     display: flex;
     gap: 8px;
@@ -9089,14 +9091,14 @@ body {
     .demo-play-ripple { width: 68px; height: 68px; }
     .demo-chapter-pills { display: none; }
     .demo-ai-lines { display: none; }
-    .demo-ai-counters { gap: 8px; bottom: 64px; left: 8px; }
+    .demo-ai-counters { gap: 8px; bottom: 30px; left: 8px; }
     .demo-counter-card { padding: 6px 10px; }
     .demo-counter-val { font-size: 14px; }
     .demo-caption-bar { padding: 10px 14px; gap: 8px; }
     .demo-caption-num { font-size: 9px; padding: 2px 6px; }
     .demo-caption-tag { font-size: 9px; padding: 4px 10px; }
     .demo-caption-text { font-size: 12px; }
-    .demo-progress { bottom: 40px; }
+    .demo-progress { bottom: 0; }
     .demo-gate-title { font-size: 18px; }
     .demo-gate-desc { font-size: 12px; }
     .demo-gate-chips { display: none; }
@@ -9113,7 +9115,7 @@ body {
     .demo-caption-bar { flex-wrap: wrap; gap: 6px; padding: 8px 10px; }
     .demo-caption-num { display: none; }
     .demo-caption-text { font-size: 11px; }
-    .demo-progress { bottom: 50px; }
+    .demo-progress { bottom: 0; }
     .demo-gate-content { padding: 20px 16px; }
     .demo-gate-title { font-size: 16px; }
 }
