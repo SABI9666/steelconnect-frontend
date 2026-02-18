@@ -328,6 +328,11 @@ function initializeApp() {
         }
     } else {
         showLandingPageView();
+        // Auto-open register modal if URL has ?action=register (from invite email)
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('action') === 'register') {
+            showAuthModal('register');
+        }
     }
 
     initializeHeaderRotation();
