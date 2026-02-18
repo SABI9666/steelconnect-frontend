@@ -663,179 +663,151 @@
                 </div>
             </div>
 
-            <!-- Cinematic Video Showcase Section -->
-            <section class="cv-section" id="videoShowcase">
-                <!-- Ambient background effects -->
-                <div class="cv-bg-glow cv-glow-1"></div>
-                <div class="cv-bg-glow cv-glow-2"></div>
+            <!-- ========== DEMO VIDEO / 3-STATE ARCHITECTURE ========== -->
+            <section class="demo-section" id="videoShowcase">
+                <!-- Ambient background glows -->
+                <div class="demo-glow demo-glow-1"></div>
+                <div class="demo-glow demo-glow-2"></div>
 
-                <div class="cv-container">
+                <div class="demo-container">
                     <!-- Header -->
-                    <div class="cv-header">
-                        <div class="cv-live-badge"><span class="cv-live-dot"></span> PLATFORM PREVIEW</div>
-                        <h2 class="cv-title">See SteelConnect in Action</h2>
-                        <p class="cv-subtitle">Steel detailing, AI-powered estimation, drawing analysis & real-time collaboration — all in one platform</p>
+                    <div class="demo-header">
+                        <div class="demo-badge"><span class="demo-badge-dot"></span> PLATFORM PREVIEW</div>
+                        <h2 class="demo-title">See SteelConnect in Action</h2>
+                        <p class="demo-subtitle">Steel detailing, AI-powered estimation, drawing analysis &amp; real-time collaboration — all in one platform</p>
                     </div>
 
-                    <!-- Single Cinematic Video Player -->
-                    <div class="cv-theater">
-                        <div class="cv-player-wrap" id="cvPlayerWrap">
-                            <!-- Cinematic slideshow (guaranteed working, high-quality) -->
-                            <div class="cv-slideshow" id="cvSlideshow">
-                                <div class="cv-slide cv-slide-active" style="background-image:url('https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=1920&q=90')">
-                                    <div class="cv-slide-caption">
-                                        <span class="cv-caption-tag"><i class="fas fa-industry"></i> Steel Fabrication</span>
-                                        <span class="cv-caption-text">Industrial steel fabrication & welding</span>
-                                    </div>
-                                </div>
-                                <div class="cv-slide" style="background-image:url('https://images.unsplash.com/photo-1581094794329-c8112c4e5190?w=1920&q=90')">
-                                    <div class="cv-slide-caption">
-                                        <span class="cv-caption-tag"><i class="fas fa-drafting-compass"></i> Steel Detailing</span>
-                                        <span class="cv-caption-text">Precision structural steel detailing & connections</span>
-                                    </div>
-                                </div>
-                                <div class="cv-slide" style="background-image:url('https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=1920&q=90')">
-                                    <div class="cv-slide-caption">
-                                        <span class="cv-caption-tag"><i class="fas fa-brain"></i> AI Analysis</span>
-                                        <span class="cv-caption-text">AI-powered cost estimation & quantity takeoff</span>
-                                    </div>
-                                </div>
-                                <div class="cv-slide" style="background-image:url('https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=1920&q=90')">
-                                    <div class="cv-slide-caption">
-                                        <span class="cv-caption-tag"><i class="fas fa-file-pdf"></i> PDF Analysis</span>
-                                        <span class="cv-caption-text">Upload drawings — AI extracts BOQ & dimensions</span>
-                                    </div>
-                                </div>
-                                <div class="cv-slide" style="background-image:url('https://images.unsplash.com/photo-1565008447742-97f6f38c985c?w=1920&q=90')">
-                                    <div class="cv-slide-caption">
-                                        <span class="cv-caption-tag"><i class="fas fa-building"></i> Industrial Projects</span>
-                                        <span class="cv-caption-text">Warehouse, factory & PEB steel structures</span>
-                                    </div>
-                                </div>
-                                <div class="cv-slide" style="background-image:url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1920&q=90')">
-                                    <div class="cv-slide-caption">
-                                        <span class="cv-caption-tag"><i class="fas fa-city"></i> Commercial</span>
-                                        <span class="cv-caption-text">High-rise commercial steel frame construction</span>
-                                    </div>
-                                </div>
-                                <div class="cv-slide" style="background-image:url('https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=1920&q=90')">
-                                    <div class="cv-slide-caption">
-                                        <span class="cv-caption-tag"><i class="fas fa-hard-hat"></i> On-Site</span>
-                                        <span class="cv-caption-text">Real-time project tracking & collaboration</span>
-                                    </div>
-                                </div>
-                                <div class="cv-slide" style="background-image:url('https://images.unsplash.com/photo-1429497419816-9ca5cfb4571a?w=1920&q=90')">
-                                    <div class="cv-slide-caption">
-                                        <span class="cv-caption-tag"><i class="fas fa-users-cog"></i> Marketplace</span>
-                                        <span class="cv-caption-text">Connect with verified structural designers worldwide</span>
-                                    </div>
-                                </div>
-                                <!-- Animated overlays for AI feel -->
-                                <div class="cv-ai-overlay" id="cvAiOverlay" style="display:none;">
-                                    <div class="cv-ai-data">
-                                        <div class="cv-ai-line"><span class="cv-ai-dot green"></span> Analyzing structural members...</div>
-                                        <div class="cv-ai-line"><span class="cv-ai-dot blue"></span> Extracting dimensions & quantities...</div>
-                                        <div class="cv-ai-line"><span class="cv-ai-dot purple"></span> Calculating cost estimates...</div>
-                                        <div class="cv-ai-line"><span class="cv-ai-dot amber"></span> Generating BOQ report...</div>
-                                    </div>
-                                    <div class="cv-ai-counter" id="cvAiCounter">
-                                        <div class="cv-counter-item"><span class="cv-counter-val" id="cvCountMembers">0</span><span class="cv-counter-label">Members Detected</span></div>
-                                        <div class="cv-counter-item"><span class="cv-counter-val" id="cvCountTonnage">0</span><span class="cv-counter-label">Tons Steel</span></div>
-                                        <div class="cv-counter-item"><span class="cv-counter-val" id="cvCountCost">$0</span><span class="cv-counter-label">Est. Cost</span></div>
-                                    </div>
-                                </div>
-                            </div>
+                    <!-- Theater: player + side stats -->
+                    <div class="demo-theater">
+                        <div class="demo-player" id="demoPlayer">
 
-                            <!-- Play button (initial state) -->
-                            <div class="cv-play-overlay" id="cvPlayOverlay">
-                                <div class="cv-play-center" onclick="startCinematicVideo()">
-                                    <div class="cv-play-ripple"></div>
-                                    <div class="cv-play-ripple cv-ripple-2"></div>
-                                    <div class="cv-play-circle">
+                            <!-- ===== STATE 1: POSTER + PLAY BUTTON ===== -->
+                            <div class="demo-state demo-state-play" id="demoStatePlay" style="display:flex">
+                                <img class="demo-poster" src="https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=1920&q=90" alt="Steel construction preview">
+                                <div class="demo-poster-overlay"></div>
+                                <div class="demo-play-center" onclick="demoPlay()">
+                                    <div class="demo-play-ripple"></div>
+                                    <div class="demo-play-ripple demo-ripple-2"></div>
+                                    <div class="demo-play-circle" id="demoPlayCircle">
                                         <i class="fas fa-play"></i>
                                     </div>
                                 </div>
-                                <div class="cv-play-info">
-                                    <span class="cv-play-text">Click to Play</span>
-                                    <span class="cv-play-duration"><i class="fas fa-clock"></i> 3:24 Full Demo</span>
+                                <div class="demo-play-info">
+                                    <span class="demo-play-label">Watch Platform Demo</span>
+                                    <span class="demo-play-time"><i class="fas fa-clock"></i> 3:24 Full Preview</span>
                                 </div>
-                                <!-- Chapter previews on play overlay -->
-                                <div class="cv-chapters-preview">
-                                    <div class="cv-chapter-pill"><i class="fas fa-drafting-compass"></i> Steel Detailing</div>
-                                    <div class="cv-chapter-pill"><i class="fas fa-brain"></i> AI Estimation</div>
-                                    <div class="cv-chapter-pill"><i class="fas fa-file-pdf"></i> PDF Analysis</div>
-                                    <div class="cv-chapter-pill"><i class="fas fa-users-cog"></i> Designer Network</div>
-                                </div>
-                            </div>
-
-                            <!-- Cinematic progress bar -->
-                            <div class="cv-progress-wrap" id="cvProgressWrap" style="display:none;">
-                                <div class="cv-progress-track">
-                                    <div class="cv-progress-fill" id="cvProgressFill"></div>
-                                    <div class="cv-progress-gate" title="Preview ends here"></div>
-                                </div>
-                                <div class="cv-chapter-markers">
-                                    <span class="cv-marker active">Detailing</span>
-                                    <span class="cv-marker">AI Estimation</span>
-                                    <span class="cv-marker">PDF Analysis</span>
-                                    <span class="cv-marker">Marketplace</span>
+                                <div class="demo-chapter-pills">
+                                    <div class="demo-pill"><i class="fas fa-drafting-compass"></i> Steel Detailing</div>
+                                    <div class="demo-pill"><i class="fas fa-brain"></i> AI Estimation</div>
+                                    <div class="demo-pill"><i class="fas fa-file-pdf"></i> PDF Analysis</div>
+                                    <div class="demo-pill"><i class="fas fa-users-cog"></i> Designer Network</div>
                                 </div>
                             </div>
 
-                            <!-- Volume / fullscreen controls -->
-                            <div class="cv-controls" id="cvControls" style="display:none;">
-                                <button class="cv-ctrl-btn" onclick="toggleVideoMute()" id="cvMuteBtn" title="Unmute"><i class="fas fa-volume-mute"></i></button>
-                                <button class="cv-ctrl-btn" onclick="toggleVideoFullscreen()" title="Fullscreen"><i class="fas fa-expand"></i></button>
-                            </div>
-
-                            <!-- INLINE EMAIL GATE (shows directly over video when slideshow stops) -->
-                            <div class="cv-inline-gate" id="cvInlineGate">
-                                <div class="cv-ig-backdrop"></div>
-                                <div class="cv-ig-content">
-                                    <div class="cv-ig-icon"><i class="fas fa-pause"></i></div>
-                                    <h3 class="cv-ig-title">Want to see the full demo?</h3>
-                                    <p class="cv-ig-desc">Enter your email to continue watching — see AI estimation, PDF analysis, designer marketplace & more</p>
-                                    <div class="cv-ig-previews">
-                                        <div class="cv-ig-preview"><i class="fas fa-brain"></i><span>AI Cost Estimation</span></div>
-                                        <div class="cv-ig-preview"><i class="fas fa-file-pdf"></i><span>PDF Drawing Analysis</span></div>
-                                        <div class="cv-ig-preview"><i class="fas fa-drafting-compass"></i><span>Steel Detailing</span></div>
-                                        <div class="cv-ig-preview"><i class="fas fa-users-cog"></i><span>Designer Network</span></div>
+                            <!-- ===== STATE 2: SLIDESHOW + AI HUD ===== -->
+                            <div class="demo-state demo-state-slides" id="demoStateSlides" style="display:none">
+                                <!-- Slides -->
+                                <div class="demo-slides" id="demoSlides">
+                                    <div class="demo-slide demo-slide-active" style="background-image:url('https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=1920&q=90')">
+                                        <div class="demo-slide-caption"><span class="demo-caption-tag"><i class="fas fa-industry"></i> Steel Fabrication</span><span class="demo-caption-text">Industrial steel fabrication &amp; welding</span></div>
                                     </div>
-                                    <form class="cv-ig-form" onsubmit="return unlockCinematicVideo(event)">
-                                        <div class="cv-ig-input-row">
-                                            <input type="email" class="cv-ig-email" id="cvGateEmail" placeholder="Enter your work email" required>
-                                            <button type="submit" class="cv-ig-btn" id="cvGateSubmitBtn">
-                                                <span class="cv-gate-submit-text"><i class="fas fa-play"></i> Continue</span>
-                                                <span class="cv-gate-submit-loading" style="display:none;"><i class="fas fa-spinner fa-spin"></i></span>
+                                    <div class="demo-slide" style="background-image:url('https://images.unsplash.com/photo-1581094794329-c8112c4e5190?w=1920&q=90')">
+                                        <div class="demo-slide-caption"><span class="demo-caption-tag"><i class="fas fa-drafting-compass"></i> Steel Detailing</span><span class="demo-caption-text">Precision structural steel detailing &amp; connections</span></div>
+                                    </div>
+                                    <div class="demo-slide" style="background-image:url('https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=1920&q=90')">
+                                        <div class="demo-slide-caption"><span class="demo-caption-tag"><i class="fas fa-brain"></i> AI Analysis</span><span class="demo-caption-text">AI-powered cost estimation &amp; quantity takeoff</span></div>
+                                    </div>
+                                    <div class="demo-slide" style="background-image:url('https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=1920&q=90')">
+                                        <div class="demo-slide-caption"><span class="demo-caption-tag"><i class="fas fa-file-pdf"></i> PDF Analysis</span><span class="demo-caption-text">Upload drawings — AI extracts BOQ &amp; dimensions</span></div>
+                                    </div>
+                                    <div class="demo-slide" style="background-image:url('https://images.unsplash.com/photo-1565008447742-97f6f38c985c?w=1920&q=90')">
+                                        <div class="demo-slide-caption"><span class="demo-caption-tag"><i class="fas fa-building"></i> Industrial Projects</span><span class="demo-caption-text">Warehouse, factory &amp; PEB steel structures</span></div>
+                                    </div>
+                                    <div class="demo-slide" style="background-image:url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1920&q=90')">
+                                        <div class="demo-slide-caption"><span class="demo-caption-tag"><i class="fas fa-city"></i> Commercial</span><span class="demo-caption-text">High-rise commercial steel frame construction</span></div>
+                                    </div>
+                                    <div class="demo-slide" style="background-image:url('https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=1920&q=90')">
+                                        <div class="demo-slide-caption"><span class="demo-caption-tag"><i class="fas fa-hard-hat"></i> On-Site</span><span class="demo-caption-text">Real-time project tracking &amp; collaboration</span></div>
+                                    </div>
+                                    <div class="demo-slide" style="background-image:url('https://images.unsplash.com/photo-1429497419816-9ca5cfb4571a?w=1920&q=90')">
+                                        <div class="demo-slide-caption"><span class="demo-caption-tag"><i class="fas fa-users-cog"></i> Marketplace</span><span class="demo-caption-text">Connect with verified structural designers worldwide</span></div>
+                                    </div>
+                                </div>
+                                <!-- AI HUD overlay -->
+                                <div class="demo-ai-hud">
+                                    <div class="demo-ai-lines">
+                                        <div class="demo-ai-line"><span class="demo-ai-dot demo-dot-green"></span> Analyzing structural members...</div>
+                                        <div class="demo-ai-line"><span class="demo-ai-dot demo-dot-blue"></span> Extracting dimensions &amp; quantities...</div>
+                                        <div class="demo-ai-line"><span class="demo-ai-dot demo-dot-purple"></span> Calculating cost estimates...</div>
+                                        <div class="demo-ai-line"><span class="demo-ai-dot demo-dot-amber"></span> Generating BOQ report...</div>
+                                    </div>
+                                    <div class="demo-ai-counters">
+                                        <div class="demo-counter-card"><span class="demo-counter-val" id="demoCountMembers">0</span><span class="demo-counter-label">Members Detected</span></div>
+                                        <div class="demo-counter-card"><span class="demo-counter-val" id="demoCountTonnage">0</span><span class="demo-counter-label">Tons Steel</span></div>
+                                        <div class="demo-counter-card"><span class="demo-counter-val" id="demoCountCost">$0</span><span class="demo-counter-label">Est. Cost</span></div>
+                                    </div>
+                                </div>
+                                <!-- Progress bar -->
+                                <div class="demo-progress">
+                                    <div class="demo-progress-track">
+                                        <div class="demo-progress-fill" id="demoProgressFill"></div>
+                                        <div class="demo-progress-gate-dot" title="Preview ends here"></div>
+                                    </div>
+                                </div>
+                                <!-- Fullscreen button -->
+                                <button class="demo-fs-btn" onclick="demoToggleFS()" title="Fullscreen"><i class="fas fa-expand"></i></button>
+                            </div>
+
+                            <!-- ===== STATE 3: EMAIL GATE ===== -->
+                            <div class="demo-state demo-state-gate" id="demoStateGate" style="display:none">
+                                <img class="demo-gate-bg" src="https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=1920&q=90" alt="">
+                                <div class="demo-gate-overlay"></div>
+                                <div class="demo-gate-content">
+                                    <div class="demo-gate-icon"><i class="fas fa-lock"></i></div>
+                                    <h3 class="demo-gate-title">Want to see the full demo?</h3>
+                                    <p class="demo-gate-desc">Enter your email to continue watching — see AI estimation, PDF analysis, designer marketplace &amp; more</p>
+                                    <div class="demo-gate-chips">
+                                        <div class="demo-gate-chip"><i class="fas fa-brain"></i><span>AI Cost Estimation</span></div>
+                                        <div class="demo-gate-chip"><i class="fas fa-file-pdf"></i><span>PDF Drawing Analysis</span></div>
+                                        <div class="demo-gate-chip"><i class="fas fa-drafting-compass"></i><span>Steel Detailing</span></div>
+                                        <div class="demo-gate-chip"><i class="fas fa-users-cog"></i><span>Designer Network</span></div>
+                                    </div>
+                                    <form class="demo-gate-form" id="demoGateForm" onsubmit="return demoUnlock(event)">
+                                        <div class="demo-gate-input-row">
+                                            <input type="email" class="demo-gate-email" id="demoGateEmail" placeholder="Enter your work email" required>
+                                            <button type="submit" class="demo-gate-btn" id="demoGateBtn">
+                                                <span class="demo-gate-btn-text"><i class="fas fa-play"></i> Continue Watching</span>
+                                                <span class="demo-gate-btn-loading" style="display:none"><i class="fas fa-spinner fa-spin"></i></span>
                                             </button>
                                         </div>
                                     </form>
-                                    <p class="cv-ig-trust"><i class="fas fa-shield-alt"></i> Free forever &middot; No credit card &middot; 10,000+ joined</p>
+                                    <p class="demo-gate-trust"><i class="fas fa-shield-alt"></i> Free forever &middot; No credit card &middot; 10,000+ joined</p>
                                 </div>
                             </div>
+
                         </div>
 
                         <!-- Side stats panel -->
-                        <div class="cv-side-panel">
-                            <div class="cv-stat-card cv-stat-highlight">
-                                <div class="cv-stat-icon"><i class="fas fa-eye"></i></div>
-                                <div class="cv-stat-num">12,400+</div>
-                                <div class="cv-stat-label">Demo Views</div>
+                        <div class="demo-side-panel">
+                            <div class="demo-stat-card demo-stat-highlight">
+                                <div class="demo-stat-icon"><i class="fas fa-eye"></i></div>
+                                <div class="demo-stat-num">12,400+</div>
+                                <div class="demo-stat-label">Demo Views</div>
                             </div>
-                            <div class="cv-stat-card">
-                                <div class="cv-stat-icon"><i class="fas fa-user-plus"></i></div>
-                                <div class="cv-stat-num">89%</div>
-                                <div class="cv-stat-label">Sign Up After Watching</div>
+                            <div class="demo-stat-card">
+                                <div class="demo-stat-icon"><i class="fas fa-user-plus"></i></div>
+                                <div class="demo-stat-num">89%</div>
+                                <div class="demo-stat-label">Sign Up Rate</div>
                             </div>
-                            <div class="cv-stat-card">
-                                <div class="cv-stat-icon"><i class="fas fa-star"></i></div>
-                                <div class="cv-stat-num">4.9/5</div>
-                                <div class="cv-stat-label">User Rating</div>
+                            <div class="demo-stat-card">
+                                <div class="demo-stat-icon"><i class="fas fa-star"></i></div>
+                                <div class="demo-stat-num">4.9/5</div>
+                                <div class="demo-stat-label">Rating</div>
                             </div>
-                            <div class="cv-stat-card">
-                                <div class="cv-stat-icon"><i class="fas fa-bolt"></i></div>
-                                <div class="cv-stat-num">&lt; 60s</div>
-                                <div class="cv-stat-label">To Get First Estimate</div>
+                            <div class="demo-stat-card">
+                                <div class="demo-stat-icon"><i class="fas fa-bolt"></i></div>
+                                <div class="demo-stat-num">&lt; 60s</div>
+                                <div class="demo-stat-label">First Estimate</div>
                             </div>
                         </div>
                     </div>
@@ -2298,58 +2270,43 @@
             }
         })();
 
-        // ===== CINEMATIC VIDEO SHOWCASE (Slideshow Engine) =====
+        // ===== DEMO VIDEO SHOWCASE — 3-STATE ENGINE =====
         (function() {
-            var GATE_AFTER_SLIDES = 2; // show gate after 2 slide transitions (~3s)
-            var SLIDE_INTERVAL = 2000; // 2s per slide for smoother feel
+            var SLIDE_INTERVAL = 2000;
+            var GATE_AFTER = 3;          // show gate after 3 slide transitions (~6s)
             var TOTAL_SLIDES = 8;
             var currentSlide = 0;
             var slideTimer = null;
             var progressTimer = null;
+            var slideTransitions = 0;
             var startTime = 0;
             var totalDuration = TOTAL_SLIDES * SLIDE_INTERVAL;
-            var cvUnlocked = localStorage.getItem('sc_prospect_captured') === 'true';
-            var countersStarted = false;
+            var demoUnlocked = localStorage.getItem('sc_prospect_captured') === 'true';
 
+            // State refs
+            var statePlay   = document.getElementById('demoStatePlay');
+            var stateSlides = document.getElementById('demoStateSlides');
+            var stateGate   = document.getElementById('demoStateGate');
+
+            // ---- Helpers ----
             function getSlides() {
-                return document.querySelectorAll('#cvSlideshow .cv-slide');
+                return document.querySelectorAll('#demoSlides .demo-slide');
             }
 
             function goToSlide(idx) {
                 var slides = getSlides();
-                // Simple: only toggle active — no prev class, no transform fighting
                 slides.forEach(function(s, i) {
                     if (i === idx) {
-                        s.classList.add('cv-slide-active');
+                        s.classList.add('demo-slide-active');
                     } else {
-                        s.classList.remove('cv-slide-active');
+                        s.classList.remove('demo-slide-active');
                     }
                 });
                 currentSlide = idx;
-
-                // Update chapter markers
-                var markers = document.querySelectorAll('.cv-marker');
-                var chapterIdx = Math.floor(idx / 2); // 0-1=detailing, 2-3=AI, 4-5=PDF, 6-7=marketplace
-                markers.forEach(function(m, i) {
-                    m.classList.toggle('active', i <= chapterIdx);
-                });
-            }
-
-            function showAiOverlay() {
-                var aiOverlay = document.getElementById('cvAiOverlay');
-                if (aiOverlay) {
-                    aiOverlay.style.display = '';
-                    // Small delay then make visible for smooth fade-in
-                    setTimeout(function() { aiOverlay.classList.add('cv-ai-visible'); }, 50);
-                }
-                if (!countersStarted) {
-                    countersStarted = true;
-                    animateCounters();
-                }
             }
 
             function animateCounters() {
-                var targets = { cvCountMembers: 147, cvCountTonnage: 82, cvCountCost: 450000 };
+                var targets = { demoCountMembers: 147, demoCountTonnage: 82, demoCountCost: 450000 };
                 Object.keys(targets).forEach(function(id) {
                     var el = document.getElementById(id);
                     if (!el) return;
@@ -2359,7 +2316,7 @@
                     var timer = setInterval(function() {
                         current += step;
                         if (current >= target) { current = target; clearInterval(timer); }
-                        if (id === 'cvCountCost') {
+                        if (id === 'demoCountCost') {
                             el.textContent = '$' + current.toLocaleString();
                         } else {
                             el.textContent = current.toLocaleString();
@@ -2368,174 +2325,141 @@
                 });
             }
 
-            window.startCinematicVideo = function() {
-                var overlay = document.getElementById('cvPlayOverlay');
-                var progressWrap = document.getElementById('cvProgressWrap');
-                var controls = document.getElementById('cvControls');
+            function stopTimers() {
+                if (slideTimer) { clearInterval(slideTimer); slideTimer = null; }
+                if (progressTimer) { clearInterval(progressTimer); progressTimer = null; }
+            }
 
-                // Hide play overlay
-                if (overlay) {
-                    overlay.classList.add('cv-overlay-hide');
-                    setTimeout(function() { overlay.style.display = 'none'; }, 500);
-                }
-                if (progressWrap) progressWrap.style.display = '';
-                if (controls) controls.style.display = '';
+            function startProgress() {
+                startTime = Date.now() - (currentSlide * SLIDE_INTERVAL);
+                progressTimer = setInterval(function() {
+                    var elapsed = Date.now() - startTime;
+                    var pct = Math.min((elapsed / totalDuration) * 100, 100);
+                    var fill = document.getElementById('demoProgressFill');
+                    if (fill) fill.style.width = pct + '%';
+                }, 50);
+            }
 
-                currentSlide = 0;
-                startTime = Date.now();
-                countersStarted = false;
+            function resetToStart() {
+                stopTimers();
+                var fill = document.getElementById('demoProgressFill');
+                if (fill) fill.style.width = '0%';
                 goToSlide(0);
+                slideTransitions = 0;
+                // Show STATE 1
+                if (stateSlides) stateSlides.style.display = 'none';
+                if (stateGate) stateGate.style.display = 'none';
+                if (statePlay) statePlay.style.display = 'flex';
+            }
 
-                // Show AI overlay immediately when video starts
-                showAiOverlay();
-
-                // Start slideshow
-                if (slideTimer) clearInterval(slideTimer);
-                if (progressTimer) clearInterval(progressTimer);
-
+            function startSlideshow() {
+                stopTimers();
+                startProgress();
                 slideTimer = setInterval(function() {
                     var nextSlide = currentSlide + 1;
+                    slideTransitions++;
 
-                    // Gate check: stop and show popup
-                    if (!cvUnlocked && nextSlide >= GATE_AFTER_SLIDES) {
-                        clearInterval(slideTimer); slideTimer = null;
-                        clearInterval(progressTimer); progressTimer = null;
-                        // Short delay so user sees the slide before popup
-                        setTimeout(showVideoGatePopup, 300);
+                    // Gate check
+                    if (!demoUnlocked && slideTransitions >= GATE_AFTER) {
+                        stopTimers();
+                        // STATE 2 -> STATE 3
+                        if (stateSlides) stateSlides.style.display = 'none';
+                        if (stateGate) stateGate.style.display = 'flex';
+                        setTimeout(function() {
+                            var input = document.getElementById('demoGateEmail');
+                            if (input) input.focus();
+                        }, 300);
                         return;
                     }
 
                     if (nextSlide >= TOTAL_SLIDES) {
-                        clearInterval(slideTimer); slideTimer = null;
-                        clearInterval(progressTimer); progressTimer = null;
                         resetToStart();
                         return;
                     }
-
                     goToSlide(nextSlide);
                 }, SLIDE_INTERVAL);
+            }
 
-                // Progress bar
-                progressTimer = setInterval(function() {
-                    var elapsed = Date.now() - startTime;
-                    var pct = Math.min((elapsed / totalDuration) * 100, 100);
-                    var fill = document.getElementById('cvProgressFill');
-                    if (fill) fill.style.width = pct + '%';
-                }, 50);
+            // ---- demoPlay: STATE 1 -> STATE 2 ----
+            window.demoPlay = function() {
+                if (!statePlay || !stateSlides) return;
+                // Hide STATE 1, show STATE 2
+                statePlay.style.display = 'none';
+                stateSlides.style.display = 'flex';
+
+                currentSlide = 0;
+                slideTransitions = 0;
+                goToSlide(0);
+                animateCounters();
+                startSlideshow();
             };
 
-            function resetToStart() {
-                var overlay = document.getElementById('cvPlayOverlay');
-                var progressWrap = document.getElementById('cvProgressWrap');
-                var controls = document.getElementById('cvControls');
-                var fill = document.getElementById('cvProgressFill');
-                var aiOverlay = document.getElementById('cvAiOverlay');
-                if (fill) fill.style.width = '0%';
-                if (overlay) { overlay.style.display = ''; overlay.classList.remove('cv-overlay-hide'); }
-                if (progressWrap) progressWrap.style.display = 'none';
-                if (controls) controls.style.display = 'none';
-                if (aiOverlay) { aiOverlay.classList.remove('cv-ai-visible'); aiOverlay.style.display = 'none'; }
-                goToSlide(0);
-            }
-
-            function showVideoGatePopup() {
-                var gate = document.getElementById('cvInlineGate');
-                if (!gate) return;
-                gate.classList.add('cv-ig-show');
-                setTimeout(function() {
-                    var input = document.getElementById('cvGateEmail');
-                    if (input) input.focus();
-                }, 600);
-            }
-
-            window.unlockCinematicVideo = async function(e) {
+            // ---- demoUnlock: STATE 3 -> STATE 2, resume ----
+            window.demoUnlock = async function(e) {
                 e.preventDefault();
-                var email = document.getElementById('cvGateEmail').value.trim();
-                if (!email) return false;
+                var email = document.getElementById('demoGateEmail');
+                if (!email || !email.value.trim()) return false;
 
-                var btn = document.getElementById('cvGateSubmitBtn');
-                var btnText = btn.querySelector('.cv-gate-submit-text');
-                var btnLoad = btn.querySelector('.cv-gate-submit-loading');
+                var btn = document.getElementById('demoGateBtn');
+                var btnText = btn ? btn.querySelector('.demo-gate-btn-text') : null;
+                var btnLoad = btn ? btn.querySelector('.demo-gate-btn-loading') : null;
                 if (btnText) btnText.style.display = 'none';
                 if (btnLoad) btnLoad.style.display = 'inline-flex';
-                btn.disabled = true;
+                if (btn) btn.disabled = true;
 
                 try {
                     var backendUrl = (typeof BACKEND_URL !== 'undefined') ? BACKEND_URL : 'https://steelconnect-backend.onrender.com/api';
                     await fetch(backendUrl + '/prospects/capture', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email: email, source: 'video-gate', scrollDepth: 0 })
+                        body: JSON.stringify({ email: email.value.trim(), source: 'video-gate', scrollDepth: 0 })
                     });
                 } catch (err) { /* silent */ }
 
+                // Sync all gates via localStorage
                 localStorage.setItem('sc_prospect_captured', 'true');
                 localStorage.setItem('sc_popup_dismissed', 'true');
                 localStorage.setItem('sc_bar_dismissed', 'true');
-                cvUnlocked = true;
+                demoUnlocked = true;
 
-                // Hide inline gate
-                var gate = document.getElementById('cvInlineGate');
-                if (gate) gate.classList.remove('cv-ig-show');
-
-                // Unlock content gate
+                // Hide other gates on the page
                 var contentGate = document.getElementById('contentGate');
                 var gatedContent = document.getElementById('gatedContent');
                 if (contentGate) contentGate.style.display = 'none';
                 if (gatedContent) gatedContent.style.display = '';
-
-                // Hide prospect bar/popup
                 var bar = document.getElementById('prospectBar');
                 if (bar) bar.style.display = 'none';
                 var pPopup = document.getElementById('prospectPopup');
                 if (pPopup) pPopup.style.display = 'none';
 
-                // Resume slideshow from where it stopped
-                startTime = Date.now() - (currentSlide * SLIDE_INTERVAL);
-                slideTimer = setInterval(function() {
-                    var nextSlide = currentSlide + 1;
-                    if (nextSlide >= TOTAL_SLIDES) {
-                        clearInterval(slideTimer);
-                        clearInterval(progressTimer);
-                        isPlaying = false;
-                        resetToStart();
-                        return;
-                    }
-                    goToSlide(nextSlide);
-                }, SLIDE_INTERVAL);
-
-                progressTimer = setInterval(function() {
-                    var elapsed = Date.now() - startTime;
-                    var pct = Math.min((elapsed / totalDuration) * 100, 100);
-                    var fill = document.getElementById('cvProgressFill');
-                    if (fill) fill.style.width = pct + '%';
-                }, 50);
+                // STATE 3 -> STATE 2, resume slideshow
+                if (stateGate) stateGate.style.display = 'none';
+                if (stateSlides) stateSlides.style.display = 'flex';
+                startSlideshow();
 
                 return false;
             };
 
-            window.toggleVideoMute = function() {
-                // No audio for slideshow — toggle is cosmetic
-                var btn = document.getElementById('cvMuteBtn');
-                if (btn) {
-                    var isMuted = btn.innerHTML.includes('volume-mute');
-                    btn.innerHTML = isMuted ? '<i class="fas fa-volume-up"></i>' : '<i class="fas fa-volume-mute"></i>';
+            // ---- Fullscreen toggle ----
+            window.demoToggleFS = function() {
+                var player = document.getElementById('demoPlayer');
+                if (!player) return;
+                if (document.fullscreenElement) {
+                    document.exitFullscreen();
+                } else {
+                    player.requestFullscreen().catch(function(){});
                 }
             };
 
-            window.toggleVideoFullscreen = function() {
-                var wrap = document.getElementById('cvPlayerWrap');
-                if (!wrap) return;
-                if (document.fullscreenElement) { document.exitFullscreen(); }
-                else { wrap.requestFullscreen().catch(function(){}); }
-            };
+            // ---- If already unlocked, skip gate entirely ----
+            // (demoPlay will run slideshow without hitting the gate check)
 
-            // Attention pulse when section scrolls into view
+            // ---- IntersectionObserver: attention pulse on play button ----
             var obs = new IntersectionObserver(function(entries) {
                 entries.forEach(function(entry) {
                     if (entry.isIntersecting) {
-                        var playCircle = document.querySelector('.cv-play-circle');
-                        if (playCircle) playCircle.classList.add('cv-attention');
+                        var circle = document.getElementById('demoPlayCircle');
+                        if (circle) circle.classList.add('demo-attention');
                         obs.disconnect();
                     }
                 });
