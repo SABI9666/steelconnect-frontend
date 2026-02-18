@@ -8681,25 +8681,25 @@ body {
     0% { transform: scale(1.0); }
     100% { transform: scale(1.06); }
 }
+/* Feature caption — full-width bottom bar for max visibility */
 .demo-slide-caption {
     position: absolute;
-    bottom: 20px;
-    left: 20px;
-    right: 20px;
+    bottom: 0;
+    left: 0;
+    right: 0;
     z-index: 2;
     display: flex;
-    flex-direction: column;
-    gap: 6px;
+    align-items: center;
+    gap: 14px;
     opacity: 0;
-    transform: translateY(16px);
-    background: rgba(0,0,0,0.5);
-    backdrop-filter: blur(12px);
-    padding: 14px 18px;
-    border-radius: 12px;
-    border: 1px solid rgba(255,255,255,0.08);
+    transform: translateY(100%);
+    background: linear-gradient(90deg, rgba(15,23,42,0.95) 0%, rgba(30,27,75,0.92) 100%);
+    backdrop-filter: blur(16px);
+    padding: 16px 24px;
+    border-top: 1px solid rgba(96,165,250,0.2);
 }
 .demo-slide-active .demo-slide-caption {
-    animation: demo-caption-in 0.8s 0.3s ease forwards;
+    animation: demo-caption-in 0.6s 0.2s cubic-bezier(0.22,1,0.36,1) forwards;
 }
 @keyframes demo-caption-in {
     to { opacity: 1; transform: translateY(0); }
@@ -8710,22 +8710,23 @@ body {
     gap: 6px;
     background: linear-gradient(135deg, #2563eb, #7c3aed);
     color: #fff;
-    padding: 4px 12px;
-    border-radius: 6px;
-    font-size: 10px;
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 11px;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.8px;
-    width: fit-content;
-    box-shadow: 0 2px 8px rgba(37,99,235,0.3);
+    white-space: nowrap;
+    flex-shrink: 0;
+    box-shadow: 0 2px 12px rgba(37,99,235,0.4);
 }
-.demo-caption-tag i { font-size: 10px; }
+.demo-caption-tag i { font-size: 11px; }
 .demo-caption-text {
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 600;
     color: #fff;
-    text-shadow: 0 1px 4px rgba(0,0,0,0.3);
-    line-height: 1.4;
+    line-height: 1.3;
+    text-shadow: none;
 }
 
 /* AI HUD overlay */
@@ -8781,7 +8782,7 @@ body {
 
 .demo-ai-counters {
     position: absolute;
-    bottom: 60px;
+    bottom: 80px;
     left: 16px;
     display: flex;
     gap: 16px;
@@ -8814,14 +8815,13 @@ body {
     font-weight: 600;
 }
 
-/* Progress bar */
+/* Progress bar — sits above the caption bar */
 .demo-progress {
     position: absolute;
-    bottom: 0;
+    bottom: 54px;
     left: 0; right: 0;
     z-index: 4;
-    padding: 0 12px 8px;
-    background: linear-gradient(transparent, rgba(0,0,0,0.6));
+    padding: 0 12px 4px;
 }
 .demo-progress-track {
     position: relative;
@@ -8855,11 +8855,16 @@ body {
     50% { box-shadow: 0 0 16px rgba(245,158,11,0.8); }
 }
 
-/* Fullscreen button */
-.demo-fs-btn {
+/* Controls bar (mute + fullscreen) */
+.demo-controls {
     position: absolute;
     top: 12px;
     right: 12px;
+    display: flex;
+    gap: 8px;
+    z-index: 5;
+}
+.demo-ctrl-btn {
     width: 36px; height: 36px;
     background: rgba(0,0,0,0.5);
     backdrop-filter: blur(6px);
@@ -8871,10 +8876,9 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 5;
     transition: background 0.2s;
 }
-.demo-fs-btn:hover { background: rgba(37,99,235,0.5); }
+.demo-ctrl-btn:hover { background: rgba(37,99,235,0.5); }
 
 /* ===== STATE 3: EMAIL GATE ===== */
 .demo-state-gate {
@@ -9075,11 +9079,13 @@ body {
     .demo-play-ripple { width: 68px; height: 68px; }
     .demo-chapter-pills { display: none; }
     .demo-ai-lines { display: none; }
-    .demo-ai-counters { gap: 8px; bottom: 48px; left: 8px; }
+    .demo-ai-counters { gap: 8px; bottom: 64px; left: 8px; }
     .demo-counter-card { padding: 6px 10px; }
     .demo-counter-val { font-size: 14px; }
-    .demo-slide-caption { bottom: 12px; left: 12px; }
-    .demo-caption-text { font-size: 12px; }
+    .demo-slide-caption { padding: 10px 14px; gap: 8px; }
+    .demo-caption-tag { font-size: 9px; padding: 4px 10px; }
+    .demo-caption-text { font-size: 13px; }
+    .demo-progress { bottom: 42px; }
     .demo-gate-title { font-size: 18px; }
     .demo-gate-desc { font-size: 12px; }
     .demo-gate-chips { display: none; }
