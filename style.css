@@ -6062,11 +6062,13 @@ body {
 }
 .air-card-primary::before { background: linear-gradient(90deg, #059669, #10b981); }
 .air-card-indigo::before { background: linear-gradient(90deg, #4f46e5, #6366f1); }
+.air-card-teal::before { background: linear-gradient(90deg, #0d9488, #14b8a6); }
 .air-card-green::before { background: linear-gradient(90deg, #0891b2, #06b6d4); }
 .air-card-amber::before { background: linear-gradient(90deg, #d97706, #f59e0b); }
 .air-sc-icon { font-size: 1.5rem; margin-bottom: 8px; color: #64748b; }
 .air-card-primary .air-sc-icon { color: #059669; }
 .air-card-indigo .air-sc-icon { color: #4f46e5; }
+.air-card-teal .air-sc-icon { color: #0d9488; }
 .air-card-green .air-sc-icon { color: #0891b2; }
 .air-card-amber .air-sc-icon { color: #d97706; }
 .air-sc-label { font-size: 0.72rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }

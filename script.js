@@ -4641,9 +4641,15 @@ function renderAIEstimateResult(estimate, projectInfo) {
                         </div>
                         <div class="air-summary-card air-card-indigo">
                             <div class="air-sc-icon"><i class="fas fa-ruler-combined"></i></div>
-                            <div class="air-sc-label">Cost per Unit</div>
-                            <div class="air-sc-value">${curr}${fmtNum(s.costPerUnit)}</div>
-                            <div class="air-sc-sub">${s.unitLabel || 'per sq ft'}</div>
+                            <div class="air-sc-label">Rate / sq ft</div>
+                            <div class="air-sc-value">${curr}${fmtNum(s.costPerSqFt || s.costPerUnit)}</div>
+                            <div class="air-sc-sub">${s.areaSqFt ? fmtNum(s.areaSqFt) + ' sq ft' : 'per sq ft'}</div>
+                        </div>
+                        <div class="air-summary-card air-card-teal">
+                            <div class="air-sc-icon"><i class="fas fa-ruler"></i></div>
+                            <div class="air-sc-label">Rate / sq m</div>
+                            <div class="air-sc-value">${curr}${fmtNum(s.costPerSqM || Math.round((s.costPerUnit || 0) * 10.7639))}</div>
+                            <div class="air-sc-sub">${s.areaSqM ? fmtNum(s.areaSqM) + ' sq m' : 'per sq m'}</div>
                         </div>
                         <div class="air-summary-card air-card-green">
                             <div class="air-sc-icon"><i class="fas fa-chart-pie"></i></div>
