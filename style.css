@@ -8681,28 +8681,39 @@ body {
     0% { transform: scale(1.0); }
     100% { transform: scale(1.06); }
 }
-/* Feature caption — full-width bottom bar for max visibility */
-.demo-slide-caption {
+/* ===== CAPTION BAR — separate overlay, ABOVE all video layers ===== */
+.demo-caption-bar {
     position: absolute;
     bottom: 0;
     left: 0;
     right: 0;
-    z-index: 2;
+    z-index: 8;
     display: flex;
     align-items: center;
     gap: 14px;
+    background: linear-gradient(90deg, rgba(15,23,42,0.97) 0%, rgba(30,27,75,0.95) 100%);
+    padding: 14px 20px;
+    border-top: 2px solid rgba(96,165,250,0.3);
     opacity: 0;
     transform: translateY(100%);
-    background: linear-gradient(90deg, rgba(15,23,42,0.95) 0%, rgba(30,27,75,0.92) 100%);
-    backdrop-filter: blur(16px);
-    padding: 16px 24px;
-    border-top: 1px solid rgba(96,165,250,0.2);
 }
-.demo-slide-active .demo-slide-caption {
-    animation: demo-caption-in 0.6s 0.2s cubic-bezier(0.22,1,0.36,1) forwards;
+.demo-caption-bar.demo-caption-animate {
+    animation: demo-caption-slide 0.5s cubic-bezier(0.22,1,0.36,1) forwards;
 }
-@keyframes demo-caption-in {
+@keyframes demo-caption-slide {
     to { opacity: 1; transform: translateY(0); }
+}
+.demo-caption-num {
+    font-size: 10px;
+    font-weight: 700;
+    color: #60a5fa;
+    background: rgba(37,99,235,0.15);
+    border: 1px solid rgba(96,165,250,0.25);
+    padding: 3px 8px;
+    border-radius: 6px;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
 }
 .demo-caption-tag {
     display: inline-flex;
@@ -8726,7 +8737,6 @@ body {
     font-weight: 600;
     color: #fff;
     line-height: 1.3;
-    text-shadow: none;
 }
 
 /* AI HUD overlay */
@@ -8815,12 +8825,12 @@ body {
     font-weight: 600;
 }
 
-/* Progress bar — sits above the caption bar */
+/* Progress bar — sits just above the caption bar */
 .demo-progress {
     position: absolute;
-    bottom: 54px;
+    bottom: 50px;
     left: 0; right: 0;
-    z-index: 4;
+    z-index: 9;
     padding: 0 12px 4px;
 }
 .demo-progress-track {
@@ -9082,10 +9092,11 @@ body {
     .demo-ai-counters { gap: 8px; bottom: 64px; left: 8px; }
     .demo-counter-card { padding: 6px 10px; }
     .demo-counter-val { font-size: 14px; }
-    .demo-slide-caption { padding: 10px 14px; gap: 8px; }
+    .demo-caption-bar { padding: 10px 14px; gap: 8px; }
+    .demo-caption-num { font-size: 9px; padding: 2px 6px; }
     .demo-caption-tag { font-size: 9px; padding: 4px 10px; }
-    .demo-caption-text { font-size: 13px; }
-    .demo-progress { bottom: 42px; }
+    .demo-caption-text { font-size: 12px; }
+    .demo-progress { bottom: 40px; }
     .demo-gate-title { font-size: 18px; }
     .demo-gate-desc { font-size: 12px; }
     .demo-gate-chips { display: none; }
@@ -9099,6 +9110,10 @@ body {
     .demo-play-circle { width: 60px; height: 60px; font-size: 20px; }
     .demo-play-ripple { width: 60px; height: 60px; }
     .demo-ai-counters { display: none; }
+    .demo-caption-bar { flex-wrap: wrap; gap: 6px; padding: 8px 10px; }
+    .demo-caption-num { display: none; }
+    .demo-caption-text { font-size: 11px; }
+    .demo-progress { bottom: 50px; }
     .demo-gate-content { padding: 20px 16px; }
     .demo-gate-title { font-size: 16px; }
 }
