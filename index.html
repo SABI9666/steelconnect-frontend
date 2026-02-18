@@ -1343,6 +1343,45 @@
                 </div>
             </section>
 
+            <!-- Email Capture / Stay Connected Section -->
+            <section class="prospect-section" id="stay-connected">
+                <div class="prospect-container">
+                    <div class="prospect-content">
+                        <h2 class="prospect-title">Stay in the Loop</h2>
+                        <p class="prospect-subtitle">Get notified about platform updates, new features, and exclusive early access. No spam — just valuable construction industry insights.</p>
+                    </div>
+                    <form class="prospect-form" id="prospectForm" onsubmit="return captureProspectEmail(event)">
+                        <div class="prospect-input-group">
+                            <input type="email" class="prospect-input" id="prospectEmailInput" placeholder="Enter your work email" required>
+                            <button type="submit" class="prospect-btn" id="prospectSubmitBtn">
+                                <span class="prospect-btn-text">Get Notified</span>
+                                <span class="prospect-btn-loading" style="display:none;"><i class="fas fa-spinner fa-spin"></i></span>
+                            </button>
+                        </div>
+                        <p class="prospect-disclaimer">We respect your privacy. Unsubscribe anytime.</p>
+                        <div class="prospect-success" id="prospectSuccess" style="display:none;">
+                            <i class="fas fa-check-circle"></i>
+                            <span>Thank you! We'll be in touch soon.</span>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Prospect Popup (shows after 25s for first-time visitors) -->
+            <div class="prospect-popup-overlay" id="prospectPopup" style="display:none;">
+                <div class="prospect-popup">
+                    <button class="prospect-popup-close" id="prospectPopupClose" aria-label="Close">&times;</button>
+                    <div class="prospect-popup-icon"><i class="fas fa-hard-hat"></i></div>
+                    <h3 class="prospect-popup-title">Join 500+ Construction Professionals</h3>
+                    <p class="prospect-popup-text">Get exclusive access to AI-powered cost estimation, project management tools, and industry insights.</p>
+                    <form class="prospect-popup-form" onsubmit="return captureProspectEmail(event, true)">
+                        <input type="email" class="prospect-popup-input" placeholder="Your email address" required>
+                        <button type="submit" class="prospect-popup-btn">Get Early Access</button>
+                    </form>
+                    <p class="prospect-popup-note">Free to join. No credit card required.</p>
+                </div>
+            </div>
+
             <!-- Footer -->
             <footer class="site-footer">
                 <div class="footer-container">
@@ -1859,6 +1898,99 @@
                     var link = e.target.closest('.sidebar-nav-link');
                     if (link && window.innerWidth <= 768) {
                         closeSidebar();
+                    }
+                });
+            }
+        })();
+
+        // Prospect email capture & popup
+        (function() {
+            var PROSPECT_KEY = 'sc_prospect_captured';
+            var POPUP_KEY = 'sc_popup_dismissed';
+
+            // Capture email function (global)
+            window.captureProspectEmail = async function(e, isPopup) {
+                e.preventDefault();
+                var form = e.target;
+                var input = form.querySelector('input[type="email"]');
+                var email = input.value.trim();
+                if (!email) return false;
+
+                var btn = form.querySelector('button[type="submit"]');
+                var btnText = btn.querySelector('.prospect-btn-text') || btn;
+                var btnLoad = btn.querySelector('.prospect-btn-loading');
+                if (btnText.style) btnText.style.display = 'none';
+                if (btnLoad) btnLoad.style.display = 'inline';
+                btn.disabled = true;
+
+                try {
+                    var backendUrl = (typeof BACKEND_URL !== 'undefined') ? BACKEND_URL : 'https://steelconnect-backend.onrender.com/api';
+                    var resp = await fetch(backendUrl + '/prospects/capture', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: email, source: isPopup ? 'popup' : 'inline-form' })
+                    });
+                    var data = await resp.json();
+
+                    localStorage.setItem(PROSPECT_KEY, 'true');
+
+                    if (isPopup) {
+                        var popup = document.getElementById('prospectPopup');
+                        if (popup) popup.style.display = 'none';
+                        localStorage.setItem(POPUP_KEY, 'true');
+                    }
+
+                    var successEl = document.getElementById('prospectSuccess');
+                    if (successEl && !isPopup) {
+                        successEl.style.display = 'flex';
+                        form.querySelector('.prospect-input-group').style.display = 'none';
+                        form.querySelector('.prospect-disclaimer').style.display = 'none';
+                    }
+
+                    if (isPopup) {
+                        if (typeof showNotification === 'function') {
+                            showNotification('Thank you! We will be in touch soon.', 'success');
+                        }
+                    }
+                } catch (err) {
+                    console.error('Prospect capture error:', err);
+                    if (typeof showNotification === 'function') {
+                        showNotification('Something went wrong. Please try again.', 'error');
+                    }
+                }
+
+                if (btnText.style) btnText.style.display = '';
+                if (btnLoad) btnLoad.style.display = 'none';
+                btn.disabled = false;
+                return false;
+            };
+
+            // Popup logic: show after 25s for first-time visitors
+            if (!localStorage.getItem(POPUP_KEY) && !localStorage.getItem(PROSPECT_KEY)) {
+                setTimeout(function() {
+                    var popup = document.getElementById('prospectPopup');
+                    if (popup && document.getElementById('landing-page-content').style.display !== 'none') {
+                        popup.style.display = 'flex';
+                    }
+                }, 25000);
+            }
+
+            // Close popup
+            var closeBtn = document.getElementById('prospectPopupClose');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', function() {
+                    document.getElementById('prospectPopup').style.display = 'none';
+                    localStorage.setItem(POPUP_KEY, 'true');
+                });
+            }
+
+            // Close popup on overlay click
+            var popupOverlay = document.getElementById('prospectPopup');
+            if (popupOverlay) {
+                popupOverlay.addEventListener('click', function(e) {
+                    if (e.target === popupOverlay) {
+                        popupOverlay.style.display = 'none';
+                        localStorage.setItem(POPUP_KEY, 'true');
                     }
                 });
             }
