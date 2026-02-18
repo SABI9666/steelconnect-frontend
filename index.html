@@ -451,6 +451,9 @@
             <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Toggle navigation menu">
                 <span></span><span></span><span></span>
             </button>
+            <button class="portal-menu-btn" id="portalMenuBtn" aria-label="Toggle sidebar menu">
+                <i class="fas fa-bars"></i>
+            </button>
             <nav id="main-nav-menu" class="nav-menu">
                 <a href="#ai-estimation" class="nav-link">AI Estimation</a>
                 <a href="#business-analytics" class="nav-link">AI Analytics</a>
@@ -1376,7 +1379,11 @@
     </div>
 
     <div id="app-content" class="main-layout" style="display: none;">
-        <aside class="sidebar">
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
+        <aside class="sidebar" id="portalSidebar">
+            <div class="sidebar-close-btn" id="sidebarCloseBtn">
+                <i class="fas fa-times"></i>
+            </div>
             <div class="sidebar-user-profile">
                 <div id="sidebarUserAvatar" class="sidebar-avatar"></div>
                 <h3 id="sidebarUserName"></h3>
@@ -1785,7 +1792,7 @@
         });
     </script>
     <script>
-        // Mobile hamburger menu toggle
+        // Mobile hamburger menu toggle (landing page)
         (function() {
             const btn = document.getElementById('mobileMenuBtn');
             const nav = document.getElementById('main-nav-menu');
@@ -1795,20 +1802,66 @@
                 btn.classList.toggle('active');
                 nav.classList.toggle('mobile-open');
             });
-            // Close menu when a nav link is clicked
             nav.querySelectorAll('.nav-link').forEach(function(link) {
                 link.addEventListener('click', function() {
                     btn.classList.remove('active');
                     nav.classList.remove('mobile-open');
                 });
             });
-            // Close menu when clicking outside
             document.addEventListener('click', function(e) {
                 if (!nav.contains(e.target) && !btn.contains(e.target)) {
                     btn.classList.remove('active');
                     nav.classList.remove('mobile-open');
                 }
             });
+        })();
+
+        // Portal sidebar slide-out toggle (logged-in mobile view)
+        (function() {
+            var portalBtn = document.getElementById('portalMenuBtn');
+            var sidebar = document.getElementById('portalSidebar');
+            var overlay = document.getElementById('sidebarOverlay');
+            var closeBtn = document.getElementById('sidebarCloseBtn');
+
+            function openSidebar() {
+                if (!sidebar || !overlay) return;
+                sidebar.classList.add('sidebar-open');
+                overlay.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            }
+            function closeSidebar() {
+                if (!sidebar || !overlay) return;
+                sidebar.classList.remove('sidebar-open');
+                overlay.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+
+            if (portalBtn) {
+                portalBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    if (sidebar && sidebar.classList.contains('sidebar-open')) {
+                        closeSidebar();
+                    } else {
+                        openSidebar();
+                    }
+                });
+            }
+            if (closeBtn) {
+                closeBtn.addEventListener('click', function() { closeSidebar(); });
+            }
+            if (overlay) {
+                overlay.addEventListener('click', function() { closeSidebar(); });
+            }
+
+            // Close sidebar when a nav link is clicked (mobile UX)
+            if (sidebar) {
+                sidebar.addEventListener('click', function(e) {
+                    var link = e.target.closest('.sidebar-nav-link');
+                    if (link && window.innerWidth <= 768) {
+                        closeSidebar();
+                    }
+                });
+            }
         })();
     </script>
 </body>

@@ -3113,6 +3113,14 @@ function showAppView() {
     document.getElementById('landing-page-content').style.display = 'none';
     document.getElementById('auth-buttons-container').style.display = 'none';
     document.getElementById('user-info-container').style.display = 'flex';
+    // Show portal sidebar toggle, hide landing hamburger
+    const portalMenuBtn = document.getElementById('portalMenuBtn');
+    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+    if (portalMenuBtn) portalMenuBtn.style.display = '';
+    if (mobileMenuBtn) mobileMenuBtn.style.display = 'none';
+    // Restore sidebar visibility (it may have been hidden by showLandingPageView)
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar) sidebar.style.display = '';
     const user = appState.currentUser;
     document.getElementById('user-info-name').textContent = user.name;
     document.getElementById('user-info-avatar').textContent = (user.name || "A").charAt(0).toUpperCase();
@@ -3156,7 +3164,15 @@ function showLandingPageView() {
     document.getElementById('auth-buttons-container').style.display = 'flex';
     document.getElementById('user-info-container').style.display = 'none';
     const sidebar = document.querySelector('.sidebar');
-    if (sidebar) sidebar.style.display = 'none';
+    if (sidebar) { sidebar.style.display = 'none'; sidebar.classList.remove('sidebar-open'); }
+    const sidebarOverlay = document.getElementById('sidebarOverlay');
+    if (sidebarOverlay) sidebarOverlay.classList.remove('active');
+    // Show landing hamburger, hide portal menu button
+    const portalMenuBtn = document.getElementById('portalMenuBtn');
+    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+    if (portalMenuBtn) portalMenuBtn.style.display = 'none';
+    if (mobileMenuBtn) mobileMenuBtn.style.display = '';
+    document.body.style.overflow = '';
     const navMenu = document.getElementById('main-nav-menu');
     if (navMenu) navMenu.innerHTML = `
         <a href="#ai-estimation" class="nav-link">AI Estimation</a><a href="#how-it-works" class="nav-link">How It Works</a>
