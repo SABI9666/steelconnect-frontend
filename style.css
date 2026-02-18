@@ -8358,6 +8358,207 @@ body {
     font-weight: 620;
 }
 
+/* ================================================================
+   PROSPECT EMAIL CAPTURE SECTION
+   ================================================================ */
+.prospect-section {
+    padding: 80px 0;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
+}
+.prospect-container {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 0 24px;
+    text-align: center;
+}
+.prospect-title {
+    font-size: 32px;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 12px;
+    letter-spacing: -0.5px;
+}
+.prospect-subtitle {
+    font-size: 16px;
+    color: #64748b;
+    line-height: 1.7;
+    margin-bottom: 32px;
+}
+.prospect-form {
+    max-width: 480px;
+    margin: 0 auto;
+}
+.prospect-input-group {
+    display: flex;
+    gap: 0;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    border: 2px solid #e2e8f0;
+    transition: border-color 0.2s ease;
+}
+.prospect-input-group:focus-within {
+    border-color: #2563eb;
+    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.12);
+}
+.prospect-input {
+    flex: 1;
+    padding: 16px 20px;
+    border: none;
+    font-size: 15px;
+    outline: none;
+    background: #ffffff;
+    color: #1e293b;
+}
+.prospect-input::placeholder { color: #94a3b8; }
+.prospect-btn {
+    padding: 16px 28px;
+    background: #2563eb;
+    color: #ffffff;
+    border: none;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s ease;
+}
+.prospect-btn:hover { background: #1d4ed8; }
+.prospect-btn:disabled { opacity: 0.7; cursor: not-allowed; }
+.prospect-disclaimer {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-top: 12px;
+}
+.prospect-success {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 16px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 10px;
+    color: #15803d;
+    font-weight: 600;
+    font-size: 15px;
+    margin-top: 8px;
+}
+.prospect-success i { font-size: 18px; }
+
+/* ================================================================
+   PROSPECT POPUP
+   ================================================================ */
+.prospect-popup-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    animation: prospectFadeIn 0.3s ease;
+}
+@keyframes prospectFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+.prospect-popup {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 40px 36px;
+    max-width: 420px;
+    width: 100%;
+    text-align: center;
+    position: relative;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    animation: prospectSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes prospectSlideUp {
+    from { transform: translateY(24px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+.prospect-popup-close {
+    position: absolute;
+    top: 12px;
+    right: 16px;
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: #94a3b8;
+    cursor: pointer;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+.prospect-popup-close:hover { background: #f1f5f9; color: #475569; }
+.prospect-popup-icon {
+    width: 56px;
+    height: 56px;
+    background: #eff6ff;
+    color: #2563eb;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    margin: 0 auto 20px;
+}
+.prospect-popup-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 10px;
+    letter-spacing: -0.3px;
+}
+.prospect-popup-text {
+    font-size: 14px;
+    color: #64748b;
+    line-height: 1.6;
+    margin-bottom: 24px;
+}
+.prospect-popup-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.prospect-popup-input {
+    padding: 14px 18px;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s;
+    color: #1e293b;
+}
+.prospect-popup-input:focus { border-color: #2563eb; }
+.prospect-popup-input::placeholder { color: #94a3b8; }
+.prospect-popup-btn {
+    padding: 14px;
+    background: #2563eb;
+    color: #ffffff;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.prospect-popup-btn:hover { background: #1d4ed8; }
+.prospect-popup-note {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-top: 12px;
+}
+
 /* --- RESPONSIVE DESIGN --- */
 @media (max-width: 1024px) {
     .hero-content { grid-template-columns: 1fr; gap: 60px; text-align: center; }
@@ -13307,6 +13508,17 @@ body { overflow-x: hidden; }
     .feature-title { font-size: 1.5rem; }
     .feature-subtitle { font-size: 1rem; }
     .feature-description { font-size: 0.85rem; }
+
+    /* ==== PROSPECT EMAIL CAPTURE ==== */
+    .prospect-section { padding: 48px 0; }
+    .prospect-title { font-size: 24px; }
+    .prospect-subtitle { font-size: 14px; margin-bottom: 24px; }
+    .prospect-input-group { flex-direction: column; border-radius: 10px; }
+    .prospect-input { border-radius: 0; }
+    .prospect-btn { border-radius: 0; padding: 14px; }
+    .prospect-popup { padding: 28px 20px; margin: 16px; }
+    .prospect-popup-title { font-size: 19px; }
+    .prospect-popup-text { font-size: 13px; }
 
     /* ================================================================
        PORTAL: LOGGED-IN VIEWS
