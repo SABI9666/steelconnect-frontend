@@ -8685,12 +8685,18 @@ body {
     position: absolute;
     bottom: 20px;
     left: 20px;
+    right: 20px;
     z-index: 2;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 6px;
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(16px);
+    background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(12px);
+    padding: 14px 18px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.08);
 }
 .demo-slide-active .demo-slide-caption {
     animation: demo-caption-in 0.8s 0.3s ease forwards;
@@ -8702,22 +8708,24 @@ body {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    background: rgba(37,99,235,0.8);
-    backdrop-filter: blur(8px);
+    background: linear-gradient(135deg, #2563eb, #7c3aed);
     color: #fff;
-    padding: 5px 12px;
+    padding: 4px 12px;
     border-radius: 6px;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.8px;
     width: fit-content;
+    box-shadow: 0 2px 8px rgba(37,99,235,0.3);
 }
+.demo-caption-tag i { font-size: 10px; }
 .demo-caption-text {
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 600;
-    color: rgba(255,255,255,0.9);
-    text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+    color: #fff;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.3);
+    line-height: 1.4;
 }
 
 /* AI HUD overlay */
@@ -8890,25 +8898,35 @@ body {
     z-index: 2;
     text-align: center;
     max-width: 480px;
-    padding: 32px 24px;
-    background: rgba(15,23,42,0.85);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(255,255,255,0.08);
+    padding: 36px 28px;
+    background: rgba(15,23,42,0.9);
+    backdrop-filter: blur(24px);
+    border: 1px solid rgba(96,165,250,0.2);
     border-radius: 20px;
-    box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+    box-shadow: 0 24px 64px rgba(0,0,0,0.6), 0 0 40px rgba(37,99,235,0.1);
+    animation: demo-gate-appear 0.6s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+@keyframes demo-gate-appear {
+    from { opacity: 0; transform: scale(0.9) translateY(20px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
 }
 .demo-gate-icon {
-    width: 56px;
-    height: 56px;
+    width: 60px;
+    height: 60px;
     margin: 0 auto 18px;
     background: linear-gradient(135deg, #2563eb, #7c3aed);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 22px;
+    font-size: 24px;
     color: #fff;
     box-shadow: 0 8px 30px rgba(37,99,235,0.4);
+    animation: demo-gate-icon-pulse 2s ease-in-out infinite;
+}
+@keyframes demo-gate-icon-pulse {
+    0%, 100% { box-shadow: 0 8px 30px rgba(37,99,235,0.4); }
+    50% { box-shadow: 0 8px 40px rgba(37,99,235,0.6), 0 0 20px rgba(124,58,237,0.3); }
 }
 .demo-gate-title {
     font-size: 24px;
