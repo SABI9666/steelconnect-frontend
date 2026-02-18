@@ -8448,6 +8448,96 @@ body {
 .prospect-success i { font-size: 18px; }
 
 /* ================================================================
+   PROSPECT STICKY BOTTOM BAR
+   ================================================================ */
+.prospect-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    color: #fff;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    z-index: 9000;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+    animation: barSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes barSlideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+}
+.prospect-bar-text {
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.prospect-bar-form {
+    display: flex;
+    gap: 8px;
+}
+.prospect-bar-input {
+    padding: 8px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    font-size: 13px;
+    width: 220px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+.prospect-bar-input::placeholder { color: rgba(255, 255, 255, 0.5); }
+.prospect-bar-input:focus { border-color: #3b82f6; }
+.prospect-bar-btn {
+    padding: 8px 18px;
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s;
+}
+.prospect-bar-btn:hover { background: #1d4ed8; }
+.prospect-bar-close {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 20px;
+    cursor: pointer;
+    padding: 4px 8px;
+    transition: color 0.2s;
+}
+.prospect-bar-close:hover { color: #fff; }
+
+@media (max-width: 768px) {
+    .prospect-bar {
+        flex-wrap: wrap;
+        padding: 10px 14px;
+        gap: 8px;
+    }
+    .prospect-bar-text {
+        font-size: 12px;
+        flex: 1 1 100%;
+        text-align: center;
+    }
+    .prospect-bar-form {
+        flex: 1;
+    }
+    .prospect-bar-input {
+        flex: 1;
+        width: auto;
+        min-width: 0;
+    }
+}
+
+/* ================================================================
    PROSPECT POPUP
    ================================================================ */
 .prospect-popup-overlay {
