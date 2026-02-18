@@ -663,6 +663,187 @@
                 </div>
             </div>
 
+            <!-- Video Trailer Showcase Section -->
+            <section class="video-showcase" id="videoShowcase">
+                <div class="vs-container">
+                    <div class="vs-header">
+                        <span class="vs-badge"><i class="fas fa-play-circle"></i> See It In Action</span>
+                        <h2 class="vs-title">Watch How SteelConnect Transforms Construction</h2>
+                        <p class="vs-subtitle">From blueprint to bill of quantities in minutes — powered by AI</p>
+                    </div>
+
+                    <!-- Video Carousel -->
+                    <div class="vs-carousel" id="vsCarousel">
+                        <div class="vs-track" id="vsTrack">
+
+                            <!-- Video 1: Steel Detailing & Fabrication -->
+                            <div class="vs-card" data-video-id="vs1">
+                                <div class="vs-player" id="vsPlayer1">
+                                    <video class="vs-video" id="vsVideo1" muted playsinline preload="metadata"
+                                        poster="https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&q=80">
+                                        <source src="https://cdn.coverr.co/videos/coverr-welding-sparks-8471/1080p.mp4" type="video/mp4">
+                                    </video>
+                                    <!-- Play button overlay -->
+                                    <div class="vs-play-overlay" id="vsPlayOverlay1" onclick="playTrailerVideo(1)">
+                                        <div class="vs-play-btn-wrap">
+                                            <div class="vs-play-pulse"></div>
+                                            <div class="vs-play-btn"><i class="fas fa-play"></i></div>
+                                        </div>
+                                        <span class="vs-play-label">Watch Trailer</span>
+                                    </div>
+                                    <!-- Email gate overlay (shows mid-video) -->
+                                    <div class="vs-gate-overlay" id="vsGate1" style="display:none;">
+                                        <div class="vs-gate-content">
+                                            <div class="vs-gate-icon"><i class="fas fa-lock"></i></div>
+                                            <h4 class="vs-gate-title">Like what you see?</h4>
+                                            <p class="vs-gate-text">Enter your email to watch the full video and unlock all platform features</p>
+                                            <form class="vs-gate-form" onsubmit="return unlockVideoGate(event, 1)">
+                                                <input type="email" class="vs-gate-input" placeholder="Your work email" required>
+                                                <button type="submit" class="vs-gate-btn">
+                                                    <span class="vs-gate-btn-text"><i class="fas fa-unlock"></i> Unlock Full Video</span>
+                                                    <span class="vs-gate-btn-loading" style="display:none;"><i class="fas fa-spinner fa-spin"></i></span>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                    <!-- Progress bar -->
+                                    <div class="vs-progress">
+                                        <div class="vs-progress-bar" id="vsProgress1"></div>
+                                        <div class="vs-progress-gate-marker" title="Email required to continue"></div>
+                                    </div>
+                                </div>
+                                <div class="vs-card-info">
+                                    <div class="vs-card-tag" style="background:#fef3c7;color:#d97706;"><i class="fas fa-fire"></i> Most Popular</div>
+                                    <h3 class="vs-card-title">Steel Fabrication & Detailing</h3>
+                                    <p class="vs-card-desc">See how our AI analyzes structural drawings, extracts member details, and generates fabrication-ready BOQ with cost estimates.</p>
+                                    <div class="vs-card-stats">
+                                        <span><i class="fas fa-clock"></i> 2:30 min</span>
+                                        <span><i class="fas fa-eye"></i> 4.2K views</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Video 2: AI Cost Estimation -->
+                            <div class="vs-card" data-video-id="vs2">
+                                <div class="vs-player" id="vsPlayer2">
+                                    <video class="vs-video" id="vsVideo2" muted playsinline preload="metadata"
+                                        poster="https://images.unsplash.com/photo-1581094794329-c8112c4e5190?w=800&q=80">
+                                        <source src="https://cdn.coverr.co/videos/coverr-steel-construction-7965/1080p.mp4" type="video/mp4">
+                                    </video>
+                                    <div class="vs-play-overlay" id="vsPlayOverlay2" onclick="playTrailerVideo(2)">
+                                        <div class="vs-play-btn-wrap">
+                                            <div class="vs-play-pulse"></div>
+                                            <div class="vs-play-btn"><i class="fas fa-play"></i></div>
+                                        </div>
+                                        <span class="vs-play-label">Watch Trailer</span>
+                                    </div>
+                                    <div class="vs-gate-overlay" id="vsGate2" style="display:none;">
+                                        <div class="vs-gate-content">
+                                            <div class="vs-gate-icon"><i class="fas fa-lock"></i></div>
+                                            <h4 class="vs-gate-title">Impressed? There's more!</h4>
+                                            <p class="vs-gate-text">Get full access to AI estimation demos, tutorials, and your own free estimates</p>
+                                            <form class="vs-gate-form" onsubmit="return unlockVideoGate(event, 2)">
+                                                <input type="email" class="vs-gate-input" placeholder="Your work email" required>
+                                                <button type="submit" class="vs-gate-btn">
+                                                    <span class="vs-gate-btn-text"><i class="fas fa-unlock"></i> Unlock Full Video</span>
+                                                    <span class="vs-gate-btn-loading" style="display:none;"><i class="fas fa-spinner fa-spin"></i></span>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                    <div class="vs-progress">
+                                        <div class="vs-progress-bar" id="vsProgress2"></div>
+                                        <div class="vs-progress-gate-marker"></div>
+                                    </div>
+                                </div>
+                                <div class="vs-card-info">
+                                    <div class="vs-card-tag" style="background:#eff6ff;color:#2563eb;"><i class="fas fa-brain"></i> AI Powered</div>
+                                    <h3 class="vs-card-title">AI Cost Estimation in Action</h3>
+                                    <p class="vs-card-desc">Watch our AI model analyze a real project PDF, extract quantities, and produce a complete cost breakdown in under 60 seconds.</p>
+                                    <div class="vs-card-stats">
+                                        <span><i class="fas fa-clock"></i> 1:45 min</span>
+                                        <span><i class="fas fa-eye"></i> 3.8K views</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Video 3: Connect with Designers -->
+                            <div class="vs-card" data-video-id="vs3">
+                                <div class="vs-player" id="vsPlayer3">
+                                    <video class="vs-video" id="vsVideo3" muted playsinline preload="metadata"
+                                        poster="https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=800&q=80">
+                                        <source src="https://cdn.coverr.co/videos/coverr-architect-working-on-blueprints-9878/1080p.mp4" type="video/mp4">
+                                    </video>
+                                    <div class="vs-play-overlay" id="vsPlayOverlay3" onclick="playTrailerVideo(3)">
+                                        <div class="vs-play-btn-wrap">
+                                            <div class="vs-play-pulse"></div>
+                                            <div class="vs-play-btn"><i class="fas fa-play"></i></div>
+                                        </div>
+                                        <span class="vs-play-label">Watch Trailer</span>
+                                    </div>
+                                    <div class="vs-gate-overlay" id="vsGate3" style="display:none;">
+                                        <div class="vs-gate-content">
+                                            <div class="vs-gate-icon"><i class="fas fa-lock"></i></div>
+                                            <h4 class="vs-gate-title">Ready to connect?</h4>
+                                            <p class="vs-gate-text">Enter your email to see the full designer matching experience and start your first project</p>
+                                            <form class="vs-gate-form" onsubmit="return unlockVideoGate(event, 3)">
+                                                <input type="email" class="vs-gate-input" placeholder="Your work email" required>
+                                                <button type="submit" class="vs-gate-btn">
+                                                    <span class="vs-gate-btn-text"><i class="fas fa-unlock"></i> Unlock Full Video</span>
+                                                    <span class="vs-gate-btn-loading" style="display:none;"><i class="fas fa-spinner fa-spin"></i></span>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                    <div class="vs-progress">
+                                        <div class="vs-progress-bar" id="vsProgress3"></div>
+                                        <div class="vs-progress-gate-marker"></div>
+                                    </div>
+                                </div>
+                                <div class="vs-card-info">
+                                    <div class="vs-card-tag" style="background:#f0fdf4;color:#16a34a;"><i class="fas fa-users"></i> Marketplace</div>
+                                    <h3 class="vs-card-title">Connect with Verified Designers</h3>
+                                    <p class="vs-card-desc">See how builders post projects, receive competitive quotes from verified structural designers, and collaborate in real-time.</p>
+                                    <div class="vs-card-stats">
+                                        <span><i class="fas fa-clock"></i> 2:10 min</span>
+                                        <span><i class="fas fa-eye"></i> 2.9K views</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- Carousel Navigation -->
+                        <button class="vs-nav vs-nav-prev" onclick="scrollVideoCarousel(-1)" aria-label="Previous"><i class="fas fa-chevron-left"></i></button>
+                        <button class="vs-nav vs-nav-next" onclick="scrollVideoCarousel(1)" aria-label="Next"><i class="fas fa-chevron-right"></i></button>
+                    </div>
+
+                    <!-- Carousel Dots -->
+                    <div class="vs-dots" id="vsDots">
+                        <button class="vs-dot vs-dot-active" onclick="scrollToVideo(0)"></button>
+                        <button class="vs-dot" onclick="scrollToVideo(1)"></button>
+                        <button class="vs-dot" onclick="scrollToVideo(2)"></button>
+                    </div>
+
+                    <!-- Social proof under videos -->
+                    <div class="vs-social-proof">
+                        <div class="vs-proof-item">
+                            <div class="vs-proof-avatars">
+                                <div class="vs-avatar" style="background:#2563eb;">JM</div>
+                                <div class="vs-avatar" style="background:#7c3aed;">SK</div>
+                                <div class="vs-avatar" style="background:#dc2626;">PA</div>
+                                <div class="vs-avatar" style="background:#059669;">RB</div>
+                            </div>
+                            <span>4,200+ professionals watched this week</span>
+                        </div>
+                        <div class="vs-proof-item">
+                            <i class="fas fa-star" style="color:#f59e0b;"></i>
+                            <span>Rated 4.9/5 by construction industry leaders</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <section id="ai-estimation" class="ai-estimation">
                 <div class="ai-est-orb ai-est-orb-1"></div>
                 <div class="ai-est-orb ai-est-orb-2"></div>
@@ -2116,6 +2297,166 @@
                     }
                 });
             }
+        })();
+
+        // ===== VIDEO TRAILER SHOWCASE =====
+        (function() {
+            var VIDEO_GATE_SECONDS = 8; // pause and show gate after 8 seconds
+            var videoTimers = {};
+            var videoUnlocked = localStorage.getItem('sc_prospect_captured') === 'true';
+
+            // Play trailer video
+            window.playTrailerVideo = function(idx) {
+                var video = document.getElementById('vsVideo' + idx);
+                var overlay = document.getElementById('vsPlayOverlay' + idx);
+                if (!video || !overlay) return;
+
+                overlay.style.opacity = '0';
+                setTimeout(function() { overlay.style.display = 'none'; }, 300);
+
+                video.currentTime = 0;
+                video.play().catch(function() {});
+
+                // Track progress
+                if (videoTimers[idx]) clearInterval(videoTimers[idx]);
+                videoTimers[idx] = setInterval(function() {
+                    var pBar = document.getElementById('vsProgress' + idx);
+                    if (pBar && video.duration) {
+                        var pct = (video.currentTime / video.duration) * 100;
+                        pBar.style.width = pct + '%';
+                    }
+
+                    // Gate trigger: pause at threshold if not unlocked
+                    if (!videoUnlocked && video.currentTime >= VIDEO_GATE_SECONDS) {
+                        video.pause();
+                        clearInterval(videoTimers[idx]);
+                        var gate = document.getElementById('vsGate' + idx);
+                        if (gate) {
+                            gate.style.display = 'flex';
+                            gate.style.opacity = '0';
+                            setTimeout(function() { gate.style.opacity = '1'; }, 50);
+                        }
+                    }
+                }, 200);
+
+                // Reset on end
+                video.onended = function() {
+                    clearInterval(videoTimers[idx]);
+                    var pBar = document.getElementById('vsProgress' + idx);
+                    if (pBar) pBar.style.width = '0%';
+                    overlay.style.display = '';
+                    overlay.style.opacity = '1';
+                };
+            };
+
+            // Unlock video after email
+            window.unlockVideoGate = async function(e, idx) {
+                e.preventDefault();
+                var form = e.target;
+                var input = form.querySelector('input[type="email"]');
+                var email = input.value.trim();
+                if (!email) return false;
+
+                var btn = form.querySelector('.vs-gate-btn');
+                var btnText = btn.querySelector('.vs-gate-btn-text');
+                var btnLoad = btn.querySelector('.vs-gate-btn-loading');
+                if (btnText) btnText.style.display = 'none';
+                if (btnLoad) btnLoad.style.display = 'inline';
+                btn.disabled = true;
+
+                try {
+                    var backendUrl = (typeof BACKEND_URL !== 'undefined') ? BACKEND_URL : 'https://steelconnect-backend.onrender.com/api';
+                    await fetch(backendUrl + '/prospects/capture', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: email, source: 'video-gate-' + idx, scrollDepth: 0 })
+                    });
+                } catch (err) { /* silent */ }
+
+                localStorage.setItem('sc_prospect_captured', 'true');
+                localStorage.setItem('sc_popup_dismissed', 'true');
+                localStorage.setItem('sc_bar_dismissed', 'true');
+                videoUnlocked = true;
+
+                // Unlock all video gates
+                for (var i = 1; i <= 3; i++) {
+                    var g = document.getElementById('vsGate' + i);
+                    if (g) { g.style.opacity = '0'; setTimeout((function(el){ return function(){ el.style.display = 'none'; }; })(g), 300); }
+                }
+
+                // Also unlock content gate if present
+                var contentGate = document.getElementById('contentGate');
+                var gatedContent = document.getElementById('gatedContent');
+                if (contentGate) { contentGate.style.display = 'none'; }
+                if (gatedContent) { gatedContent.style.display = ''; }
+
+                // Hide prospect bar/popup
+                var bar = document.getElementById('prospectBar');
+                if (bar) bar.style.display = 'none';
+                var popup = document.getElementById('prospectPopup');
+                if (popup) popup.style.display = 'none';
+
+                // Resume video
+                var video = document.getElementById('vsVideo' + idx);
+                if (video) {
+                    video.play().catch(function() {});
+                    // Resume progress tracking
+                    videoTimers[idx] = setInterval(function() {
+                        var pBar = document.getElementById('vsProgress' + idx);
+                        if (pBar && video.duration) {
+                            pBar.style.width = (video.currentTime / video.duration) * 100 + '%';
+                        }
+                    }, 200);
+                }
+
+                return false;
+            };
+
+            // Video carousel navigation
+            window.scrollVideoCarousel = function(dir) {
+                var track = document.getElementById('vsTrack');
+                if (!track) return;
+                var cards = track.querySelectorAll('.vs-card');
+                var cardW = cards[0] ? cards[0].offsetWidth + 24 : 400;
+                track.scrollBy({ left: dir * cardW, behavior: 'smooth' });
+            };
+
+            window.scrollToVideo = function(i) {
+                var track = document.getElementById('vsTrack');
+                if (!track) return;
+                var cards = track.querySelectorAll('.vs-card');
+                if (cards[i]) cards[i].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+            };
+
+            // Update dots on scroll
+            var track = document.getElementById('vsTrack');
+            if (track) {
+                track.addEventListener('scroll', function() {
+                    var cards = track.querySelectorAll('.vs-card');
+                    var dots = document.querySelectorAll('.vs-dot');
+                    var scrollL = track.scrollLeft;
+                    var cardW = cards[0] ? cards[0].offsetWidth + 24 : 400;
+                    var active = Math.round(scrollL / cardW);
+                    dots.forEach(function(d, i) {
+                        d.classList.toggle('vs-dot-active', i === active);
+                    });
+                });
+            }
+
+            // Auto-play first video when section enters viewport
+            var observer = new IntersectionObserver(function(entries) {
+                entries.forEach(function(entry) {
+                    if (entry.isIntersecting) {
+                        var video = document.getElementById('vsVideo1');
+                        // Don't auto-play, just add an attention animation to play button
+                        var playBtn = document.querySelector('#vsPlayOverlay1 .vs-play-btn-wrap');
+                        if (playBtn) playBtn.classList.add('vs-play-attention');
+                        observer.disconnect();
+                    }
+                });
+            }, { threshold: 0.3 });
+            var section = document.getElementById('videoShowcase');
+            if (section) observer.observe(section);
         })();
 
         // Content gate: unlock gated content
