@@ -704,6 +704,12 @@
                                 </div>
                             </div>
 
+                            <!-- Background music (royalty-free energetic track) -->
+                            <audio id="demoBgMusic" preload="auto" loop>
+                                <source src="https://cdn.pixabay.com/audio/2022/10/25/audio_33f0f26491.mp3" type="audio/mpeg">
+                                <source src="https://cdn.pixabay.com/audio/2023/07/06/audio_e4dfc2adf5.mp3" type="audio/mpeg">
+                            </audio>
+
                             <!-- ===== STATE 2: SLIDESHOW + AI HUD ===== -->
                             <div class="demo-state demo-state-slides" id="demoStateSlides" style="display:none">
                                 <!-- Slides -->
@@ -724,7 +730,7 @@
                                         <div class="demo-slide-caption"><span class="demo-caption-tag"><i class="fas fa-comments"></i> Real-Time Messaging</span><span class="demo-caption-text">Chat with designers &amp; contractors — file sharing, project context &amp; instant delivery</span></div>
                                     </div>
                                     <div class="demo-slide" style="background-image:url('https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=1920&q=90')">
-                                        <div class="demo-slide-caption"><span class="demo-caption-tag"><i class="fas fa-users"></i> Community Feed</span><span class="demo-caption-text">LinkedIn-style network — share updates, showcase work &amp; connect with professionals</span></div>
+                                        <div class="demo-slide-caption"><span class="demo-caption-tag"><i class="fas fa-users"></i> Community Hub</span><span class="demo-caption-text">Professional network — share updates, showcase work &amp; connect with steel industry experts</span></div>
                                     </div>
                                     <div class="demo-slide" style="background-image:url('https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1920&q=90')">
                                         <div class="demo-slide-caption"><span class="demo-caption-tag"><i class="fas fa-chart-bar"></i> Analytics &amp; Reports</span><span class="demo-caption-text">Business analytics dashboards — track projects, revenue &amp; performance metrics</span></div>
@@ -754,8 +760,11 @@
                                         <div class="demo-progress-gate-dot" title="Preview ends here"></div>
                                     </div>
                                 </div>
-                                <!-- Fullscreen button -->
-                                <button class="demo-fs-btn" onclick="demoToggleFS()" title="Fullscreen"><i class="fas fa-expand"></i></button>
+                                <!-- Controls: mute + fullscreen -->
+                                <div class="demo-controls">
+                                    <button class="demo-ctrl-btn" id="demoMuteBtn" onclick="demoToggleMute()" title="Mute/Unmute"><i class="fas fa-volume-up"></i></button>
+                                    <button class="demo-ctrl-btn" onclick="demoToggleFS()" title="Fullscreen"><i class="fas fa-expand"></i></button>
+                                </div>
                             </div>
 
                             <!-- ===== STATE 3: EMAIL GATE ===== -->
@@ -769,7 +778,7 @@
                                     <div class="demo-gate-chips">
                                         <div class="demo-gate-chip"><i class="fas fa-briefcase"></i><span>Project Marketplace</span></div>
                                         <div class="demo-gate-chip"><i class="fas fa-comments"></i><span>Real-Time Chat</span></div>
-                                        <div class="demo-gate-chip"><i class="fas fa-users"></i><span>Community Feed</span></div>
+                                        <div class="demo-gate-chip"><i class="fas fa-users"></i><span>Community Hub</span></div>
                                         <div class="demo-gate-chip"><i class="fas fa-chart-bar"></i><span>Analytics Dashboard</span></div>
                                     </div>
                                     <form class="demo-gate-form" id="demoGateForm" onsubmit="return demoUnlock(event)">
@@ -2358,6 +2367,9 @@
                     // Gate check
                     if (!demoUnlocked && slideTransitions >= GATE_AFTER) {
                         stopTimers();
+                        // Pause music
+                        var m = document.getElementById('demoBgMusic');
+                        if (m) m.pause();
                         // STATE 2 -> STATE 3
                         if (stateSlides) stateSlides.style.display = 'none';
                         if (stateGate) stateGate.style.display = 'flex';
@@ -2369,7 +2381,13 @@
                     }
 
                     if (nextSlide >= TOTAL_SLIDES) {
-                        resetToStart();
+                        if (demoUnlocked) {
+                            // After unlock: loop continuously
+                            goToSlide(0);
+                            currentSlide = 0;
+                        } else {
+                            resetToStart();
+                        }
                         return;
                     }
                     goToSlide(nextSlide);
@@ -2388,6 +2406,14 @@
                 goToSlide(0);
                 animateCounters();
                 startSlideshow();
+
+                // Start background music
+                var music = document.getElementById('demoBgMusic');
+                if (music) {
+                    music.volume = 0.35;
+                    music.currentTime = 0;
+                    music.play().catch(function(){});
+                }
             };
 
             // ---- demoUnlock: STATE 3 -> STATE 2, resume ----
@@ -2434,7 +2460,20 @@
                 if (stateSlides) stateSlides.style.display = 'flex';
                 startSlideshow();
 
+                // Resume music
+                var music = document.getElementById('demoBgMusic');
+                if (music) music.play().catch(function(){});
+
                 return false;
+            };
+
+            // ---- Music mute toggle ----
+            window.demoToggleMute = function() {
+                var music = document.getElementById('demoBgMusic');
+                var btn = document.getElementById('demoMuteBtn');
+                if (!music || !btn) return;
+                music.muted = !music.muted;
+                btn.innerHTML = music.muted ? '<i class="fas fa-volume-mute"></i>' : '<i class="fas fa-volume-up"></i>';
             };
 
             // ---- Fullscreen toggle ----
