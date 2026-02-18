@@ -1367,7 +1367,17 @@
                 </div>
             </section>
 
-            <!-- Prospect Popup (shows after 25s for first-time visitors) -->
+            <!-- Sticky bottom email bar (shows on scroll past hero) -->
+            <div class="prospect-bar" id="prospectBar" style="display:none;">
+                <span class="prospect-bar-text">Get a free AI cost estimate for your project</span>
+                <form class="prospect-bar-form" onsubmit="return captureProspectEmail(event, false, 'scroll-bar')">
+                    <input type="email" class="prospect-bar-input" placeholder="Enter your email" required>
+                    <button type="submit" class="prospect-bar-btn">Get Started</button>
+                </form>
+                <button class="prospect-bar-close" id="prospectBarClose">&times;</button>
+            </div>
+
+            <!-- Prospect Popup (shows on scroll 50% or exit intent) -->
             <div class="prospect-popup-overlay" id="prospectPopup" style="display:none;">
                 <div class="prospect-popup">
                     <button class="prospect-popup-close" id="prospectPopupClose" aria-label="Close">&times;</button>
@@ -1909,7 +1919,7 @@
             var POPUP_KEY = 'sc_popup_dismissed';
 
             // Capture email function (global)
-            window.captureProspectEmail = async function(e, isPopup) {
+            window.captureProspectEmail = async function(e, isPopup, customSource) {
                 e.preventDefault();
                 var form = e.target;
                 var input = form.querySelector('input[type="email"]');
@@ -1923,16 +1933,27 @@
                 if (btnLoad) btnLoad.style.display = 'inline';
                 btn.disabled = true;
 
+                // Collect scroll depth at capture time
+                var scrollPct = 0;
+                var docH = document.documentElement.scrollHeight - window.innerHeight;
+                if (docH > 0) scrollPct = Math.round((window.scrollY / docH) * 100);
+
+                var source = customSource || (isPopup ? 'popup' : 'inline-form');
+
                 try {
                     var backendUrl = (typeof BACKEND_URL !== 'undefined') ? BACKEND_URL : 'https://steelconnect-backend.onrender.com/api';
                     var resp = await fetch(backendUrl + '/prospects/capture', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email: email, source: isPopup ? 'popup' : 'inline-form' })
+                        body: JSON.stringify({ email: email, source: source, scrollDepth: scrollPct })
                     });
                     var data = await resp.json();
 
                     localStorage.setItem(PROSPECT_KEY, 'true');
+
+                    // Hide all prospect UI after capture
+                    var bar = document.getElementById('prospectBar');
+                    if (bar) bar.style.display = 'none';
 
                     if (isPopup) {
                         var popup = document.getElementById('prospectPopup');
@@ -1965,14 +1986,35 @@
                 return false;
             };
 
-            // Popup logic: show after 25s for first-time visitors
+            // Popup logic: show on scroll (50% of page) or exit intent for first-time visitors
             if (!localStorage.getItem(POPUP_KEY) && !localStorage.getItem(PROSPECT_KEY)) {
-                setTimeout(function() {
+                var popupShown = false;
+                function showProspectPopup() {
+                    if (popupShown) return;
                     var popup = document.getElementById('prospectPopup');
-                    if (popup && document.getElementById('landing-page-content').style.display !== 'none') {
+                    var landing = document.getElementById('landing-page-content');
+                    if (popup && landing && landing.style.display !== 'none') {
                         popup.style.display = 'flex';
+                        popupShown = true;
                     }
-                }, 25000);
+                }
+                // Trigger on scroll past 50% of landing page
+                window.addEventListener('scroll', function() {
+                    if (popupShown) return;
+                    var docH = document.documentElement.scrollHeight - window.innerHeight;
+                    if (docH > 0 && (window.scrollY / docH) >= 0.5) {
+                        showProspectPopup();
+                    }
+                });
+                // Exit intent: mouse leaves viewport top (desktop only)
+                document.addEventListener('mouseout', function(e) {
+                    if (popupShown) return;
+                    if (e.clientY <= 0 && e.relatedTarget == null) {
+                        showProspectPopup();
+                    }
+                });
+                // Fallback: 60s timer in case they don't scroll much
+                setTimeout(function() { showProspectPopup(); }, 60000);
             }
 
             // Close popup
@@ -1992,6 +2034,30 @@
                         popupOverlay.style.display = 'none';
                         localStorage.setItem(POPUP_KEY, 'true');
                     }
+                });
+            }
+
+            // Sticky bottom bar: show after scrolling past hero section (20% of page)
+            var BAR_KEY = 'sc_bar_dismissed';
+            if (!localStorage.getItem(BAR_KEY) && !localStorage.getItem(PROSPECT_KEY)) {
+                var barShown = false;
+                window.addEventListener('scroll', function() {
+                    if (barShown || localStorage.getItem(PROSPECT_KEY)) return;
+                    var docH = document.documentElement.scrollHeight - window.innerHeight;
+                    var landing = document.getElementById('landing-page-content');
+                    if (docH > 0 && (window.scrollY / docH) >= 0.2 && landing && landing.style.display !== 'none') {
+                        var bar = document.getElementById('prospectBar');
+                        if (bar) { bar.style.display = 'flex'; barShown = true; }
+                    }
+                });
+            }
+
+            // Close sticky bar
+            var barClose = document.getElementById('prospectBarClose');
+            if (barClose) {
+                barClose.addEventListener('click', function() {
+                    document.getElementById('prospectBar').style.display = 'none';
+                    localStorage.setItem(BAR_KEY, 'true');
                 });
             }
         })();
