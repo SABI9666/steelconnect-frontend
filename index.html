@@ -407,6 +407,30 @@
         @keyframes rippleEffect {
             to { transform: scale(4); opacity: 0; }
         }
+
+        /* Mobile overrides for inline analytics styles */
+        @media (max-width: 768px) {
+            .business-analytics-section { padding: 60px 0; }
+            .analytics-header { margin-bottom: 40px; }
+            .analytics-title { font-size: 30px; }
+            .analytics-subtitle { font-size: 15px; }
+            .analytics-grid { gap: 16px; margin-bottom: 32px; }
+            .analytics-card { padding: 20px; border-radius: 16px; }
+            .kpi-grid { gap: 10px; }
+            .kpi-card { padding: 16px; }
+            .charts-grid { gap: 16px; }
+            .chart-card { padding: 16px; border-radius: 14px; }
+            .metrics-strip { border-radius: 16px; }
+            .metric-item-value { font-size: 28px; }
+            .metric-item-label { font-size: 12px; }
+        }
+        @media (max-width: 480px) {
+            .analytics-title { font-size: 24px; }
+            .analytics-card { padding: 16px; }
+            .kpi-grid { grid-template-columns: 1fr; }
+            .metrics-strip { grid-template-columns: 1fr; padding: 24px 16px; }
+            .metric-item-value { font-size: 24px; }
+        }
     </style>
 </head>
 <body>
@@ -420,6 +444,9 @@
                 <div class="logo-icon">SC</div>
                 SteelConnect
             </a>
+            <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Toggle navigation menu">
+                <span></span><span></span><span></span>
+            </button>
             <nav id="main-nav-menu" class="nav-menu">
                 <a href="#ai-estimation" class="nav-link">AI Estimation</a>
                 <a href="#business-analytics" class="nav-link">AI Analytics</a>
@@ -1752,6 +1779,33 @@
                 });
             }
         });
+    </script>
+    <script>
+        // Mobile hamburger menu toggle
+        (function() {
+            const btn = document.getElementById('mobileMenuBtn');
+            const nav = document.getElementById('main-nav-menu');
+            if (!btn || !nav) return;
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                btn.classList.toggle('active');
+                nav.classList.toggle('mobile-open');
+            });
+            // Close menu when a nav link is clicked
+            nav.querySelectorAll('.nav-link').forEach(function(link) {
+                link.addEventListener('click', function() {
+                    btn.classList.remove('active');
+                    nav.classList.remove('mobile-open');
+                });
+            });
+            // Close menu when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!nav.contains(e.target) && !btn.contains(e.target)) {
+                    btn.classList.remove('active');
+                    nav.classList.remove('mobile-open');
+                }
+            });
+        })();
     </script>
 </body>
 </html>
