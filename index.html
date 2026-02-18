@@ -732,7 +732,6 @@
                                 </div>
                                 <!-- Animated overlays for AI feel -->
                                 <div class="cv-ai-overlay" id="cvAiOverlay" style="display:none;">
-                                    <div class="cv-ai-scan"></div>
                                     <div class="cv-ai-data">
                                         <div class="cv-ai-line"><span class="cv-ai-dot green"></span> Analyzing structural members...</div>
                                         <div class="cv-ai-line"><span class="cv-ai-dot blue"></span> Extracting dimensions & quantities...</div>
@@ -2374,8 +2373,8 @@
 
         // ===== CINEMATIC VIDEO SHOWCASE (Slideshow Engine) =====
         (function() {
-            var GATE_AFTER_SLIDES = 2; // show gate after 2 slides (≈3 seconds)
-            var SLIDE_INTERVAL = 1500; // ms per slide
+            var GATE_AFTER_SLIDES = 2; // show gate after 2 slide transitions (~3s)
+            var SLIDE_INTERVAL = 2000; // 2s per slide for smoother feel
             var TOTAL_SLIDES = 8;
             var currentSlide = 0;
             var slideTimer = null;
@@ -2383,7 +2382,7 @@
             var startTime = 0;
             var totalDuration = TOTAL_SLIDES * SLIDE_INTERVAL;
             var cvUnlocked = localStorage.getItem('sc_prospect_captured') === 'true';
-            var isPlaying = false;
+            var countersStarted = false;
 
             function getSlides() {
                 return document.querySelectorAll('#cvSlideshow .cv-slide');
@@ -2391,20 +2390,35 @@
 
             function goToSlide(idx) {
                 var slides = getSlides();
+                // Simple: only toggle active — no prev class, no transform fighting
                 slides.forEach(function(s, i) {
-                    s.classList.toggle('cv-slide-active', i === idx);
-                    s.classList.toggle('cv-slide-prev', i < idx);
+                    if (i === idx) {
+                        s.classList.add('cv-slide-active');
+                    } else {
+                        s.classList.remove('cv-slide-active');
+                    }
                 });
                 currentSlide = idx;
 
-                // Show AI overlay on slide 3+
+                // Update chapter markers
+                var markers = document.querySelectorAll('.cv-marker');
+                var chapterIdx = Math.floor(idx / 2); // 0-1=detailing, 2-3=AI, 4-5=PDF, 6-7=marketplace
+                markers.forEach(function(m, i) {
+                    m.classList.toggle('active', i <= chapterIdx);
+                });
+            }
+
+            function showAiOverlay() {
                 var aiOverlay = document.getElementById('cvAiOverlay');
                 if (aiOverlay) {
-                    aiOverlay.style.display = idx >= 2 ? '' : 'none';
+                    aiOverlay.style.display = '';
+                    // Small delay then make visible for smooth fade-in
+                    setTimeout(function() { aiOverlay.classList.add('cv-ai-visible'); }, 50);
                 }
-
-                // Animate counters on slide 3
-                if (idx === 2) animateCounters();
+                if (!countersStarted) {
+                    countersStarted = true;
+                    animateCounters();
+                }
             }
 
             function animateCounters() {
@@ -2414,7 +2428,7 @@
                     if (!el) return;
                     var target = targets[id];
                     var current = 0;
-                    var step = Math.ceil(target / 20);
+                    var step = Math.ceil(target / 25);
                     var timer = setInterval(function() {
                         current += step;
                         if (current >= target) { current = target; clearInterval(timer); }
@@ -2423,7 +2437,7 @@
                         } else {
                             el.textContent = current.toLocaleString();
                         }
-                    }, 50);
+                    }, 60);
                 });
             }
 
@@ -2433,34 +2447,40 @@
                 var controls = document.getElementById('cvControls');
 
                 // Hide play overlay
-                overlay.classList.add('cv-overlay-hide');
-                setTimeout(function() { overlay.style.display = 'none'; }, 500);
+                if (overlay) {
+                    overlay.classList.add('cv-overlay-hide');
+                    setTimeout(function() { overlay.style.display = 'none'; }, 500);
+                }
                 if (progressWrap) progressWrap.style.display = '';
                 if (controls) controls.style.display = '';
 
-                isPlaying = true;
                 currentSlide = 0;
                 startTime = Date.now();
+                countersStarted = false;
                 goToSlide(0);
 
+                // Show AI overlay immediately when video starts
+                showAiOverlay();
+
                 // Start slideshow
+                if (slideTimer) clearInterval(slideTimer);
+                if (progressTimer) clearInterval(progressTimer);
+
                 slideTimer = setInterval(function() {
                     var nextSlide = currentSlide + 1;
 
-                    // Gate check: pause after GATE_AFTER_SLIDES
+                    // Gate check: stop and show popup
                     if (!cvUnlocked && nextSlide >= GATE_AFTER_SLIDES) {
-                        clearInterval(slideTimer);
-                        clearInterval(progressTimer);
-                        isPlaying = false;
-                        showVideoGatePopup();
+                        clearInterval(slideTimer); slideTimer = null;
+                        clearInterval(progressTimer); progressTimer = null;
+                        // Short delay so user sees the slide before popup
+                        setTimeout(showVideoGatePopup, 300);
                         return;
                     }
 
                     if (nextSlide >= TOTAL_SLIDES) {
-                        // Loop or stop
-                        clearInterval(slideTimer);
-                        clearInterval(progressTimer);
-                        isPlaying = false;
+                        clearInterval(slideTimer); slideTimer = null;
+                        clearInterval(progressTimer); progressTimer = null;
                         resetToStart();
                         return;
                     }
@@ -2482,32 +2502,37 @@
                 var progressWrap = document.getElementById('cvProgressWrap');
                 var controls = document.getElementById('cvControls');
                 var fill = document.getElementById('cvProgressFill');
+                var aiOverlay = document.getElementById('cvAiOverlay');
                 if (fill) fill.style.width = '0%';
                 if (overlay) { overlay.style.display = ''; overlay.classList.remove('cv-overlay-hide'); }
                 if (progressWrap) progressWrap.style.display = 'none';
                 if (controls) controls.style.display = 'none';
+                if (aiOverlay) { aiOverlay.classList.remove('cv-ai-visible'); aiOverlay.style.display = 'none'; }
                 goToSlide(0);
             }
 
             function showVideoGatePopup() {
                 var popup = document.getElementById('cvGatePopup');
-                if (!popup) return;
+                if (!popup) { console.log('cvGatePopup not found'); return; }
 
                 // Update frozen frame image to current slide's image
                 var activeSlide = document.querySelector('#cvSlideshow .cv-slide-active');
                 if (activeSlide) {
                     var bg = activeSlide.style.backgroundImage;
-                    var url = bg.replace(/^url\(['"]?/, '').replace(/['"]?\)$/, '');
+                    var url = bg ? bg.replace(/^url\(["']?/, '').replace(/["']?\)$/, '') : '';
                     var frozenImg = document.getElementById('cvFrozenImg');
                     if (frozenImg && url) frozenImg.src = url;
                 }
 
                 popup.style.display = 'flex';
-                setTimeout(function() { popup.classList.add('cv-gate-active'); }, 20);
+                // Force reflow before adding class
+                popup.offsetHeight;
+                popup.classList.add('cv-gate-active');
+
                 setTimeout(function() {
                     var input = document.getElementById('cvGateEmail');
                     if (input) input.focus();
-                }, 400);
+                }, 500);
             }
 
             window.unlockCinematicVideo = async function(e) {
