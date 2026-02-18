@@ -1272,6 +1272,48 @@
                 </div>
             </section>
 
+            <!-- Content Gate: Email Required to Continue -->
+            <div class="content-gate" id="contentGate">
+                <div class="cg-inner">
+                    <div class="cg-lock-icon"><i class="fas fa-lock"></i></div>
+                    <h3 class="cg-title">Want to see more?</h3>
+                    <p class="cg-text">Enter your email to unlock client testimonials, project showcases, pricing details, and free AI estimation access.</p>
+
+                    <div class="cg-preview-cards">
+                        <div class="cg-preview-card">
+                            <i class="fas fa-star" style="color:#f59e0b;"></i>
+                            <span>Client Reviews & Success Stories</span>
+                        </div>
+                        <div class="cg-preview-card">
+                            <i class="fas fa-calculator" style="color:#2563eb;"></i>
+                            <span>Free AI Cost Estimation Tool</span>
+                        </div>
+                        <div class="cg-preview-card">
+                            <i class="fas fa-file-invoice-dollar" style="color:#10b981;"></i>
+                            <span>Detailed Cost Breakdowns & BOQ</span>
+                        </div>
+                        <div class="cg-preview-card">
+                            <i class="fas fa-users-cog" style="color:#7c3aed;"></i>
+                            <span>Connect with Verified Designers</span>
+                        </div>
+                    </div>
+
+                    <form class="cg-form" onsubmit="return unlockContent(event)">
+                        <div class="cg-input-wrap">
+                            <input type="email" class="cg-input" id="cgEmailInput" placeholder="Enter your email to continue" required>
+                            <button type="submit" class="cg-btn">
+                                <span class="cg-btn-text"><i class="fas fa-unlock"></i> Unlock</span>
+                                <span class="cg-btn-loading" style="display:none;"><i class="fas fa-spinner fa-spin"></i></span>
+                            </button>
+                        </div>
+                    </form>
+                    <p class="cg-note">Free access. No credit card. Unsubscribe anytime.</p>
+                </div>
+            </div>
+
+            <!-- Gated Content (hidden until email entered) -->
+            <div id="gatedContent" style="display:none;">
+
             <!-- Testimonials Carousel -->
             <section class="testimonials-section">
                 <div class="testimonials-container">
@@ -1343,27 +1385,184 @@
                 </div>
             </section>
 
-            <!-- Email Capture / Stay Connected Section -->
-            <section class="prospect-section" id="stay-connected">
-                <div class="prospect-container">
-                    <div class="prospect-content">
-                        <h2 class="prospect-title">Stay in the Loop</h2>
-                        <p class="prospect-subtitle">Get notified about platform updates, new features, and exclusive early access. No spam — just valuable construction industry insights.</p>
+            </div><!-- end #gatedContent -->
+
+            <!-- Smart Lead Capture: Interactive Mini Estimator + Value Gate -->
+            <section class="lead-capture-section" id="stay-connected">
+                <div class="lc-container">
+                    <div class="lc-header">
+                        <span class="lc-badge"><i class="fas fa-bolt"></i> Free Instant Estimate</span>
+                        <h2 class="lc-title">Get Your Project Cost Estimate in 60 Seconds</h2>
+                        <p class="lc-subtitle">Our AI analyzes 10,000+ real construction projects to give you an accurate range — no signup required to start.</p>
                     </div>
-                    <form class="prospect-form" id="prospectForm" onsubmit="return captureProspectEmail(event)">
-                        <div class="prospect-input-group">
-                            <input type="email" class="prospect-input" id="prospectEmailInput" placeholder="Enter your work email" required>
-                            <button type="submit" class="prospect-btn" id="prospectSubmitBtn">
-                                <span class="prospect-btn-text">Get Notified</span>
-                                <span class="prospect-btn-loading" style="display:none;"><i class="fas fa-spinner fa-spin"></i></span>
-                            </button>
+
+                    <!-- Step 1: Mini Calculator -->
+                    <div class="lc-calculator" id="lcStep1">
+                        <div class="lc-calc-grid">
+                            <div class="lc-field">
+                                <label class="lc-label"><i class="fas fa-building"></i> Project Type</label>
+                                <select class="lc-select" id="lcProjectType">
+                                    <option value="">Select type...</option>
+                                    <option value="Industrial / Warehouse">Industrial / Warehouse</option>
+                                    <option value="Commercial Office">Commercial Office</option>
+                                    <option value="Residential">Residential</option>
+                                    <option value="Retail / Shopping">Retail / Shopping</option>
+                                    <option value="Pre-Engineered Building">Pre-Engineered Building (PEB)</option>
+                                    <option value="Healthcare">Healthcare</option>
+                                    <option value="Educational">Educational</option>
+                                    <option value="Mixed-Use">Mixed-Use</option>
+                                </select>
+                            </div>
+                            <div class="lc-field">
+                                <label class="lc-label"><i class="fas fa-ruler-combined"></i> Approximate Area</label>
+                                <div class="lc-input-row">
+                                    <input type="number" class="lc-input" id="lcArea" placeholder="e.g. 5000" min="100">
+                                    <select class="lc-unit-select" id="lcUnit">
+                                        <option value="sqft">sq ft</option>
+                                        <option value="sqm">sq m</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="lc-field">
+                                <label class="lc-label"><i class="fas fa-map-marker-alt"></i> Location</label>
+                                <select class="lc-select" id="lcRegion">
+                                    <option value="">Select region...</option>
+                                    <option value="India">India</option>
+                                    <option value="USA">United States</option>
+                                    <option value="UAE">UAE / Gulf</option>
+                                    <option value="UK">United Kingdom</option>
+                                    <option value="Southeast Asia">Southeast Asia</option>
+                                    <option value="Africa">Africa</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div class="lc-field lc-field-btn">
+                                <button class="lc-estimate-btn" id="lcEstimateBtn" onclick="runMiniEstimate()">
+                                    <i class="fas fa-calculator"></i> Calculate My Estimate
+                                </button>
+                            </div>
                         </div>
-                        <p class="prospect-disclaimer">We respect your privacy. Unsubscribe anytime.</p>
-                        <div class="prospect-success" id="prospectSuccess" style="display:none;">
-                            <i class="fas fa-check-circle"></i>
-                            <span>Thank you! We'll be in touch soon.</span>
+                    </div>
+
+                    <!-- Step 2: Blurred Preview + Email Gate -->
+                    <div class="lc-result-gate" id="lcStep2" style="display:none;">
+                        <!-- Blurred teaser estimate -->
+                        <div class="lc-teaser">
+                            <div class="lc-teaser-header">
+                                <i class="fas fa-check-circle" style="color:#10b981;"></i>
+                                <span>Your estimate is ready!</span>
+                            </div>
+                            <div class="lc-teaser-preview">
+                                <div class="lc-teaser-row">
+                                    <span class="lc-teaser-label">Project Type</span>
+                                    <span class="lc-teaser-value" id="lcPreviewType">—</span>
+                                </div>
+                                <div class="lc-teaser-row">
+                                    <span class="lc-teaser-label">Estimated Range</span>
+                                    <span class="lc-teaser-value lc-blurred" id="lcPreviewRange">$450,000 - $820,000</span>
+                                </div>
+                                <div class="lc-teaser-row">
+                                    <span class="lc-teaser-label">Cost per sq ft</span>
+                                    <span class="lc-teaser-value lc-blurred" id="lcPreviewRate">$145 - $210</span>
+                                </div>
+                                <div class="lc-teaser-row">
+                                    <span class="lc-teaser-label">Steel Tonnage</span>
+                                    <span class="lc-teaser-value lc-blurred">12.5 - 18.2 tons</span>
+                                </div>
+                                <div class="lc-teaser-row">
+                                    <span class="lc-teaser-label">Concrete Volume</span>
+                                    <span class="lc-teaser-value lc-blurred">85 - 140 CY</span>
+                                </div>
+                            </div>
+                            <div class="lc-blur-overlay">
+                                <i class="fas fa-lock"></i>
+                                <span>Enter your email to unlock full estimate</span>
+                            </div>
                         </div>
-                    </form>
+
+                        <!-- What you'll get -->
+                        <div class="lc-unlock-features">
+                            <h3 class="lc-unlock-title">What you'll unlock:</h3>
+                            <div class="lc-features-grid">
+                                <div class="lc-feature">
+                                    <div class="lc-feature-icon" style="background:#eff6ff;color:#2563eb;"><i class="fas fa-file-invoice-dollar"></i></div>
+                                    <div class="lc-feature-text">
+                                        <strong>Detailed Cost Breakdown</strong>
+                                        <span>Trade-by-trade costs: structural steel, concrete, MEP, finishes, sitework</span>
+                                    </div>
+                                </div>
+                                <div class="lc-feature">
+                                    <div class="lc-feature-icon" style="background:#f0fdf4;color:#16a34a;"><i class="fas fa-clipboard-list"></i></div>
+                                    <div class="lc-feature-text">
+                                        <strong>Material Bill of Quantities</strong>
+                                        <span>Procurement-ready BOQ with exact quantities, specs, and unit rates</span>
+                                    </div>
+                                </div>
+                                <div class="lc-feature">
+                                    <div class="lc-feature-icon" style="background:#fef3c7;color:#d97706;"><i class="fas fa-hard-hat"></i></div>
+                                    <div class="lc-feature-text">
+                                        <strong>Manpower & Timeline</strong>
+                                        <span>Crew breakdown, labor hours, and estimated project duration</span>
+                                    </div>
+                                </div>
+                                <div class="lc-feature">
+                                    <div class="lc-feature-icon" style="background:#f5f3ff;color:#7c3aed;"><i class="fas fa-chart-bar"></i></div>
+                                    <div class="lc-feature-text">
+                                        <strong>Market Benchmarks</strong>
+                                        <span>Compare your estimate against industry rates for your region</span>
+                                    </div>
+                                </div>
+                                <div class="lc-feature">
+                                    <div class="lc-feature-icon" style="background:#fef2f2;color:#dc2626;"><i class="fas fa-file-pdf"></i></div>
+                                    <div class="lc-feature-text">
+                                        <strong>PDF Drawing Analysis</strong>
+                                        <span>Upload drawings and get AI-powered quantity takeoff from blueprints</span>
+                                    </div>
+                                </div>
+                                <div class="lc-feature">
+                                    <div class="lc-feature-icon" style="background:#ecfdf5;color:#059669;"><i class="fas fa-users-cog"></i></div>
+                                    <div class="lc-feature-text">
+                                        <strong>Connect with Designers</strong>
+                                        <span>Get matched with verified structural designers and receive competitive quotes</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Email capture form -->
+                        <div class="lc-email-gate">
+                            <form class="lc-gate-form" onsubmit="return captureProspectEmail(event, false, 'mini-estimator')">
+                                <input type="email" class="lc-gate-input" placeholder="Enter your work email to unlock" required>
+                                <button type="submit" class="lc-gate-btn">
+                                    <span class="prospect-btn-text"><i class="fas fa-unlock"></i> Unlock Full Estimate</span>
+                                    <span class="prospect-btn-loading" style="display:none;"><i class="fas fa-spinner fa-spin"></i></span>
+                                </button>
+                            </form>
+                            <p class="lc-gate-note"><i class="fas fa-shield-alt"></i> Free forever. No credit card. Cancel anytime.</p>
+                        </div>
+
+                        <button class="lc-back-btn" onclick="document.getElementById('lcStep1').style.display='';document.getElementById('lcStep2').style.display='none';">
+                            <i class="fas fa-arrow-left"></i> Modify inputs
+                        </button>
+                    </div>
+
+                    <!-- Step 3: Success State -->
+                    <div class="lc-success" id="lcStep3" style="display:none;">
+                        <div class="lc-success-icon"><i class="fas fa-check-circle"></i></div>
+                        <h3 class="lc-success-title">You're In!</h3>
+                        <p class="lc-success-text">We've sent you an invitation to access the full platform. Check your inbox for login details.</p>
+                        <div class="lc-success-next">
+                            <p>While you wait, here's what SteelConnect members get:</p>
+                            <div class="lc-success-perks">
+                                <div class="lc-perk"><i class="fas fa-brain"></i> Unlimited AI cost estimates</div>
+                                <div class="lc-perk"><i class="fas fa-file-pdf"></i> PDF drawing analysis</div>
+                                <div class="lc-perk"><i class="fas fa-comments"></i> Real-time messaging with designers</div>
+                                <div class="lc-perk"><i class="fas fa-briefcase"></i> Job posting & quoting system</div>
+                                <div class="lc-perk"><i class="fas fa-chart-line"></i> Market rate benchmarks</div>
+                                <div class="lc-perk"><i class="fas fa-mobile-alt"></i> Mobile-friendly portal</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </section>
 
@@ -1381,14 +1580,20 @@
             <div class="prospect-popup-overlay" id="prospectPopup" style="display:none;">
                 <div class="prospect-popup">
                     <button class="prospect-popup-close" id="prospectPopupClose" aria-label="Close">&times;</button>
-                    <div class="prospect-popup-icon"><i class="fas fa-hard-hat"></i></div>
-                    <h3 class="prospect-popup-title">Join 500+ Construction Professionals</h3>
-                    <p class="prospect-popup-text">Get exclusive access to AI-powered cost estimation, project management tools, and industry insights.</p>
+                    <div class="prospect-popup-icon"><i class="fas fa-gift"></i></div>
+                    <h3 class="prospect-popup-title">Unlock Free AI Cost Estimation</h3>
+                    <p class="prospect-popup-text">Join 500+ construction professionals already using SteelConnect.</p>
+                    <div class="prospect-popup-perks">
+                        <div class="pp-perk"><i class="fas fa-check" style="color:#10b981;"></i> AI estimates from PDF drawings</div>
+                        <div class="pp-perk"><i class="fas fa-check" style="color:#10b981;"></i> Trade-by-trade cost breakdown</div>
+                        <div class="pp-perk"><i class="fas fa-check" style="color:#10b981;"></i> Material BOQ with quantities</div>
+                        <div class="pp-perk"><i class="fas fa-check" style="color:#10b981;"></i> Connect with verified designers</div>
+                    </div>
                     <form class="prospect-popup-form" onsubmit="return captureProspectEmail(event, true)">
-                        <input type="email" class="prospect-popup-input" placeholder="Your email address" required>
-                        <button type="submit" class="prospect-popup-btn">Get Early Access</button>
+                        <input type="email" class="prospect-popup-input" placeholder="Your work email" required>
+                        <button type="submit" class="prospect-popup-btn"><i class="fas fa-unlock"></i> Get Free Access</button>
                     </form>
-                    <p class="prospect-popup-note">Free to join. No credit card required.</p>
+                    <p class="prospect-popup-note"><i class="fas fa-shield-alt"></i> Free forever. No credit card needed.</p>
                 </div>
             </div>
 
@@ -1913,6 +2118,107 @@
             }
         })();
 
+        // Content gate: unlock gated content
+        window.unlockContent = async function(e) {
+            e.preventDefault();
+            var form = e.target;
+            var input = form.querySelector('input[type="email"]');
+            var email = input.value.trim();
+            if (!email) return false;
+
+            var btn = form.querySelector('button[type="submit"]');
+            var btnText = btn.querySelector('.cg-btn-text');
+            var btnLoad = btn.querySelector('.cg-btn-loading');
+            if (btnText) btnText.style.display = 'none';
+            if (btnLoad) btnLoad.style.display = 'inline';
+            btn.disabled = true;
+
+            var scrollPct = 0;
+            var docH = document.documentElement.scrollHeight - window.innerHeight;
+            if (docH > 0) scrollPct = Math.round((window.scrollY / docH) * 100);
+
+            try {
+                var backendUrl = (typeof BACKEND_URL !== 'undefined') ? BACKEND_URL : 'https://steelconnect-backend.onrender.com/api';
+                await fetch(backendUrl + '/prospects/capture', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email, source: 'content-gate', scrollDepth: scrollPct })
+                });
+            } catch (err) { /* silent */ }
+
+            localStorage.setItem('sc_prospect_captured', 'true');
+            localStorage.setItem('sc_popup_dismissed', 'true');
+            localStorage.setItem('sc_bar_dismissed', 'true');
+
+            // Unlock content with smooth animation
+            var gate = document.getElementById('contentGate');
+            var gated = document.getElementById('gatedContent');
+            if (gate) { gate.style.opacity = '0'; gate.style.transform = 'translateY(-20px)'; setTimeout(function(){ gate.style.display = 'none'; }, 300); }
+            if (gated) gated.style.display = '';
+
+            // Hide other prospect captures
+            var bar = document.getElementById('prospectBar');
+            if (bar) bar.style.display = 'none';
+            var popup = document.getElementById('prospectPopup');
+            if (popup) popup.style.display = 'none';
+
+            return false;
+        };
+
+        // Auto-unlock if already captured
+        if (localStorage.getItem('sc_prospect_captured')) {
+            var gate = document.getElementById('contentGate');
+            var gated = document.getElementById('gatedContent');
+            if (gate) gate.style.display = 'none';
+            if (gated) gated.style.display = '';
+        }
+
+        // Mini estimator logic
+        window.runMiniEstimate = function() {
+            var type = document.getElementById('lcProjectType').value;
+            var area = parseFloat(document.getElementById('lcArea').value);
+            var unit = document.getElementById('lcUnit').value;
+            var region = document.getElementById('lcRegion').value;
+
+            if (!type) { alert('Please select a project type.'); return; }
+            if (!area || area < 100) { alert('Please enter an area (minimum 100).'); return; }
+            if (!region) { alert('Please select your region.'); return; }
+
+            // Convert to sqft for calculation
+            var areaSqft = unit === 'sqm' ? area * 10.764 : area;
+
+            // Regional cost benchmarks per sqft (low-high)
+            var benchmarks = {
+                'Industrial / Warehouse': { USD: [80,200], INR: [2000,5000], AED: [300,700] },
+                'Commercial Office': { USD: [150,350], INR: [3000,8000], AED: [500,1200] },
+                'Residential': { USD: [120,280], INR: [1500,4500], AED: [400,900] },
+                'Retail / Shopping': { USD: [130,300], INR: [2500,7000], AED: [450,1000] },
+                'Pre-Engineered Building': { USD: [40,120], INR: [1200,3000], AED: [180,450] },
+                'Healthcare': { USD: [250,500], INR: [5000,12000], AED: [700,1500] },
+                'Educational': { USD: [180,350], INR: [3500,8000], AED: [500,1000] },
+                'Mixed-Use': { USD: [160,380], INR: [3000,8500], AED: [500,1100] }
+            };
+
+            var currMap = { India: 'INR', USA: 'USD', UAE: 'AED', UK: 'USD', 'Southeast Asia': 'USD', Africa: 'USD', Other: 'USD' };
+            var symMap = { INR: '\u20B9', USD: '$', AED: 'AED ' };
+            var curr = currMap[region] || 'USD';
+            var sym = symMap[curr];
+            var bm = benchmarks[type] ? (benchmarks[type][curr] || benchmarks[type].USD) : [100, 300];
+
+            var low = Math.round(bm[0] * areaSqft);
+            var high = Math.round(bm[1] * areaSqft);
+
+            // Show step 2
+            document.getElementById('lcStep1').style.display = 'none';
+            document.getElementById('lcStep2').style.display = '';
+            document.getElementById('lcPreviewType').textContent = type + ' (' + area.toLocaleString() + ' ' + (unit === 'sqm' ? 'sq m' : 'sq ft') + ')';
+            document.getElementById('lcPreviewRange').textContent = sym + low.toLocaleString() + ' - ' + sym + high.toLocaleString();
+            document.getElementById('lcPreviewRate').textContent = sym + bm[0].toLocaleString() + ' - ' + sym + bm[1].toLocaleString() + ' / sq ft';
+
+            // Store for backend
+            window._lcEstimateData = { projectType: type, area: area, unit: unit, region: region, currency: curr };
+        };
+
         // Prospect email capture & popup
         (function() {
             var PROSPECT_KEY = 'sc_prospect_captured';
@@ -1940,12 +2246,18 @@
 
                 var source = customSource || (isPopup ? 'popup' : 'inline-form');
 
+                // Include mini estimator data if available
+                var bodyData = { email: email, source: source, scrollDepth: scrollPct };
+                if (window._lcEstimateData) {
+                    bodyData.estimateData = window._lcEstimateData;
+                }
+
                 try {
                     var backendUrl = (typeof BACKEND_URL !== 'undefined') ? BACKEND_URL : 'https://steelconnect-backend.onrender.com/api';
                     var resp = await fetch(backendUrl + '/prospects/capture', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email: email, source: source, scrollDepth: scrollPct })
+                        body: JSON.stringify(bodyData)
                     });
                     var data = await resp.json();
 
@@ -1961,11 +2273,12 @@
                         localStorage.setItem(POPUP_KEY, 'true');
                     }
 
-                    var successEl = document.getElementById('prospectSuccess');
-                    if (successEl && !isPopup) {
-                        successEl.style.display = 'flex';
-                        form.querySelector('.prospect-input-group').style.display = 'none';
-                        form.querySelector('.prospect-disclaimer').style.display = 'none';
+                    // Show mini estimator success state
+                    var lcStep2 = document.getElementById('lcStep2');
+                    var lcStep3 = document.getElementById('lcStep3');
+                    if (lcStep2 && lcStep3 && source === 'mini-estimator') {
+                        lcStep2.style.display = 'none';
+                        lcStep3.style.display = '';
                     }
 
                     if (isPopup) {
