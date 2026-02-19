@@ -2863,5 +2863,112 @@
             }
         })();
     </script>
+
+    <!-- ========== STEELCONNECT AI CHATBOT WIDGET ========== -->
+    <div id="sc-chatbot-widget" class="sc-chatbot-widget">
+        <!-- Floating Toggle Button -->
+        <button class="sc-chatbot-toggle" id="scChatbotToggle" aria-label="Open AI Assistant">
+            <div class="sc-chatbot-toggle-inner">
+                <div class="sc-chatbot-toggle-pulse"></div>
+                <div class="sc-chatbot-toggle-pulse sc-pulse-2"></div>
+                <div class="sc-chatbot-toggle-icon" id="scChatbotToggleIcon">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2C6.48 2 2 6.04 2 11c0 2.77 1.56 5.22 4 6.82V22l3.77-2.08c.74.13 1.47.08 2.23.08 5.52 0 10-4.04 10-9S17.52 2 12 2z" fill="white"/>
+                        <circle cx="8" cy="11" r="1.2" fill="#4338ca"/>
+                        <circle cx="12" cy="11" r="1.2" fill="#4338ca"/>
+                        <circle cx="16" cy="11" r="1.2" fill="#4338ca"/>
+                    </svg>
+                </div>
+                <div class="sc-chatbot-toggle-close" id="scChatbotToggleClose" style="display:none;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M18 6L6 18M6 6l12 12" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+                    </svg>
+                </div>
+            </div>
+            <span class="sc-chatbot-badge" id="scChatbotBadge">1</span>
+        </button>
+
+        <!-- Chat Window -->
+        <div class="sc-chatbot-window" id="scChatbotWindow" style="display:none;">
+            <!-- Header -->
+            <div class="sc-chatbot-header">
+                <div class="sc-chatbot-header-left">
+                    <div class="sc-chatbot-avatar">
+                        <div class="sc-chatbot-avatar-ring"></div>
+                        <div class="sc-chatbot-avatar-inner">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                <path d="M12 2L2 7v10l10 5 10-5V7L12 2z" fill="url(#botGrad)" opacity="0.15"/>
+                                <path d="M9 10h.01M15 10h.01M9.5 15a3.5 3.5 0 005 0" stroke="url(#botGrad)" stroke-width="2" stroke-linecap="round"/>
+                                <defs><linearGradient id="botGrad" x1="2" y1="2" x2="22" y2="22"><stop stop-color="#6366f1"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient></defs>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="sc-chatbot-header-info">
+                        <h4>SteelConnect AI</h4>
+                        <span class="sc-chatbot-status"><span class="sc-chatbot-status-dot"></span> Online</span>
+                    </div>
+                </div>
+                <div class="sc-chatbot-header-actions">
+                    <button class="sc-chatbot-minimize" id="scChatbotMinimize" aria-label="Minimize">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Messages Area -->
+            <div class="sc-chatbot-messages" id="scChatbotMessages">
+                <!-- Welcome message injected by JS -->
+            </div>
+
+            <!-- Quick Actions (shown initially) -->
+            <div class="sc-chatbot-quick-actions" id="scChatbotQuickActions">
+                <button class="sc-chatbot-quick-btn" data-question="What is SteelConnect?">
+                    <i class="fas fa-info-circle"></i> What is SteelConnect?
+                </button>
+                <button class="sc-chatbot-quick-btn" data-question="How does AI Estimation work?">
+                    <i class="fas fa-brain"></i> AI Estimation
+                </button>
+                <button class="sc-chatbot-quick-btn" data-question="What are the pricing plans?">
+                    <i class="fas fa-tags"></i> Pricing & Plans
+                </button>
+                <button class="sc-chatbot-quick-btn" data-question="How do I get started as a contractor?">
+                    <i class="fas fa-hard-hat"></i> Getting Started
+                </button>
+            </div>
+
+            <!-- Email Capture (shown after 2 messages) -->
+            <div class="sc-chatbot-email-capture" id="scChatbotEmailCapture" style="display:none;">
+                <div class="sc-chatbot-email-inner">
+                    <div class="sc-chatbot-email-sparkle"><i class="fas fa-envelope-open-text"></i></div>
+                    <p class="sc-chatbot-email-text">Get a personalized demo & free AI estimate sent to your inbox</p>
+                    <form class="sc-chatbot-email-form" id="scChatbotEmailForm">
+                        <input type="email" class="sc-chatbot-email-input" id="scChatbotEmailInput" placeholder="your@email.com" required>
+                        <button type="submit" class="sc-chatbot-email-btn">
+                            <span class="sc-chatbot-email-btn-text"><i class="fas fa-paper-plane"></i></span>
+                            <span class="sc-chatbot-email-btn-loading" style="display:none;"><i class="fas fa-spinner fa-spin"></i></span>
+                        </button>
+                    </form>
+                    <button class="sc-chatbot-email-skip" id="scChatbotEmailSkip">Maybe later</button>
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="sc-chatbot-input-area">
+                <div class="sc-chatbot-input-container">
+                    <textarea class="sc-chatbot-input" id="scChatbotInput" placeholder="Ask me anything about SteelConnect..." rows="1" maxlength="500"></textarea>
+                    <button class="sc-chatbot-send" id="scChatbotSend" disabled aria-label="Send message">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="sc-chatbot-powered">
+                    <span>Powered by SteelConnect AI</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- ========== END CHATBOT WIDGET ========== -->
+
 </body>
 </html>
