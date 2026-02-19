@@ -8468,6 +8468,7 @@ window.analyzeProjectQuotes = analyzeProjectQuotes;
     let greetingShown = false;
     let greetingDismissed = false;
     let sessionId = 'cb_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+    let chatHistory = []; // Track all messages for saving
 
     // DOM Elements
     const widget = document.getElementById('sc-chatbot-widget');
@@ -8692,10 +8693,12 @@ window.analyzeProjectQuotes = analyzeProjectQuotes;
 
             emailCaptured = true;
             localStorage.setItem('sc_chatbot_email_captured', 'true');
+            localStorage.setItem('sc_chatbot_email', email);
             localStorage.setItem('sc_prospect_captured', 'true');
 
             emailCapture.style.display = 'none';
             addBotMessage("Thank you! We've noted your email. You'll receive a personalized demo and free AI estimate shortly. Feel free to keep asking questions!");
+            saveChatSession(); // Save with email
         });
     }
 
@@ -8754,6 +8757,7 @@ window.analyzeProjectQuotes = analyzeProjectQuotes;
     // --- Core: Process user input and find the best response ---
     async function handleUserInput(text) {
         addUserMessage(text);
+        chatHistory.push({ role: 'user', text: text, time: new Date().toISOString() });
 
         // Hide quick actions after first message
         if (quickActions && quickActions.style.display !== 'none') {
@@ -8766,23 +8770,51 @@ window.analyzeProjectQuotes = analyzeProjectQuotes;
 
         // Try local knowledge base first
         const localResponse = findLocalResponse(text);
+        let botReply = '';
 
         if (localResponse) {
             // Simulate brief thinking delay for natural feel
             await delay(800 + Math.random() * 600);
             hideTyping();
             addBotMessage(localResponse);
+            botReply = localResponse;
         } else {
             // Try backend AI endpoint
             try {
                 const aiResponse = await fetchAIResponse(text);
                 hideTyping();
                 addBotMessage(aiResponse);
+                botReply = aiResponse;
             } catch (err) {
                 hideTyping();
-                addBotMessage(getFallbackResponse(text));
+                botReply = getFallbackResponse(text);
+                addBotMessage(botReply);
             }
         }
+
+        chatHistory.push({ role: 'bot', text: botReply, time: new Date().toISOString() });
+        saveChatSession();
+    }
+
+    // Save chat session to backend (debounced)
+    let saveTimeout = null;
+    function saveChatSession() {
+        if (saveTimeout) clearTimeout(saveTimeout);
+        saveTimeout = setTimeout(() => {
+            try {
+                fetch(CHATBOT_BACKEND + '/chatbot/save-session', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sessionId: sessionId,
+                        messages: chatHistory,
+                        email: localStorage.getItem('sc_chatbot_email') || null,
+                        source: 'landing-page-chatbot',
+                        capturedAt: new Date().toISOString()
+                    })
+                }).catch(() => {});
+            } catch (e) { /* silent */ }
+        }, 2000);
     }
 
     // --- Local Knowledge Base Matching ---
