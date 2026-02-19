@@ -8403,3 +8403,470 @@ window.analyzeProjectQuotes = analyzeProjectQuotes;
 
 // Business Analytics - View Only (No client uploads - admin manages all data)
 // Clients can only view approved dashboards via the AI Analytics Dashboard (analytics-integration.js)
+
+// ================================================================
+// STEELCONNECT AI CHATBOT - Landing Page Conversational Assistant
+// ================================================================
+(function() {
+    'use strict';
+
+    const CHATBOT_BACKEND = (typeof BACKEND_URL !== 'undefined') ? BACKEND_URL : 'https://steelconnect-backend.onrender.com/api';
+
+    // --- Knowledge Base: Comprehensive SteelConnect Portal Information ---
+    const KNOWLEDGE_BASE = {
+        about: {
+            keywords: ['what is steelconnect', 'about steelconnect', 'tell me about', 'what does steelconnect do', 'what is this platform', 'what is this', 'explain steelconnect', 'overview'],
+            response: `<strong>SteelConnect</strong> is the world's premier AI-powered construction platform connecting steel designers, structural engineers, and contractors globally.\n\nHere's what makes us unique:\n<ul><li><strong>AI-Powered Cost Estimation</strong> — Get instant, accurate cost estimates from PDF drawings using advanced AI (Claude Opus)</li><li><strong>Global Marketplace</strong> — Connect with 2,500+ PE-licensed professionals across 50+ countries</li><li><strong>Predictive Analytics</strong> — Business intelligence dashboards with real-time insights</li><li><strong>Real-Time Collaboration</strong> — Secure messaging, file sharing, and project management</li><li><strong>Enterprise Security</strong> — SOC 2 compliant with end-to-end encryption</li></ul>\nWe've helped manage 850+ projects with 12,000+ AI estimates generated!`
+        },
+        aiEstimation: {
+            keywords: ['ai estimation', 'cost estimate', 'how does ai', 'ai work', 'estimation work', 'pdf analysis', 'drawing analysis', 'estimate cost', 'ai-powered', 'calculate cost', 'how accurate'],
+            response: `<strong>AI-Powered Cost Estimation</strong> is our flagship feature:\n\n<ul><li><strong>Upload PDFs</strong> — Submit architectural drawings, structural plans, or blueprints</li><li><strong>AI Vision Analysis</strong> — Our Claude Opus AI analyzes every element: dimensions, materials, structural components</li><li><strong>Detailed Breakdown</strong> — Get trade-by-trade costs: structural steel, concrete, MEP, finishes, sitework</li><li><strong>Material BOQ</strong> — Procurement-ready Bill of Quantities with exact quantities and unit rates</li><li><strong>Manpower & Timeline</strong> — Crew breakdown, labor hours, and estimated project duration</li><li><strong>95%+ Accuracy</strong> — Trained on 10,000+ real construction projects</li></ul>\nSupports Industrial, Commercial, Residential, Healthcare, PEB, and more. Available in USD, INR, AED, and other currencies.`
+        },
+        pricing: {
+            keywords: ['pricing', 'price', 'cost', 'plan', 'free', 'subscription', 'how much', 'payment', 'fee', 'charge'],
+            response: `<strong>SteelConnect Pricing:</strong>\n\n<ul><li><strong>Free Tier</strong> — Sign up free! Get basic AI estimates, browse the marketplace, and connect with professionals</li><li><strong>Professional</strong> — Unlimited AI estimates, PDF drawing analysis, priority matching, advanced analytics</li><li><strong>Enterprise</strong> — Custom solutions for large firms: dedicated support, API access, team management, NDA tools</li></ul>\n<strong>No credit card required to start.</strong> All tiers include real-time messaging and project management.\n\nWant a personalized quote? Share your email and our team will send you a custom pricing breakdown!`
+        },
+        gettingStarted: {
+            keywords: ['get started', 'how to start', 'sign up', 'register', 'join', 'create account', 'new user', 'onboard', 'how do i begin', 'first step'],
+            response: `<strong>Getting Started is Easy:</strong>\n\n<ul><li><strong>Step 1: Sign Up</strong> — Click "Start Building Today" on the homepage. Enter your email, name, and choose your role (Client or Contractor)</li><li><strong>Step 2: Verify Email</strong> — We'll send you a secure OTP to verify your account</li><li><strong>Step 3: Complete Profile</strong> — Add your skills, experience, certifications, and portfolio</li><li><strong>Step 4: Get Approved</strong> — Our admin team reviews and approves your profile</li><li><strong>Step 5: Start Working</strong> — Post or bid on projects, use AI estimation, and collaborate!</li></ul>\nThe entire process is smooth and guided. Our support team is available 24/7 to help.`
+        },
+        forContractors: {
+            keywords: ['contractor', 'designer', 'engineer', 'freelance', 'bid', 'find work', 'find projects', 'job opportunities', 'for engineers'],
+            response: `<strong>For Contractors & Engineers:</strong>\n\nSteelConnect opens doors to high-value projects worldwide:\n\n<ul><li><strong>Global Exposure</strong> — Get matched with clients across 50+ countries based on your expertise</li><li><strong>Verified Profile</strong> — Showcase PE licenses, certifications, portfolio, and client reviews</li><li><strong>AI Tools</strong> — Use AI estimation to create winning proposals faster</li><li><strong>Secure Payments</strong> — Escrow protection ensures you get paid for your work</li><li><strong>Quote System</strong> — Receive project briefs and submit competitive quotes</li><li><strong>Business Analytics</strong> — Track your revenue, projects, and growth with AI-powered dashboards</li></ul>\nJoin 2,500+ professionals already growing their business on SteelConnect.`
+        },
+        forClients: {
+            keywords: ['client', 'owner', 'project owner', 'post project', 'find engineer', 'hire', 'find designer', 'looking for', 'need engineer'],
+            response: `<strong>For Project Owners & Clients:</strong>\n\nFind the right talent and manage projects effortlessly:\n\n<ul><li><strong>Post a Project</strong> — Describe your requirements and get matched with qualified professionals</li><li><strong>AI Estimates First</strong> — Get instant AI cost estimates before hiring, so you know your budget</li><li><strong>Verified Professionals</strong> — Every contractor is PE-verified with background checks</li><li><strong>Real-Time Chat</strong> — Communicate directly with your team via encrypted messaging</li><li><strong>Track Progress</strong> — Monitor milestones, deliverables, and timelines in one dashboard</li><li><strong>Quality Guarantee</strong> — Built-in NDA management, insurance validation, and dispute resolution</li></ul>`
+        },
+        analytics: {
+            keywords: ['analytics', 'dashboard', 'business intelligence', 'data', 'reports', 'insights', 'tracking', 'metrics', 'ai analytics'],
+            response: `<strong>AI-Powered Business Analytics:</strong>\n\nGet enterprise-grade insights to drive smarter decisions:\n\n<ul><li><strong>Revenue Tracking</strong> — Monitor earnings, invoices, and financial trends in real-time</li><li><strong>Project Metrics</strong> — Track completion rates, timelines, and efficiency scores</li><li><strong>Market Benchmarks</strong> — Compare your rates against industry standards by region</li><li><strong>Predictive Forecasting</strong> — AI predicts revenue trends and project demand</li><li><strong>Custom Reports</strong> — Export PDF/Excel reports for stakeholders</li><li><strong>KPI Dashboard</strong> — Key performance indicators at a glance</li></ul>\nOur analytics dashboard has helped businesses achieve an average 186% ROI boost!`
+        },
+        security: {
+            keywords: ['security', 'safe', 'secure', 'privacy', 'encryption', 'data protection', 'trust', 'compliance', 'soc'],
+            response: `<strong>Enterprise-Grade Security:</strong>\n\nYour data is protected with multiple layers of security:\n\n<ul><li><strong>SOC 2 Compliant</strong> — Industry-standard security certification</li><li><strong>End-to-End Encryption</strong> — All messages and files are encrypted in transit and at rest</li><li><strong>NDA Management</strong> — Built-in tools for confidentiality agreements</li><li><strong>Verified Users</strong> — PE license checks, insurance validation, and identity verification</li><li><strong>Escrow Payments</strong> — Funds held securely until project milestones are met</li><li><strong>24/7 Monitoring</strong> — Continuous security monitoring and threat detection</li></ul>\nTrusted by companies like Turner Construction, Bechtel Group, AECOM, and Skanska.`
+        },
+        support: {
+            keywords: ['support', 'help', 'contact', 'customer service', 'issue', 'problem', 'technical', 'assistance'],
+            response: `<strong>We're Here to Help!</strong>\n\n<ul><li><strong>24/7 Support</strong> — Our dedicated team is available around the clock</li><li><strong>In-App Support</strong> — Submit tickets directly from your dashboard with priority levels</li><li><strong>Email Support</strong> — Reach us for detailed inquiries</li><li><strong>Knowledge Base</strong> — Comprehensive guides and documentation</li><li><strong>Community Forum</strong> — Connect with other professionals and share best practices</li></ul>\nPlease share your email and we'll have a support specialist reach out to you personally!`
+        },
+        features: {
+            keywords: ['features', 'what can i do', 'capabilities', 'tools', 'functionality', 'services', 'offerings'],
+            response: `<strong>SteelConnect Platform Features:</strong>\n\n<ul><li><strong>AI Cost Estimation</strong> — Instant estimates from PDF drawings</li><li><strong>PDF Drawing Analysis</strong> — AI-powered quantity takeoff from blueprints</li><li><strong>Global Marketplace</strong> — Connect with 2,500+ verified professionals</li><li><strong>Real-Time Messaging</strong> — Encrypted chat with file sharing</li><li><strong>Project Management</strong> — Track milestones, deliverables, and payments</li><li><strong>Business Analytics</strong> — AI-powered dashboards and forecasting</li><li><strong>Quote System</strong> — Submit and receive competitive project quotes</li><li><strong>Community Hub</strong> — Industry news, discussions, and networking</li><li><strong>Mobile Responsive</strong> — Full functionality on any device</li></ul>`
+        },
+        demo: {
+            keywords: ['demo', 'trial', 'try', 'test', 'preview', 'see it', 'show me', 'walkthrough', 'tour'],
+            response: `<strong>See SteelConnect in Action!</strong>\n\nYou can explore the platform right now:\n\n<ul><li><strong>Watch Our Demo Video</strong> — Scroll up to the "Platform Preview" section for a full walkthrough</li><li><strong>Try AI Estimation</strong> — Use the mini estimator on this page to get a free cost estimate instantly</li><li><strong>Free Account</strong> — Sign up with just your email to access all features</li></ul>\nShare your email and we'll send you a personalized demo link with sample projects and AI estimation results!`
+        }
+    };
+
+    // State
+    let chatOpen = false;
+    let messageCount = 0;
+    let emailCaptured = localStorage.getItem('sc_chatbot_email_captured') === 'true';
+    let emailShown = false;
+    let greetingShown = false;
+    let greetingDismissed = false;
+    let sessionId = 'cb_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+
+    // DOM Elements
+    const widget = document.getElementById('sc-chatbot-widget');
+    const toggle = document.getElementById('scChatbotToggle');
+    const window_ = document.getElementById('scChatbotWindow');
+    const messagesContainer = document.getElementById('scChatbotMessages');
+    const quickActions = document.getElementById('scChatbotQuickActions');
+    const emailCapture = document.getElementById('scChatbotEmailCapture');
+    const emailForm = document.getElementById('scChatbotEmailForm');
+    const emailInput = document.getElementById('scChatbotEmailInput');
+    const emailSkip = document.getElementById('scChatbotEmailSkip');
+    const chatInput = document.getElementById('scChatbotInput');
+    const sendBtn = document.getElementById('scChatbotSend');
+    const minimizeBtn = document.getElementById('scChatbotMinimize');
+    const toggleIcon = document.getElementById('scChatbotToggleIcon');
+    const toggleClose = document.getElementById('scChatbotToggleClose');
+    const badge = document.getElementById('scChatbotBadge');
+
+    if (!widget || !toggle) return;
+
+    // Only show on landing page
+    function isLandingPageVisible() {
+        const landing = document.getElementById('landing-page-content');
+        return landing && landing.style.display !== 'none';
+    }
+
+    // --- Toggle Chat ---
+    function openChat() {
+        if (!isLandingPageVisible()) return;
+        chatOpen = true;
+        window_.style.display = 'flex';
+        window_.classList.remove('sc-closing');
+        toggleIcon.style.display = 'none';
+        toggleClose.style.display = 'flex';
+        badge.style.display = 'none';
+        // Remove greeting bubble if present
+        const greet = document.querySelector('.sc-chatbot-greeting');
+        if (greet) greet.remove();
+
+        // Add welcome message if first time
+        if (messagesContainer.children.length === 0) {
+            addBotMessage("Hi there! I'm the <strong>SteelConnect AI Assistant</strong>. I can help you learn about our platform, AI estimation, pricing, and more.\n\nWhat would you like to know?");
+        }
+        chatInput.focus();
+    }
+
+    function closeChat() {
+        chatOpen = false;
+        window_.classList.add('sc-closing');
+        setTimeout(() => {
+            window_.style.display = 'none';
+            window_.classList.remove('sc-closing');
+        }, 250);
+        toggleIcon.style.display = 'flex';
+        toggleClose.style.display = 'none';
+    }
+
+    toggle.addEventListener('click', () => {
+        if (chatOpen) {
+            closeChat();
+        } else {
+            openChat();
+        }
+    });
+
+    minimizeBtn.addEventListener('click', closeChat);
+
+    // --- Auto-show greeting bubble after delay ---
+    function showGreetingBubble() {
+        if (greetingShown || greetingDismissed || chatOpen || !isLandingPageVisible()) return;
+        greetingShown = true;
+
+        const bubble = document.createElement('div');
+        bubble.className = 'sc-chatbot-greeting';
+        bubble.innerHTML = `
+            <button class="sc-chatbot-greeting-close" aria-label="Close">&times;</button>
+            <p class="sc-chatbot-greeting-text">Hi! Need help with <strong>AI estimation</strong> or finding the right engineer? I'm here to help!</p>
+            <div class="sc-chatbot-greeting-arrow"></div>
+        `;
+
+        widget.appendChild(bubble);
+
+        bubble.addEventListener('click', (e) => {
+            if (e.target.classList.contains('sc-chatbot-greeting-close')) {
+                bubble.remove();
+                greetingDismissed = true;
+                return;
+            }
+            bubble.remove();
+            openChat();
+        });
+
+        // Auto-hide after 12 seconds
+        setTimeout(() => {
+            if (bubble.parentNode) {
+                bubble.style.opacity = '0';
+                bubble.style.transform = 'translateY(10px)';
+                bubble.style.transition = 'all 0.3s ease';
+                setTimeout(() => bubble.remove(), 300);
+            }
+        }, 12000);
+    }
+
+    // Show greeting after 5 seconds on landing page
+    setTimeout(showGreetingBubble, 5000);
+
+    // Also show on scroll (50% of viewport)
+    let greetOnScroll = false;
+    window.addEventListener('scroll', () => {
+        if (greetOnScroll || greetingDismissed) return;
+        const scrollPct = window.scrollY / (document.documentElement.scrollHeight - window.innerHeight);
+        if (scrollPct > 0.3 && isLandingPageVisible()) {
+            greetOnScroll = true;
+            showGreetingBubble();
+        }
+    });
+
+    // Hide chatbot when not on landing page
+    const observer = new MutationObserver(() => {
+        if (!isLandingPageVisible()) {
+            widget.style.display = 'none';
+            if (chatOpen) closeChat();
+        } else {
+            widget.style.display = '';
+        }
+    });
+    const landingEl = document.getElementById('landing-page-content');
+    if (landingEl) {
+        observer.observe(landingEl, { attributes: true, attributeFilter: ['style'] });
+    }
+
+    // --- Message Rendering ---
+    function addBotMessage(html) {
+        const msg = document.createElement('div');
+        msg.className = 'sc-chat-msg sc-bot';
+        msg.innerHTML = `
+            <div class="sc-chat-msg-avatar"><i class="fas fa-robot"></i></div>
+            <div class="sc-chat-bubble">${html.replace(/\n/g, '<br>')}</div>
+        `;
+        messagesContainer.appendChild(msg);
+        scrollToBottom();
+        messageCount++;
+        checkEmailPrompt();
+    }
+
+    function addUserMessage(text) {
+        const msg = document.createElement('div');
+        msg.className = 'sc-chat-msg sc-user';
+        msg.innerHTML = `
+            <div class="sc-chat-msg-avatar">You</div>
+            <div class="sc-chat-bubble">${escapeHtml(text)}</div>
+        `;
+        messagesContainer.appendChild(msg);
+        scrollToBottom();
+        messageCount++;
+    }
+
+    function showTyping() {
+        const typing = document.createElement('div');
+        typing.className = 'sc-chat-msg sc-bot';
+        typing.id = 'scChatTyping';
+        typing.innerHTML = `
+            <div class="sc-chat-msg-avatar"><i class="fas fa-robot"></i></div>
+            <div class="sc-chat-bubble sc-chat-typing">
+                <div class="sc-chat-typing-dot"></div>
+                <div class="sc-chat-typing-dot"></div>
+                <div class="sc-chat-typing-dot"></div>
+            </div>
+        `;
+        messagesContainer.appendChild(typing);
+        scrollToBottom();
+    }
+
+    function hideTyping() {
+        const typing = document.getElementById('scChatTyping');
+        if (typing) typing.remove();
+    }
+
+    function scrollToBottom() {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // --- Email Prompt Logic ---
+    function checkEmailPrompt() {
+        if (emailCaptured || emailShown) return;
+        if (messageCount >= 3) {
+            emailShown = true;
+            emailCapture.style.display = '';
+        }
+    }
+
+    // Email form submit
+    if (emailForm) {
+        emailForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = emailInput.value.trim();
+            if (!email) return;
+
+            const btnText = emailForm.querySelector('.sc-chatbot-email-btn-text');
+            const btnLoad = emailForm.querySelector('.sc-chatbot-email-btn-loading');
+            if (btnText) btnText.style.display = 'none';
+            if (btnLoad) btnLoad.style.display = 'inline';
+
+            try {
+                await fetch(CHATBOT_BACKEND + '/prospects/capture', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: email,
+                        source: 'chatbot-widget',
+                        chatSessionId: sessionId,
+                        messageCount: messageCount
+                    })
+                });
+            } catch (err) { /* silent */ }
+
+            emailCaptured = true;
+            localStorage.setItem('sc_chatbot_email_captured', 'true');
+            localStorage.setItem('sc_prospect_captured', 'true');
+
+            emailCapture.style.display = 'none';
+            addBotMessage("Thank you! We've noted your email. You'll receive a personalized demo and free AI estimate shortly. Feel free to keep asking questions!");
+        });
+    }
+
+    if (emailSkip) {
+        emailSkip.addEventListener('click', () => {
+            emailCapture.style.display = 'none';
+        });
+    }
+
+    // --- Quick Action Buttons ---
+    if (quickActions) {
+        quickActions.addEventListener('click', (e) => {
+            const btn = e.target.closest('.sc-chatbot-quick-btn');
+            if (!btn) return;
+            const question = btn.getAttribute('data-question');
+            if (question) {
+                handleUserInput(question);
+                // Fade out quick actions after first use
+                quickActions.style.opacity = '0';
+                quickActions.style.transform = 'translateY(6px)';
+                quickActions.style.transition = 'all 0.3s ease';
+                setTimeout(() => { quickActions.style.display = 'none'; }, 300);
+            }
+        });
+    }
+
+    // --- Input Handling ---
+    chatInput.addEventListener('input', () => {
+        sendBtn.disabled = chatInput.value.trim().length === 0;
+        // Auto-resize textarea
+        chatInput.style.height = 'auto';
+        chatInput.style.height = Math.min(chatInput.scrollHeight, 80) + 'px';
+    });
+
+    chatInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            if (chatInput.value.trim()) {
+                handleUserInput(chatInput.value.trim());
+                chatInput.value = '';
+                chatInput.style.height = 'auto';
+                sendBtn.disabled = true;
+            }
+        }
+    });
+
+    sendBtn.addEventListener('click', () => {
+        if (chatInput.value.trim()) {
+            handleUserInput(chatInput.value.trim());
+            chatInput.value = '';
+            chatInput.style.height = 'auto';
+            sendBtn.disabled = true;
+        }
+    });
+
+    // --- Core: Process user input and find the best response ---
+    async function handleUserInput(text) {
+        addUserMessage(text);
+
+        // Hide quick actions after first message
+        if (quickActions && quickActions.style.display !== 'none') {
+            quickActions.style.opacity = '0';
+            quickActions.style.transition = 'all 0.3s ease';
+            setTimeout(() => { quickActions.style.display = 'none'; }, 300);
+        }
+
+        showTyping();
+
+        // Try local knowledge base first
+        const localResponse = findLocalResponse(text);
+
+        if (localResponse) {
+            // Simulate brief thinking delay for natural feel
+            await delay(800 + Math.random() * 600);
+            hideTyping();
+            addBotMessage(localResponse);
+        } else {
+            // Try backend AI endpoint
+            try {
+                const aiResponse = await fetchAIResponse(text);
+                hideTyping();
+                addBotMessage(aiResponse);
+            } catch (err) {
+                hideTyping();
+                addBotMessage(getFallbackResponse(text));
+            }
+        }
+    }
+
+    // --- Local Knowledge Base Matching ---
+    function findLocalResponse(text) {
+        const lower = text.toLowerCase().trim();
+
+        // Check each knowledge base category
+        for (const [key, entry] of Object.entries(KNOWLEDGE_BASE)) {
+            for (const keyword of entry.keywords) {
+                if (lower.includes(keyword) || fuzzyMatch(lower, keyword)) {
+                    return entry.response;
+                }
+            }
+        }
+
+        // Greeting detection
+        if (/^(hi|hello|hey|good morning|good afternoon|good evening|howdy|greetings|yo|sup)\b/i.test(lower)) {
+            return "Hello! Welcome to <strong>SteelConnect</strong>. I'm your AI assistant, ready to help you explore our platform.\n\nI can tell you about:\n<ul><li>AI-powered cost estimation</li><li>How to get started</li><li>Pricing and plans</li><li>Features for contractors & clients</li><li>Business analytics</li></ul>\nWhat interests you most?";
+        }
+
+        // Thank you
+        if (/^(thanks|thank you|thx|ty|cheers|appreciate)/i.test(lower)) {
+            return "You're welcome! If you have any more questions about SteelConnect, feel free to ask. I'm here to help!\n\nDon't forget — you can <strong>sign up free</strong> to try our AI estimation and connect with professionals worldwide.";
+        }
+
+        // Bye
+        if (/^(bye|goodbye|see you|later|cya|take care)/i.test(lower)) {
+            return "Goodbye! Thanks for exploring SteelConnect. If you need anything in the future, I'm always here.\n\nRemember: <strong>Sign up is free</strong> and you can start getting AI estimates immediately!";
+        }
+
+        return null; // No local match
+    }
+
+    function fuzzyMatch(text, keyword) {
+        const words = keyword.split(' ');
+        if (words.length === 1) return false;
+        let matchCount = 0;
+        for (const word of words) {
+            if (text.includes(word)) matchCount++;
+        }
+        return matchCount >= Math.ceil(words.length * 0.7);
+    }
+
+    // --- Backend AI Fetch ---
+    async function fetchAIResponse(userMessage) {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 15000);
+
+        try {
+            const res = await fetch(CHATBOT_BACKEND + '/chatbot/ask', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message: userMessage,
+                    sessionId: sessionId,
+                    context: 'landing-page'
+                }),
+                signal: controller.signal
+            });
+            clearTimeout(timeout);
+
+            if (!res.ok) throw new Error('API error');
+            const data = await res.json();
+            return data.response || getFallbackResponse(userMessage);
+        } catch (err) {
+            clearTimeout(timeout);
+            throw err;
+        }
+    }
+
+    // --- Fallback Responses ---
+    function getFallbackResponse(text) {
+        const fallbacks = [
+            "That's a great question! While I don't have a specific answer for that, here's what I can help with:\n\n<ul><li><strong>AI Estimation</strong> — Learn about our AI-powered cost estimation</li><li><strong>Getting Started</strong> — How to sign up and begin</li><li><strong>For Contractors</strong> — Opportunities for engineers</li><li><strong>For Clients</strong> — How to find the right talent</li><li><strong>Pricing</strong> — Plans and costs</li></ul>\nOr, share your email and our team will personally reach out to answer your question!",
+
+            "I appreciate your interest! That question might need a more detailed response from our team.\n\nIn the meantime, try asking me about:\n<ul><li>How AI estimation works</li><li>Platform features and pricing</li><li>Getting started as a client or contractor</li><li>Security and compliance</li></ul>\nOr drop your email and we'll connect you with a specialist!",
+
+            "Interesting question! I'm best at helping with SteelConnect-specific topics.\n\nHere's what I'm an expert on:\n<ul><li><strong>AI Cost Estimation</strong> from construction drawings</li><li><strong>Platform features</strong> and how to use them</li><li><strong>Marketplace</strong> for construction professionals</li><li><strong>Business analytics</strong> and insights</li></ul>\nFeel free to ask about any of these, or share your email for personalized assistance!"
+        ];
+        return fallbacks[Math.floor(Math.random() * fallbacks.length)];
+    }
+
+    // --- Utilities ---
+    function delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+})();
