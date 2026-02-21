@@ -445,6 +445,22 @@ async function apiCall(endpoint, method, body = null, successMessage = null) {
 async function handleRegister(event) {
     event.preventDefault();
     const form = event.target;
+
+    // Validate Terms & Conditions checkbox
+    const termsCheckbox = form.termsAccepted;
+    const termsError = document.getElementById('terms-error');
+    if (!termsCheckbox || !termsCheckbox.checked) {
+        if (termsError) {
+            termsError.style.display = 'flex';
+            termsError.classList.add('terms-error-shake');
+            setTimeout(() => termsError.classList.remove('terms-error-shake'), 600);
+        }
+        const termsGroup = form.querySelector('.terms-checkbox-group');
+        if (termsGroup) termsGroup.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+    }
+    if (termsError) termsError.style.display = 'none';
+
     const submitBtn = form.querySelector('button[type="submit"]');
     const originalText = submitBtn.innerHTML;
     submitBtn.innerHTML = '<div class="btn-spinner"></div> Creating Account...';
@@ -455,6 +471,7 @@ async function handleRegister(event) {
         email: form.regEmail.value,
         password: form.regPassword.value,
         type: form.regRole.value,
+        termsAccepted: true,
     };
     try {
         await apiCall('/auth/register', 'POST', userData, 'Registration successful! Please sign in.');
@@ -4854,6 +4871,157 @@ function getLoginTemplate() {
     return `<div class="auth-header premium-auth-header"><div class="auth-logo"><i class="fas fa-drafting-compass"></i></div><h2>Welcome Back</h2><p>Sign in to your account</p></div><div id="auth-error-container"></div><form id="login-form" class="premium-form"><div class="form-group"><label class="form-label"><i class="fas fa-envelope"></i> Email</label><input type="email" class="form-input" name="loginEmail" required></div><div class="form-group"><label class="form-label"><i class="fas fa-lock"></i> Password</label><input type="password" class="form-input" name="loginPassword" required></div><button type="submit" class="btn btn-primary btn-full"><i class="fas fa-sign-in-alt"></i> Sign In</button></form><div class="auth-forgot-password"><a onclick="renderAuthForm('forgot-password')"><i class="fas fa-key"></i> Forgot Password?</a></div><div class="auth-switch">Don't have an account? <a onclick="renderAuthForm('register')">Create one</a></div>`;
 }
 
+function showTermsConditionsModal(tab = 'terms') {
+    const termsContent = `
+        <h3>1. Acceptance of Terms</h3>
+        <p>By accessing and using the SteelConnect platform ("Platform"), you agree to be bound by these Terms & Conditions ("Terms"). If you do not agree to these Terms, you must not use the Platform.</p>
+
+        <h3>2. Platform Description</h3>
+        <p>SteelConnect is a professional marketplace that connects steel designers, structural engineers, and contractors. The Platform provides AI-powered estimation tools, project management features, and communication services for the structural steel industry.</p>
+
+        <h3>3. User Accounts</h3>
+        <p>You must provide accurate, current, and complete information during registration. You are responsible for maintaining the confidentiality of your account credentials and for all activities under your account. You must notify us immediately of any unauthorized use of your account.</p>
+
+        <h3>4. User Conduct</h3>
+        <p>You agree not to:</p>
+        <ul>
+            <li>Provide false or misleading information in your profile or project listings</li>
+            <li>Use the Platform for any unlawful or fraudulent purpose</li>
+            <li>Interfere with or disrupt the Platform's functionality or security</li>
+            <li>Attempt to gain unauthorized access to other user accounts or Platform systems</li>
+            <li>Scrape, harvest, or collect information from the Platform without authorization</li>
+            <li>Upload malicious files, viruses, or harmful content</li>
+        </ul>
+
+        <h3>5. Projects & Quotes</h3>
+        <p>All project listings and quotes submitted through the Platform are subject to review. SteelConnect does not guarantee the accuracy of AI-generated estimations. Users are responsible for verifying all cost estimates and project details independently before making business decisions.</p>
+
+        <h3>6. Intellectual Property</h3>
+        <p>All content, trademarks, and technology on the Platform are owned by SteelConnect. Users retain ownership of their uploaded content but grant SteelConnect a license to use it for Platform operations. You must not reproduce or distribute Platform content without authorization.</p>
+
+        <h3>7. Payment & Subscriptions</h3>
+        <p>Certain features may require a paid subscription. Subscription fees are non-refundable unless otherwise specified. SteelConnect reserves the right to modify pricing with reasonable notice to affected users.</p>
+
+        <h3>8. Limitation of Liability</h3>
+        <p>SteelConnect provides the Platform "as is" without warranties of any kind. We are not liable for any indirect, incidental, or consequential damages arising from your use of the Platform, including but not limited to losses from reliance on AI estimations or project outcomes.</p>
+
+        <h3>9. Termination</h3>
+        <p>SteelConnect may suspend or terminate your account for violations of these Terms or for any reason with reasonable notice. Upon termination, your right to access the Platform ceases immediately.</p>
+
+        <h3>10. Modifications</h3>
+        <p>We reserve the right to update these Terms at any time. Continued use of the Platform after changes constitutes acceptance of the revised Terms. Material changes will be communicated via email or Platform notification.</p>
+
+        <h3>11. Governing Law</h3>
+        <p>These Terms are governed by applicable law. Any disputes shall be resolved through binding arbitration or in the courts of the jurisdiction where SteelConnect operates.</p>
+
+        <h3>12. Contact</h3>
+        <p>For questions about these Terms, contact us at <strong>legal@steelconnectapp.com</strong>.</p>
+    `;
+
+    const privacyContent = `
+        <h3>1. Information We Collect</h3>
+        <p>We collect information you provide during registration (name, email, professional details), project data you submit, usage analytics, device information, and cookies to operate and improve the Platform.</p>
+
+        <h3>2. How We Use Your Information</h3>
+        <ul>
+            <li>To provide and maintain Platform services</li>
+            <li>To process your projects, quotes, and AI estimations</li>
+            <li>To communicate with you about your account and Platform updates</li>
+            <li>To improve our AI estimation accuracy and Platform features</li>
+            <li>To ensure Platform security and prevent fraud</li>
+            <li>To comply with legal obligations</li>
+        </ul>
+
+        <h3>3. Data Sharing</h3>
+        <p>We do not sell your personal information. We may share data with: service providers who assist Platform operations, other users as necessary for project collaboration (e.g., your profile is visible to potential project partners), and law enforcement when required by law.</p>
+
+        <h3>4. Data Security</h3>
+        <p>We implement industry-standard security measures including encryption, secure authentication (OTP verification), and access controls. However, no method of electronic transmission is 100% secure, and we cannot guarantee absolute security.</p>
+
+        <h3>5. Data Retention</h3>
+        <p>We retain your data for as long as your account is active or as needed to provide services. You may request deletion of your account and associated data by contacting our support team.</p>
+
+        <h3>6. Your Rights</h3>
+        <p>You have the right to access, correct, or delete your personal data. You may opt out of non-essential communications. To exercise these rights, contact us at <strong>privacy@steelconnectapp.com</strong>.</p>
+
+        <h3>7. Cookies</h3>
+        <p>We use essential cookies for Platform functionality and analytics cookies to understand usage patterns. You can manage cookie preferences through your browser settings.</p>
+
+        <h3>8. Updates to This Policy</h3>
+        <p>We may update this Privacy Policy periodically. We will notify you of material changes via email or Platform notification. Continued use after changes constitutes acceptance.</p>
+
+        <h3>9. Contact</h3>
+        <p>For privacy-related inquiries, contact us at <strong>privacy@steelconnectapp.com</strong>.</p>
+    `;
+
+    const activeTerms = tab === 'terms' ? 'active' : '';
+    const activePrivacy = tab === 'privacy' ? 'active' : '';
+
+    const modalHTML = `
+        <div class="terms-modal-header">
+            <div class="terms-modal-icon"><i class="fas fa-file-contract"></i></div>
+            <h2>Legal Agreements</h2>
+            <p>Please review our terms before proceeding</p>
+        </div>
+        <div class="terms-tabs">
+            <button class="terms-tab ${activeTerms}" onclick="switchTermsTab('terms')"><i class="fas fa-gavel"></i> Terms &amp; Conditions</button>
+            <button class="terms-tab ${activePrivacy}" onclick="switchTermsTab('privacy')"><i class="fas fa-shield-alt"></i> Privacy Policy</button>
+        </div>
+        <div class="terms-content-scroll">
+            <div id="terms-tab-content" class="terms-body ${activeTerms ? '' : 'hidden'}">${termsContent}</div>
+            <div id="privacy-tab-content" class="terms-body ${activePrivacy ? '' : 'hidden'}">${privacyContent}</div>
+        </div>
+        <div class="terms-modal-footer">
+            <span class="terms-version"><i class="fas fa-info-circle"></i> Version 1.0 &mdash; Last updated February 2026</span>
+            <button class="btn btn-primary" onclick="closeTermsConditionsModal()"><i class="fas fa-check"></i> I Understand</button>
+        </div>
+    `;
+
+    // Create a dedicated terms modal overlay (separate from auth modal)
+    let termsOverlay = document.getElementById('terms-modal-overlay');
+    if (!termsOverlay) {
+        termsOverlay = document.createElement('div');
+        termsOverlay.id = 'terms-modal-overlay';
+        document.body.appendChild(termsOverlay);
+    }
+    termsOverlay.innerHTML = `
+        <div class="terms-modal-backdrop" onclick="closeTermsConditionsModal()"></div>
+        <div class="terms-modal-dialog" onclick="event.stopPropagation()">
+            <button class="terms-modal-close" onclick="closeTermsConditionsModal()"><i class="fas fa-times"></i></button>
+            ${modalHTML}
+        </div>
+    `;
+    termsOverlay.classList.add('visible');
+    document.body.style.overflow = 'hidden';
+}
+
+function switchTermsTab(tab) {
+    const termsTab = document.getElementById('terms-tab-content');
+    const privacyTab = document.getElementById('privacy-tab-content');
+    const tabs = document.querySelectorAll('.terms-tab');
+
+    if (tab === 'terms') {
+        termsTab.classList.remove('hidden');
+        privacyTab.classList.add('hidden');
+        tabs[0].classList.add('active');
+        tabs[1].classList.remove('active');
+    } else {
+        termsTab.classList.add('hidden');
+        privacyTab.classList.remove('hidden');
+        tabs[0].classList.remove('active');
+        tabs[1].classList.add('active');
+    }
+}
+
+function closeTermsConditionsModal() {
+    const overlay = document.getElementById('terms-modal-overlay');
+    if (overlay) {
+        overlay.classList.remove('visible');
+        setTimeout(() => { overlay.innerHTML = ''; }, 300);
+    }
+    document.body.style.overflow = '';
+}
+
 function getForgotPasswordTemplate() {
     return `<div class="auth-header premium-auth-header"><div class="auth-logo"><i class="fas fa-key"></i></div><h2>Forgot Password</h2><p>Enter your email to receive a reset code</p></div><div id="auth-error-container"></div><div id="auth-success-container"></div><form id="forgot-password-form" class="premium-form"><div class="form-group"><label class="form-label"><i class="fas fa-envelope"></i> Email Address</label><input type="email" class="form-input" name="resetEmail" required placeholder="Enter your registered email"></div><button type="submit" class="btn btn-primary btn-full"><i class="fas fa-paper-plane"></i> Send Reset Code</button></form><div class="auth-switch">Remember your password? <a onclick="renderAuthForm('login')">Sign In</a></div>`;
 }
@@ -4868,7 +5036,7 @@ function getResetPasswordTemplate(email) {
 }
 
 function getRegisterTemplate() {
-    return `<div class="auth-header premium-auth-header"><div class="auth-logo"><i class="fas fa-drafting-compass"></i></div><h2>Join SteelConnect</h2><p>Create your professional account</p></div><div id="auth-error-container"></div><form id="register-form" class="premium-form"><div class="form-group"><label class="form-label"><i class="fas fa-user"></i> Full Name</label><input type="text" class="form-input" name="regName" required></div><div class="form-group"><label class="form-label"><i class="fas fa-envelope"></i> Email</label><input type="email" class="form-input" name="regEmail" required></div><div class="form-group"><label class="form-label"><i class="fas fa-lock"></i> Password</label><input type="password" class="form-input" name="regPassword" required></div><div class="form-group"><label class="form-label"><i class="fas fa-user-tag"></i> I am a...</label><select class="form-select" name="regRole" required><option value="" disabled selected>Select role</option><option value="contractor">Client / Contractor</option><option value="designer">Designer / Engineer</option></select></div><button type="submit" class="btn btn-primary btn-full"><i class="fas fa-user-plus"></i> Create Account</button></form><div class="auth-switch">Already have an account? <a onclick="renderAuthForm('login')">Sign In</a></div>`;
+    return `<div class="auth-header premium-auth-header"><div class="auth-logo"><i class="fas fa-drafting-compass"></i></div><h2>Join SteelConnect</h2><p>Create your professional account</p></div><div id="auth-error-container"></div><form id="register-form" class="premium-form"><div class="form-group"><label class="form-label"><i class="fas fa-user"></i> Full Name</label><input type="text" class="form-input" name="regName" required></div><div class="form-group"><label class="form-label"><i class="fas fa-envelope"></i> Email</label><input type="email" class="form-input" name="regEmail" required></div><div class="form-group"><label class="form-label"><i class="fas fa-lock"></i> Password</label><input type="password" class="form-input" name="regPassword" required></div><div class="form-group"><label class="form-label"><i class="fas fa-user-tag"></i> I am a...</label><select class="form-select" name="regRole" required><option value="" disabled selected>Select role</option><option value="contractor">Client / Contractor</option><option value="designer">Designer / Engineer</option></select></div><div class="terms-checkbox-group"><label class="terms-checkbox-label"><input type="checkbox" name="termsAccepted" id="termsAcceptedCheckbox" class="terms-checkbox-input"><span class="terms-checkbox-custom"><i class="fas fa-check"></i></span><span class="terms-checkbox-text">I agree to the <a href="javascript:void(0)" onclick="event.preventDefault();event.stopPropagation();showTermsConditionsModal('terms')" class="terms-link">Terms &amp; Conditions</a> and <a href="javascript:void(0)" onclick="event.preventDefault();event.stopPropagation();showTermsConditionsModal('privacy')" class="terms-link">Privacy Policy</a></span></label><div id="terms-error" class="terms-error-msg" style="display:none;"><i class="fas fa-exclamation-circle"></i> You must accept the Terms &amp; Conditions to continue</div></div><button type="submit" class="btn btn-primary btn-full"><i class="fas fa-user-plus"></i> Create Account</button></form><div class="auth-switch">Already have an account? <a onclick="renderAuthForm('login')">Sign In</a></div>`;
 }
 
 function getPostJobTemplate() {
