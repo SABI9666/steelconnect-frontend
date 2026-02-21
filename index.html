@@ -2990,10 +2990,23 @@
             return Math.round((Date.now() - startTime) / 1000);
         }
 
+        // Get logged-in user info if available
+        function getUserInfo() {
+            try {
+                var u = localStorage.getItem('currentUser');
+                if (u) {
+                    var user = JSON.parse(u);
+                    return { userEmail: user.email || '', userName: user.name || '' };
+                }
+            } catch(e) {}
+            return {};
+        }
+
         function sendBeacon(url, data) {
             try {
+                var blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
                 if (navigator.sendBeacon) {
-                    navigator.sendBeacon(TRACK_URL + url, JSON.stringify(data));
+                    navigator.sendBeacon(TRACK_URL + url, blob);
                 } else {
                     var xhr = new XMLHttpRequest();
                     xhr.open('POST', TRACK_URL + url, true);
@@ -3006,27 +3019,39 @@
         // Initial track (only once per session)
         if (!tracked) {
             try {
-                var xhr = new XMLHttpRequest();
-                xhr.open('POST', TRACK_URL + '/visitors/track', true);
-                xhr.setRequestHeader('Content-Type', 'application/json');
-                xhr.send(JSON.stringify({
+                var userInfo = getUserInfo();
+                var trackData = {
                     sessionId: sessionId,
                     referrer: document.referrer || 'Direct',
                     landingPage: currentPage,
-                    userAgent: navigator.userAgent
-                }));
+                    userAgent: navigator.userAgent,
+                    screenResolution: screen.width + 'x' + screen.height,
+                    language: navigator.language || ''
+                };
+                if (userInfo.userEmail) trackData.userEmail = userInfo.userEmail;
+                if (userInfo.userName) trackData.userName = userInfo.userName;
+
+                var xhr = new XMLHttpRequest();
+                xhr.open('POST', TRACK_URL + '/visitors/track', true);
+                xhr.setRequestHeader('Content-Type', 'application/json');
+                xhr.send(JSON.stringify(trackData));
                 sessionStorage.setItem('sc_visitor_tracked', '1');
             } catch(e) {}
         }
 
-        // Heartbeat every 30 seconds to track time + page changes
+        // Heartbeat every 30 seconds to track time + page changes + user login
         setInterval(function() {
             var nowPage = window.location.pathname + window.location.hash;
-            sendBeacon('/visitors/heartbeat', {
+            var userInfo = getUserInfo();
+            var data = {
                 sessionId: sessionId,
                 currentPage: nowPage,
                 timeSpentSeconds: getElapsedSeconds()
-            });
+            };
+            // Send user info on every heartbeat so mid-session login is captured
+            if (userInfo.userEmail) data.userEmail = userInfo.userEmail;
+            if (userInfo.userName) data.userName = userInfo.userName;
+            sendBeacon('/visitors/heartbeat', data);
             currentPage = nowPage;
         }, 30000);
 
@@ -3036,11 +3061,15 @@
             var newHash = window.location.hash;
             if (newHash !== lastHash) {
                 lastHash = newHash;
-                sendBeacon('/visitors/heartbeat', {
+                var userInfo = getUserInfo();
+                var data = {
                     sessionId: sessionId,
                     currentPage: window.location.pathname + newHash,
                     timeSpentSeconds: getElapsedSeconds()
-                });
+                };
+                if (userInfo.userEmail) data.userEmail = userInfo.userEmail;
+                if (userInfo.userName) data.userName = userInfo.userName;
+                sendBeacon('/visitors/heartbeat', data);
             }
         }, 2000);
 
