@@ -2970,5 +2970,99 @@
     </div>
     <!-- ========== END CHATBOT WIDGET ========== -->
 
+    <!-- ========== VISITOR TRACKING ========== -->
+    <script>
+    (function() {
+        var TRACK_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+            ? 'http://localhost:10000/api' : 'https://steelconnect-backend.onrender.com/api';
+        var SESSION_KEY = 'sc_visitor_sid';
+        var sessionId = sessionStorage.getItem(SESSION_KEY);
+        if (!sessionId) {
+            sessionId = 'v_' + Date.now() + '_' + Math.random().toString(36).substring(2, 10);
+            sessionStorage.setItem(SESSION_KEY, sessionId);
+        }
+
+        var startTime = Date.now();
+        var currentPage = window.location.pathname + window.location.hash;
+        var tracked = sessionStorage.getItem('sc_visitor_tracked');
+
+        function getElapsedSeconds() {
+            return Math.round((Date.now() - startTime) / 1000);
+        }
+
+        function sendBeacon(url, data) {
+            try {
+                if (navigator.sendBeacon) {
+                    navigator.sendBeacon(TRACK_URL + url, JSON.stringify(data));
+                } else {
+                    var xhr = new XMLHttpRequest();
+                    xhr.open('POST', TRACK_URL + url, true);
+                    xhr.setRequestHeader('Content-Type', 'application/json');
+                    xhr.send(JSON.stringify(data));
+                }
+            } catch(e) {}
+        }
+
+        // Initial track (only once per session)
+        if (!tracked) {
+            try {
+                var xhr = new XMLHttpRequest();
+                xhr.open('POST', TRACK_URL + '/visitors/track', true);
+                xhr.setRequestHeader('Content-Type', 'application/json');
+                xhr.send(JSON.stringify({
+                    sessionId: sessionId,
+                    referrer: document.referrer || 'Direct',
+                    landingPage: currentPage,
+                    userAgent: navigator.userAgent
+                }));
+                sessionStorage.setItem('sc_visitor_tracked', '1');
+            } catch(e) {}
+        }
+
+        // Heartbeat every 30 seconds to track time + page changes
+        setInterval(function() {
+            var nowPage = window.location.pathname + window.location.hash;
+            sendBeacon('/visitors/heartbeat', {
+                sessionId: sessionId,
+                currentPage: nowPage,
+                timeSpentSeconds: getElapsedSeconds()
+            });
+            currentPage = nowPage;
+        }, 30000);
+
+        // Track page changes for SPA navigation
+        var lastHash = window.location.hash;
+        setInterval(function() {
+            var newHash = window.location.hash;
+            if (newHash !== lastHash) {
+                lastHash = newHash;
+                sendBeacon('/visitors/heartbeat', {
+                    sessionId: sessionId,
+                    currentPage: window.location.pathname + newHash,
+                    timeSpentSeconds: getElapsedSeconds()
+                });
+            }
+        }, 2000);
+
+        // Send leave event when closing tab
+        window.addEventListener('beforeunload', function() {
+            sendBeacon('/visitors/leave', {
+                sessionId: sessionId,
+                timeSpentSeconds: getElapsedSeconds()
+            });
+        });
+
+        // Also track visibility changes (tab switch = inactive)
+        document.addEventListener('visibilitychange', function() {
+            if (document.visibilityState === 'hidden') {
+                sendBeacon('/visitors/leave', {
+                    sessionId: sessionId,
+                    timeSpentSeconds: getElapsedSeconds()
+                });
+            }
+        });
+    })();
+    </script>
+
 </body>
 </html>
