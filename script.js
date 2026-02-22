@@ -43,7 +43,7 @@ const PROD_BACKEND_URL = 'https://steelconnect-backend.onrender.com/api';
 const BACKEND_URL = IS_LOCAL ? 'http://localhost:10000/api' : PROD_BACKEND_URL;
 
 // Google OAuth Client ID - replace with your actual Google Client ID
-const GOOGLE_CLIENT_ID = window.GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = window.GOOGLE_CLIENT_ID || '453964978221-v6q3scndk3b8je38ueirovsqa28nu5pv.apps.googleusercontent.com';
 
 const appState = {
     currentUser: null,
