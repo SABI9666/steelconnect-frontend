@@ -42,6 +42,9 @@ const IS_LOCAL = window.location.hostname === 'localhost' || window.location.hos
 const PROD_BACKEND_URL = 'https://steelconnect-backend.onrender.com/api';
 const BACKEND_URL = IS_LOCAL ? 'http://localhost:10000/api' : PROD_BACKEND_URL;
 
+// Google OAuth Client ID - replace with your actual Google Client ID
+const GOOGLE_CLIENT_ID = window.GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com';
+
 const appState = {
     currentUser: null,
     jwtToken: null,
@@ -486,6 +489,185 @@ async function handleRegister(event) {
                     <span>${errorMsg}</span>
                     <button class="auth-error-dismiss" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>
                 </div>`;
+        } else {
+            showNotification(errorMsg, 'error');
+        }
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    }
+}
+
+// --- GOOGLE SIGN-IN ---
+// Track pending Google credential for role-selection step
+let pendingGoogleCredential = null;
+
+function initGoogleSignIn(buttonId, context) {
+    if (typeof google === 'undefined' || !google.accounts) {
+        console.warn('Google Identity Services not loaded');
+        return;
+    }
+    google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: (response) => handleGoogleCallback(response, context),
+        auto_select: false,
+        cancel_on_tap_outside: true
+    });
+    const btnEl = document.getElementById(buttonId);
+    if (btnEl) {
+        // Attach a manual click handler that triggers Google One Tap prompt
+        btnEl.addEventListener('click', (e) => {
+            e.preventDefault();
+            // For register context, validate role & T&C first
+            if (context === 'register') {
+                const roleSelect = document.querySelector('[name="regRole"]');
+                const termsCheckbox = document.querySelector('[name="termsAccepted"]');
+                const termsError = document.getElementById('terms-error');
+                if (!roleSelect || !roleSelect.value) {
+                    showNotification('Please select your role (Contractor or Designer) before continuing with Google.', 'warning');
+                    if (roleSelect) roleSelect.focus();
+                    return;
+                }
+                if (!termsCheckbox || !termsCheckbox.checked) {
+                    if (termsError) {
+                        termsError.style.display = 'flex';
+                        termsError.classList.add('terms-error-shake');
+                        setTimeout(() => termsError.classList.remove('terms-error-shake'), 600);
+                    }
+                    showNotification('Please accept the Terms & Conditions to continue.', 'warning');
+                    return;
+                }
+                if (termsError) termsError.style.display = 'none';
+            }
+            google.accounts.id.prompt();
+        });
+    }
+}
+
+async function handleGoogleCallback(response, context) {
+    if (!response || !response.credential) {
+        showNotification('Google Sign-In was cancelled or failed.', 'error');
+        return;
+    }
+
+    const credential = response.credential;
+
+    // Gather role & terms from register form if available
+    let type = null;
+    let termsAccepted = false;
+
+    if (context === 'register') {
+        const roleSelect = document.querySelector('[name="regRole"]');
+        const termsCheckbox = document.querySelector('[name="termsAccepted"]');
+        type = roleSelect ? roleSelect.value : null;
+        termsAccepted = termsCheckbox ? termsCheckbox.checked : false;
+    }
+
+    // For login context, first try without role/terms (existing user)
+    // If backend says requiresRegistration, show role selection step
+    try {
+        const payload = { credential };
+        if (type) payload.type = type;
+        if (termsAccepted) payload.termsAccepted = termsAccepted;
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+        const res = await fetch(BACKEND_URL + '/auth/google', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+            signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+        const data = await res.json();
+
+        if (!res.ok) {
+            if (data.requiresRegistration) {
+                // New user from login page - show Google role selection step
+                pendingGoogleCredential = credential;
+                renderAuthForm('google-role-select');
+                return;
+            }
+            throw new Error(data.message || 'Google authentication failed');
+        }
+
+        // Success - complete login
+        completeLogin(data);
+    } catch (error) {
+        let errorMsg = error.message || 'Google authentication failed. Please try again.';
+        if (error.name === 'AbortError') {
+            errorMsg = 'Request timeout. Please check your connection and try again.';
+        }
+        showNotification(errorMsg, 'error');
+    }
+}
+
+async function handleGoogleRoleSubmit(event) {
+    event.preventDefault();
+    const form = event.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+
+    const type = form.googleRole.value;
+    const termsCheckbox = form.googleTermsAccepted;
+    const termsError = document.getElementById('google-terms-error');
+
+    if (!type) {
+        showNotification('Please select your role.', 'warning');
+        return;
+    }
+    if (!termsCheckbox || !termsCheckbox.checked) {
+        if (termsError) {
+            termsError.style.display = 'flex';
+            termsError.classList.add('terms-error-shake');
+            setTimeout(() => termsError.classList.remove('terms-error-shake'), 600);
+        }
+        return;
+    }
+    if (termsError) termsError.style.display = 'none';
+
+    if (!pendingGoogleCredential) {
+        showNotification('Google session expired. Please try again.', 'error');
+        renderAuthForm('login');
+        return;
+    }
+
+    submitBtn.innerHTML = '<div class="btn-spinner"></div> Creating Account...';
+    submitBtn.disabled = true;
+
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+        const res = await fetch(BACKEND_URL + '/auth/google', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                credential: pendingGoogleCredential,
+                type: type,
+                termsAccepted: true
+            }),
+            signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+        const data = await res.json();
+
+        if (!res.ok) {
+            throw new Error(data.message || 'Google registration failed');
+        }
+
+        pendingGoogleCredential = null;
+        completeLogin(data);
+    } catch (error) {
+        let errorMsg = error.message || 'Registration failed. Please try again.';
+        if (error.name === 'AbortError') {
+            errorMsg = 'Request timeout. Please check your connection and try again.';
+        }
+        const errorContainer = document.getElementById('auth-error-container');
+        if (errorContainer) {
+            errorContainer.innerHTML = `<div class="auth-inline-error"><i class="fas fa-exclamation-circle"></i><span>${errorMsg}</span><button class="auth-error-dismiss" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button></div>`;
         } else {
             showNotification(errorMsg, 'error');
         }
@@ -3095,6 +3277,16 @@ function renderAuthForm(view) {
         // Auto-focus the OTP input
         const otpInput = document.querySelector('.otp-code-input');
         if (otpInput) setTimeout(() => otpInput.focus(), 100);
+    } else if (view === 'google-role-select') {
+        container.innerHTML = getGoogleRoleSelectTemplate();
+        document.getElementById('google-role-form').addEventListener('submit', handleGoogleRoleSubmit);
+    }
+
+    // Initialize Google Sign-In buttons after rendering
+    if (view === 'login') {
+        setTimeout(() => initGoogleSignIn('google-login-btn', 'login'), 100);
+    } else if (view === 'register') {
+        setTimeout(() => initGoogleSignIn('google-register-btn', 'register'), 100);
     }
 }
 
@@ -4868,7 +5060,7 @@ function showRestrictedFeature(featureName) {
 
 // --- TEMPLATE GETTERS ---
 function getLoginTemplate() {
-    return `<div class="auth-header premium-auth-header"><div class="auth-logo"><i class="fas fa-drafting-compass"></i></div><h2>Welcome Back</h2><p>Sign in to your account</p></div><div id="auth-error-container"></div><form id="login-form" class="premium-form"><div class="form-group"><label class="form-label"><i class="fas fa-envelope"></i> Email</label><input type="email" class="form-input" name="loginEmail" required></div><div class="form-group"><label class="form-label"><i class="fas fa-lock"></i> Password</label><input type="password" class="form-input" name="loginPassword" required></div><button type="submit" class="btn btn-primary btn-full"><i class="fas fa-sign-in-alt"></i> Sign In</button></form><div class="auth-forgot-password"><a onclick="renderAuthForm('forgot-password')"><i class="fas fa-key"></i> Forgot Password?</a></div><div class="auth-switch">Don't have an account? <a onclick="renderAuthForm('register')">Create one</a></div>`;
+    return `<div class="auth-header premium-auth-header"><div class="auth-logo"><i class="fas fa-drafting-compass"></i></div><h2>Welcome Back</h2><p>Sign in to your account</p></div><div id="auth-error-container"></div><form id="login-form" class="premium-form"><div class="form-group"><label class="form-label"><i class="fas fa-envelope"></i> Email</label><input type="email" class="form-input" name="loginEmail" required></div><div class="form-group"><label class="form-label"><i class="fas fa-lock"></i> Password</label><input type="password" class="form-input" name="loginPassword" required></div><button type="submit" class="btn btn-primary btn-full"><i class="fas fa-sign-in-alt"></i> Sign In</button></form><div class="auth-forgot-password"><a onclick="renderAuthForm('forgot-password')"><i class="fas fa-key"></i> Forgot Password?</a></div><div class="auth-divider"><span>or</span></div><button type="button" id="google-login-btn" class="btn-google"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg> Sign in with Google</button><div class="auth-switch">Don't have an account? <a onclick="renderAuthForm('register')">Create one</a></div>`;
 }
 
 function showTermsConditionsModal(tab = 'terms') {
@@ -5036,7 +5228,11 @@ function getResetPasswordTemplate(email) {
 }
 
 function getRegisterTemplate() {
-    return `<div class="auth-header premium-auth-header"><div class="auth-logo"><i class="fas fa-drafting-compass"></i></div><h2>Join SteelConnect</h2><p>Create your professional account</p></div><div id="auth-error-container"></div><form id="register-form" class="premium-form"><div class="form-group"><label class="form-label"><i class="fas fa-user"></i> Full Name</label><input type="text" class="form-input" name="regName" required></div><div class="form-group"><label class="form-label"><i class="fas fa-envelope"></i> Email</label><input type="email" class="form-input" name="regEmail" required></div><div class="form-group"><label class="form-label"><i class="fas fa-lock"></i> Password</label><input type="password" class="form-input" name="regPassword" required></div><div class="form-group"><label class="form-label"><i class="fas fa-user-tag"></i> I am a...</label><select class="form-select" name="regRole" required><option value="" disabled selected>Select role</option><option value="contractor">Client / Contractor</option><option value="designer">Designer / Engineer</option></select></div><div class="terms-checkbox-group"><label class="terms-checkbox-label"><input type="checkbox" name="termsAccepted" id="termsAcceptedCheckbox" class="terms-checkbox-input"><span class="terms-checkbox-custom"><i class="fas fa-check"></i></span><span class="terms-checkbox-text">I agree to the <a href="javascript:void(0)" onclick="event.preventDefault();event.stopPropagation();showTermsConditionsModal('terms')" class="terms-link">Terms &amp; Conditions</a> and <a href="javascript:void(0)" onclick="event.preventDefault();event.stopPropagation();showTermsConditionsModal('privacy')" class="terms-link">Privacy Policy</a></span></label><div id="terms-error" class="terms-error-msg" style="display:none;"><i class="fas fa-exclamation-circle"></i> You must accept the Terms &amp; Conditions to continue</div></div><button type="submit" class="btn btn-primary btn-full"><i class="fas fa-user-plus"></i> Create Account</button></form><div class="auth-switch">Already have an account? <a onclick="renderAuthForm('login')">Sign In</a></div>`;
+    return `<div class="auth-header premium-auth-header"><div class="auth-logo"><i class="fas fa-drafting-compass"></i></div><h2>Join SteelConnect</h2><p>Create your professional account</p></div><div id="auth-error-container"></div><form id="register-form" class="premium-form"><div class="form-group"><label class="form-label"><i class="fas fa-user"></i> Full Name</label><input type="text" class="form-input" name="regName" required></div><div class="form-group"><label class="form-label"><i class="fas fa-envelope"></i> Email</label><input type="email" class="form-input" name="regEmail" required></div><div class="form-group"><label class="form-label"><i class="fas fa-lock"></i> Password</label><input type="password" class="form-input" name="regPassword" required></div><div class="form-group"><label class="form-label"><i class="fas fa-user-tag"></i> I am a...</label><select class="form-select" name="regRole" required><option value="" disabled selected>Select role</option><option value="contractor">Client / Contractor</option><option value="designer">Designer / Engineer</option></select></div><div class="terms-checkbox-group"><label class="terms-checkbox-label"><input type="checkbox" name="termsAccepted" id="termsAcceptedCheckbox" class="terms-checkbox-input"><span class="terms-checkbox-custom"><i class="fas fa-check"></i></span><span class="terms-checkbox-text">I agree to the <a href="javascript:void(0)" onclick="event.preventDefault();event.stopPropagation();showTermsConditionsModal('terms')" class="terms-link">Terms &amp; Conditions</a> and <a href="javascript:void(0)" onclick="event.preventDefault();event.stopPropagation();showTermsConditionsModal('privacy')" class="terms-link">Privacy Policy</a></span></label><div id="terms-error" class="terms-error-msg" style="display:none;"><i class="fas fa-exclamation-circle"></i> You must accept the Terms &amp; Conditions to continue</div></div><button type="submit" class="btn btn-primary btn-full"><i class="fas fa-user-plus"></i> Create Account</button></form><div class="auth-divider"><span>or</span></div><button type="button" id="google-register-btn" class="btn-google"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg> Sign up with Google</button><div class="auth-switch">Already have an account? <a onclick="renderAuthForm('login')">Sign In</a></div>`;
+}
+
+function getGoogleRoleSelectTemplate() {
+    return `<div class="auth-header premium-auth-header"><div class="auth-logo google-logo"><svg viewBox="0 0 24 24" width="32" height="32"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg></div><h2>Complete Your Profile</h2><p>Select your role to finish signing up with Google</p></div><div id="auth-error-container"></div><form id="google-role-form" class="premium-form"><div class="google-role-cards"><label class="google-role-card"><input type="radio" name="googleRole" value="contractor" class="google-role-radio"><div class="google-role-card-inner"><div class="google-role-icon"><i class="fas fa-hard-hat"></i></div><h4>Client / Contractor</h4><p>I need steel design & engineering services</p></div></label><label class="google-role-card"><input type="radio" name="googleRole" value="designer" class="google-role-radio"><div class="google-role-card-inner"><div class="google-role-icon"><i class="fas fa-drafting-compass"></i></div><h4>Designer / Engineer</h4><p>I provide steel design & engineering services</p></div></label></div><div class="terms-checkbox-group"><label class="terms-checkbox-label"><input type="checkbox" name="googleTermsAccepted" id="googleTermsCheckbox" class="terms-checkbox-input"><span class="terms-checkbox-custom"><i class="fas fa-check"></i></span><span class="terms-checkbox-text">I agree to the <a href="javascript:void(0)" onclick="event.preventDefault();event.stopPropagation();showTermsConditionsModal(\'terms\')" class="terms-link">Terms &amp; Conditions</a> and <a href="javascript:void(0)" onclick="event.preventDefault();event.stopPropagation();showTermsConditionsModal(\'privacy\')" class="terms-link">Privacy Policy</a></span></label><div id="google-terms-error" class="terms-error-msg" style="display:none;"><i class="fas fa-exclamation-circle"></i> You must accept the Terms &amp; Conditions to continue</div></div><button type="submit" class="btn btn-primary btn-full"><i class="fas fa-check-circle"></i> Continue with Google</button></form><div class="auth-switch">Want to use email instead? <a onclick="renderAuthForm(\'register\')">Create Account</a> | <a onclick="renderAuthForm(\'login\')">Sign In</a></div>`;
 }
 
 function getPostJobTemplate() {
