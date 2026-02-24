@@ -8798,13 +8798,16 @@ async function renderSubscriptionPage() {
     `;
 
     try {
-        const response = await apiCall('/subscriptions/plans');
+        const [response, subResponse, invoicesResponse] = await Promise.all([
+            apiCall('/subscriptions/plans'),
+            apiCall('/subscriptions/my-subscription'),
+            apiCall('/subscriptions/my-invoices').catch(() => ({ invoices: [] })),
+        ]);
         const plans = response.plans || {};
-
-        const subResponse = await apiCall('/subscriptions/my-subscription');
         const currentSub = subResponse.subscription;
+        const invoices = invoicesResponse.invoices || [];
 
-        renderSubscriptionContent(plans, currentSub);
+        renderSubscriptionContent(plans, currentSub, invoices);
     } catch (error) {
         document.getElementById('subscription-content').innerHTML = `
             <div style="text-align:center; padding:40px;">
@@ -8818,7 +8821,7 @@ async function renderSubscriptionPage() {
     }
 }
 
-function renderSubscriptionContent(plans, currentSub) {
+function renderSubscriptionContent(plans, currentSub, invoices = []) {
     const contentEl = document.getElementById('subscription-content');
     if (!contentEl) return;
 
@@ -8943,6 +8946,34 @@ function renderSubscriptionContent(plans, currentSub) {
                         </button>
                     `}
                 </div>
+            </div>
+        </div>
+        ` : ''}
+
+        ${invoices.length > 0 ? `
+        <div class="sc-invoices-section">
+            <h3 class="sc-plans-title"><i class="fas fa-file-invoice"></i> Billing History</h3>
+            <div class="sc-invoices-list">
+                ${invoices.map(inv => {
+                    const statusColor = inv.status === 'paid' ? '#059669' : inv.status === 'free' ? '#2563eb' : '#d97706';
+                    const statusBg = inv.status === 'paid' ? '#ecfdf5' : inv.status === 'free' ? '#eff6ff' : '#fffbeb';
+                    return `
+                        <div class="sc-invoice-row">
+                            <div class="sc-invoice-left">
+                                <div class="sc-invoice-icon"><i class="fas fa-receipt"></i></div>
+                                <div class="sc-invoice-info">
+                                    <strong>${inv.invoiceNumber}</strong>
+                                    <span>${inv.planLabel} — ${new Date(inv.issuedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                                </div>
+                            </div>
+                            <div class="sc-invoice-right">
+                                <span class="sc-invoice-amount">${inv.total === 0 ? 'Free' : '$' + inv.total.toFixed(2)}</span>
+                                <span class="sc-invoice-status" style="background:${statusBg}; color:${statusColor};">${inv.status.toUpperCase()}</span>
+                                ${inv.pdfUrl ? `<a href="${inv.pdfUrl}" target="_blank" class="sc-invoice-download" title="Download PDF"><i class="fas fa-download"></i></a>` : ''}
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
             </div>
         </div>
         ` : ''}
