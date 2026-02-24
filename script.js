@@ -3479,6 +3479,9 @@ function renderAppSection(sectionId) {
     else if (sectionId === 'support') {
         renderSupportSection();
     }
+    else if (sectionId === 'subscription') {
+        renderSubscriptionPage();
+    }
     else if (sectionId === 'project-tracking') {
         renderProjectTrackingDashboard();
     }
@@ -6371,6 +6374,12 @@ function buildSidebarNav() {
             <span class="nav-badge">NEW</span>
         </a>
         <hr class="sidebar-divider">
+        <div class="sidebar-section-title">Billing</div>
+        <a href="#" class="sidebar-nav-link" data-section="subscription">
+            <i class="fas fa-credit-card fa-fw"></i>
+            <span>Subscription</span>
+        </a>
+        <hr class="sidebar-divider">
         <a href="#" class="sidebar-nav-link" data-section="support">
             <i class="fas fa-life-ring fa-fw"></i>
             <span>Support</span>
@@ -8767,6 +8776,204 @@ window.analyzeProjectQuotes = analyzeProjectQuotes;
 
 // Business Analytics - View Only (No client uploads - admin manages all data)
 // Clients can only view approved dashboards via the AI Analytics Dashboard (analytics-integration.js)
+
+// ============================================================
+// SUBSCRIPTION / PRICING PAGE
+// ============================================================
+
+async function renderSubscriptionPage() {
+    const container = document.getElementById('app-container');
+    if (!container) return;
+
+    container.innerHTML = `
+        <div class="section-header modern-header">
+            <div class="header-content">
+                <h2><i class="fas fa-credit-card"></i> Subscription & Pricing</h2>
+                <p class="header-subtitle">Choose a plan that fits your needs</p>
+            </div>
+        </div>
+        <div id="subscription-content" style="padding:0 20px;">
+            <div style="text-align:center; padding:40px;"><i class="fas fa-spinner fa-spin" style="font-size:24px; color:#6366f1;"></i><p style="color:#6b7280; margin-top:12px;">Loading plans...</p></div>
+        </div>
+    `;
+
+    try {
+        const response = await apiCall('/subscriptions/plans');
+        const plans = response.plans || {};
+
+        const subResponse = await apiCall('/subscriptions/my-subscription');
+        const currentSub = subResponse.subscription;
+
+        renderSubscriptionContent(plans, currentSub);
+    } catch (error) {
+        document.getElementById('subscription-content').innerHTML = `
+            <div style="text-align:center; padding:40px;">
+                <i class="fas fa-exclamation-circle" style="font-size:40px; color:#dc2626; margin-bottom:12px;"></i>
+                <p style="color:#6b7280;">${error.message || 'Failed to load plans'}</p>
+                <button class="btn btn-primary" onclick="renderSubscriptionPage()" style="margin-top:16px;">
+                    <i class="fas fa-sync-alt"></i> Retry
+                </button>
+            </div>
+        `;
+    }
+}
+
+function renderSubscriptionContent(plans, currentSub) {
+    const contentEl = document.getElementById('subscription-content');
+    if (!contentEl) return;
+
+    const userType = appState.currentUser?.type || 'designer';
+    const isContractor = userType === 'contractor';
+
+    // Show current subscription status if active
+    let currentSubHtml = '';
+    if (currentSub) {
+        const statusColor = currentSub.status === 'active' || currentSub.status === 'free_override' ? '#059669' : '#d97706';
+        const statusLabel = currentSub.status === 'free_override' ? 'Active (Free)' : currentSub.status;
+        currentSubHtml = `
+            <div class="sc-current-sub">
+                <div class="sc-current-sub-icon"><i class="fas fa-check-circle"></i></div>
+                <div class="sc-current-sub-info">
+                    <strong>Current Plan: ${currentSub.planLabel || currentSub.plan}</strong>
+                    <span>Status: <span style="color:${statusColor}; font-weight:600; text-transform:capitalize;">${statusLabel}</span></span>
+                    ${currentSub.endDate ? `<span>Renews: ${new Date(currentSub.endDate).toLocaleDateString()}</span>` : ''}
+                    ${currentSub.quotesAllowed ? `<span>Quotes: ${currentSub.quotesUsed || 0} / ${currentSub.quotesAllowed} used</span>` : ''}
+                </div>
+            </div>
+        `;
+    }
+
+    // Designer plans
+    const designerPlans = [
+        { id: 'designer_free', ...plans.designer_free },
+        { id: 'designer_5', ...plans.designer_5 },
+        { id: 'designer_10', ...plans.designer_10 },
+        { id: 'designer_15', ...plans.designer_15 },
+    ];
+
+    // Contractor plan
+    const contractorPlan = plans.contractor_pro;
+
+    const planColors = [
+        { gradient: 'linear-gradient(135deg, #16a34a, #22c55e)', check: '#16a34a' },
+        { gradient: 'linear-gradient(135deg, #2563eb, #3b82f6)', check: '#2563eb' },
+        { gradient: 'linear-gradient(135deg, #7c3aed, #8b5cf6)', check: '#7c3aed' },
+        { gradient: 'linear-gradient(135deg, #a855f7, #c084fc)', check: '#a855f7' },
+    ];
+
+    contentEl.innerHTML = `
+        ${currentSubHtml}
+
+        ${!isContractor ? `
+        <div class="sc-plans-section">
+            <h3 class="sc-plans-title"><i class="fas fa-palette"></i> Designer Portal Plans</h3>
+            <div class="sc-plans-grid">
+                ${designerPlans.map((plan, i) => {
+                    const color = planColors[i];
+                    const isCurrent = currentSub && currentSub.plan === plan.id;
+                    const priceDisplay = plan.price === 0 ? 'Free' : `$${plan.price}<span style="font-size:14px; font-weight:400;">/mo</span>`;
+                    return `
+                        <div class="sc-plan-card ${isCurrent ? 'sc-plan-current' : ''}" ${i === 2 ? 'style="border-color:#7c3aed; box-shadow:0 0 0 2px rgba(124,58,237,0.2);"' : ''}>
+                            ${i === 2 ? '<div class="sc-plan-popular">Most Popular</div>' : ''}
+                            <div class="sc-plan-header" style="background:${color.gradient};">
+                                <div class="sc-plan-price">${priceDisplay}</div>
+                                <div class="sc-plan-label">${plan.label}</div>
+                            </div>
+                            <div class="sc-plan-body">
+                                <p class="sc-plan-desc">${plan.description}</p>
+                                <ul class="sc-plan-features">
+                                    ${(plan.features || []).map(f => `<li><i class="fas fa-check" style="color:${color.check};"></i> ${f}</li>`).join('')}
+                                </ul>
+                                ${isCurrent ? `
+                                    <button class="btn sc-plan-btn sc-plan-btn-current" disabled>
+                                        <i class="fas fa-check-circle"></i> Current Plan
+                                    </button>
+                                ` : `
+                                    <button class="btn sc-plan-btn" onclick="handleSubscribe('${plan.id}')" style="background:${color.gradient}; color:white;">
+                                        ${plan.price === 0 ? 'Get Started Free' : 'Subscribe Now'}
+                                    </button>
+                                `}
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        </div>
+        ` : ''}
+
+        ${isContractor ? `
+        <div class="sc-plans-section">
+            <h3 class="sc-plans-title"><i class="fas fa-hard-hat"></i> Contractor Pro Plan</h3>
+            <div class="sc-contractor-pro">
+                <div class="sc-contractor-pro-header">
+                    <div class="sc-contractor-pro-price">
+                        <span class="sc-price-amount">$49</span>
+                        <span class="sc-price-period">/month</span>
+                    </div>
+                    <h4>Contractor Pro</h4>
+                    <p>Unlock lower AI rates and priority processing for high-volume estimation</p>
+                </div>
+                <div class="sc-contractor-pro-body">
+                    <div class="sc-pro-rates">
+                        <div class="sc-pro-rate">
+                            <div class="sc-pro-rate-icon"><i class="fas fa-calculator"></i></div>
+                            <div>
+                                <strong>$0.40 per MB</strong>
+                                <span>AI Estimation</span>
+                            </div>
+                        </div>
+                        <div class="sc-pro-rate">
+                            <div class="sc-pro-rate-icon"><i class="fas fa-chart-line"></i></div>
+                            <div>
+                                <strong>$0.08 per MB</strong>
+                                <span>AI Analysis</span>
+                            </div>
+                        </div>
+                    </div>
+                    <ul class="sc-plan-features">
+                        ${(contractorPlan?.features || []).map(f => `<li><i class="fas fa-check" style="color:#ea580c;"></i> ${f}</li>`).join('')}
+                    </ul>
+                    ${currentSub && currentSub.plan === 'contractor_pro' ? `
+                        <button class="btn sc-plan-btn sc-plan-btn-current" disabled>
+                            <i class="fas fa-check-circle"></i> Current Plan
+                        </button>
+                    ` : `
+                        <button class="btn sc-plan-btn" onclick="handleSubscribe('contractor_pro')" style="background:linear-gradient(135deg, #ea580c, #f97316); color:white;">
+                            <i class="fas fa-rocket"></i> Subscribe to Pro
+                        </button>
+                    `}
+                </div>
+            </div>
+        </div>
+        ` : ''}
+
+        <div class="sc-stripe-info">
+            <i class="fas fa-lock"></i>
+            <span>Payments are securely processed via Stripe. Your card details are never stored on our servers.</span>
+        </div>
+    `;
+}
+
+async function handleSubscribe(planId) {
+    try {
+        showNotification('Processing subscription...', 'info');
+
+        const response = await apiCall('/subscriptions/create-checkout', 'POST', { planId });
+
+        if (response.checkoutUrl) {
+            // Redirect to Stripe checkout
+            window.location.href = response.checkoutUrl;
+        } else if (response.subscription && response.subscription.status === 'active') {
+            showNotification('Plan activated successfully!', 'success');
+            renderSubscriptionPage();
+        } else {
+            showNotification(response.message || 'Subscription created. Payment will be processed when Stripe is configured.', 'info');
+            renderSubscriptionPage();
+        }
+    } catch (error) {
+        showNotification('Error: ' + error.message, 'error');
+    }
+}
 
 // ================================================================
 // STEELCONNECT AI CHATBOT - Landing Page Conversational Assistant
