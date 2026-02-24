@@ -16744,3 +16744,107 @@ body { overflow-x: hidden; }
     .sc-pro-rates { grid-template-columns: 1fr; }
     .sc-contractor-pro { max-width: 100%; }
 }
+
+/* Billing History / Invoices */
+.sc-invoices-section {
+    margin-bottom: 24px;
+}
+
+.sc-invoices-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.sc-invoice-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    transition: box-shadow 0.15s;
+}
+
+.sc-invoice-row:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.sc-invoice-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.sc-invoice-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: #ede9fe;
+    color: #6d28d9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.sc-invoice-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.sc-invoice-info strong {
+    font-size: 13px;
+    color: #111827;
+    font-family: monospace;
+}
+
+.sc-invoice-info span {
+    font-size: 12px;
+    color: #6b7280;
+}
+
+.sc-invoice-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.sc-invoice-amount {
+    font-size: 15px;
+    font-weight: 700;
+    color: #111827;
+}
+
+.sc-invoice-status {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 6px;
+    letter-spacing: 0.5px;
+}
+
+.sc-invoice-download {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: #eff6ff;
+    color: #2563eb;
+    text-decoration: none;
+    font-size: 13px;
+    transition: background 0.15s;
+}
+
+.sc-invoice-download:hover {
+    background: #dbeafe;
+}
+
+@media (max-width: 600px) {
+    .sc-invoice-row { flex-direction: column; align-items: flex-start; gap: 10px; }
+    .sc-invoice-right { width: 100%; justify-content: flex-end; }
+}
