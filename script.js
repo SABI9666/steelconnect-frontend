@@ -8840,7 +8840,7 @@ function renderSubscriptionContent(plans, currentSub, invoices = []) {
                     <strong>Current Plan: ${currentSub.planLabel || currentSub.plan}</strong>
                     <span>Status: <span style="color:${statusColor}; font-weight:600; text-transform:capitalize;">${statusLabel}</span></span>
                     ${currentSub.endDate ? `<span>Renews: ${new Date(currentSub.endDate).toLocaleDateString()}</span>` : ''}
-                    ${currentSub.quotesAllowed ? `<span>Quotes: ${currentSub.quotesUsed || 0} / ${currentSub.quotesAllowed} used</span>` : ''}
+                    ${currentSub.quotesAllowed ? `<span>Quotes: ${currentSub.quotesUsed || 0} / ${currentSub.quotesAllowed} used</span>` : currentSub.plan === 'designer_30' ? '<span>Quotes: Unlimited</span>' : ''}
                 </div>
             </div>
         `;
@@ -8852,6 +8852,7 @@ function renderSubscriptionContent(plans, currentSub, invoices = []) {
         { id: 'designer_5', ...plans.designer_5 },
         { id: 'designer_10', ...plans.designer_10 },
         { id: 'designer_15', ...plans.designer_15 },
+        { id: 'designer_30', ...plans.designer_30 },
     ];
 
     // Contractor plan
@@ -8862,6 +8863,7 @@ function renderSubscriptionContent(plans, currentSub, invoices = []) {
         { gradient: 'linear-gradient(135deg, #2563eb, #3b82f6)', check: '#2563eb' },
         { gradient: 'linear-gradient(135deg, #7c3aed, #8b5cf6)', check: '#7c3aed' },
         { gradient: 'linear-gradient(135deg, #a855f7, #c084fc)', check: '#a855f7' },
+        { gradient: 'linear-gradient(135deg, #dc2626, #f43f5e)', check: '#dc2626' },
     ];
 
     contentEl.innerHTML = `
@@ -8875,9 +8877,10 @@ function renderSubscriptionContent(plans, currentSub, invoices = []) {
                     const color = planColors[i];
                     const isCurrent = currentSub && currentSub.plan === plan.id;
                     const priceDisplay = plan.price === 0 ? 'Free' : `$${plan.price}<span style="font-size:14px; font-weight:400;">/mo</span>`;
+                    const isPremium = plan.id === 'designer_30';
                     return `
-                        <div class="sc-plan-card ${isCurrent ? 'sc-plan-current' : ''}" ${i === 2 ? 'style="border-color:#7c3aed; box-shadow:0 0 0 2px rgba(124,58,237,0.2);"' : ''}>
-                            ${i === 2 ? '<div class="sc-plan-popular">Most Popular</div>' : ''}
+                        <div class="sc-plan-card ${isCurrent ? 'sc-plan-current' : ''}" ${isPremium ? 'style="border-color:#dc2626; box-shadow:0 0 0 2px rgba(220,38,38,0.2);"' : ''}>
+                            ${isPremium ? '<div class="sc-plan-popular">Best Value</div>' : ''}
                             <div class="sc-plan-header" style="background:${color.gradient};">
                                 <div class="sc-plan-price">${priceDisplay}</div>
                                 <div class="sc-plan-label">${plan.label}</div>
@@ -8950,14 +8953,16 @@ function renderSubscriptionContent(plans, currentSub, invoices = []) {
         </div>
         ` : ''}
 
-        <!-- AI Analysis Pricing Tiers -->
+        ${isContractor ? `
+        <!-- AI Analysis Pricing Tiers (Contractors Only) -->
         <div class="sc-plans-section">
             <h3 class="sc-plans-title"><i class="fas fa-brain"></i> AI Analysis Plans</h3>
-            <p style="color:#6b7280; margin:-8px 0 20px; font-size:14px;">Unlock powerful AI-driven analytics, predictive insights, and estimation storage</p>
+            <p style="color:#6b7280; margin:-8px 0 20px; font-size:14px;">Unlock powerful AI-driven analytics, predictive insights, and estimation capacity</p>
             <div class="sc-plans-grid sc-ai-plans-grid">
                 ${renderAiAnalysisPlans(plans, currentSub)}
             </div>
         </div>
+        ` : ''}
 
         ${invoices.length > 0 ? `
         <div class="sc-invoices-section">
