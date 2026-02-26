@@ -8917,25 +8917,9 @@ function renderSubscriptionContent(plans, currentSub, invoices = []) {
                         <span class="sc-price-period">/month</span>
                     </div>
                     <h4>Contractor Pro</h4>
-                    <p>Unlock lower AI rates and priority processing for high-volume estimation</p>
+                    <p>Priority processing, bulk estimation support & dedicated account management</p>
                 </div>
                 <div class="sc-contractor-pro-body">
-                    <div class="sc-pro-rates">
-                        <div class="sc-pro-rate">
-                            <div class="sc-pro-rate-icon"><i class="fas fa-calculator"></i></div>
-                            <div>
-                                <strong>$0.40 per MB</strong>
-                                <span>AI Estimation</span>
-                            </div>
-                        </div>
-                        <div class="sc-pro-rate">
-                            <div class="sc-pro-rate-icon"><i class="fas fa-chart-line"></i></div>
-                            <div>
-                                <strong>$0.08 per MB</strong>
-                                <span>AI Analysis</span>
-                            </div>
-                        </div>
-                    </div>
                     <ul class="sc-plan-features">
                         ${(contractorPlan?.features || []).map(f => `<li><i class="fas fa-check" style="color:#ea580c;"></i> ${f}</li>`).join('')}
                     </ul>
@@ -8949,6 +8933,66 @@ function renderSubscriptionContent(plans, currentSub, invoices = []) {
                         </button>
                     `}
                 </div>
+            </div>
+        </div>
+
+        <!-- Contractor AI Pay-Per-Use Options (Separate) -->
+        <div class="sc-plans-section">
+            <h3 class="sc-plans-title"><i class="fas fa-microchip"></i> AI Pay-Per-Use</h3>
+            <p style="color:#6b7280; margin:-8px 0 20px; font-size:14px;">Use AI estimation and analysis independently — pay only for what you use</p>
+            <div class="sc-plans-grid" style="grid-template-columns: repeat(2, 1fr); max-width:700px;">
+                ${(() => {
+                    const estPlan = plans.contractor_ai_estimation;
+                    const anaPlan = plans.contractor_ai_analysis;
+                    const isEstCurrent = currentSub && currentSub.plan === 'contractor_ai_estimation';
+                    const isAnaCurrent = currentSub && currentSub.plan === 'contractor_ai_analysis';
+                    return `
+                        <div class="sc-plan-card ${isEstCurrent ? 'sc-plan-current' : ''}">
+                            <div class="sc-plan-header" style="background:linear-gradient(135deg, #0d9488, #14b8a6);">
+                                <div style="font-size:20px; margin-bottom:4px;"><i class="fas fa-calculator"></i></div>
+                                <div class="sc-plan-price">$0.40<span style="font-size:14px; font-weight:400;">/MB</span></div>
+                                <div class="sc-plan-label">AI Estimation</div>
+                            </div>
+                            <div class="sc-plan-body">
+                                <p class="sc-plan-desc">Pay per MB — Upload PDF drawings and get instant AI cost estimates</p>
+                                <ul class="sc-plan-features">
+                                    ${(estPlan?.features || []).map(f => `<li><i class="fas fa-check" style="color:#0d9488;"></i> ${f}</li>`).join('')}
+                                </ul>
+                                ${isEstCurrent ? `
+                                    <button class="btn sc-plan-btn sc-plan-btn-current" disabled>
+                                        <i class="fas fa-check-circle"></i> Active
+                                    </button>
+                                ` : `
+                                    <button class="btn sc-plan-btn" onclick="handleSubscribe('contractor_ai_estimation')" style="background:linear-gradient(135deg, #0d9488, #14b8a6); color:white;">
+                                        <i class="fas fa-bolt"></i> Activate
+                                    </button>
+                                `}
+                            </div>
+                        </div>
+                        <div class="sc-plan-card ${isAnaCurrent ? 'sc-plan-current' : ''}">
+                            <div class="sc-plan-header" style="background:linear-gradient(135deg, #7c3aed, #a855f7);">
+                                <div style="font-size:20px; margin-bottom:4px;"><i class="fas fa-chart-line"></i></div>
+                                <div class="sc-plan-price">$0.08<span style="font-size:14px; font-weight:400;">/MB</span></div>
+                                <div class="sc-plan-label">AI Analysis</div>
+                            </div>
+                            <div class="sc-plan-body">
+                                <p class="sc-plan-desc">Pay per MB — Spreadsheet analysis with predictive insights</p>
+                                <ul class="sc-plan-features">
+                                    ${(anaPlan?.features || []).map(f => `<li><i class="fas fa-check" style="color:#7c3aed;"></i> ${f}</li>`).join('')}
+                                </ul>
+                                ${isAnaCurrent ? `
+                                    <button class="btn sc-plan-btn sc-plan-btn-current" disabled>
+                                        <i class="fas fa-check-circle"></i> Active
+                                    </button>
+                                ` : `
+                                    <button class="btn sc-plan-btn" onclick="handleSubscribe('contractor_ai_analysis')" style="background:linear-gradient(135deg, #7c3aed, #a855f7); color:white;">
+                                        <i class="fas fa-bolt"></i> Activate
+                                    </button>
+                                `}
+                            </div>
+                        </div>
+                    `;
+                })()}
             </div>
         </div>
         ` : ''}
