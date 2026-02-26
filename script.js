@@ -2947,7 +2947,12 @@ async function fetchAndRenderConversations() {
     container.innerHTML = `
         <div id="dynamic-feature-header" class="dynamic-feature-header"></div>
         <div class="section-header modern-header"><div class="header-content"><h2><i class="fas fa-comments"></i> Messages</h2><p class="header-subtitle">Communicate with clients and designers</p></div></div>
-        <div id="conversations-list" class="conversations-container premium-conversations"></div>`;
+        <div class="messages-tabs">
+            <button class="msg-tab active" onclick="switchMessageTab('chats')"><i class="fas fa-comments"></i> Chats</button>
+            <button class="msg-tab" onclick="switchMessageTab('calls')"><i class="fas fa-phone-alt"></i> Recent Calls</button>
+        </div>
+        <div id="conversations-list" class="conversations-container premium-conversations"></div>
+        <div id="call-history-list" class="conversations-container premium-conversations" style="display:none"></div>`;
     updateDynamicHeader();
     const listContainer = document.getElementById('conversations-list');
     listContainer.innerHTML = `<div class="loading-spinner"><div class="spinner"></div><p>Loading conversations...</p></div>`;
@@ -3300,6 +3305,11 @@ function initializeSocketConnection() {
             endCallCleanup();
         });
 
+        voiceCallState.socket.on('call-timeout', (data) => {
+            showNotification('No answer. Please try again later.', 'warning');
+            endCallCleanup();
+        });
+
         voiceCallState.socket.on('webrtc-offer', async (data) => {
             await handleWebRTCOffer(data);
         });
@@ -3552,7 +3562,7 @@ function updateCallUI(status) {
     }
 }
 
-// WebRTC: Create peer connection
+// WebRTC: Create peer connection with STUN + free TURN servers
 function createPeerConnection() {
     const config = {
         iceServers: [
@@ -3560,8 +3570,13 @@ function createPeerConnection() {
             { urls: 'stun:stun1.l.google.com:19302' },
             { urls: 'stun:stun2.l.google.com:19302' },
             { urls: 'stun:stun3.l.google.com:19302' },
-            { urls: 'stun:stun4.l.google.com:19302' }
-        ]
+            { urls: 'stun:stun4.l.google.com:19302' },
+            // Free TURN servers for users behind strict firewalls/NATs
+            { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+            { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+            { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
+        ],
+        iceCandidatePoolSize: 10
     };
 
     voiceCallState.peerConnection = new RTCPeerConnection(config);
@@ -3597,6 +3612,9 @@ function createPeerConnection() {
         if (state === 'disconnected' || state === 'failed') {
             showNotification('Call connection lost', 'error');
             endVoiceCall();
+        }
+        if (state === 'connected') {
+            startConnectionQualityMonitor();
         }
     };
 
@@ -3681,6 +3699,37 @@ async function handleICECandidate(data) {
     } catch (error) {
         console.error('[VOICE] Error handling ICE candidate:', error);
     }
+}
+
+// Connection quality monitor - updates quality bars in real-time
+function startConnectionQualityMonitor() {
+    if (voiceCallState._qualityInterval) clearInterval(voiceCallState._qualityInterval);
+    voiceCallState._qualityInterval = setInterval(async () => {
+        if (!voiceCallState.peerConnection || voiceCallState.peerConnection.connectionState !== 'connected') {
+            clearInterval(voiceCallState._qualityInterval);
+            return;
+        }
+        try {
+            const stats = await voiceCallState.peerConnection.getStats();
+            let rtt = 0, packetsLost = 0, packetsReceived = 1;
+            stats.forEach(report => {
+                if (report.type === 'candidate-pair' && report.state === 'succeeded') {
+                    rtt = report.currentRoundTripTime || 0;
+                }
+                if (report.type === 'inbound-rtp' && report.kind === 'audio') {
+                    packetsLost = report.packetsLost || 0;
+                    packetsReceived = report.packetsReceived || 1;
+                }
+            });
+            const lossRate = packetsLost / (packetsReceived + packetsLost);
+            let quality = 4; // excellent
+            if (rtt > 0.4 || lossRate > 0.1) quality = 1; // poor
+            else if (rtt > 0.25 || lossRate > 0.05) quality = 2; // fair
+            else if (rtt > 0.15 || lossRate > 0.02) quality = 3; // good
+            const bars = document.querySelectorAll('.quality-bar');
+            bars.forEach((bar, i) => bar.classList.toggle('active', i < quality));
+        } catch (e) { /* stats unavailable */ }
+    }, 3000);
 }
 
 // Call controls
@@ -3772,6 +3821,11 @@ function stopCallSound() {
 function endCallCleanup() {
     stopCallSound();
 
+    if (voiceCallState._qualityInterval) {
+        clearInterval(voiceCallState._qualityInterval);
+        voiceCallState._qualityInterval = null;
+    }
+
     if (voiceCallState.callTimer) {
         clearInterval(voiceCallState.callTimer);
         voiceCallState.callTimer = null;
@@ -3803,6 +3857,62 @@ function endCallCleanup() {
     voiceCallState.isSpeakerOn = true;
     voiceCallState.isConnected = false;
     voiceCallState._targetUserId = null;
+}
+
+// Message tab switching (Chats / Recent Calls)
+function switchMessageTab(tab) {
+    const tabs = document.querySelectorAll('.msg-tab');
+    tabs.forEach(t => t.classList.remove('active'));
+    event.target.closest('.msg-tab').classList.add('active');
+    const chatList = document.getElementById('conversations-list');
+    const callList = document.getElementById('call-history-list');
+    if (tab === 'chats') {
+        if (chatList) chatList.style.display = '';
+        if (callList) callList.style.display = 'none';
+    } else {
+        if (chatList) chatList.style.display = 'none';
+        if (callList) callList.style.display = '';
+        loadCallHistory();
+    }
+}
+
+async function loadCallHistory() {
+    const container = document.getElementById('call-history-list');
+    if (!container) return;
+    container.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Loading call history...</p></div>';
+    try {
+        const response = await apiCall('/voice-calls/history?limit=30', 'GET');
+        const calls = response.data || [];
+        if (calls.length === 0) {
+            container.innerHTML = '<div class="empty-state premium-empty"><div class="empty-icon"><i class="fas fa-phone-alt"></i></div><h3>No Calls Yet</h3><p>Start a voice call from any conversation.</p></div>';
+            return;
+        }
+        container.innerHTML = calls.map(call => {
+            const isOutgoing = call.callerId === appState.currentUser.id;
+            const otherName = isOutgoing ? (call.calleeName || 'User') : (call.callerName || 'User');
+            const avatarColor = getAvatarColor(otherName);
+            const statusIcon = call.status === 'completed' ? 'fa-phone-alt' : call.status === 'missed' ? 'fa-phone-slash' : 'fa-phone-slash';
+            const statusColor = call.status === 'completed' ? '#10b981' : '#ef4444';
+            const directionIcon = isOutgoing ? 'fa-arrow-up' : 'fa-arrow-down';
+            const duration = call.duration ? `${Math.floor(call.duration / 60)}:${(call.duration % 60).toString().padStart(2, '0')}` : '--:--';
+            const timeAgo = getTimeAgo(call.startedAt);
+            return `
+                <div class="conversation-card premium-card call-history-card">
+                    <div class="convo-avatar" style="background-color: ${avatarColor}">${otherName.charAt(0).toUpperCase()}</div>
+                    <div class="convo-details">
+                        <div class="convo-header"><h4>${otherName}</h4><span class="convo-time">${timeAgo}</span></div>
+                        <p class="convo-preview">
+                            <i class="fas ${directionIcon}" style="color:${isOutgoing ? '#3b82f6' : '#10b981'};margin-right:4px;font-size:11px;"></i>
+                            <i class="fas ${statusIcon}" style="color:${statusColor};margin-right:6px;font-size:12px;"></i>
+                            ${call.status === 'completed' ? duration : call.status.charAt(0).toUpperCase() + call.status.slice(1)}
+                        </p>
+                    </div>
+                    ${call.conversationId ? `<div class="convo-arrow" onclick="renderConversationView('${call.conversationId}')"><i class="fas fa-chevron-right"></i></div>` : ''}
+                </div>`;
+        }).join('');
+    } catch (error) {
+        container.innerHTML = '<div class="error-state premium-error"><p>Failed to load call history.</p></div>';
+    }
 }
 
 // Initialize socket when user logs in
