@@ -8950,6 +8950,15 @@ function renderSubscriptionContent(plans, currentSub, invoices = []) {
         </div>
         ` : ''}
 
+        <!-- AI Analysis Pricing Tiers -->
+        <div class="sc-plans-section">
+            <h3 class="sc-plans-title"><i class="fas fa-brain"></i> AI Analysis Plans</h3>
+            <p style="color:#6b7280; margin:-8px 0 20px; font-size:14px;">Unlock powerful AI-driven analytics, predictive insights, and estimation storage</p>
+            <div class="sc-plans-grid sc-ai-plans-grid">
+                ${renderAiAnalysisPlans(plans, currentSub)}
+            </div>
+        </div>
+
         ${invoices.length > 0 ? `
         <div class="sc-invoices-section">
             <h3 class="sc-plans-title"><i class="fas fa-file-invoice"></i> Billing History</h3>
@@ -8983,6 +8992,57 @@ function renderSubscriptionContent(plans, currentSub, invoices = []) {
             <span>Payments are securely processed via Stripe. Your card details are never stored on our servers.</span>
         </div>
     `;
+}
+
+function renderAiAnalysisPlans(plans, currentSub) {
+    const aiPlans = [
+        { id: 'ai_analysis_daily_weekly', color: { gradient: 'linear-gradient(135deg, #0891b2, #06b6d4)', check: '#0891b2' }, icon: 'fa-chart-bar' },
+        { id: 'ai_analysis_monthly', color: { gradient: 'linear-gradient(135deg, #2563eb, #3b82f6)', check: '#2563eb' }, icon: 'fa-calendar-alt' },
+        { id: 'ai_analysis_premium', color: { gradient: 'linear-gradient(135deg, #7c3aed, #a855f7)', check: '#7c3aed' }, icon: 'fa-crown', popular: true },
+        { id: 'ai_analysis_pro', color: { gradient: 'linear-gradient(135deg, #dc2626, #f43f5e)', check: '#dc2626' }, icon: 'fa-rocket' },
+    ];
+
+    return aiPlans.map(({ id, color, icon, popular }) => {
+        const plan = plans[id];
+        if (!plan) return '';
+        const isCurrent = currentSub && currentSub.plan === id;
+        const priceDisplay = `$${plan.price}<span style="font-size:14px; font-weight:400;">/${plan.billingCycle === 'weekly' ? 'wk' : 'mo'}</span>`;
+
+        const storageInfo = plan.storageAllowedMB
+            ? `<div class="sc-ai-plan-highlight"><i class="fas fa-database"></i> ${(plan.storageAllowedMB / 1024).toFixed(0)} GB max AI estimation</div>`
+            : '';
+        const quotaInfo = plan.aiAnalysisQuota
+            ? `<div class="sc-ai-plan-highlight"><i class="fas fa-brain"></i> ${plan.aiAnalysisQuota} free analysis${plan.aiAnalysisQuota > 1 ? 'es' : ''} per period</div>`
+            : '';
+
+        return `
+            <div class="sc-plan-card ${isCurrent ? 'sc-plan-current' : ''}" ${popular ? 'style="border-color:#7c3aed; box-shadow:0 0 0 2px rgba(124,58,237,0.2);"' : ''}>
+                ${popular ? '<div class="sc-plan-popular">Best Value</div>' : ''}
+                <div class="sc-plan-header" style="background:${color.gradient};">
+                    <div style="font-size:20px; margin-bottom:4px;"><i class="fas ${icon}"></i></div>
+                    <div class="sc-plan-price">${priceDisplay}</div>
+                    <div class="sc-plan-label">${plan.label}</div>
+                </div>
+                <div class="sc-plan-body">
+                    <p class="sc-plan-desc">${plan.description}</p>
+                    ${storageInfo}
+                    ${quotaInfo}
+                    <ul class="sc-plan-features">
+                        ${(plan.features || []).map(f => `<li><i class="fas fa-check" style="color:${color.check};"></i> ${f}</li>`).join('')}
+                    </ul>
+                    ${isCurrent ? `
+                        <button class="btn sc-plan-btn sc-plan-btn-current" disabled>
+                            <i class="fas fa-check-circle"></i> Current Plan
+                        </button>
+                    ` : `
+                        <button class="btn sc-plan-btn" onclick="handleSubscribe('${id}')" style="background:${color.gradient}; color:white;">
+                            <i class="fas fa-bolt"></i> Subscribe
+                        </button>
+                    `}
+                </div>
+            </div>
+        `;
+    }).join('');
 }
 
 async function handleSubscribe(planId) {
