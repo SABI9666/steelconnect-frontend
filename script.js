@@ -9009,7 +9009,7 @@ function renderAiAnalysisPlans(plans, currentSub) {
         const priceDisplay = `$${plan.price}<span style="font-size:14px; font-weight:400;">/${plan.billingCycle === 'weekly' ? 'wk' : 'mo'}</span>`;
 
         const storageInfo = plan.storageAllowedMB
-            ? `<div class="sc-ai-plan-highlight"><i class="fas fa-database"></i> ${(plan.storageAllowedMB / 1024).toFixed(0)} GB estimation storage</div>`
+            ? `<div class="sc-ai-plan-highlight"><i class="fas fa-database"></i> ${(plan.storageAllowedMB / 1024).toFixed(0)} GB max AI estimation</div>`
             : '';
         const quotaInfo = plan.aiAnalysisQuota
             ? `<div class="sc-ai-plan-highlight"><i class="fas fa-brain"></i> ${plan.aiAnalysisQuota} free analysis${plan.aiAnalysisQuota > 1 ? 'es' : ''} per period</div>`
