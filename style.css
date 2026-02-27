@@ -17550,16 +17550,21 @@ body { overflow-x: hidden; }
 
 /* ================================================================
    HERO AUTH CARD - Professional auth options card on landing page
-   Sits in hero right column, replaces image slider for guests
+   Overlays on top of the hero image slider inside hero-visual
    ================================================================ */
 .hero-auth-card {
-    position: relative;
-    z-index: 3;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 5;
+    width: 92%;
+    max-width: 400px;
     animation: heroAuthCardIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.4s both;
 }
 @keyframes heroAuthCardIn {
-    from { opacity: 0; transform: translateY(24px) scale(0.97); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
+    from { opacity: 0; transform: translate(-50%, -50%) translateY(24px) scale(0.97); }
+    to { opacity: 1; transform: translate(-50%, -50%) translateY(0) scale(1); }
 }
 .hero-auth-card-inner {
     background: rgba(255, 255, 255, 0.95);
@@ -17757,6 +17762,18 @@ body { overflow-x: hidden; }
 .hero-auth-trust-badges i {
     color: #6366f1;
     font-size: 10px;
+}
+
+/* When auth card is showing, dim the image and hide overlapping elements */
+.hero-visual.has-auth-card .hero-image-container {
+    filter: brightness(0.4) blur(2px);
+}
+.hero-visual.has-auth-card .hero-image-overlay {
+    opacity: 0;
+}
+.hero-visual.has-auth-card .floating-cards {
+    opacity: 0;
+    pointer-events: none;
 }
 
 /* Hero Auth Card Responsive */
