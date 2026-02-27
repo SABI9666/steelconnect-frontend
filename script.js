@@ -1305,6 +1305,8 @@ function getNotificationActionButtons(notification) {
                 buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); renderAppSection('dashboard')"><i class="fas fa-tachometer-alt"></i> Dashboard</button>`;
             } else if (metadata?.action === 'profile_rejected') {
                 buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); renderAppSection('profile-completion')"><i class="fas fa-edit"></i> Update Profile</button>`;
+            } else if (metadata?.action === 'profile_reminder') {
+                buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); renderAppSection('profile-completion')"><i class="fas fa-user-edit"></i> Complete Profile</button>`;
             }
             break;
         case 'support':
@@ -1357,7 +1359,7 @@ function handleNotificationClick(notificationId, type, metadata = {}) {
             renderAppSection('my-estimations');
             break;
         case 'profile':
-            if (metadata.action === 'profile_rejected') {
+            if (metadata.action === 'profile_rejected' || metadata.action === 'profile_reminder') {
                 renderAppSection('profile-completion');
             } else {
                 renderAppSection('settings');
