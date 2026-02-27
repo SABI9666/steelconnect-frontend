@@ -303,13 +303,19 @@ function initializeApp() {
     const headerGoogleBtn = document.getElementById('header-google-btn');
     if (headerGoogleBtn) headerGoogleBtn.addEventListener('click', () => triggerGoogleSignInDirect());
 
-    // Hero auth card buttons (on landing page, Google goes directly to Google, etc.)
+    // Hero auth card buttons (on landing page)
     const heroGoogleBtn = document.getElementById('hero-google-login-btn');
     if (heroGoogleBtn) heroGoogleBtn.addEventListener('click', () => triggerGoogleSignInDirect());
     const heroSigninBtn = document.getElementById('hero-signin-btn');
-    if (heroSigninBtn) heroSigninBtn.addEventListener('click', () => showAuthModal('login'));
+    if (heroSigninBtn) heroSigninBtn.addEventListener('click', () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        showAuthModal('login');
+    });
     const heroRegisterBtn = document.getElementById('hero-register-btn');
-    if (heroRegisterBtn) heroRegisterBtn.addEventListener('click', () => showAuthModal('register'));
+    if (heroRegisterBtn) heroRegisterBtn.addEventListener('click', () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        showAuthModal('register');
+    });
 
     // Logo navigation
     const logo = document.querySelector('.logo');
@@ -3974,6 +3980,7 @@ function showAuthGateway() {
         loginBtn.parentNode.replaceChild(newLogin, loginBtn);
         newLogin.addEventListener('click', () => {
             hideAuthGateway();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
             showAuthModal('login');
         });
     }
@@ -3982,6 +3989,7 @@ function showAuthGateway() {
         registerBtn.parentNode.replaceChild(newRegister, registerBtn);
         newRegister.addEventListener('click', () => {
             hideAuthGateway();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
             showAuthModal('register');
         });
     }
@@ -3989,8 +3997,19 @@ function showAuthGateway() {
         const newGoogle = googleBtn.cloneNode(true);
         googleBtn.parentNode.replaceChild(newGoogle, googleBtn);
         newGoogle.addEventListener('click', () => {
-            hideAuthGateway();
-            triggerGoogleSignInDirect();
+            // Hide gateway first, then trigger Google after overlay is gone
+            // so Google One Tap popup isn't blocked by the overlay z-index
+            const gw = document.getElementById('auth-gateway-overlay');
+            if (gw) {
+                gw.classList.add('gateway-closing');
+                setTimeout(() => {
+                    gw.style.display = 'none';
+                    gw.classList.remove('gateway-closing');
+                    triggerGoogleSignInDirect();
+                }, 400);
+            } else {
+                triggerGoogleSignInDirect();
+            }
         });
     }
     if (browseBtn) {
@@ -4121,11 +4140,11 @@ function showAppView() {
     const gatewayOverlay = document.getElementById('auth-gateway-overlay');
     if (gatewayOverlay) gatewayOverlay.style.display = 'none';
 
-    // Hide hero auth card and restore image slider for logged-in users
+    // Hide hero auth card when user is logged in
     const heroAuthCard = document.getElementById('hero-auth-card');
     const heroVisual = document.querySelector('.hero-visual');
     if (heroAuthCard) heroAuthCard.style.display = 'none';
-    if (heroVisual) heroVisual.style.display = '';
+    if (heroVisual) heroVisual.classList.remove('has-auth-card');
 
     // Batch all DOM changes before the user sees anything
     document.getElementById('landing-page-content').style.display = 'none';
@@ -4197,11 +4216,11 @@ function showLandingPageView() {
     if (navMenu) navMenu.innerHTML = `
         <a href="#ai-estimation" class="nav-link">AI Estimation</a><a href="#how-it-works" class="nav-link">How It Works</a>
         <a href="#why-steelconnect" class="nav-link">Why Choose Us</a><a href="#showcase" class="nav-link">Showcase</a>`;
-    // Show hero auth card and hide image slider for unauthenticated users
+    // Show hero auth card overlay on top of hero image for unauthenticated users
     const heroAuthCard = document.getElementById('hero-auth-card');
     const heroVisual = document.querySelector('.hero-visual');
     if (heroAuthCard) heroAuthCard.style.display = 'block';
-    if (heroVisual) heroVisual.style.display = 'none';
+    if (heroVisual) heroVisual.classList.add('has-auth-card');
 }
 
 // --- PROFILE & ROUTING FUNCTIONS ---
