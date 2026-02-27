@@ -17294,3 +17294,257 @@ body { overflow-x: hidden; }
     .sc-invoice-row { flex-direction: column; align-items: flex-start; gap: 10px; }
     .sc-invoice-right { width: 100%; justify-content: flex-end; }
 }
+
+/* ================================================================
+   AUTH GATEWAY OVERLAY - Transparent overlay with 3 auth options
+   Shows Register, Login, Google Login separately over the website
+   ================================================================ */
+.auth-gateway-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    animation: gatewayFadeIn 0.5s ease-out;
+}
+@keyframes gatewayFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+.auth-gateway-overlay.gateway-closing {
+    animation: gatewayFadeOut 0.4s ease-in forwards;
+}
+@keyframes gatewayFadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+.auth-gateway-container {
+    text-align: center;
+    padding: 48px 40px 36px;
+    max-width: 680px;
+    width: 92%;
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 28px;
+    box-shadow: 0 32px 64px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+    animation: gatewaySlideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes gatewaySlideUp {
+    from { opacity: 0; transform: translateY(30px) scale(0.96); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.auth-gateway-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+.auth-gateway-logo-icon {
+    width: 44px;
+    height: 44px;
+    background: linear-gradient(135deg, #2563eb, #7c3aed);
+    color: white;
+    font-weight: 800;
+    font-size: 16px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.4);
+}
+.auth-gateway-logo span {
+    font-size: 22px;
+    font-weight: 800;
+    color: #ffffff;
+    letter-spacing: -0.02em;
+}
+
+.auth-gateway-title {
+    font-size: 28px;
+    font-weight: 800;
+    color: #ffffff;
+    margin-bottom: 8px;
+    letter-spacing: -0.02em;
+}
+.auth-gateway-subtitle {
+    font-size: 15px;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 36px;
+    line-height: 1.5;
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.auth-gateway-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 28px;
+}
+
+.auth-gateway-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 28px 16px 24px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    font-family: inherit;
+    outline: none;
+}
+.auth-gateway-card:hover {
+    transform: translateY(-4px);
+    background: rgba(255, 255, 255, 0.18);
+    border-color: rgba(255, 255, 255, 0.3);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+}
+.auth-gateway-card:active {
+    transform: translateY(-1px);
+}
+
+.auth-gateway-card-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    margin-bottom: 14px;
+    transition: all 0.35s ease;
+}
+
+.auth-gateway-login .auth-gateway-card-icon {
+    background: linear-gradient(135deg, #2563eb, #3b82f6);
+    color: #ffffff;
+    box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+}
+.auth-gateway-login:hover .auth-gateway-card-icon {
+    box-shadow: 0 8px 28px rgba(37, 99, 235, 0.55);
+    transform: scale(1.05);
+}
+
+.auth-gateway-register .auth-gateway-card-icon {
+    background: linear-gradient(135deg, #7c3aed, #a855f7);
+    color: #ffffff;
+    box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4);
+}
+.auth-gateway-register:hover .auth-gateway-card-icon {
+    box-shadow: 0 8px 28px rgba(124, 58, 237, 0.55);
+    transform: scale(1.05);
+}
+
+.auth-gateway-google .auth-gateway-card-icon {
+    background: #ffffff;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+.auth-gateway-google:hover .auth-gateway-card-icon {
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
+    transform: scale(1.05);
+}
+.auth-gateway-google-icon svg {
+    width: 28px;
+    height: 28px;
+}
+
+.auth-gateway-card h3 {
+    font-size: 16px;
+    font-weight: 700;
+    color: #ffffff;
+    margin-bottom: 6px;
+}
+.auth-gateway-card p {
+    font-size: 12.5px;
+    color: rgba(255, 255, 255, 0.6);
+    line-height: 1.4;
+    margin: 0;
+}
+
+.auth-gateway-browse {
+    margin-top: 4px;
+}
+.auth-gateway-browse-btn {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 8px 20px;
+    border-radius: 10px;
+    transition: all 0.25s ease;
+    font-family: inherit;
+}
+.auth-gateway-browse-btn:hover {
+    color: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.08);
+}
+.auth-gateway-browse-btn i {
+    margin-right: 6px;
+}
+
+/* Auth Gateway Responsive */
+@media (max-width: 600px) {
+    .auth-gateway-container {
+        padding: 36px 20px 28px;
+        border-radius: 20px;
+        width: 95%;
+    }
+    .auth-gateway-cards {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    .auth-gateway-card {
+        flex-direction: row;
+        text-align: left;
+        padding: 18px 20px;
+        gap: 16px;
+    }
+    .auth-gateway-card-icon {
+        margin-bottom: 0;
+        width: 48px;
+        height: 48px;
+        min-width: 48px;
+        font-size: 20px;
+        border-radius: 14px;
+    }
+    .auth-gateway-card h3 {
+        font-size: 15px;
+        margin-bottom: 2px;
+    }
+    .auth-gateway-card p {
+        font-size: 12px;
+    }
+    .auth-gateway-title {
+        font-size: 22px;
+    }
+    .auth-gateway-subtitle {
+        font-size: 13px;
+        margin-bottom: 24px;
+    }
+    .auth-gateway-logo-icon {
+        width: 36px;
+        height: 36px;
+        font-size: 14px;
+    }
+    .auth-gateway-logo span {
+        font-size: 18px;
+    }
+}

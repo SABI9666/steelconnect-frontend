@@ -335,6 +335,9 @@ function initializeApp() {
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('action') === 'register') {
             showAuthModal('register');
+        } else {
+            // Show the auth gateway overlay with 3 separate options over the website
+            showAuthGateway();
         }
     }
 
@@ -750,6 +753,9 @@ function completeLogin(data) {
     localStorage.setItem('currentUser', JSON.stringify(data.user));
     localStorage.setItem('jwtToken', data.token);
     closeModal();
+    // Hide auth gateway if still visible
+    const gatewayOverlay = document.getElementById('auth-gateway-overlay');
+    if (gatewayOverlay) gatewayOverlay.style.display = 'none';
     showAppView();
     setTimeout(() => {
         showNotification(`Welcome to SteelConnect, ${data.user.name}!`, 'success');
@@ -3935,6 +3941,88 @@ function unlockBodyScroll() {
     document.body.style.overflow = '';
 }
 
+// ========================================
+// AUTH GATEWAY OVERLAY
+// Shows Register, Login, Google Login as 3 separate options over the website
+// ========================================
+function showAuthGateway() {
+    const overlay = document.getElementById('auth-gateway-overlay');
+    if (!overlay) return;
+    overlay.style.display = 'flex';
+    overlay.classList.remove('gateway-closing');
+
+    // Wire up gateway buttons
+    const loginBtn = document.getElementById('gateway-login-btn');
+    const registerBtn = document.getElementById('gateway-register-btn');
+    const googleBtn = document.getElementById('gateway-google-btn');
+    const browseBtn = document.getElementById('gateway-browse-btn');
+
+    // Remove old listeners by cloning
+    if (loginBtn) {
+        const newLogin = loginBtn.cloneNode(true);
+        loginBtn.parentNode.replaceChild(newLogin, loginBtn);
+        newLogin.addEventListener('click', () => {
+            hideAuthGateway();
+            showAuthModal('login');
+        });
+    }
+    if (registerBtn) {
+        const newRegister = registerBtn.cloneNode(true);
+        registerBtn.parentNode.replaceChild(newRegister, registerBtn);
+        newRegister.addEventListener('click', () => {
+            hideAuthGateway();
+            showAuthModal('register');
+        });
+    }
+    if (googleBtn) {
+        const newGoogle = googleBtn.cloneNode(true);
+        googleBtn.parentNode.replaceChild(newGoogle, googleBtn);
+        newGoogle.addEventListener('click', () => {
+            hideAuthGateway();
+            triggerGoogleSignInDirect();
+        });
+    }
+    if (browseBtn) {
+        const newBrowse = browseBtn.cloneNode(true);
+        browseBtn.parentNode.replaceChild(newBrowse, browseBtn);
+        newBrowse.addEventListener('click', () => {
+            hideAuthGateway();
+        });
+    }
+}
+
+function hideAuthGateway() {
+    const overlay = document.getElementById('auth-gateway-overlay');
+    if (!overlay) return;
+    overlay.classList.add('gateway-closing');
+    setTimeout(() => {
+        overlay.style.display = 'none';
+        overlay.classList.remove('gateway-closing');
+    }, 400);
+}
+
+// Direct Google Sign-In (standalone, outside register form)
+function triggerGoogleSignInDirect() {
+    if (typeof google === 'undefined' || !google.accounts) {
+        showNotification('Google Sign-In is not available. Please try again or use email login.', 'error');
+        showAuthModal('login');
+        return;
+    }
+    google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: (response) => handleGoogleCallback(response, 'login'),
+        auto_select: false,
+        cancel_on_tap_outside: true
+    });
+    google.accounts.id.prompt((notification) => {
+        // If prompt was dismissed or not displayed, open login modal as fallback
+        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+            showNotification('Google popup was blocked or unavailable. Please try the Sign In option.', 'info');
+            showAuthModal('login');
+        }
+    });
+}
+
 function showAuthModal(view) {
     const modal = document.getElementById('modal-container');
     if (modal) {
@@ -4018,6 +4106,10 @@ function showAppView() {
     appContent.classList.remove('app-ready');
     appContent.style.display = 'flex';
 
+    // Hide auth gateway overlay if visible
+    const gatewayOverlay = document.getElementById('auth-gateway-overlay');
+    if (gatewayOverlay) gatewayOverlay.style.display = 'none';
+
     // Batch all DOM changes before the user sees anything
     document.getElementById('landing-page-content').style.display = 'none';
     document.getElementById('auth-buttons-container').style.display = 'none';
@@ -4063,6 +4155,8 @@ function logout() {
     dismissInactivityWarning();
     showLandingPageView();
     showNotification('You have been logged out.', 'info');
+    // Show auth gateway again after logout
+    setTimeout(() => showAuthGateway(), 600);
 }
 
 function showLandingPageView() {
