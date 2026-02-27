@@ -299,13 +299,13 @@ function initializeApp() {
     if (joinBtn) joinBtn.addEventListener('click', () => showAuthModal('register'));
     const getStartedBtn = document.getElementById('get-started-btn');
     if (getStartedBtn) getStartedBtn.addEventListener('click', () => showAuthModal('register'));
-    // Header Google Sign-In button (separate, always visible in header)
-    const headerGoogleBtn = document.getElementById('header-google-btn');
-    if (headerGoogleBtn) headerGoogleBtn.addEventListener('click', () => triggerGoogleSignInDirect());
-
-    // Hero auth card buttons (on landing page)
-    const heroGoogleBtn = document.getElementById('hero-google-login-btn');
-    if (heroGoogleBtn) heroGoogleBtn.addEventListener('click', () => triggerGoogleSignInDirect());
+    // Render standalone Google Sign-In buttons (header, hero, gateway)
+    // GSI library is loaded async, so retry if not ready yet
+    if (typeof google !== 'undefined' && google.accounts) {
+        renderGoogleButtons();
+    } else {
+        window.addEventListener('load', () => renderGoogleButtons());
+    }
     const heroSigninBtn = document.getElementById('hero-signin-btn');
     if (heroSigninBtn) heroSigninBtn.addEventListener('click', () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -541,55 +541,23 @@ function ensureGoogleInitialized() {
     return true;
 }
 
-function initGoogleSignIn(buttonId, context) {
+// Render Google Sign-In buttons on visible page elements (header, hero, gateway)
+function renderGoogleButtons() {
     if (!ensureGoogleInitialized()) return;
-    const btnEl = document.getElementById(buttonId);
-    if (!btnEl) return;
-
-    // Set context before rendering so callback knows the context
-    _googleSignInContext = context;
-
-    // Use renderButton() — uses popup OAuth, not FedCM, so it's reliable
-    google.accounts.id.renderButton(btnEl, {
-        type: 'standard',
-        theme: 'outline',
-        size: 'large',
-        text: context === 'register' ? 'signup_with' : 'signin_with',
-        width: btnEl.offsetWidth || 300,
-        click_listener: () => { _googleSignInContext = context; }
+    const targets = [
+        { id: 'header-google-btn', type: 'icon', theme: 'outline', size: 'medium', shape: 'pill' },
+        { id: 'hero-google-login-btn', type: 'standard', theme: 'outline', size: 'large', text: 'continue_with' },
+        { id: 'gateway-google-render', type: 'standard', theme: 'outline', size: 'large', text: 'signin_with' }
+    ];
+    targets.forEach(t => {
+        const el = document.getElementById(t.id);
+        if (!el) return;
+        const opts = { type: t.type, theme: t.theme, size: t.size, shape: t.shape || 'rectangular',
+            click_listener: () => { _googleSignInContext = 'login'; } };
+        if (t.text) opts.text = t.text;
+        if (t.type === 'standard') opts.width = el.offsetWidth || 250;
+        google.accounts.id.renderButton(el, opts);
     });
-
-    // For register context, add validation overlay that intercepts clicks
-    if (context === 'register') {
-        const overlay = document.getElementById('google-register-btn-overlay');
-        if (overlay) {
-            overlay.addEventListener('click', (e) => {
-                const roleSelect = document.querySelector('[name="regRole"]');
-                const termsCheckbox = document.querySelector('[name="termsAccepted"]');
-                const termsError = document.getElementById('terms-error');
-                if (!roleSelect || !roleSelect.value) {
-                    e.stopPropagation();
-                    showNotification('Please select your role (Contractor or Designer) before continuing with Google.', 'warning');
-                    if (roleSelect) roleSelect.focus();
-                    return;
-                }
-                if (!termsCheckbox || !termsCheckbox.checked) {
-                    e.stopPropagation();
-                    if (termsError) {
-                        termsError.style.display = 'flex';
-                        termsError.classList.add('terms-error-shake');
-                        setTimeout(() => termsError.classList.remove('terms-error-shake'), 600);
-                    }
-                    showNotification('Please accept the Terms & Conditions to continue.', 'warning');
-                    return;
-                }
-                if (termsError) termsError.style.display = 'none';
-                // Validation passed — hide overlay so Google's button receives the next click
-                overlay.style.display = 'none';
-                showNotification('Now click the Google button to continue.', 'info');
-            });
-        }
-    }
 }
 
 async function handleGoogleCallback(response, context) {
@@ -4022,14 +3990,17 @@ function showAuthGateway() {
             showAuthModal('register');
         });
     }
+    // Google button in gateway uses renderButton() directly — no clone needed
+    // Re-render Google button in case gateway was re-opened
     if (googleBtn) {
-        const newGoogle = googleBtn.cloneNode(true);
-        googleBtn.parentNode.replaceChild(newGoogle, googleBtn);
-        newGoogle.addEventListener('click', () => {
-            hideAuthGateway();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-            triggerGoogleSignInDirect();
-        });
+        const renderTarget = document.getElementById('gateway-google-render');
+        if (renderTarget && ensureGoogleInitialized()) {
+            google.accounts.id.renderButton(renderTarget, {
+                type: 'standard', theme: 'outline', size: 'large',
+                text: 'signin_with', width: renderTarget.offsetWidth || 250,
+                click_listener: () => { _googleSignInContext = 'login'; }
+            });
+        }
     }
     if (browseBtn) {
         const newBrowse = browseBtn.cloneNode(true);
@@ -4050,11 +4021,6 @@ function hideAuthGateway() {
     }, 400);
 }
 
-// Direct Google Sign-In (standalone, outside register form)
-// Opens the login modal which contains a renderButton-based Google button (popup OAuth)
-function triggerGoogleSignInDirect() {
-    showAuthModal('login');
-}
 
 function showAuthModal(view) {
     const modal = document.getElementById('modal-container');
@@ -4096,13 +4062,6 @@ function renderAuthForm(view) {
     } else if (view === 'google-role-select') {
         container.innerHTML = getGoogleRoleSelectTemplate();
         document.getElementById('google-role-form').addEventListener('submit', handleGoogleRoleSubmit);
-    }
-
-    // Initialize Google Sign-In buttons after rendering
-    if (view === 'login') {
-        setTimeout(() => initGoogleSignIn('google-login-btn', 'login'), 100);
-    } else if (view === 'register') {
-        setTimeout(() => initGoogleSignIn('google-register-btn', 'register'), 100);
     }
 }
 
@@ -5892,7 +5851,7 @@ function showRestrictedFeature(featureName) {
 
 // --- TEMPLATE GETTERS ---
 function getLoginTemplate() {
-    return `<div class="auth-header premium-auth-header"><div class="auth-logo"><i class="fas fa-drafting-compass"></i></div><h2>Welcome Back</h2><p>Sign in to your account</p></div><div id="auth-error-container"></div><form id="login-form" class="premium-form"><div class="form-group"><label class="form-label"><i class="fas fa-envelope"></i> Email</label><input type="email" class="form-input" name="loginEmail" required></div><div class="form-group"><label class="form-label"><i class="fas fa-lock"></i> Password</label><input type="password" class="form-input" name="loginPassword" required></div><button type="submit" class="btn btn-primary btn-full"><i class="fas fa-sign-in-alt"></i> Sign In</button></form><div class="auth-forgot-password"><a onclick="renderAuthForm('forgot-password')"><i class="fas fa-key"></i> Forgot Password?</a></div><div class="auth-divider"><span>or</span></div><div id="google-login-btn" class="google-btn-wrapper"></div><div class="auth-switch">Don't have an account? <a onclick="renderAuthForm('register')">Create one</a></div>`;
+    return `<div class="auth-header premium-auth-header"><div class="auth-logo"><i class="fas fa-drafting-compass"></i></div><h2>Welcome Back</h2><p>Sign in to your account</p></div><div id="auth-error-container"></div><form id="login-form" class="premium-form"><div class="form-group"><label class="form-label"><i class="fas fa-envelope"></i> Email</label><input type="email" class="form-input" name="loginEmail" required></div><div class="form-group"><label class="form-label"><i class="fas fa-lock"></i> Password</label><input type="password" class="form-input" name="loginPassword" required></div><button type="submit" class="btn btn-primary btn-full"><i class="fas fa-sign-in-alt"></i> Sign In</button></form><div class="auth-forgot-password"><a onclick="renderAuthForm('forgot-password')"><i class="fas fa-key"></i> Forgot Password?</a></div><div class="auth-switch">Don't have an account? <a onclick="renderAuthForm('register')">Create one</a></div>`;
 }
 
 function showTermsConditionsModal(tab = 'terms') {
@@ -6060,7 +6019,7 @@ function getResetPasswordTemplate(email) {
 }
 
 function getRegisterTemplate() {
-    return `<div class="auth-header premium-auth-header"><div class="auth-logo"><i class="fas fa-drafting-compass"></i></div><h2>Join SteelConnect</h2><p>Create your professional account</p></div><div id="auth-error-container"></div><form id="register-form" class="premium-form"><div class="form-group"><label class="form-label"><i class="fas fa-user"></i> Full Name</label><input type="text" class="form-input" name="regName" required></div><div class="form-group"><label class="form-label"><i class="fas fa-envelope"></i> Email</label><input type="email" class="form-input" name="regEmail" required></div><div class="form-group"><label class="form-label"><i class="fas fa-lock"></i> Password</label><input type="password" class="form-input" name="regPassword" required></div><div class="form-group"><label class="form-label"><i class="fas fa-user-tag"></i> I am a...</label><select class="form-select" name="regRole" required><option value="" disabled selected>Select role</option><option value="contractor">Client / Contractor</option><option value="designer">Designer / Engineer</option></select></div><div class="terms-checkbox-group"><label class="terms-checkbox-label"><input type="checkbox" name="termsAccepted" id="termsAcceptedCheckbox" class="terms-checkbox-input"><span class="terms-checkbox-custom"><i class="fas fa-check"></i></span><span class="terms-checkbox-text">I agree to the <a href="javascript:void(0)" onclick="event.preventDefault();event.stopPropagation();showTermsConditionsModal('terms')" class="terms-link">Terms &amp; Conditions</a> and <a href="javascript:void(0)" onclick="event.preventDefault();event.stopPropagation();showTermsConditionsModal('privacy')" class="terms-link">Privacy Policy</a></span></label><div id="terms-error" class="terms-error-msg" style="display:none;"><i class="fas fa-exclamation-circle"></i> You must accept the Terms &amp; Conditions to continue</div></div><button type="submit" class="btn btn-primary btn-full"><i class="fas fa-user-plus"></i> Create Account</button></form><div class="auth-divider"><span>or</span></div><div id="google-register-btn" class="google-btn-wrapper" style="position:relative;"><div id="google-register-btn-overlay" class="google-btn-overlay" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:2;cursor:pointer;"></div></div><div class="auth-switch">Already have an account? <a onclick="renderAuthForm('login')">Sign In</a></div>`;
+    return `<div class="auth-header premium-auth-header"><div class="auth-logo"><i class="fas fa-drafting-compass"></i></div><h2>Join SteelConnect</h2><p>Create your professional account</p></div><div id="auth-error-container"></div><form id="register-form" class="premium-form"><div class="form-group"><label class="form-label"><i class="fas fa-user"></i> Full Name</label><input type="text" class="form-input" name="regName" required></div><div class="form-group"><label class="form-label"><i class="fas fa-envelope"></i> Email</label><input type="email" class="form-input" name="regEmail" required></div><div class="form-group"><label class="form-label"><i class="fas fa-lock"></i> Password</label><input type="password" class="form-input" name="regPassword" required></div><div class="form-group"><label class="form-label"><i class="fas fa-user-tag"></i> I am a...</label><select class="form-select" name="regRole" required><option value="" disabled selected>Select role</option><option value="contractor">Client / Contractor</option><option value="designer">Designer / Engineer</option></select></div><div class="terms-checkbox-group"><label class="terms-checkbox-label"><input type="checkbox" name="termsAccepted" id="termsAcceptedCheckbox" class="terms-checkbox-input"><span class="terms-checkbox-custom"><i class="fas fa-check"></i></span><span class="terms-checkbox-text">I agree to the <a href="javascript:void(0)" onclick="event.preventDefault();event.stopPropagation();showTermsConditionsModal('terms')" class="terms-link">Terms &amp; Conditions</a> and <a href="javascript:void(0)" onclick="event.preventDefault();event.stopPropagation();showTermsConditionsModal('privacy')" class="terms-link">Privacy Policy</a></span></label><div id="terms-error" class="terms-error-msg" style="display:none;"><i class="fas fa-exclamation-circle"></i> You must accept the Terms &amp; Conditions to continue</div></div><button type="submit" class="btn btn-primary btn-full"><i class="fas fa-user-plus"></i> Create Account</button></form><div class="auth-switch">Already have an account? <a onclick="renderAuthForm('login')">Sign In</a></div>`;
 }
 
 function getGoogleRoleSelectTemplate() {
