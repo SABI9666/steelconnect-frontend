@@ -530,7 +530,8 @@ function initGoogleSignIn(buttonId, context) {
         client_id: GOOGLE_CLIENT_ID,
         callback: (response) => handleGoogleCallback(response, context),
         auto_select: false,
-        cancel_on_tap_outside: true
+        cancel_on_tap_outside: true,
+        use_fedcm_for_prompt: true
     });
     const btnEl = document.getElementById(buttonId);
     if (btnEl) {
@@ -4053,13 +4054,16 @@ function triggerGoogleSignInDirect() {
             handleGoogleCallback(response, 'login');
         },
         auto_select: false,
-        cancel_on_tap_outside: true
+        cancel_on_tap_outside: true,
+        use_fedcm_for_prompt: true
     });
     google.accounts.id.prompt((notification) => {
         _googlePromptActive = false;
-        // If prompt was dismissed or not displayed, open login modal as fallback
-        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-            showNotification('Google popup was blocked or unavailable. Please try the Sign In option.', 'info');
+        // Under FedCM, isDismissedMoment() is the reliable check
+        if (notification.isDismissedMoment()) {
+            const reason = notification.getDismissedReason();
+            if (reason === 'credential_returned') return; // success, callback handles it
+            showNotification('Google popup was closed. Please try the Sign In option.', 'info');
             showAuthModal('login');
         }
     });
