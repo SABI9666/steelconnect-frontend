@@ -558,6 +558,8 @@ function initGoogleSignIn(buttonId, context) {
                 }
                 if (termsError) termsError.style.display = 'none';
             }
+            // Cancel any outstanding prompt to avoid FedCM conflict
+            try { google.accounts.id.cancel(); } catch (e) { /* ignore */ }
             google.accounts.id.prompt();
         });
     }
@@ -4032,19 +4034,29 @@ function hideAuthGateway() {
 }
 
 // Direct Google Sign-In (standalone, outside register form)
+let _googlePromptActive = false;
 function triggerGoogleSignInDirect() {
     if (typeof google === 'undefined' || !google.accounts) {
         showNotification('Google Sign-In is not available. Please try again or use email login.', 'error');
         showAuthModal('login');
         return;
     }
+    // Prevent overlapping FedCM requests
+    if (_googlePromptActive) return;
+    _googlePromptActive = true;
+    // Cancel any previous prompt before re-initializing
+    try { google.accounts.id.cancel(); } catch (e) { /* ignore */ }
     google.accounts.id.initialize({
         client_id: GOOGLE_CLIENT_ID,
-        callback: (response) => handleGoogleCallback(response, 'login'),
+        callback: (response) => {
+            _googlePromptActive = false;
+            handleGoogleCallback(response, 'login');
+        },
         auto_select: false,
         cancel_on_tap_outside: true
     });
     google.accounts.id.prompt((notification) => {
+        _googlePromptActive = false;
         // If prompt was dismissed or not displayed, open login modal as fallback
         if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
             showNotification('Google popup was blocked or unavailable. Please try the Sign In option.', 'info');
