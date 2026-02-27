@@ -17548,6 +17548,262 @@ body { overflow-x: hidden; }
     margin-right: 6px;
 }
 
+/* ================================================================
+   HERO AUTH CARD - Professional auth options card on landing page
+   Sits in hero right column, replaces image slider for guests
+   ================================================================ */
+.hero-auth-card {
+    position: relative;
+    z-index: 3;
+    animation: heroAuthCardIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.4s both;
+}
+@keyframes heroAuthCardIn {
+    from { opacity: 0; transform: translateY(24px) scale(0.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.hero-auth-card-inner {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    box-shadow:
+        0 24px 48px rgba(0, 0, 0, 0.1),
+        0 4px 12px rgba(0, 0, 0, 0.04),
+        0 0 0 1px rgba(99, 102, 241, 0.06);
+    padding: 36px 32px 28px;
+    overflow: hidden;
+    position: relative;
+}
+.hero-auth-card-inner::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #2563eb, #7c3aed, #a855f7);
+    border-radius: 24px 24px 0 0;
+}
+
+.hero-auth-card-header {
+    text-align: center;
+    margin-bottom: 28px;
+}
+.hero-auth-card-icon {
+    width: 52px;
+    height: 52px;
+    margin: 0 auto 14px;
+    background: linear-gradient(135deg, #4338ca, #6366f1);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 22px;
+    box-shadow: 0 8px 24px rgba(99, 102, 241, 0.3);
+}
+.hero-auth-card-header h3 {
+    font-size: 22px;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 6px;
+    letter-spacing: -0.02em;
+}
+.hero-auth-card-header p {
+    font-size: 14px;
+    color: #64748b;
+    margin: 0;
+}
+
+.hero-auth-card-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 24px;
+}
+
+.hero-auth-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    background: #f8fafc;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 14px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    font-family: inherit;
+    outline: none;
+    width: 100%;
+}
+.hero-auth-option:hover {
+    transform: translateX(4px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+.hero-auth-option:active {
+    transform: translateX(2px);
+}
+
+.hero-auth-option-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+.hero-auth-option-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+    transition: all 0.3s ease;
+}
+.hero-auth-icon-google {
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+.hero-auth-icon-signin {
+    background: linear-gradient(135deg, #2563eb, #3b82f6);
+    color: white;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+.hero-auth-icon-register {
+    background: linear-gradient(135deg, #7c3aed, #a855f7);
+    color: white;
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+}
+
+.hero-auth-option-text {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+}
+.hero-auth-option-title {
+    font-size: 15px;
+    font-weight: 650;
+    color: #0f172a;
+    line-height: 1.2;
+}
+.hero-auth-option-desc {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-top: 2px;
+}
+
+.hero-auth-arrow {
+    color: #cbd5e1;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+.hero-auth-option:hover .hero-auth-arrow {
+    color: #6366f1;
+    transform: translateX(3px);
+}
+
+/* Google option highlight */
+.hero-auth-google {
+    background: #ffffff;
+    border-color: #e2e8f0;
+}
+.hero-auth-google:hover {
+    border-color: #93c5fd;
+    background: #f0f7ff;
+}
+.hero-auth-google:hover .hero-auth-icon-google {
+    box-shadow: 0 4px 16px rgba(66, 133, 244, 0.2);
+}
+
+/* Sign In option highlight */
+.hero-auth-signin:hover {
+    border-color: #93c5fd;
+    background: #eff6ff;
+}
+.hero-auth-signin:hover .hero-auth-icon-signin {
+    box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+    transform: scale(1.04);
+}
+
+/* Register option highlight */
+.hero-auth-register:hover {
+    border-color: #c4b5fd;
+    background: #f5f3ff;
+}
+.hero-auth-register:hover .hero-auth-icon-register {
+    box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4);
+    transform: scale(1.04);
+}
+
+.hero-auth-card-footer {
+    text-align: center;
+}
+.hero-auth-trust-badges {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+.hero-auth-trust-badges span {
+    font-size: 11px;
+    color: #94a3b8;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.hero-auth-trust-badges i {
+    color: #6366f1;
+    font-size: 10px;
+}
+
+/* Hero Auth Card Responsive */
+@media (max-width: 1024px) {
+    .hero-auth-card-inner {
+        padding: 28px 24px 22px;
+    }
+    .hero-auth-card-header h3 { font-size: 20px; }
+}
+@media (max-width: 768px) {
+    .hero-auth-card {
+        max-width: 440px;
+        margin: 0 auto;
+    }
+    .hero-auth-card-inner {
+        padding: 28px 20px 22px;
+    }
+}
+@media (max-width: 480px) {
+    .hero-auth-card-inner {
+        padding: 24px 16px 18px;
+        border-radius: 18px;
+    }
+    .hero-auth-card-icon {
+        width: 44px;
+        height: 44px;
+        font-size: 18px;
+        border-radius: 12px;
+    }
+    .hero-auth-card-header h3 { font-size: 18px; }
+    .hero-auth-card-header p { font-size: 13px; }
+    .hero-auth-option {
+        padding: 12px 14px;
+        border-radius: 12px;
+    }
+    .hero-auth-option-icon {
+        width: 36px;
+        height: 36px;
+        font-size: 15px;
+        border-radius: 10px;
+    }
+    .hero-auth-option-title { font-size: 14px; }
+    .hero-auth-option-desc { font-size: 11px; }
+    .hero-auth-trust-badges { gap: 10px; }
+    .hero-auth-trust-badges span { font-size: 10px; }
+}
+
 /* Auth Gateway Responsive */
 @media (max-width: 600px) {
     .auth-gateway-container {

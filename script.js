@@ -303,6 +303,14 @@ function initializeApp() {
     const headerGoogleBtn = document.getElementById('header-google-btn');
     if (headerGoogleBtn) headerGoogleBtn.addEventListener('click', () => triggerGoogleSignInDirect());
 
+    // Hero auth card buttons (on landing page, Google goes directly to Google, etc.)
+    const heroGoogleBtn = document.getElementById('hero-google-login-btn');
+    if (heroGoogleBtn) heroGoogleBtn.addEventListener('click', () => triggerGoogleSignInDirect());
+    const heroSigninBtn = document.getElementById('hero-signin-btn');
+    if (heroSigninBtn) heroSigninBtn.addEventListener('click', () => showAuthModal('login'));
+    const heroRegisterBtn = document.getElementById('hero-register-btn');
+    if (heroRegisterBtn) heroRegisterBtn.addEventListener('click', () => showAuthModal('register'));
+
     // Logo navigation
     const logo = document.querySelector('.logo');
     if (logo) {
@@ -4113,6 +4121,12 @@ function showAppView() {
     const gatewayOverlay = document.getElementById('auth-gateway-overlay');
     if (gatewayOverlay) gatewayOverlay.style.display = 'none';
 
+    // Hide hero auth card and restore image slider for logged-in users
+    const heroAuthCard = document.getElementById('hero-auth-card');
+    const heroVisual = document.querySelector('.hero-visual');
+    if (heroAuthCard) heroAuthCard.style.display = 'none';
+    if (heroVisual) heroVisual.style.display = '';
+
     // Batch all DOM changes before the user sees anything
     document.getElementById('landing-page-content').style.display = 'none';
     document.getElementById('auth-buttons-container').style.display = 'none';
@@ -4183,6 +4197,11 @@ function showLandingPageView() {
     if (navMenu) navMenu.innerHTML = `
         <a href="#ai-estimation" class="nav-link">AI Estimation</a><a href="#how-it-works" class="nav-link">How It Works</a>
         <a href="#why-steelconnect" class="nav-link">Why Choose Us</a><a href="#showcase" class="nav-link">Showcase</a>`;
+    // Show hero auth card and hide image slider for unauthenticated users
+    const heroAuthCard = document.getElementById('hero-auth-card');
+    const heroVisual = document.querySelector('.hero-visual');
+    if (heroAuthCard) heroAuthCard.style.display = 'block';
+    if (heroVisual) heroVisual.style.display = 'none';
 }
 
 // --- PROFILE & ROUTING FUNCTIONS ---
