@@ -4140,11 +4140,9 @@ function showAppView() {
     const gatewayOverlay = document.getElementById('auth-gateway-overlay');
     if (gatewayOverlay) gatewayOverlay.style.display = 'none';
 
-    // Hide hero auth card when user is logged in
+    // Hide hero auth strip when user is logged in
     const heroAuthCard = document.getElementById('hero-auth-card');
-    const heroVisual = document.querySelector('.hero-visual');
     if (heroAuthCard) heroAuthCard.style.display = 'none';
-    if (heroVisual) heroVisual.classList.remove('has-auth-card');
 
     // Batch all DOM changes before the user sees anything
     document.getElementById('landing-page-content').style.display = 'none';
@@ -4216,11 +4214,9 @@ function showLandingPageView() {
     if (navMenu) navMenu.innerHTML = `
         <a href="#ai-estimation" class="nav-link">AI Estimation</a><a href="#how-it-works" class="nav-link">How It Works</a>
         <a href="#why-steelconnect" class="nav-link">Why Choose Us</a><a href="#showcase" class="nav-link">Showcase</a>`;
-    // Show hero auth card overlay on top of hero image for unauthenticated users
+    // Show hero auth strip for unauthenticated users
     const heroAuthCard = document.getElementById('hero-auth-card');
-    const heroVisual = document.querySelector('.hero-visual');
-    if (heroAuthCard) heroAuthCard.style.display = 'block';
-    if (heroVisual) heroVisual.classList.add('has-auth-card');
+    if (heroAuthCard) heroAuthCard.style.display = '';
 }
 
 // --- PROFILE & ROUTING FUNCTIONS ---
