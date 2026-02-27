@@ -14224,6 +14224,99 @@ textarea:focus-visible {
     border: 2px solid white;
     border-radius: 50%;
     box-shadow: 0 0 0 1px rgba(52, 211, 153, 0.3);
+    transition: background 0.3s ease;
+}
+
+/* ===== MY STATUS SELECTOR ===== */
+.my-status-selector {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 20px;
+    padding: 5px 12px;
+    cursor: pointer;
+    color: white;
+    font-size: 12px;
+    font-weight: 500;
+    position: relative;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(4px);
+    user-select: none;
+}
+.my-status-selector:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.35);
+}
+.my-status-selector .fa-chevron-down {
+    font-size: 9px;
+    opacity: 0.7;
+    transition: transform 0.2s ease;
+}
+.my-status-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    transition: background 0.3s ease;
+}
+.status-dropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.08);
+    padding: 6px;
+    min-width: 140px;
+    z-index: 100;
+    display: none;
+    animation: statusDropIn 0.15s ease;
+}
+.status-dropdown.show {
+    display: block;
+}
+@keyframes statusDropIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.status-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    color: #374151;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+.status-option:hover {
+    background: #f3f4f6;
+}
+.status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+/* Voice call button states for busy/offline peers */
+.voice-call-btn.callee-busy {
+    background: rgba(239, 68, 68, 0.2) !important;
+    border-color: rgba(239, 68, 68, 0.4) !important;
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+.voice-call-btn.callee-busy:hover {
+    background: rgba(239, 68, 68, 0.3) !important;
+    transform: none;
+    box-shadow: none;
+}
+.voice-call-btn.callee-offline {
+    opacity: 0.5;
 }
 
 /* ===== PROFESSIONAL DASHBOARD CHARTS ===== */
