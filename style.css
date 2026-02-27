@@ -5633,6 +5633,13 @@ body {
 }
 
 /* ========================================   GOOGLE SIGN-IN   ======================================== */
+.google-btn-wrapper {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    min-height: 44px;
+}
+
 .btn-google {
     display: flex;
     align-items: center;
