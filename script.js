@@ -299,6 +299,9 @@ function initializeApp() {
     if (joinBtn) joinBtn.addEventListener('click', () => showAuthModal('register'));
     const getStartedBtn = document.getElementById('get-started-btn');
     if (getStartedBtn) getStartedBtn.addEventListener('click', () => showAuthModal('register'));
+    // Header Google Sign-In button (separate, always visible in header)
+    const headerGoogleBtn = document.getElementById('header-google-btn');
+    if (headerGoogleBtn) headerGoogleBtn.addEventListener('click', () => triggerGoogleSignInDirect());
 
     // Logo navigation
     const logo = document.querySelector('.logo');

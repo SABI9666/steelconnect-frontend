@@ -160,7 +160,50 @@ body {
 }
 .auth-buttons {
     display: flex;
-    gap: 16px;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Header Google Sign-In Button */
+.btn-google-header {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 16px;
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: inherit;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    white-space: nowrap;
+}
+.btn-google-header svg {
+    flex-shrink: 0;
+}
+.btn-google-header:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+}
+.btn-google-header:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* Separator between Google and other auth buttons */
+.auth-buttons .btn-google-header::after {
+    content: '';
+    display: block;
+    width: 1px;
+    height: 20px;
+    background: #e2e8f0;
+    margin-left: 6px;
 }
 
 /* --- New Header User Dropdown & Notification Styles --- */
@@ -15437,8 +15480,11 @@ body { overflow-x: hidden; }
     }
     .nav-menu .nav-link:hover,
     .nav-menu .nav-link:active { background: var(--primary-light, #eef2ff); }
-    .auth-buttons { gap: 8px; }
+    .auth-buttons { gap: 6px; }
     .auth-buttons .btn { padding: 8px 14px; font-size: 13px; border-radius: 8px; }
+    .btn-google-header { padding: 7px 10px; font-size: 12px; gap: 5px; }
+    .btn-google-header span { display: none; }
+    .btn-google-header::after { display: none !important; }
 
     /* ==== LANDING: HERO ==== */
     .hero { min-height: auto; padding: 80px 0 40px; }
@@ -16078,6 +16124,8 @@ body { overflow-x: hidden; }
     .logo { font-size: 17px; gap: 6px; }
     .logo-icon { width: 28px; height: 28px; font-size: 10px; border-radius: 7px; }
     .auth-buttons .btn { padding: 6px 10px; font-size: 11px; }
+    .btn-google-header { padding: 6px 8px; }
+    .btn-google-header svg { width: 14px; height: 14px; }
 
     /* ==== LANDING: HERO ==== */
     .hero { padding: 68px 0 32px; }
