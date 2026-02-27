@@ -3045,16 +3045,30 @@ async function renderConversationView(conversationOrId) {
     const container = document.getElementById('app-container');
     const other = convo.participants ? convo.participants.find(p => p.id !== appState.currentUser.id) : { name: 'N/A', type: 'user' };
     const avatarColor = getAvatarColor(other.name || 'U');
+    const peerStatus = voiceCallState.peerStatuses[other.id] || 'offline';
+    const peerCfg = STATUS_CONFIG[peerStatus];
+    const myCfg = STATUS_CONFIG[voiceCallState.myStatus];
     container.innerHTML = `
         <div class="chat-container premium-chat">
             <div class="chat-header premium-chat-header">
                 <button onclick="renderAppSection('messages')" class="back-btn premium-back-btn"><i class="fas fa-arrow-left"></i></button>
                 <div class="chat-header-info">
-                    <div class="chat-avatar premium-avatar" style="background-color: ${avatarColor}">${(other.name || 'U').charAt(0).toUpperCase()}<div class="online-indicator"></div></div>
-                    <div class="chat-details"><h3>${other.name || 'Conversation'}</h3><p class="chat-project"><i class="fas fa-briefcase"></i> ${convo.jobTitle || 'Project Discussion'}</p><span class="chat-status">Active now</span></div>
+                    <div class="chat-avatar premium-avatar" style="background-color: ${avatarColor}">${(other.name || 'U').charAt(0).toUpperCase()}<div class="online-indicator" style="background:${peerCfg.color}"></div></div>
+                    <div class="chat-details"><h3>${other.name || 'Conversation'}</h3><p class="chat-project"><i class="fas fa-briefcase"></i> ${convo.jobTitle || 'Project Discussion'}</p><span class="chat-status" style="color:${peerCfg.textColor}">${peerCfg.label}</span></div>
                 </div>
                 <div class="chat-actions">
-                    <button class="voice-call-btn" onclick="initiateVoiceCall('${convo.id}', '${other.id || ''}', '${(other.name || 'User').replace(/'/g, "\\'")}')" title="Voice Call">
+                    <div class="my-status-selector" onclick="toggleStatusDropdown(event)">
+                        <div class="my-status-dot" id="my-status-dot" style="background:${myCfg.color}"></div>
+                        <span id="my-status-label">${myCfg.label}</span>
+                        <i class="fas fa-chevron-down"></i>
+                        <div class="status-dropdown" id="status-dropdown">
+                            <div class="status-option" onclick="event.stopPropagation();setMyPresenceStatus('online')"><span class="status-dot" style="background:#10B981"></span> Online</div>
+                            <div class="status-option" onclick="event.stopPropagation();setMyPresenceStatus('away')"><span class="status-dot" style="background:#F59E0B"></span> Away</div>
+                            <div class="status-option" onclick="event.stopPropagation();setMyPresenceStatus('busy')"><span class="status-dot" style="background:#EF4444"></span> Busy</div>
+                            <div class="status-option" onclick="event.stopPropagation();setMyPresenceStatus('offline')"><span class="status-dot" style="background:#9CA3AF"></span> Offline</div>
+                        </div>
+                    </div>
+                    <button class="voice-call-btn ${peerStatus === 'busy' ? 'callee-busy' : peerStatus === 'offline' ? 'callee-offline' : ''}" onclick="initiateVoiceCall('${convo.id}', '${other.id || ''}', '${(other.name || 'User').replace(/'/g, "\\'")}')" title="${peerStatus === 'busy' ? 'User is Busy - Cannot call' : 'Voice Call'}">
                         <i class="fas fa-phone-alt"></i>
                     </button>
                     <span class="participant-type-badge premium-badge ${other.type || ''}"><i class="fas ${other.type === 'designer' ? 'fa-drafting-compass' : 'fa-building'}"></i> ${other.type || 'User'}</span>
@@ -3065,6 +3079,17 @@ async function renderConversationView(conversationOrId) {
             <div class="chat-input-area premium-input-area"><form id="send-message-form" class="message-form premium-message-form"><div class="message-input-container"><input type="file" id="msg-file-input" multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xls,.xlsx,.txt,.zip" style="display:none"><button type="button" class="msg-attach-btn" title="Attach files (PDF, documents, images)" onclick="document.getElementById('msg-file-input').click()"><i class="fas fa-paperclip"></i></button><input type="text" id="message-text-input" placeholder="Type your message..." autocomplete="off"><button type="submit" class="send-button premium-send-btn" title="Send"><i class="fas fa-paper-plane"></i></button></div></form></div>
         </div>`;
     document.getElementById('send-message-form').addEventListener('submit', (e) => { e.preventDefault(); handleSendMessage(convo.id); });
+    // Request peer's current status
+    initializeSocketConnection();
+    if (voiceCallState.socket && voiceCallState.socket.connected && other.id) {
+        voiceCallState.socket.emit('check-online', { userId: other.id });
+    } else if (other.id) {
+        setTimeout(() => {
+            if (voiceCallState.socket && voiceCallState.socket.connected) {
+                voiceCallState.socket.emit('check-online', { userId: other.id });
+            }
+        }, 800);
+    }
     appState.messageAttachments = [];
     document.getElementById('msg-file-input').addEventListener('change', (e) => handleMessageFileSelect(e));
     const msgContainer = document.getElementById('chat-messages-container');
@@ -3273,7 +3298,9 @@ const voiceCallState = {
     isMuted: false,
     isSpeakerOn: true,
     ringtoneAudio: null,
-    isConnected: false
+    isConnected: false,
+    myStatus: 'online',
+    peerStatuses: {} // userId -> 'online' | 'away' | 'busy' | 'offline'
 };
 
 // Initialize Socket.IO connection for voice calls
@@ -3294,6 +3321,10 @@ function initializeSocketConnection() {
         voiceCallState.socket.on('connect', () => {
             console.log('[VOICE] Socket connected:', voiceCallState.socket.id);
             voiceCallState.socket.emit('register', appState.currentUser.id);
+            // Restore previous status on reconnect
+            if (voiceCallState.myStatus && voiceCallState.myStatus !== 'online') {
+                voiceCallState.socket.emit('set-status', { status: voiceCallState.myStatus });
+            }
         });
 
         voiceCallState.socket.on('incoming-call', (data) => {
@@ -3311,7 +3342,11 @@ function initializeSocketConnection() {
         });
 
         voiceCallState.socket.on('call-rejected', (data) => {
-            showNotification(`Call declined${data.reason === 'busy' ? ' - User is busy' : ''}`, 'info');
+            if (data.reason === 'busy' || data.status === 'busy') {
+                showNotification('User has set their status to Busy and cannot receive calls right now.', 'warning');
+            } else {
+                showNotification('Call declined', 'info');
+            }
             endCallCleanup();
         });
 
@@ -3343,11 +3378,24 @@ function initializeSocketConnection() {
         });
 
         voiceCallState.socket.on('user-online', (data) => {
-            updateOnlineStatus(data.userId, true);
+            const status = data.status || 'online';
+            voiceCallState.peerStatuses[data.userId] = status;
+            updatePresenceIndicator(data.userId, status);
         });
 
         voiceCallState.socket.on('user-offline', (data) => {
-            updateOnlineStatus(data.userId, false);
+            voiceCallState.peerStatuses[data.userId] = 'offline';
+            updatePresenceIndicator(data.userId, 'offline');
+        });
+
+        voiceCallState.socket.on('user-status-changed', (data) => {
+            voiceCallState.peerStatuses[data.userId] = data.status;
+            updatePresenceIndicator(data.userId, data.status);
+        });
+
+        voiceCallState.socket.on('user-online-status', (data) => {
+            voiceCallState.peerStatuses[data.userId] = data.status || (data.isOnline ? 'online' : 'offline');
+            updatePresenceIndicator(data.userId, voiceCallState.peerStatuses[data.userId]);
         });
 
         voiceCallState.socket.on('disconnect', () => {
@@ -3358,16 +3406,67 @@ function initializeSocketConnection() {
     }
 }
 
-function updateOnlineStatus(userId, isOnline) {
+const STATUS_CONFIG = {
+    online:  { label: 'Online',  color: '#10B981', icon: 'fa-circle',     textColor: '#34d399' },
+    away:    { label: 'Away',    color: '#F59E0B', icon: 'fa-clock',      textColor: '#F59E0B' },
+    busy:    { label: 'Busy',    color: '#EF4444', icon: 'fa-minus-circle', textColor: '#EF4444' },
+    offline: { label: 'Offline', color: '#9CA3AF', icon: 'fa-circle',     textColor: '#9CA3AF' }
+};
+
+function updatePresenceIndicator(userId, status) {
+    const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.offline;
+    // Update chat header indicator if viewing this user's conversation
+    const indicator = document.querySelector('.online-indicator');
     const statusEl = document.querySelector('.chat-status');
+    const callBtn = document.querySelector('.voice-call-btn');
+    if (indicator) indicator.style.background = cfg.color;
     if (statusEl) {
-        const onlineIndicator = document.querySelector('.online-indicator');
-        if (isOnline) {
-            statusEl.textContent = 'Active now';
-            statusEl.style.color = '#34d399';
-            if (onlineIndicator) onlineIndicator.style.background = '#10B981';
+        statusEl.textContent = cfg.label;
+        statusEl.style.color = cfg.textColor;
+    }
+    // Update call button appearance based on callee status
+    if (callBtn) {
+        if (status === 'busy') {
+            callBtn.classList.add('callee-busy');
+            callBtn.title = 'User is Busy - Cannot call';
+        } else if (status === 'offline') {
+            callBtn.classList.add('callee-offline');
+            callBtn.classList.remove('callee-busy');
+            callBtn.title = 'User is Offline';
+        } else {
+            callBtn.classList.remove('callee-busy', 'callee-offline');
+            callBtn.title = 'Voice Call';
         }
     }
+}
+
+function setMyPresenceStatus(status) {
+    voiceCallState.myStatus = status;
+    const cfg = STATUS_CONFIG[status];
+    // Update the status selector UI
+    const currentDot = document.getElementById('my-status-dot');
+    const currentLabel = document.getElementById('my-status-label');
+    if (currentDot) currentDot.style.background = cfg.color;
+    if (currentLabel) currentLabel.textContent = cfg.label;
+    // Emit to server
+    if (voiceCallState.socket && voiceCallState.socket.connected) {
+        voiceCallState.socket.emit('set-status', { status });
+    }
+    // Close the dropdown
+    const dropdown = document.getElementById('status-dropdown');
+    if (dropdown) dropdown.classList.remove('show');
+}
+
+function toggleStatusDropdown(e) {
+    e.stopPropagation();
+    const dropdown = document.getElementById('status-dropdown');
+    if (dropdown) dropdown.classList.toggle('show');
+    // Close on outside click
+    const closeHandler = () => {
+        if (dropdown) dropdown.classList.remove('show');
+        document.removeEventListener('click', closeHandler);
+    };
+    setTimeout(() => document.addEventListener('click', closeHandler), 0);
 }
 
 // Initiate a voice call
@@ -3382,6 +3481,16 @@ function initiateVoiceCall(conversationId, calleeId, calleeName) {
     }
     if (voiceCallState.currentCallId) {
         showNotification('You are already on a call', 'warning');
+        return;
+    }
+    // Check callee's presence status
+    const calleeStatus = voiceCallState.peerStatuses[calleeId];
+    if (calleeStatus === 'busy') {
+        showNotification(`${calleeName} is currently Busy and cannot receive calls.`, 'warning');
+        return;
+    }
+    if (calleeStatus === 'offline') {
+        showNotification(`${calleeName} is currently Offline. Try again later.`, 'warning');
         return;
     }
 
