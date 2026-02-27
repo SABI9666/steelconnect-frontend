@@ -764,6 +764,10 @@ async function handleLogin(event) {
 function completeLogin(data) {
     appState.currentUser = data.user;
     appState.jwtToken = data.token;
+    // Flag new Google users so they are redirected to profile completion
+    if (data.isNewUser) {
+        appState.isNewGoogleUser = true;
+    }
     localStorage.setItem('currentUser', JSON.stringify(data.user));
     localStorage.setItem('jwtToken', data.token);
     closeModal();
@@ -4308,13 +4312,20 @@ async function checkProfileAndRoute() {
         document.getElementById('sidebarUserType').textContent = appState.currentUser.type;
         document.getElementById('sidebarUserAvatar').textContent = (appState.currentUser.name || "A").charAt(0).toUpperCase();
         buildSidebarNav();
-        renderAppSection('dashboard');
+        // If this is a new Google user, go directly to profile completion
+        if (appState.isNewGoogleUser && profileStatus === 'incomplete') {
+            appState.isNewGoogleUser = false;
+            renderAppSection('profile-completion');
+            showNotification('Please complete your profile to get started.', 'info', 8000);
+        } else {
+            renderAppSection('dashboard');
+            if (profileStatus === 'incomplete') showNotification('Complete your profile to unlock all features.', 'info', 8000);
+            else if (profileStatus === 'pending') showNotification('Your profile is under review.', 'info', 8000);
+            else if (profileStatus === 'rejected') showNotification('Please update your profile.', 'warning', 10000);
+        }
         if (appState.currentUser.type === 'designer') loadUserQuotes();
         if (appState.currentUser.type === 'contractor') loadUserEstimations();
         resetInactivityTimer();
-        if (profileStatus === 'incomplete') showNotification('Complete your profile to unlock all features.', 'info', 8000);
-        else if (profileStatus === 'pending') showNotification('Your profile is under review.', 'info', 8000);
-        else if (profileStatus === 'rejected') showNotification('Please update your profile.', 'warning', 10000);
     } catch (error) {
         showNotification('Could not verify profile status.', 'error');
         container.innerHTML = `<div class="error-state"><h2>Error</h2><p>Could not load dashboard.</p><button class="btn btn-primary" onclick="logout()">Logout</button></div>`;
