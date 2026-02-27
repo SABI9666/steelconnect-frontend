@@ -601,9 +601,18 @@ async function handleGoogleCallback(response, context) {
 
         if (!res.ok) {
             if (data.requiresRegistration) {
-                // New user from login page - show Google role selection step
+                // New user - show Google role selection step
                 pendingGoogleCredential = credential;
-                renderAuthForm('google-role-select');
+                // Hide auth gateway if visible so it doesn't overlap the modal
+                const gateway = document.getElementById('auth-gateway-overlay');
+                if (gateway) gateway.style.display = 'none';
+                // Ensure the auth modal is open (Google buttons on landing page bypass the modal)
+                const existingContainer = document.getElementById('modal-form-container');
+                if (!existingContainer) {
+                    showAuthModal('google-role-select');
+                } else {
+                    renderAuthForm('google-role-select');
+                }
                 return;
             }
             throw new Error(data.message || 'Google authentication failed');
