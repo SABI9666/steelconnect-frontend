@@ -300,11 +300,20 @@ function initializeApp() {
     const getStartedBtn = document.getElementById('get-started-btn');
     if (getStartedBtn) getStartedBtn.addEventListener('click', () => showAuthModal('register'));
     // Render standalone Google Sign-In buttons (header, hero, gateway)
-    // GSI library is loaded async, so retry if not ready yet
+    // GSI library is loaded async — poll briefly instead of waiting for full page load
     if (typeof google !== 'undefined' && google.accounts) {
         renderGoogleButtons();
     } else {
-        window.addEventListener('load', () => renderGoogleButtons());
+        let _gsiPollCount = 0;
+        const _gsiPoll = setInterval(() => {
+            _gsiPollCount++;
+            if (typeof google !== 'undefined' && google.accounts) {
+                clearInterval(_gsiPoll);
+                renderGoogleButtons();
+            } else if (_gsiPollCount >= 50) {
+                clearInterval(_gsiPoll); // stop after 5s
+            }
+        }, 100);
     }
     const heroSigninBtn = document.getElementById('hero-signin-btn');
     if (heroSigninBtn) heroSigninBtn.addEventListener('click', () => {
@@ -560,6 +569,26 @@ function renderGoogleButtons() {
     });
 }
 
+// Show/hide a fullscreen loading overlay for Google sign-in
+function showGoogleAuthLoading(show) {
+    let overlay = document.getElementById('google-auth-loading-overlay');
+    if (show) {
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = 'google-auth-loading-overlay';
+            overlay.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;gap:16px;">
+                <div style="width:48px;height:48px;border:3px solid #e5e7eb;border-top-color:#4285F4;border-radius:50%;animation:spin 0.7s linear infinite;"></div>
+                <span style="color:#1e293b;font-size:1rem;font-weight:500;">Signing in with Google...</span>
+            </div>`;
+            overlay.style.cssText = 'position:fixed;inset:0;z-index:100000;background:rgba(255,255,255,0.85);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;';
+            document.body.appendChild(overlay);
+        }
+        overlay.style.display = 'flex';
+    } else if (overlay) {
+        overlay.remove();
+    }
+}
+
 async function handleGoogleCallback(response, context) {
     if (!response || !response.credential) {
         showNotification('Google Sign-In was cancelled or failed.', 'error');
@@ -567,6 +596,9 @@ async function handleGoogleCallback(response, context) {
     }
 
     const credential = response.credential;
+
+    // Show loading overlay immediately for visual feedback
+    showGoogleAuthLoading(true);
 
     // Gather role & terms from register form if available
     let type = null;
@@ -601,6 +633,7 @@ async function handleGoogleCallback(response, context) {
 
         if (!res.ok) {
             if (data.requiresRegistration) {
+                showGoogleAuthLoading(false);
                 // New user - show Google role selection step
                 pendingGoogleCredential = credential;
                 // Hide auth gateway if visible so it doesn't overlap the modal
@@ -618,9 +651,12 @@ async function handleGoogleCallback(response, context) {
             throw new Error(data.message || 'Google authentication failed');
         }
 
-        // Success - complete login
+        // Success - complete login (overlay stays visible during transition)
         completeLogin(data);
+        // Remove overlay after app view has transitioned in
+        setTimeout(() => showGoogleAuthLoading(false), 400);
     } catch (error) {
+        showGoogleAuthLoading(false);
         let errorMsg = error.message || 'Google authentication failed. Please try again.';
         if (error.name === 'AbortError') {
             errorMsg = 'Request timeout. Please check your connection and try again.';
@@ -784,9 +820,10 @@ function completeLogin(data) {
     const gatewayOverlay = document.getElementById('auth-gateway-overlay');
     if (gatewayOverlay) gatewayOverlay.style.display = 'none';
     showAppView();
+    // Show welcome notification quickly for faster perceived login
     setTimeout(() => {
         showNotification(`Welcome to SteelConnect, ${data.user.name}!`, 'success');
-    }, 600);
+    }, 300);
 }
 
 // Handle OTP verification
