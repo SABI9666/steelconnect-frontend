@@ -17549,276 +17549,173 @@ body { overflow-x: hidden; }
 }
 
 /* ================================================================
-   HERO AUTH CARD - Professional auth options card on landing page
-   Overlays on top of the hero image slider inside hero-visual
+   HERO AUTH STRIP - Professional auth section below hero
+   Separate section, does NOT cover hero images
    ================================================================ */
-.hero-auth-card {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 5;
-    width: 92%;
-    max-width: 400px;
-    animation: heroAuthCardIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.4s both;
+.hero-auth-strip {
+    position: relative;
+    z-index: 3;
+    margin-top: -48px;
+    padding: 0 24px;
+    animation: heroStripIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.6s both;
 }
-@keyframes heroAuthCardIn {
-    from { opacity: 0; transform: translate(-50%, -50%) translateY(24px) scale(0.97); }
-    to { opacity: 1; transform: translate(-50%, -50%) translateY(0) scale(1); }
+@keyframes heroStripIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
 }
-.hero-auth-card-inner {
-    background: rgba(255, 255, 255, 0.95);
+.hero-auth-strip-inner {
+    max-width: 900px;
+    margin: 0 auto;
+    background: rgba(255, 255, 255, 0.97);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border-radius: 24px;
-    border: 1px solid rgba(255, 255, 255, 0.8);
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.9);
     box-shadow:
-        0 24px 48px rgba(0, 0, 0, 0.1),
-        0 4px 12px rgba(0, 0, 0, 0.04),
-        0 0 0 1px rgba(99, 102, 241, 0.06);
-    padding: 36px 32px 28px;
-    overflow: hidden;
-    position: relative;
-}
-.hero-auth-card-inner::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, #2563eb, #7c3aed, #a855f7);
-    border-radius: 24px 24px 0 0;
-}
-
-.hero-auth-card-header {
-    text-align: center;
-    margin-bottom: 28px;
-}
-.hero-auth-card-icon {
-    width: 52px;
-    height: 52px;
-    margin: 0 auto 14px;
-    background: linear-gradient(135deg, #4338ca, #6366f1);
-    border-radius: 16px;
+        0 20px 40px rgba(0, 0, 0, 0.08),
+        0 4px 12px rgba(0, 0, 0, 0.03),
+        0 0 0 1px rgba(99, 102, 241, 0.08);
+    padding: 28px 36px;
     display: flex;
     align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 22px;
-    box-shadow: 0 8px 24px rgba(99, 102, 241, 0.3);
+    gap: 28px;
+    position: relative;
+    overflow: hidden;
 }
-.hero-auth-card-header h3 {
-    font-size: 22px;
+.hero-auth-strip-inner::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #2563eb, #7c3aed, #a855f7, #06b6d4);
+    border-radius: 20px 20px 0 0;
+}
+
+.hero-auth-strip-text {
+    flex-shrink: 0;
+}
+.hero-auth-strip-text h3 {
+    font-size: 18px;
     font-weight: 800;
     color: #0f172a;
-    margin-bottom: 6px;
+    margin: 0 0 4px 0;
     letter-spacing: -0.02em;
 }
-.hero-auth-card-header p {
-    font-size: 14px;
+.hero-auth-strip-text p {
+    font-size: 13px;
     color: #64748b;
     margin: 0;
 }
 
-.hero-auth-card-options {
+.hero-auth-strip-actions {
     display: flex;
-    flex-direction: column;
+    align-items: center;
     gap: 10px;
-    margin-bottom: 24px;
-}
-
-.hero-auth-option {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 14px 18px;
-    background: #f8fafc;
-    border: 1.5px solid #e2e8f0;
-    border-radius: 14px;
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    font-family: inherit;
-    outline: none;
-    width: 100%;
-}
-.hero-auth-option:hover {
-    transform: translateX(4px);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-}
-.hero-auth-option:active {
-    transform: translateX(2px);
-}
-
-.hero-auth-option-left {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-}
-.hero-auth-option-icon {
-    width: 42px;
-    height: 42px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
+    flex: 1;
     justify-content: center;
-    font-size: 18px;
-    flex-shrink: 0;
-    transition: all 0.3s ease;
-}
-.hero-auth-icon-google {
-    background: #ffffff;
-    border: 1.5px solid #e2e8f0;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-}
-.hero-auth-icon-signin {
-    background: linear-gradient(135deg, #2563eb, #3b82f6);
-    color: white;
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
-}
-.hero-auth-icon-register {
-    background: linear-gradient(135deg, #7c3aed, #a855f7);
-    color: white;
-    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
 }
 
-.hero-auth-option-text {
-    display: flex;
-    flex-direction: column;
-    text-align: left;
-}
-.hero-auth-option-title {
-    font-size: 15px;
-    font-weight: 650;
-    color: #0f172a;
-    line-height: 1.2;
-}
-.hero-auth-option-desc {
-    font-size: 12px;
-    color: #94a3b8;
-    margin-top: 2px;
-}
-
-.hero-auth-arrow {
-    color: #cbd5e1;
+.hero-auth-strip-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 22px;
+    border-radius: 12px;
     font-size: 14px;
-    transition: all 0.3s ease;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    border: 1.5px solid transparent;
+    white-space: nowrap;
 }
-.hero-auth-option:hover .hero-auth-arrow {
-    color: #6366f1;
-    transform: translateX(3px);
-}
+.hero-auth-strip-btn i { font-size: 14px; }
+.hero-auth-strip-btn svg { flex-shrink: 0; }
 
-/* Google option highlight */
-.hero-auth-google {
+/* Google button */
+.hero-strip-google {
     background: #ffffff;
     border-color: #e2e8f0;
+    color: #374151;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
 }
-.hero-auth-google:hover {
+.hero-strip-google:hover {
     border-color: #93c5fd;
     background: #f0f7ff;
-}
-.hero-auth-google:hover .hero-auth-icon-google {
-    box-shadow: 0 4px 16px rgba(66, 133, 244, 0.2);
+    box-shadow: 0 4px 16px rgba(66, 133, 244, 0.15);
+    transform: translateY(-2px);
 }
 
-/* Sign In option highlight */
-.hero-auth-signin:hover {
-    border-color: #93c5fd;
-    background: #eff6ff;
+/* Sign In button */
+.hero-strip-signin {
+    background: linear-gradient(135deg, #2563eb, #3b82f6);
+    color: #ffffff;
+    border-color: transparent;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
 }
-.hero-auth-signin:hover .hero-auth-icon-signin {
+.hero-strip-signin:hover {
     box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
-    transform: scale(1.04);
+    transform: translateY(-2px);
 }
 
-/* Register option highlight */
-.hero-auth-register:hover {
-    border-color: #c4b5fd;
-    background: #f5f3ff;
+/* Register button */
+.hero-strip-register {
+    background: linear-gradient(135deg, #7c3aed, #a855f7);
+    color: #ffffff;
+    border-color: transparent;
+    box-shadow: 0 4px 14px rgba(124, 58, 237, 0.3);
 }
-.hero-auth-register:hover .hero-auth-icon-register {
+.hero-strip-register:hover {
     box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4);
-    transform: scale(1.04);
+    transform: translateY(-2px);
 }
 
-.hero-auth-card-footer {
-    text-align: center;
-}
-.hero-auth-trust-badges {
+.hero-auth-strip-badges {
     display: flex;
-    justify-content: center;
-    gap: 16px;
-    flex-wrap: wrap;
+    flex-direction: column;
+    gap: 4px;
+    flex-shrink: 0;
 }
-.hero-auth-trust-badges span {
+.hero-auth-strip-badges span {
     font-size: 11px;
     color: #94a3b8;
     font-weight: 500;
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 5px;
+    white-space: nowrap;
 }
-.hero-auth-trust-badges i {
+.hero-auth-strip-badges i {
     color: #6366f1;
     font-size: 10px;
 }
 
-/* When auth card is showing, dim the image and hide overlapping elements */
-.hero-visual.has-auth-card .hero-image-container {
-    filter: brightness(0.4) blur(2px);
-}
-.hero-visual.has-auth-card .hero-image-overlay {
-    opacity: 0;
-}
-.hero-visual.has-auth-card .floating-cards {
-    opacity: 0;
-    pointer-events: none;
-}
-
-/* Hero Auth Card Responsive */
+/* Hero Auth Strip Responsive */
 @media (max-width: 1024px) {
-    .hero-auth-card-inner {
-        padding: 28px 24px 22px;
+    .hero-auth-strip-inner {
+        flex-wrap: wrap;
+        justify-content: center;
+        text-align: center;
+        padding: 24px 28px;
+        gap: 18px;
     }
-    .hero-auth-card-header h3 { font-size: 20px; }
+    .hero-auth-strip-text { flex-basis: 100%; }
+    .hero-auth-strip-badges { flex-direction: row; gap: 12px; }
 }
 @media (max-width: 768px) {
-    .hero-auth-card {
-        max-width: 440px;
-        margin: 0 auto;
-    }
-    .hero-auth-card-inner {
-        padding: 28px 20px 22px;
-    }
+    .hero-auth-strip { margin-top: -32px; padding: 0 16px; }
+    .hero-auth-strip-inner { padding: 22px 20px; gap: 14px; }
+    .hero-auth-strip-actions { flex-wrap: wrap; justify-content: center; }
+    .hero-auth-strip-btn { padding: 10px 18px; font-size: 13px; }
 }
 @media (max-width: 480px) {
-    .hero-auth-card-inner {
-        padding: 24px 16px 18px;
-        border-radius: 18px;
-    }
-    .hero-auth-card-icon {
-        width: 44px;
-        height: 44px;
-        font-size: 18px;
-        border-radius: 12px;
-    }
-    .hero-auth-card-header h3 { font-size: 18px; }
-    .hero-auth-card-header p { font-size: 13px; }
-    .hero-auth-option {
-        padding: 12px 14px;
-        border-radius: 12px;
-    }
-    .hero-auth-option-icon {
-        width: 36px;
-        height: 36px;
-        font-size: 15px;
-        border-radius: 10px;
-    }
-    .hero-auth-option-title { font-size: 14px; }
-    .hero-auth-option-desc { font-size: 11px; }
-    .hero-auth-trust-badges { gap: 10px; }
-    .hero-auth-trust-badges span { font-size: 10px; }
+    .hero-auth-strip { margin-top: -24px; padding: 0 12px; }
+    .hero-auth-strip-inner { padding: 18px 16px; border-radius: 16px; gap: 12px; }
+    .hero-auth-strip-text h3 { font-size: 16px; }
+    .hero-auth-strip-text p { font-size: 12px; }
+    .hero-auth-strip-actions { gap: 8px; }
+    .hero-auth-strip-btn { padding: 10px 14px; font-size: 12.5px; border-radius: 10px; flex: 1; justify-content: center; }
+    .hero-auth-strip-badges span { font-size: 10px; }
 }
 
 /* Auth Gateway Responsive */
