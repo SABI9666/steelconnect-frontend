@@ -2175,12 +2175,19 @@ async function fetchAndRenderJobs(loadMore = false) {
             const statusIcon = job.status === 'assigned' ? 'fa-user-check' : job.status === 'open' ? 'fa-circle' : 'fa-check-circle';
             const statusBadge = `<span class="jc-status ${statusClass}"><i class="fas ${statusIcon}"></i> ${job.status.charAt(0).toUpperCase() + job.status.slice(1)}</span>`;
             // For designers: show posted date/time instead of budget
-            const postedDate = parseDate(job.createdAt) || new Date();
-            const timeAgo = getTimeAgo(job.createdAt);
-            const postedDateFormatted = postedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-            const postedTimeFormatted = postedDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            const postedDate = parseDate(job.createdAt) || parseDate(job.updatedAt) || new Date();
+            const timeAgo = getTimeAgo(job.createdAt || job.updatedAt);
+            let postedDateFormatted, postedTimeFormatted;
+            try {
+                postedDateFormatted = postedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                postedTimeFormatted = postedDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            } catch(e) {
+                postedDateFormatted = 'Recently';
+                postedTimeFormatted = '';
+            }
+            const timeDetail = postedTimeFormatted ? `${postedDateFormatted}, ${postedTimeFormatted}` : postedDateFormatted;
             const topRightSection = isDesigner
-                ? `<div class="jc-posted-time"><i class="far fa-clock"></i><span class="jc-time-ago">${timeAgo}</span><span class="jc-time-detail">${postedDateFormatted}, ${postedTimeFormatted}</span></div>`
+                ? `<div class="jc-posted-time"><i class="far fa-clock"></i><span class="jc-time-ago">${timeAgo}</span><span class="jc-time-detail">${timeDetail}</span></div>`
                 : `<div class="jc-budget-pill"><span class="jc-budget-label">Budget</span><span class="jc-budget-value">${job.budget}</span></div>`;
             const attachmentLinks = job.attachments && job.attachments.length > 0 ? `
                 <div class="jc-attachments">
