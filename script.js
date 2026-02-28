@@ -1616,7 +1616,7 @@ function renderEstimatesGrid(filteredEstimates = null) {
         const hasFiles = est.uploadedFiles && est.uploadedFiles.length > 0;
         const isCompleted = est.status === 'completed';
         const hasManualResult = est.resultFile;
-        const hasAIReport = est.aiEstimate && (est.resultType === 'ai-report' || isCompleted);
+        const hasAIReport = est.aiEstimate || est.hasAIEstimate;
         const progress = getEstimationProgress(est.status);
         const canEdit = est.status === 'pending';
         return `
@@ -1633,7 +1633,7 @@ function renderEstimatesGrid(filteredEstimates = null) {
                 ${est.estimatedAmount ? `<div class="estimation-amount-section"><span class="amount-label">Estimated Cost</span><span class="amount-value">$${Number(est.estimatedAmount).toLocaleString()}</span></div>` : ''}
                 <div class="estimation-actions">
                     ${hasFiles ? `<button class="btn btn-outline btn-sm" onclick="viewEstimationFiles('${est._id}')"><i class="fas fa-folder-open"></i> View Files</button>` : ''}
-                    ${isCompleted && hasAIReport ? `<button class="btn btn-success btn-sm" onclick="viewMyAIReport('${est._id}')"><i class="fas fa-robot"></i> View AI Report</button>` : ''}
+                    ${hasAIReport ? `<button class="btn btn-success btn-sm" onclick="viewMyAIReport('${est._id}')"><i class="fas fa-robot"></i> View AI Report</button>` : ''}
                     ${isCompleted && hasManualResult ? `<button class="btn btn-success btn-sm" onclick="viewEstimationResult('${est._id}')"><i class="fas fa-eye"></i> View Result</button><button class="btn btn-outline btn-sm" onclick="downloadEstimationResult('${est._id}')"><i class="fas fa-download"></i> Download Result</button>` : ''}
                     <button class="btn btn-outline btn-sm" onclick="viewEstimationDetails('${est._id}')"><i class="fas fa-eye"></i> Details</button>
                     ${canEdit ? `<button class="btn btn-outline btn-sm" onclick="editEstimation('${est._id}')"><i class="fas fa-edit"></i> Edit</button>` : ''}
@@ -1685,13 +1685,23 @@ function viewEstimationDetails(estimationId) {
     const estimation = appState.myEstimations.find(e => e._id === estimationId);
     if (!estimation) return;
     const statusConfig = getEstimationStatusConfig(estimation.status);
+    const hasAIReport = estimation.aiEstimate || estimation.hasAIEstimate;
+    const fileCount = estimation.fileCount || (estimation.uploadedFiles ? estimation.uploadedFiles.length : 0);
     const content = `
         <div class="modal-header estimation-modal-header"><h3>${estimation.projectTitle}</h3><p class="modal-subtitle">Estimation Request Details</p></div>
         <div class="estimation-details-content">
             <p><strong>Status:</strong> <span class="status-${estimation.status}">${statusConfig.label}</span></p>
             <p><strong>Description:</strong> ${estimation.description}</p>
             ${estimation.estimatedAmount ? `<p><strong>Estimated Cost:</strong> $${Number(estimation.estimatedAmount).toLocaleString()}</p>` : ''}
-            <div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Close</button></div>
+            <p><strong>Files Uploaded:</strong> ${fileCount} file${fileCount !== 1 ? 's' : ''}</p>
+            <p><strong>AI Report:</strong> ${hasAIReport ? '<span style="color:#16a34a"><i class="fas fa-check-circle"></i> Available</span>' : '<span style="color:#9ca3af"><i class="fas fa-clock"></i> Pending</span>'}</p>
+            ${estimation.createdAt ? `<p><strong>Submitted:</strong> ${formatEstimationDate(estimation.createdAt)}</p>` : ''}
+            ${estimation.completedAt ? `<p><strong>Completed:</strong> ${formatEstimationDate(estimation.completedAt)}</p>` : ''}
+            <div class="modal-actions">
+                ${hasAIReport ? `<button class="btn btn-success" onclick="closeModal(); viewMyAIReport('${estimation._id}')"><i class="fas fa-robot"></i> View AI Report</button>` : ''}
+                ${fileCount > 0 ? `<button class="btn btn-outline" onclick="closeModal(); viewEstimationFiles('${estimation._id}')"><i class="fas fa-folder-open"></i> View Files</button>` : ''}
+                <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+            </div>
         </div>`;
     showGenericModal(content, 'max-width: 800px;');
 }
@@ -4593,6 +4603,7 @@ function renderAppSection(sectionId) {
         appState._aiProjectInfo = {};
         container.innerHTML = getEstimationToolTemplate();
         setupEstimationToolEventListeners();
+        loadAndRenderRecentEstimations();
     } else if (sectionId === 'my-estimations') fetchAndRenderMyEstimations();
     else if (sectionId === 'support') {
         renderSupportSection();
@@ -6562,7 +6573,66 @@ function getEstimationToolTemplate() {
                     <p class="est-submit-note"><i class="fas fa-lock"></i> Your files are securely uploaded and AI cost estimate is generated automatically</p>
                 </div>
             </form>
-        </div>`;
+        </div>
+        <div id="recent-estimations-section" class="recent-estimations-section" style="margin-top: 2rem;"></div>`;
+}
+
+async function loadAndRenderRecentEstimations() {
+    const container = document.getElementById('recent-estimations-section');
+    if (!container || !appState.currentUser) return;
+    container.innerHTML = '<div style="text-align:center;padding:2rem;"><div class="spinner"></div><p>Loading your estimation requests...</p></div>';
+    try {
+        await loadUserEstimations();
+        if (appState.myEstimations.length === 0) {
+            container.innerHTML = '';
+            return;
+        }
+        const estimates = appState.myEstimations;
+        const cardsHTML = estimates.map(est => {
+            const statusConfig = getEstimationStatusConfig(est.status);
+            const createdDate = formatEstimationDate(est.createdAt);
+            const hasFiles = est.uploadedFiles && est.uploadedFiles.length > 0;
+            const hasAIReport = est.aiEstimate || est.hasAIEstimate;
+            const hasManualResult = est.resultFile;
+            const isCompleted = est.status === 'completed';
+            const progress = getEstimationProgress(est.status);
+            return `
+                <div class="estimation-card-professional" data-status="${est.status}" data-title="${(est.projectTitle || '').toLowerCase()}">
+                    <div class="estimation-card-header">
+                        <div class="estimation-title-section">
+                            <h3 class="estimation-title">${est.projectTitle}</h3>
+                            <p class="estimation-meta">Submitted: ${createdDate}</p>
+                        </div>
+                        <span class="estimation-status-badge ${est.status}"><i class="fas ${statusConfig.icon}"></i> ${statusConfig.label}</span>
+                    </div>
+                    <div class="estimation-progress-bar"><div class="progress-bar-fill ${est.status}" style="width: ${progress}%"></div></div>
+                    ${est.description ? `<div class="estimation-description"><p>${est.description.length > 120 ? est.description.substring(0, 120) + '...' : est.description}</p></div>` : ''}
+                    ${est.estimatedAmount ? `<div class="estimation-amount-section"><span class="amount-label">Estimated Cost</span><span class="amount-value">$${Number(est.estimatedAmount).toLocaleString()}</span></div>` : ''}
+                    <div class="estimation-actions">
+                        ${hasFiles ? `<button class="btn btn-outline btn-sm" onclick="viewEstimationFiles('${est._id}')"><i class="fas fa-folder-open"></i> View Files</button>` : ''}
+                        ${hasAIReport ? `<button class="btn btn-success btn-sm" onclick="viewMyAIReport('${est._id}')"><i class="fas fa-robot"></i> View AI Report</button>` : ''}
+                        ${isCompleted && hasManualResult ? `<button class="btn btn-success btn-sm" onclick="viewEstimationResult('${est._id}')"><i class="fas fa-eye"></i> View Result</button><button class="btn btn-outline btn-sm" onclick="downloadEstimationResult('${est._id}')"><i class="fas fa-download"></i> Download Result</button>` : ''}
+                        <button class="btn btn-outline btn-sm" onclick="viewEstimationDetails('${est._id}')"><i class="fas fa-eye"></i> Details</button>
+                    </div>
+                </div>`;
+        }).join('');
+        container.innerHTML = `
+            <div class="section-header modern-header estimates-header" style="margin-bottom:1rem;">
+                <div class="header-content">
+                    <h2><i class="fas fa-chart-line"></i> My Estimation Requests</h2>
+                    <p class="header-subtitle">Your submitted estimation requests and AI analysis results</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-outline" onclick="renderAppSection('my-estimations')">
+                        <i class="fas fa-list"></i> View All
+                    </button>
+                </div>
+            </div>
+            <div class="estimations-grid-professional">${cardsHTML}</div>`;
+    } catch (error) {
+        console.error('Error loading recent estimations:', error);
+        container.innerHTML = '';
+    }
 }
 
 function getDashboardTemplate(user) {
