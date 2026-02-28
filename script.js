@@ -3120,7 +3120,7 @@ async function renderConversationView(conversationOrId) {
                             <div class="status-option" onclick="event.stopPropagation();setMyPresenceStatus('offline')"><span class="status-dot" style="background:#9CA3AF"></span> Offline</div>
                         </div>
                     </div>
-                    <button class="voice-call-btn ${peerStatus === 'busy' ? 'callee-busy' : peerStatus === 'offline' ? 'callee-offline' : ''}" onclick="initiateVoiceCall('${convo.id}', '${other.id || ''}', '${(other.name || 'User').replace(/'/g, "\\'")}')" title="${peerStatus === 'busy' ? 'User is Busy - Cannot call' : 'Voice Call'}">
+                    <button class="voice-call-btn ${peerStatus === 'busy' ? 'callee-busy' : ''}" onclick="initiateVoiceCall('${convo.id}', '${other.id || ''}', '${(other.name || 'User').replace(/'/g, "\\'")}')" title="${peerStatus === 'busy' ? 'User is Busy - Cannot call' : peerStatus === 'offline' ? 'User is Offline - Will be notified' : 'Voice Call'}">
                         <i class="fas fa-phone-alt"></i>
                     </button>
                     <span class="participant-type-badge premium-badge ${other.type || ''}"><i class="fas ${other.type === 'designer' ? 'fa-drafting-compass' : 'fa-building'}"></i> ${other.type || 'User'}</span>
@@ -3389,6 +3389,11 @@ function initializeSocketConnection() {
 
         voiceCallState.socket.on('call-ringing', (data) => {
             voiceCallState.currentCallId = data.callId;
+            // If push notification was sent to offline user, update the call status text
+            if (data.pushNotified) {
+                const statusText = document.getElementById('call-status-text');
+                if (statusText) statusText.textContent = 'Notifying user...';
+            }
         });
 
         voiceCallState.socket.on('call-accepted', async (data) => {
@@ -3407,7 +3412,7 @@ function initializeSocketConnection() {
         });
 
         voiceCallState.socket.on('call-unavailable', (data) => {
-            showNotification('User is currently offline. Try again later.', 'warning');
+            showNotification('Could not reach user. They have been notified of your call.', 'info');
             endCallCleanup();
         });
 
@@ -3480,18 +3485,15 @@ function updatePresenceIndicator(userId, status) {
         statusEl.textContent = cfg.label;
         statusEl.style.color = cfg.textColor;
     }
-    // Update call button appearance based on callee status
+    // Update call button appearance - only disable for busy users
     if (callBtn) {
         if (status === 'busy') {
             callBtn.classList.add('callee-busy');
+            callBtn.classList.remove('callee-offline');
             callBtn.title = 'User is Busy - Cannot call';
-        } else if (status === 'offline') {
-            callBtn.classList.add('callee-offline');
-            callBtn.classList.remove('callee-busy');
-            callBtn.title = 'User is Offline';
         } else {
             callBtn.classList.remove('callee-busy', 'callee-offline');
-            callBtn.title = 'Voice Call';
+            callBtn.title = status === 'offline' ? 'Voice Call - User will be notified' : 'Voice Call';
         }
     }
 }
@@ -3539,14 +3541,10 @@ function initiateVoiceCall(conversationId, calleeId, calleeName) {
         showNotification('You are already on a call', 'warning');
         return;
     }
-    // Check callee's presence status
+    // Only block calls to busy users - offline users will receive push notifications
     const calleeStatus = voiceCallState.peerStatuses[calleeId];
     if (calleeStatus === 'busy') {
         showNotification(`${calleeName} is currently Busy and cannot receive calls.`, 'warning');
-        return;
-    }
-    if (calleeStatus === 'offline') {
-        showNotification(`${calleeName} is currently Offline. Try again later.`, 'warning');
         return;
     }
 
@@ -4495,13 +4493,139 @@ async function loadCallHistory() {
 
 // Initialize socket when user logs in
 const _originalInitApp = typeof initializeApp === 'function' ? null : null;
-// Hook into app state changes to initialize socket
+// Hook into app state changes to initialize socket and push notifications
 const _checkAndInitSocket = setInterval(() => {
     if (appState.currentUser && appState.jwtToken) {
         initializeSocketConnection();
+        initializePushNotifications();
+        // Check if opened from a push notification with callId
+        const urlParams = new URLSearchParams(window.location.search);
+        const pushCallId = urlParams.get('callId');
+        if (pushCallId) {
+            console.log('[PUSH] App opened from push notification for call:', pushCallId);
+            // Clean URL without reload
+            window.history.replaceState({}, document.title, window.location.pathname);
+            // Socket will receive the pending call via the register handler
+        }
         clearInterval(_checkAndInitSocket);
     }
 }, 3000);
+
+// --- PUSH NOTIFICATIONS FOR OFFLINE CALL RECEIVING ---
+async function initializePushNotifications() {
+    try {
+        // Check browser support
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+            console.log('[PUSH] Push notifications not supported in this browser');
+            return;
+        }
+
+        // Register service worker
+        const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+        console.log('[PUSH] Service worker registered:', registration.scope);
+
+        // Check if Firebase messaging is available (loaded via CDN)
+        if (typeof firebase !== 'undefined' && firebase.messaging) {
+            const messaging = firebase.messaging();
+
+            // Request notification permission
+            const permission = await Notification.requestPermission();
+            if (permission !== 'granted') {
+                console.log('[PUSH] Notification permission denied');
+                return;
+            }
+
+            // Get FCM token
+            try {
+                const token = await messaging.getToken({
+                    vapidKey: window.FIREBASE_VAPID_KEY || '',
+                    serviceWorkerRegistration: registration
+                });
+
+                if (token) {
+                    console.log('[PUSH] FCM token obtained');
+                    // Register token with backend
+                    await registerFCMToken(token);
+
+                    // Also send via socket for immediate registration
+                    if (voiceCallState.socket && voiceCallState.socket.connected) {
+                        voiceCallState.socket.emit('register-fcm-token', {
+                            userId: appState.currentUser.id,
+                            token: token
+                        });
+                    }
+                }
+
+                // Handle foreground messages
+                messaging.onMessage((payload) => {
+                    console.log('[PUSH] Foreground message received:', payload);
+                    if (payload.data && payload.data.type === 'incoming_call') {
+                        // Call will come through socket if user is online, this is a backup
+                        console.log('[PUSH] Incoming call notification in foreground - socket should handle it');
+                    }
+                });
+            } catch (tokenErr) {
+                console.warn('[PUSH] FCM token error (Firebase may not be configured):', tokenErr.message);
+                // Fall back to basic web push without FCM
+                await setupBasicWebPush(registration);
+            }
+        } else {
+            // Firebase SDK not loaded - use basic service worker for notifications
+            console.log('[PUSH] Firebase SDK not loaded, using basic push notifications');
+            await setupBasicWebPush(registration);
+        }
+
+        // Listen for messages from service worker (e.g., user clicked "Answer" on notification)
+        navigator.serviceWorker.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'CALL_ANSWER') {
+                const { callId, callerId } = event.data;
+                // Initialize socket and accept the call
+                initializeSocketConnection();
+                setTimeout(() => {
+                    if (voiceCallState.socket && voiceCallState.socket.connected) {
+                        voiceCallState.currentCallId = callId;
+                        acceptVoiceCall(callId, callerId);
+                    }
+                }, 1000);
+            }
+        });
+    } catch (error) {
+        console.error('[PUSH] Push notification setup error:', error);
+    }
+}
+
+async function setupBasicWebPush(registration) {
+    try {
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+            console.log('[PUSH] Notification permission denied');
+            return;
+        }
+        console.log('[PUSH] Basic web push ready (notifications will show when tab is open)');
+    } catch (err) {
+        console.warn('[PUSH] Basic push setup error:', err.message);
+    }
+}
+
+async function registerFCMToken(token) {
+    try {
+        const backendUrl = IS_LOCAL ? 'http://localhost:10000' : 'https://steelconnect-backend.onrender.com';
+        await fetch(`${backendUrl}/api/users/fcm-token`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${appState.jwtToken}`
+            },
+            body: JSON.stringify({
+                userId: appState.currentUser.id,
+                token: token
+            })
+        });
+        console.log('[PUSH] FCM token registered with backend');
+    } catch (err) {
+        console.error('[PUSH] Failed to register FCM token:', err.message);
+    }
+}
 
 
 // --- UI & MODAL FUNCTIONS ---
