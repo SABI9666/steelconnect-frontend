@@ -2175,8 +2175,8 @@ async function fetchAndRenderJobs(loadMore = false) {
             const statusIcon = job.status === 'assigned' ? 'fa-user-check' : job.status === 'open' ? 'fa-circle' : 'fa-check-circle';
             const statusBadge = `<span class="jc-status ${statusClass}"><i class="fas ${statusIcon}"></i> ${job.status.charAt(0).toUpperCase() + job.status.slice(1)}</span>`;
             // For designers: show posted date/time instead of budget
-            const postedDate = job.createdAt ? new Date(job.createdAt) : new Date();
-            const timeAgo = getTimeAgo(postedDate);
+            const postedDate = parseDate(job.createdAt) || new Date();
+            const timeAgo = getTimeAgo(job.createdAt);
             const postedDateFormatted = postedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
             const postedTimeFormatted = postedDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
             const topRightSection = isDesigner
