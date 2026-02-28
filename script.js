@@ -1089,6 +1089,13 @@ const notificationState = {
     unseenCount: 0,
 };
 
+// --- MENU BADGE STATE (sidebar notification counts per section) ---
+const menuBadgeState = {
+    sectionCounts: {},
+    pollingInterval: null,
+    storageKey: 'steelconnect_menu_badges',
+};
+
 async function fetchNotifications() {
     if (!appState.currentUser) return;
     try {
@@ -1545,6 +1552,123 @@ function addLocalNotification(title, message, type = 'info', metadata = {}) {
 
 // ========================================
 // END: NEW NOTIFICATION SYSTEM
+// ========================================
+
+// ========================================
+// MENU BADGE SYSTEM (sidebar section counts)
+// ========================================
+
+async function fetchMenuBadges() {
+    if (!appState.currentUser) return;
+    try {
+        const response = await apiCall('/notifications/menu-badges', 'GET');
+        if (response.success) {
+            menuBadgeState.sectionCounts = response.sectionCounts || {};
+            saveMenuBadgesToStorage();
+            updateSidebarBadges();
+        }
+    } catch (error) {
+        console.error('Error fetching menu badges:', error);
+        loadStoredMenuBadges();
+        updateSidebarBadges();
+    }
+}
+
+function loadStoredMenuBadges() {
+    try {
+        const stored = localStorage.getItem(menuBadgeState.storageKey);
+        if (stored) {
+            const parsed = JSON.parse(stored);
+            if (parsed.sectionCounts) {
+                menuBadgeState.sectionCounts = parsed.sectionCounts;
+            }
+        }
+    } catch (e) {
+        menuBadgeState.sectionCounts = {};
+    }
+}
+
+function saveMenuBadgesToStorage() {
+    try {
+        localStorage.setItem(menuBadgeState.storageKey, JSON.stringify({
+            sectionCounts: menuBadgeState.sectionCounts,
+            savedAt: new Date().toISOString()
+        }));
+    } catch (e) {
+        console.error('Error saving menu badges:', e);
+    }
+}
+
+function updateSidebarBadges() {
+    const counts = menuBadgeState.sectionCounts || {};
+    // Update each sidebar badge element
+    document.querySelectorAll('.sidebar-nav-link[data-section]').forEach(link => {
+        const section = link.dataset.section;
+        const count = counts[section] || 0;
+        let badge = link.querySelector('.menu-notif-badge');
+        if (count > 0) {
+            if (!badge) {
+                badge = document.createElement('span');
+                badge.className = 'menu-notif-badge';
+                link.appendChild(badge);
+            }
+            badge.textContent = count > 99 ? '99+' : count;
+            badge.style.display = 'inline-flex';
+            // Pulse animation on new count
+            badge.classList.remove('pulse-badge');
+            void badge.offsetWidth; // trigger reflow
+            badge.classList.add('pulse-badge');
+        } else {
+            if (badge) {
+                badge.style.display = 'none';
+                badge.textContent = '';
+            }
+        }
+    });
+}
+
+function startMenuBadgePolling() {
+    if (menuBadgeState.pollingInterval) clearInterval(menuBadgeState.pollingInterval);
+    fetchMenuBadges();
+    menuBadgeState.pollingInterval = setInterval(() => {
+        if (appState.currentUser) fetchMenuBadges();
+        else stopMenuBadgePolling();
+    }, 25000); // Poll every 25 seconds
+}
+
+function stopMenuBadgePolling() {
+    if (menuBadgeState.pollingInterval) {
+        clearInterval(menuBadgeState.pollingInterval);
+        menuBadgeState.pollingInterval = null;
+    }
+}
+
+async function markSectionAsRead(section) {
+    if (!appState.currentUser) return;
+    const counts = menuBadgeState.sectionCounts || {};
+    if (!counts[section] || counts[section] <= 0) return;
+    // Optimistically clear the local count
+    menuBadgeState.sectionCounts[section] = 0;
+    updateSidebarBadges();
+    saveMenuBadgesToStorage();
+    // Sync with backend
+    try {
+        await apiCall('/notifications/mark-section-read', 'POST', { section });
+    } catch (e) {
+        console.warn('Failed to sync section read status:', e);
+    }
+    // Also refresh the notification bell count
+    fetchNotifications();
+}
+
+function cleanupMenuBadgeSystem() {
+    stopMenuBadgePolling();
+    menuBadgeState.sectionCounts = {};
+    updateSidebarBadges();
+}
+
+// ========================================
+// END: MENU BADGE SYSTEM
 // ========================================
 
 async function loadUserQuotes() {
@@ -4516,6 +4640,7 @@ function showAppView() {
 
 function logout() {
     cleanupNotificationSystem();
+    cleanupMenuBadgeSystem();
     appState.currentUser = null;
     appState.jwtToken = null;
     appState.userSubmittedQuotes.clear();
@@ -4576,6 +4701,7 @@ async function checkProfileAndRoute() {
         document.getElementById('sidebarUserType').textContent = appState.currentUser.type;
         document.getElementById('sidebarUserAvatar').textContent = (appState.currentUser.name || "A").charAt(0).toUpperCase();
         buildSidebarNav();
+        startMenuBadgePolling(); // Start sidebar badge polling
         // If this is a new Google user, go directly to profile completion
         if (appState.isNewGoogleUser && profileStatus === 'incomplete') {
             appState.isNewGoogleUser = false;
@@ -4601,6 +4727,8 @@ function renderAppSection(sectionId) {
     // Smooth scroll to top on section change
     window.scrollTo({ top: 0, behavior: 'smooth' });
     document.querySelectorAll('.sidebar-nav-link').forEach(link => link.classList.toggle('active', link.dataset.section === sectionId));
+    // Mark section notifications as read when user navigates to it
+    markSectionAsRead(sectionId);
     if (!appState.currentUser) return;
     const profileStatus = appState.currentUser.profileStatus;
     const isApproved = profileStatus === 'approved';

@@ -15949,6 +15949,12 @@ body { overflow-x: hidden; }
         margin-left: auto;
         border-radius: 10px;
     }
+    .sidebar .menu-notif-badge {
+        min-width: 18px;
+        height: 18px;
+        font-size: 0.6rem;
+        padding: 0 5px;
+    }
 
     /* Adjust main content - no bottom padding needed anymore */
     .main-content { padding: 20px 16px !important; padding-bottom: 20px !important; }

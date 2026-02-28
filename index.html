@@ -51,6 +51,43 @@
             letter-spacing: 0.5px;
         }
 
+        /* --- MENU NOTIFICATION BADGE (unread counts on sidebar items) --- */
+        .menu-notif-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 20px;
+            height: 20px;
+            padding: 0 6px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #ef4444, #f97316);
+            color: #fff;
+            font-size: 0.65rem;
+            font-weight: 700;
+            margin-left: auto;
+            line-height: 1;
+            letter-spacing: 0.3px;
+            box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            flex-shrink: 0;
+        }
+        .menu-notif-badge.pulse-badge {
+            animation: menuBadgePulse 0.6s ease-out;
+        }
+        @keyframes menuBadgePulse {
+            0% { transform: scale(0.5); opacity: 0; }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .sidebar-nav-link:hover .menu-notif-badge {
+            box-shadow: 0 2px 12px rgba(239, 68, 68, 0.6);
+            transform: scale(1.08);
+        }
+        .sidebar-nav-link.active .menu-notif-badge {
+            background: linear-gradient(135deg, #dc2626, #ea580c);
+            box-shadow: 0 2px 10px rgba(220, 38, 38, 0.5);
+        }
+
         /* --- PREMIUM BUSINESS ANALYTICS SECTION --- */
         .business-analytics-section {
             padding: 140px 0;
