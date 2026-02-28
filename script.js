@@ -3798,7 +3798,16 @@ const voiceCallState = {
 
 // Initialize Socket.IO connection for voice calls
 function initializeSocketConnection() {
-    if (voiceCallState.socket && voiceCallState.socket.connected) return;
+    if (voiceCallState.socket) {
+        // Socket already exists - if connected, nothing to do
+        if (voiceCallState.socket.connected) return;
+        // Socket exists but disconnected - force reconnect, don't create a new one
+        // Creating a new socket causes duplicate connections and events not reaching caller
+        if (!voiceCallState.socket.connected) {
+            voiceCallState.socket.connect();
+        }
+        return;
+    }
     if (!appState.currentUser) return;
 
     const socketUrl = IS_LOCAL ? 'http://localhost:10000' : 'https://steelconnect-backend.onrender.com';
