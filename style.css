@@ -3599,27 +3599,130 @@ body {
     -webkit-line-clamp: unset;
 }
 
-/* Quick actions per card */
+/* Quick actions per card - grouped layout */
 .vq-quick-actions {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-top: 12px;
-    padding-top: 12px;
-    border-top: 1px solid #f1f5f9;
+    gap: 10px;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 2px solid #f1f5f9;
     flex-wrap: wrap;
 }
-.vq-approve-single {
+.vq-action-group-left,
+.vq-action-group-center,
+.vq-action-group-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.vq-action-group-right {
     margin-left: auto;
 }
-.vq-approved-tag {
-    margin-left: auto;
-    color: #059669;
-    font-weight: 600;
-    font-size: 0.82rem;
+/* Inline select toggle */
+.vq-select-toggle {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
+    gap: 6px;
+    cursor: pointer;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #64748b;
+    padding: 6px 12px;
+    border-radius: 10px;
+    border: 1.5px solid #e2e8f0;
+    background: #f8fafc;
+    transition: all 0.2s;
+    user-select: none;
+}
+.vq-select-toggle:hover {
+    border-color: #a5b4fc;
+    background: #eef2ff;
+    color: #4f46e5;
+}
+.vq-select-box {
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+    border: 2px solid #cbd5e1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    background: #fff;
+    flex-shrink: 0;
+}
+.vq-select-box i {
+    font-size: 0.55rem;
+    color: transparent;
+    transition: all 0.15s;
+}
+.vq-select-box.checked {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    border-color: #6366f1;
+    box-shadow: 0 2px 6px rgba(99,102,241,0.3);
+}
+.vq-select-box.checked i {
+    color: #fff;
+}
+/* Card action buttons */
+.vq-card-btn {
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+.vq-card-msg {
+    background: #eff6ff;
+    color: #2563eb;
+    border: 1.5px solid #bfdbfe;
+}
+.vq-card-msg:hover {
+    background: #dbeafe;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(37,99,235,0.15);
+}
+.vq-card-call {
+    background: #ecfdf5;
+    color: #059669;
+    border: 1.5px solid #a7f3d0;
+}
+.vq-card-call:hover {
+    background: #d1fae5;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(5,150,105,0.15);
+}
+.vq-card-approve {
+    background: linear-gradient(135deg, #f59e0b, #f97316);
+    color: #fff;
+    border: none;
+    box-shadow: 0 2px 8px rgba(245,158,11,0.3);
+    font-weight: 700;
+    padding: 10px 20px;
+    font-size: 0.85rem;
+}
+.vq-card-approve:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(245,158,11,0.4);
+}
+.vq-approved-tag {
+    color: #059669;
+    font-weight: 700;
+    font-size: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #ecfdf5;
+    padding: 8px 16px;
+    border-radius: 10px;
+    border: 1.5px solid #a7f3d0;
 }
 
 /* --- Compare Overlay --- */
@@ -3731,8 +3834,15 @@ body {
     .vq-action-bar-right { width: 100%; justify-content: stretch; flex-wrap: wrap; }
     .vq-btn { flex: 1; min-width: 0; justify-content: center; padding: 8px 10px; font-size: 0.72rem; }
     .vq-compare-grid { grid-template-columns: 1fr !important; }
-    .vq-quick-actions { flex-direction: column; align-items: stretch; }
-    .vq-approve-single { margin-left: 0; }
+    .vq-quick-actions { flex-direction: column; align-items: stretch; gap: 8px; }
+    .vq-action-group-left,
+    .vq-action-group-center,
+    .vq-action-group-right { width: 100%; }
+    .vq-action-group-right { margin-left: 0; }
+    .vq-action-group-center { flex-wrap: wrap; }
+    .vq-card-btn { flex: 1; justify-content: center; }
+    .vq-card-approve { width: 100%; justify-content: center; }
+    .vq-select-toggle { width: 100%; justify-content: center; }
 }
 
 /* --- FILE MANAGEMENT STYLES (User Added) --- */

@@ -3118,10 +3118,34 @@ async function viewQuotes(jobId) {
                             ${attachmentSection}
                             ${designerProfileSection}
                             <div class="vq-quick-actions" onclick="event.stopPropagation()">
-                                <button class="btn btn-outline btn-sm" onclick="openConversation('${quote.jobId}', '${quote.designerId}')"><i class="fas fa-comments"></i> Message</button>
-                                <button class="btn btn-outline btn-sm" onclick="initiateVoiceCall(null, '${quote.designerId}', '${(quote.designerName || '').replace(/'/g, "\\'")}')" title="Call this designer"><i class="fas fa-phone-alt"></i> Call</button>
-                                ${canApprove ? `<button class="btn btn-success btn-sm vq-approve-single" onclick="approveQuote('${quote.id}', '${jobId}')"><i class="fas fa-check"></i> Approve This Quote</button>` : ''}
-                                ${quote.status === 'approved' ? `<span class="vq-approved-tag"><i class="fas fa-check-circle"></i> Approved</span>` : ''}
+                                ${canApprove ? `
+                                <div class="vq-action-group-left">
+                                    <label class="vq-select-toggle" onclick="event.stopPropagation(); toggleQuoteSelection('${quote.id}')">
+                                        <span class="vq-select-box" id="vq-sel-${quote.id}"><i class="fas fa-check"></i></span>
+                                        <span>Select</span>
+                                    </label>
+                                </div>
+                                <div class="vq-action-group-center">
+                                    <button class="btn vq-card-btn vq-card-msg" onclick="openConversation('${quote.jobId}', '${quote.designerId}')"><i class="fas fa-comments"></i> Message</button>
+                                    <button class="btn vq-card-btn vq-card-call" onclick="initiateVoiceCall(null, '${quote.designerId}', '${(quote.designerName || '').replace(/'/g, "\\'")}')" title="Call this designer"><i class="fas fa-phone-alt"></i> Call</button>
+                                </div>
+                                <div class="vq-action-group-right">
+                                    <button class="btn vq-card-btn vq-card-approve" onclick="approveQuote('${quote.id}', '${jobId}')"><i class="fas fa-check-circle"></i> Approve & Assign</button>
+                                </div>
+                                ` : quote.status === 'approved' ? `
+                                <div class="vq-action-group-center">
+                                    <button class="btn vq-card-btn vq-card-msg" onclick="openConversation('${quote.jobId}', '${quote.designerId}')"><i class="fas fa-comments"></i> Message</button>
+                                    <button class="btn vq-card-btn vq-card-call" onclick="initiateVoiceCall(null, '${quote.designerId}', '${(quote.designerName || '').replace(/'/g, "\\'")}')" title="Call this designer"><i class="fas fa-phone-alt"></i> Call</button>
+                                </div>
+                                <div class="vq-action-group-right">
+                                    <span class="vq-approved-tag"><i class="fas fa-check-circle"></i> Approved</span>
+                                </div>
+                                ` : `
+                                <div class="vq-action-group-center">
+                                    <button class="btn vq-card-btn vq-card-msg" onclick="openConversation('${quote.jobId}', '${quote.designerId}')"><i class="fas fa-comments"></i> Message</button>
+                                    <button class="btn vq-card-btn vq-card-call" onclick="initiateVoiceCall(null, '${quote.designerId}', '${(quote.designerName || '').replace(/'/g, "\\'")}')" title="Call this designer"><i class="fas fa-phone-alt"></i> Call</button>
+                                </div>
+                                `}
                             </div>
                         </div>
                     </div>`;
@@ -3159,6 +3183,11 @@ function toggleQuoteSelection(quoteId) {
         card.classList.add('vq-selected');
     }
     appState._selectedQuoteIds = selected;
+    // Sync inline select box visual state
+    const selBox = document.getElementById(`vq-sel-${quoteId}`);
+    if (selBox) {
+        selBox.classList.toggle('checked', selected.has(quoteId));
+    }
     updateQuoteSelectionBar();
 }
 
