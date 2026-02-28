@@ -4093,9 +4093,9 @@ function showIncomingCallUI(data) {
                         <div class="action-btn-icon"><i class="fas fa-phone-slash"></i></div>
                         <span>Decline</span>
                     </button>
-                    <button class="call-action-btn accept-btn" onclick="acceptVoiceCall('${callId}', '${callerId}')" title="Accept">
+                    <button class="call-action-btn accept-btn" onclick="acceptVoiceCall('${callId}', '${callerId}')" title="Receive Call">
                         <div class="action-btn-icon"><i class="fas fa-phone-alt"></i></div>
-                        <span>Accept</span>
+                        <span>Receive</span>
                     </button>
                 </div>
             </div>
@@ -4770,33 +4770,134 @@ function startCallTimer() {
     }, 1000);
 }
 
-// Call sounds
+// Professional Call Sounds (Teams/WhatsApp-style)
 function playCallSound(type) {
     stopCallSound();
     try {
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const oscillator = ctx.createOscillator();
-        const gainNode = ctx.createGain();
-        oscillator.connect(gainNode);
-        gainNode.connect(ctx.destination);
-        gainNode.gain.value = 0.1;
+        const masterGain = ctx.createGain();
+        masterGain.connect(ctx.destination);
+        masterGain.gain.value = 0.18;
+
+        let intervalId = null;
+        const oscillators = [];
 
         if (type === 'incoming') {
-            oscillator.frequency.value = 440;
-            oscillator.type = 'sine';
-            // Ring pattern
-            const ringInterval = setInterval(() => {
-                if (!voiceCallState.ringtoneAudio) { clearInterval(ringInterval); return; }
-                gainNode.gain.setValueAtTime(0.1, ctx.currentTime);
-                gainNode.gain.setValueAtTime(0, ctx.currentTime + 0.5);
-            }, 1500);
-            voiceCallState.ringtoneAudio = { ctx, oscillator, gainNode, interval: ringInterval };
+            // Professional incoming ringtone: melodic two-tone pattern (like Teams/WhatsApp)
+            // Pattern: two-note chime plays for 1.2s, silence for 1.8s, repeat
+            const playRingChime = () => {
+                if (!voiceCallState.ringtoneAudio) return;
+                const now = ctx.currentTime;
+
+                // First note: E5 (659 Hz) with harmonics
+                const osc1 = ctx.createOscillator();
+                const gain1 = ctx.createGain();
+                osc1.type = 'sine';
+                osc1.frequency.setValueAtTime(659.25, now);
+                gain1.gain.setValueAtTime(0, now);
+                gain1.gain.linearRampToValueAtTime(0.3, now + 0.05);
+                gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.45);
+                osc1.connect(gain1);
+                gain1.connect(masterGain);
+                osc1.start(now);
+                osc1.stop(now + 0.5);
+
+                // Harmonic overtone for richness
+                const osc1h = ctx.createOscillator();
+                const gain1h = ctx.createGain();
+                osc1h.type = 'sine';
+                osc1h.frequency.setValueAtTime(1318.5, now); // E6 (octave above)
+                gain1h.gain.setValueAtTime(0, now);
+                gain1h.gain.linearRampToValueAtTime(0.08, now + 0.05);
+                gain1h.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+                osc1h.connect(gain1h);
+                gain1h.connect(masterGain);
+                osc1h.start(now);
+                osc1h.stop(now + 0.4);
+
+                // Second note: G5 (784 Hz) - higher pitch for pleasant ascending chime
+                const osc2 = ctx.createOscillator();
+                const gain2 = ctx.createGain();
+                osc2.type = 'sine';
+                osc2.frequency.setValueAtTime(783.99, now + 0.2);
+                gain2.gain.setValueAtTime(0, now + 0.2);
+                gain2.gain.linearRampToValueAtTime(0.3, now + 0.25);
+                gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.7);
+                osc2.connect(gain2);
+                gain2.connect(masterGain);
+                osc2.start(now + 0.2);
+                osc2.stop(now + 0.75);
+
+                // Second note harmonic
+                const osc2h = ctx.createOscillator();
+                const gain2h = ctx.createGain();
+                osc2h.type = 'sine';
+                osc2h.frequency.setValueAtTime(1567.98, now + 0.2); // G6
+                gain2h.gain.setValueAtTime(0, now + 0.2);
+                gain2h.gain.linearRampToValueAtTime(0.06, now + 0.25);
+                gain2h.gain.exponentialRampToValueAtTime(0.01, now + 0.55);
+                osc2h.connect(gain2h);
+                gain2h.connect(masterGain);
+                osc2h.start(now + 0.2);
+                osc2h.stop(now + 0.6);
+
+                // Third note: B5 (988 Hz) - completing a major triad for a pleasant ring
+                const osc3 = ctx.createOscillator();
+                const gain3 = ctx.createGain();
+                osc3.type = 'sine';
+                osc3.frequency.setValueAtTime(987.77, now + 0.4);
+                gain3.gain.setValueAtTime(0, now + 0.4);
+                gain3.gain.linearRampToValueAtTime(0.25, now + 0.45);
+                gain3.gain.exponentialRampToValueAtTime(0.01, now + 1.1);
+                osc3.connect(gain3);
+                gain3.connect(masterGain);
+                osc3.start(now + 0.4);
+                osc3.stop(now + 1.15);
+            };
+
+            // Play immediately, then repeat every 3 seconds
+            playRingChime();
+            intervalId = setInterval(playRingChime, 3000);
+
+            voiceCallState.ringtoneAudio = { ctx, masterGain, interval: intervalId };
         } else {
-            oscillator.frequency.value = 350;
-            oscillator.type = 'sine';
-            voiceCallState.ringtoneAudio = { ctx, oscillator, gainNode };
+            // Professional outgoing ringback tone (standard telephony ringback)
+            // Standard North American ringback: 440Hz + 480Hz, 2s on / 4s off
+            const playRingback = () => {
+                if (!voiceCallState.ringtoneAudio) return;
+                const now = ctx.currentTime;
+
+                const osc1 = ctx.createOscillator();
+                const osc2 = ctx.createOscillator();
+                const gain = ctx.createGain();
+
+                osc1.type = 'sine';
+                osc1.frequency.value = 440;
+                osc2.type = 'sine';
+                osc2.frequency.value = 480;
+
+                osc1.connect(gain);
+                osc2.connect(gain);
+                gain.connect(masterGain);
+
+                // Smooth fade in/out for professional sound
+                gain.gain.setValueAtTime(0, now);
+                gain.gain.linearRampToValueAtTime(0.15, now + 0.05);
+                gain.gain.setValueAtTime(0.15, now + 1.9);
+                gain.gain.linearRampToValueAtTime(0, now + 2.0);
+
+                osc1.start(now);
+                osc2.start(now);
+                osc1.stop(now + 2.05);
+                osc2.stop(now + 2.05);
+            };
+
+            // Play immediately, then repeat every 6 seconds (2s tone + 4s silence)
+            playRingback();
+            intervalId = setInterval(playRingback, 6000);
+
+            voiceCallState.ringtoneAudio = { ctx, masterGain, interval: intervalId };
         }
-        oscillator.start();
     } catch (e) {
         console.warn('[VOICE] Audio context unavailable:', e);
     }
@@ -4806,7 +4907,9 @@ function stopCallSound() {
     if (voiceCallState.ringtoneAudio) {
         try {
             if (voiceCallState.ringtoneAudio.interval) clearInterval(voiceCallState.ringtoneAudio.interval);
-            voiceCallState.ringtoneAudio.oscillator.stop();
+            if (voiceCallState.ringtoneAudio.masterGain) {
+                voiceCallState.ringtoneAudio.masterGain.gain.setValueAtTime(0, voiceCallState.ringtoneAudio.ctx.currentTime);
+            }
             voiceCallState.ringtoneAudio.ctx.close();
         } catch (e) { /* ignore */ }
         voiceCallState.ringtoneAudio = null;
@@ -4950,7 +5053,7 @@ const _checkAndInitSocket = setInterval(() => {
         }
         clearInterval(_checkAndInitSocket);
     }
-}, 3000);
+}, 500);
 
 // --- PUSH NOTIFICATIONS FOR OFFLINE CALL RECEIVING ---
 async function initializePushNotifications() {
@@ -5247,6 +5350,10 @@ function showAppView() {
     const navMenu = document.getElementById('main-nav-menu');
     if (navMenu) navMenu.innerHTML = '';
     initializeNotificationSystem();
+
+    // Initialize socket connection immediately so user can receive incoming calls
+    initializeSocketConnection();
+    initializePushNotifications();
 
     // Let checkProfileAndRoute do its work, then fade in
     checkProfileAndRoute().then(() => {
