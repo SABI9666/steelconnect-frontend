@@ -2778,6 +2778,7 @@ body {
 }
 .form-input::placeholder, .form-textarea::placeholder { color: #a1a1aa; }
 .jobs-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 20px; }
+/* Legacy job-card (kept for backward compat) */
 .job-card {
     background: var(--bg-white);
     border: 1px solid rgba(0, 0, 0, 0.06);
@@ -2827,6 +2828,312 @@ body {
     display: flex;
     justify-content: flex-end;
     gap: 10px;
+}
+
+/* ========================================
+   PREMIUM PROJECT CARD (.jc-card)
+   Inspired by Upwork, Fiverr, Toptal
+   ======================================== */
+.jc-card {
+    background: #ffffff;
+    border-radius: 20px;
+    overflow: hidden;
+    position: relative;
+    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+.jc-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 20px 40px rgba(37, 99, 235, 0.1), 0 8px 16px rgba(0, 0, 0, 0.04);
+    border-color: rgba(99, 102, 241, 0.15);
+}
+.jc-card-accent {
+    height: 4px;
+    background: linear-gradient(135deg, #6366f1 0%, #3b82f6 30%, #06b6d4 60%, #10b981 100%);
+    transition: height 0.3s ease;
+}
+.jc-card:hover .jc-card-accent {
+    height: 5px;
+}
+.jc-card-body {
+    padding: 24px 28px 20px;
+}
+.jc-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+.jc-title-area {
+    flex: 1;
+    min-width: 0;
+}
+.jc-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1.4;
+    letter-spacing: -0.3px;
+    margin: 0 0 8px 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.jc-card:hover .jc-title {
+    color: #2563eb;
+}
+/* Status badges */
+.jc-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+}
+.jc-status.open {
+    background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+    color: #059669;
+    border: 1px solid rgba(5, 150, 105, 0.15);
+}
+.jc-status.open i { color: #10b981; font-size: 6px; }
+.jc-status.assigned {
+    background: linear-gradient(135deg, #eff6ff, #dbeafe);
+    color: #2563eb;
+    border: 1px solid rgba(37, 99, 235, 0.15);
+}
+.jc-status.completed {
+    background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+    color: #16a34a;
+    border: 1px solid rgba(22, 163, 74, 0.15);
+}
+/* Posted time section (designer view - replaces budget) */
+.jc-posted-time {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    flex-shrink: 0;
+    color: #64748b;
+}
+.jc-posted-time > i {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    margin-bottom: 2px;
+}
+.jc-time-ago {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #475569;
+    line-height: 1;
+}
+.jc-time-detail {
+    font-size: 0.7rem;
+    color: #94a3b8;
+    line-height: 1;
+}
+/* Budget pill (contractor view) */
+.jc-budget-pill {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: linear-gradient(135deg, #eff6ff, #dbeafe);
+    border: 1px solid rgba(59, 130, 246, 0.12);
+    padding: 8px 16px;
+    border-radius: 14px;
+    flex-shrink: 0;
+}
+.jc-budget-label {
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #64748b;
+    line-height: 1;
+    margin-bottom: 3px;
+}
+.jc-budget-value {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #2563eb;
+    letter-spacing: -0.3px;
+    line-height: 1.2;
+}
+/* Meta row */
+.jc-meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+.jc-poster {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.jc-poster-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+.jc-poster-name {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #334155;
+}
+.jc-meta-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #475569;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+}
+.jc-meta-chip i {
+    font-size: 0.7rem;
+    color: #94a3b8;
+}
+.jc-meta-chip.assigned-chip {
+    background: #eff6ff;
+    border-color: #bfdbfe;
+    color: #2563eb;
+}
+.jc-meta-chip.assigned-chip i { color: #3b82f6; }
+.jc-meta-chip.deadline-chip {
+    background: #fffbeb;
+    border-color: #fde68a;
+    color: #b45309;
+}
+.jc-meta-chip.deadline-chip i { color: #f59e0b; }
+.jc-meta-chip.time-chip {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+    color: #15803d;
+}
+.jc-meta-chip.time-chip i { color: #22c55e; }
+/* Description */
+.jc-description {
+    margin-bottom: 14px;
+}
+.jc-description p {
+    font-size: 0.88rem;
+    color: #475569;
+    line-height: 1.65;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin: 0;
+}
+/* Skills */
+.jc-skills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 14px;
+}
+.jc-skill-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    background: linear-gradient(135deg, #f5f3ff, #ede9fe);
+    color: #6d28d9;
+    border: 1px solid rgba(139, 92, 246, 0.12);
+    letter-spacing: 0.2px;
+    transition: all 0.2s ease;
+}
+.jc-skill-chip:hover {
+    background: linear-gradient(135deg, #ede9fe, #ddd6fe);
+    transform: translateY(-1px);
+}
+/* Link */
+.jc-link {
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.82rem;
+}
+.jc-link i { color: #6366f1; font-size: 0.75rem; }
+.jc-link a {
+    color: #6366f1;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s;
+}
+.jc-link a:hover { color: #4338ca; text-decoration: underline; }
+/* Attachments */
+.jc-attachments {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.82rem;
+    color: #64748b;
+    margin-bottom: 12px;
+}
+.jc-attachments i { color: #94a3b8; }
+.jc-attachments .attachment-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    color: #3b82f6;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+.jc-attachments .attachment-link:hover {
+    background: #eff6ff;
+    border-color: #bfdbfe;
+}
+/* Footer / Actions */
+.jc-footer {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #f1f5f9;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+/* --- Mobile responsive for .jc-card --- */
+@media (max-width: 768px) {
+    .jc-card-body { padding: 16px 18px 14px; }
+    .jc-card-top { flex-direction: column; gap: 10px; }
+    .jc-title { font-size: 1rem; }
+    .jc-budget-pill { align-self: flex-start; padding: 6px 12px; }
+    .jc-budget-value { font-size: 0.95rem; }
+    .jc-posted-time { align-items: flex-start; }
+    .jc-meta-row { gap: 6px; }
+    .jc-poster-avatar { width: 24px; height: 24px; font-size: 0.6rem; }
+    .jc-description p { font-size: 0.82rem; -webkit-line-clamp: 2; }
+    .jc-footer { flex-wrap: wrap; }
 }
 
 .modal-overlay {

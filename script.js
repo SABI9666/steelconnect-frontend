@@ -2161,38 +2161,63 @@ async function fetchAndRenderJobs(loadMore = false) {
             return;
         }
         const jobsHTML = appState.jobs.map(job => {
+            const isDesigner = user.type === 'designer';
             const hasUserQuoted = appState.userSubmittedQuotes.has(job.id);
-            const canQuote = user.type === 'designer' && job.status === 'open' && !hasUserQuoted;
+            const canQuote = isDesigner && job.status === 'open' && !hasUserQuoted;
             const quoteButton = canQuote
                 ? `<button class="btn btn-primary btn-submit-quote" onclick="showQuoteModal('${job.id}')"><i class="fas fa-file-invoice-dollar"></i> Submit Quote</button>`
-                : user.type === 'designer' && hasUserQuoted
+                : isDesigner && hasUserQuoted
                 ? `<button class="btn btn-outline btn-submitted" disabled><i class="fas fa-check-circle"></i> Quote Submitted</button>`
-                : user.type === 'designer' && job.status === 'assigned'
+                : isDesigner && job.status === 'assigned'
                 ? `<span class="job-status-badge assigned"><i class="fas fa-user-check"></i> Job Assigned</span>` : '';
-            const actions = user.type === 'designer' ? quoteButton : `<div class="job-actions-group"><button class="btn btn-outline" onclick="viewQuotes('${job.id}')"><i class="fas fa-eye"></i> View Quotes (${job.quotesCount || 0})</button><button class="btn btn-outline" onclick="editJob('${job.id}')"><i class="fas fa-edit"></i> Edit</button><button class="btn btn-danger" onclick="deleteJob('${job.id}')"><i class="fas fa-trash"></i> Delete</button></div>`;
-            const statusBadge = `<span class="job-status-badge ${job.status}"><i class="fas ${job.status === 'assigned' ? 'fa-user-check' : 'fa-check-circle'}"></i> ${job.status.charAt(0).toUpperCase() + job.status.slice(1)}</span>`;
+            const actions = isDesigner ? quoteButton : `<div class="job-actions-group"><button class="btn btn-outline" onclick="viewQuotes('${job.id}')"><i class="fas fa-eye"></i> View Quotes (${job.quotesCount || 0})</button><button class="btn btn-outline" onclick="editJob('${job.id}')"><i class="fas fa-edit"></i> Edit</button><button class="btn btn-danger" onclick="deleteJob('${job.id}')"><i class="fas fa-trash"></i> Delete</button></div>`;
+            const statusClass = job.status === 'open' ? 'open' : job.status === 'assigned' ? 'assigned' : job.status;
+            const statusIcon = job.status === 'assigned' ? 'fa-user-check' : job.status === 'open' ? 'fa-circle' : 'fa-check-circle';
+            const statusBadge = `<span class="jc-status ${statusClass}"><i class="fas ${statusIcon}"></i> ${job.status.charAt(0).toUpperCase() + job.status.slice(1)}</span>`;
+            // For designers: show posted date/time instead of budget
+            const postedDate = job.createdAt ? new Date(job.createdAt) : new Date();
+            const timeAgo = getTimeAgo(postedDate);
+            const postedDateFormatted = postedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            const postedTimeFormatted = postedDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            const topRightSection = isDesigner
+                ? `<div class="jc-posted-time"><i class="far fa-clock"></i><span class="jc-time-ago">${timeAgo}</span><span class="jc-time-detail">${postedDateFormatted}, ${postedTimeFormatted}</span></div>`
+                : `<div class="jc-budget-pill"><span class="jc-budget-label">Budget</span><span class="jc-budget-value">${job.budget}</span></div>`;
             const attachmentLinks = job.attachments && job.attachments.length > 0 ? `
-                <div class="job-attachments">
+                <div class="jc-attachments">
                     <i class="fas fa-paperclip"></i>
                     <span>Attachments (${job.attachments.length}):</span>
                     <div class="attachment-links">
                         ${job.attachments.map((attachment, index) => `<a href="${attachment.url}" target="_blank" rel="noopener noreferrer" class="attachment-link"><i class="fas fa-file"></i> ${attachment.name || `File ${index + 1}`}</a>`).join('')}
                     </div>
                 </div>` : '';
-            const skillsDisplay = job.skills?.length > 0 ? `<div class="job-skills"><i class="fas fa-tools"></i><span>Skills:</span><div class="skills-tags">${job.skills.map(skill => `<span class="skill-tag">${skill}</span>`).join('')}</div></div>` : '';
+            const skillsDisplay = job.skills?.length > 0 ? `<div class="jc-skills">${job.skills.map(skill => `<span class="jc-skill-chip">${skill}</span>`).join('')}</div>` : '';
+            const posterInitial = (job.posterName || 'U').charAt(0).toUpperCase();
             return `
-                <div class="job-card premium-card" data-job-id="${job.id}">
-                    <div class="job-header"><div class="job-title-section"><h3 class="job-title">${job.title}</h3>${statusBadge}</div><div class="job-budget-section"><span class="budget-label">Budget</span><span class="budget-amount">${job.budget}</span></div></div>
-                    <div class="job-meta">
-                        <div class="job-meta-item"><i class="fas fa-user"></i><span>Posted by: <strong>${job.posterName || 'N/A'}</strong></span></div>
-                        ${job.assignedToName ? `<div class="job-meta-item"><i class="fas fa-user-check"></i><span>Assigned to: <strong>${job.assignedToName}</strong></span></div>` : ''}
-                        ${job.deadline ? `<div class="job-meta-item"><i class="fas fa-calendar-alt"></i><span>Deadline: <strong>${new Date(job.deadline).toLocaleDateString()}</strong></span></div>` : ''}
+                <div class="jc-card" data-job-id="${job.id}">
+                    <div class="jc-card-accent"></div>
+                    <div class="jc-card-body">
+                        <div class="jc-card-top">
+                            <div class="jc-title-area">
+                                <h3 class="jc-title">${job.title}</h3>
+                                ${statusBadge}
+                            </div>
+                            ${topRightSection}
+                        </div>
+                        <div class="jc-meta-row">
+                            <div class="jc-poster">
+                                <div class="jc-poster-avatar">${posterInitial}</div>
+                                <span class="jc-poster-name">${job.posterName || 'N/A'}</span>
+                            </div>
+                            ${job.assignedToName ? `<div class="jc-meta-chip assigned-chip"><i class="fas fa-user-check"></i> ${job.assignedToName}</div>` : ''}
+                            ${job.deadline ? `<div class="jc-meta-chip deadline-chip"><i class="fas fa-calendar-alt"></i> ${new Date(job.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>` : ''}
+                            ${isDesigner ? '' : `<div class="jc-meta-chip time-chip"><i class="far fa-clock"></i> ${timeAgo}</div>`}
+                        </div>
+                        <div class="jc-description"><p>${job.description}</p></div>
+                        ${skillsDisplay}
+                        ${job.link ? `<div class="jc-link"><i class="fas fa-external-link-alt"></i><a href="${job.link}" target="_blank">Project Link</a></div>` : ''}
+                        ${attachmentLinks}
+                        <div class="jc-footer">${actions}</div>
                     </div>
-                    <div class="job-description"><p>${job.description}</p></div>
-                    ${skillsDisplay}
-                    ${job.link ? `<div class="job-link"><i class="fas fa-external-link-alt"></i><a href="${job.link}" target="_blank">Project Link</a></div>` : ''}
-                    ${attachmentLinks}
-                    <div class="job-actions">${actions}</div>
                 </div>`;
         }).join('');
         if (jobsListContainer) jobsListContainer.innerHTML = jobsHTML;
