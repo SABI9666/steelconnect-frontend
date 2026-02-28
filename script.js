@@ -1634,7 +1634,7 @@ function renderEstimatesGrid(filteredEstimates = null) {
                 <div class="estimation-actions">
                     ${hasFiles ? `<button class="btn btn-outline btn-sm" onclick="viewEstimationFiles('${est._id}')"><i class="fas fa-folder-open"></i> View Files</button>` : ''}
                     ${isCompleted && hasAIReport ? `<button class="btn btn-success btn-sm" onclick="viewMyAIReport('${est._id}')"><i class="fas fa-robot"></i> View AI Report</button>` : ''}
-                    ${isCompleted && hasManualResult ? `<button class="btn btn-success btn-sm" onclick="downloadEstimationResult('${est._id}')"><i class="fas fa-download"></i> Download Result</button>` : ''}
+                    ${isCompleted && hasManualResult ? `<button class="btn btn-success btn-sm" onclick="viewEstimationResult('${est._id}')"><i class="fas fa-eye"></i> View Result</button><button class="btn btn-outline btn-sm" onclick="downloadEstimationResult('${est._id}')"><i class="fas fa-download"></i> Download Result</button>` : ''}
                     <button class="btn btn-outline btn-sm" onclick="viewEstimationDetails('${est._id}')"><i class="fas fa-eye"></i> Details</button>
                     ${canEdit ? `<button class="btn btn-outline btn-sm" onclick="editEstimation('${est._id}')"><i class="fas fa-edit"></i> Edit</button>` : ''}
                     <button class="btn btn-danger btn-sm" onclick="deleteEstimation('${est._id}')"><i class="fas fa-trash"></i> Delete</button>
@@ -1836,6 +1836,29 @@ async function downloadWithRetry(apiCall, maxRetries = 3) {
     }
 
     throw lastError;
+}
+
+async function viewEstimationResult(estimationId) {
+    try {
+        showNotification('Loading result file...', 'info');
+
+        const response = await downloadWithRetry(() =>
+             apiCall(`/estimation/${estimationId}/result/download`, 'GET')
+        );
+
+        if (response.downloadUrl) {
+            let downloadUrl = response.downloadUrl;
+            if (!downloadUrl.startsWith('http')) {
+                downloadUrl = `${BACKEND_URL}${downloadUrl.startsWith('/') ? '' : '/'}${downloadUrl}`;
+            }
+            window.open(downloadUrl, '_blank');
+        } else {
+            showNotification('Could not generate file link.', 'error');
+        }
+    } catch (error) {
+        console.error('View error:', error);
+        showNotification(`Failed to open result: ${error.message}. Please try again.`, 'error');
+    }
 }
 
 async function downloadEstimationResult(estimationId) {
