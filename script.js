@@ -3817,6 +3817,7 @@ function initializeSocketConnection() {
 
         voiceCallState.socket.on('connect', () => {
             console.log('[VOICE] Socket connected:', voiceCallState.socket.id);
+            if (!appState.currentUser) return;
             voiceCallState.socket.emit('register', appState.currentUser.id);
             // Restore previous status on reconnect
             if (voiceCallState.myStatus && voiceCallState.myStatus !== 'online') {
@@ -4095,12 +4096,19 @@ function showIncomingCallUI(data) {
                 <div class="call-ring ring-3"></div>
             </div>
             <div class="voice-call-content">
-                <div class="call-status-text">Incoming Voice Call</div>
+                <div class="call-status-text" id="call-status-text">Incoming Voice Call</div>
                 <div class="call-avatar-large pulse-animation" style="background-color: ${avatarColor}">
                     ${callerName.charAt(0).toUpperCase()}
                 </div>
                 <div class="call-participant-name">${callerName}</div>
                 <div class="call-subtitle">SteelConnect Voice Call</div>
+                <div class="call-timer" id="call-timer" style="display:none">00:00</div>
+                <div class="call-quality-indicator" id="call-quality" style="display:none">
+                    <div class="quality-bar active"></div>
+                    <div class="quality-bar active"></div>
+                    <div class="quality-bar active"></div>
+                    <div class="quality-bar"></div>
+                </div>
                 <div class="call-incoming-actions">
                     <button class="call-action-btn decline-btn" onclick="rejectVoiceCall('${callId}')" title="Decline">
                         <div class="action-btn-icon"><i class="fas fa-phone-slash"></i></div>
@@ -4939,11 +4947,15 @@ function stopCallSound() {
         try {
             if (voiceCallState.ringtoneAudio.interval) clearInterval(voiceCallState.ringtoneAudio.interval);
             if (voiceCallState.ringtoneAudio.masterGain) {
-                // Immediately silence: set gain to 0 and disconnect from output
+                // Immediately silence and disconnect from audio output
                 voiceCallState.ringtoneAudio.masterGain.gain.setValueAtTime(0, voiceCallState.ringtoneAudio.ctx.currentTime);
                 voiceCallState.ringtoneAudio.masterGain.disconnect();
             }
-            voiceCallState.ringtoneAudio.ctx.close();
+            // Suspend freezes the audio timeline immediately, preventing any
+            // future-scheduled oscillators from producing sound before close() completes
+            voiceCallState.ringtoneAudio.ctx.suspend().then(() => {
+                try { voiceCallState.ringtoneAudio?.ctx?.close(); } catch (e) { /* ignore */ }
+            }).catch(() => {});
         } catch (e) { /* ignore */ }
         voiceCallState.ringtoneAudio = null;
     }
