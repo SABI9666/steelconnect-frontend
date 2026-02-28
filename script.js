@@ -3012,16 +3012,55 @@ async function viewQuotes(jobId) {
     try {
         const response = await apiCall(`/quotes/job/${jobId}`, 'GET');
         const quotes = response.data || [];
+        const job = appState.jobs.find(j => j.id === jobId);
+        // Store quotes in state for the selection system
+        appState._viewingQuotes = quotes;
+        appState._viewingJobId = jobId;
+        appState._selectedQuoteIds = new Set();
+
         let quotesHTML = `
-            <div class="modal-header premium-modal-header">
-                <h3><i class="fas fa-file-invoice-dollar"></i> Received Quotes</h3>
-                <p class="modal-subtitle">Review quotes for this project (${quotes.length} quotes)</p>
+            <div class="vq-header">
+                <div class="vq-header-top">
+                    <div class="vq-header-title">
+                        <i class="fas fa-file-invoice-dollar"></i>
+                        <div>
+                            <h3>Received Quotes</h3>
+                            <p>${quotes.length} designer${quotes.length !== 1 ? 's' : ''} submitted quotes${job ? ` for <strong>${job.title}</strong>` : ''}</p>
+                        </div>
+                    </div>
+                    <button class="vq-close-btn" onclick="closeModal()"><i class="fas fa-times"></i></button>
+                </div>`;
+
+        if (quotes.length > 1 && job && job.status === 'open') {
+            quotesHTML += `
+                <div class="vq-steps-bar">
+                    <div class="vq-step active" id="vq-step-1"><span class="vq-step-num">1</span><span class="vq-step-label">Select & Compare</span></div>
+                    <div class="vq-step-line"></div>
+                    <div class="vq-step" id="vq-step-2"><span class="vq-step-num">2</span><span class="vq-step-label">Message / Call</span></div>
+                    <div class="vq-step-line"></div>
+                    <div class="vq-step" id="vq-step-3"><span class="vq-step-num">3</span><span class="vq-step-label">Approve Quote</span></div>
+                </div>`;
+        }
+        quotesHTML += `</div>`;
+
+        // Floating selection action bar (hidden initially)
+        quotesHTML += `
+            <div class="vq-action-bar" id="vq-action-bar" style="display:none;">
+                <div class="vq-action-bar-left">
+                    <span class="vq-selected-count" id="vq-selected-count">0 selected</span>
+                </div>
+                <div class="vq-action-bar-right">
+                    <button class="btn vq-btn vq-btn-compare" onclick="compareSelectedQuotes()" id="vq-compare-btn" style="display:none;"><i class="fas fa-columns"></i> Compare</button>
+                    <button class="btn vq-btn vq-btn-message" onclick="messageSelectedDesigners()"><i class="fas fa-comments"></i> Message</button>
+                    <button class="btn vq-btn vq-btn-call" onclick="callSelectedDesigner()"><i class="fas fa-phone-alt"></i> Call</button>
+                    <button class="btn vq-btn vq-btn-approve" onclick="approveSelectedQuote()"><i class="fas fa-check-circle"></i> Approve Quote</button>
+                </div>
             </div>`;
+
         if (quotes.length === 0) {
             quotesHTML += `<div class="empty-state premium-empty"><div class="empty-icon"><i class="fas fa-file-invoice"></i></div><h3>No Quotes Received</h3><p>No quotes have been submitted yet.</p></div>`;
         } else {
-            const job = appState.jobs.find(j => j.id === jobId);
-            quotesHTML += `<div class="quotes-list premium-quotes">`;
+            quotesHTML += `<div class="vq-list" id="vq-list">`;
             for (const quote of quotes) {
                 const attachments = quote.attachments || [];
                 const hasAttachments = attachments.length > 0;
@@ -3037,45 +3076,65 @@ async function viewQuotes(jobId) {
                         </div>`;
                 }
                 const canApprove = job && job.status === 'open' && quote.status === 'submitted';
-                let actionButtons = '';
-                const messageButton = `<button class="btn btn-outline btn-sm" onclick="openConversation('${quote.jobId}', '${quote.designerId}')"><i class="fas fa-comments"></i> Message</button>`;
-                if (canApprove) {
-                    actionButtons = `<button class="btn btn-success btn-sm" onclick="approveQuote('${quote.id}', '${jobId}')"><i class="fas fa-check"></i> Approve</button>${messageButton}`;
-                } else if (quote.status === 'approved') {
-                    actionButtons = `<span class="status-approved"><i class="fas fa-check-circle"></i> Approved</span>${messageButton}`;
-                } else {
-                    actionButtons = messageButton;
-                }
                 const statusClass = quote.status;
                 const statusIcon = {'submitted': 'fa-clock', 'approved': 'fa-check-circle', 'rejected': 'fa-times-circle'}[quote.status] || 'fa-question-circle';
 
-                // Build designer profile - use enriched data or placeholder for lazy load
+                // Designer profile
                 const dp = quote.designerProfile || {};
                 const designerProfileSection = buildDesignerProfileHTML(dp, quote.designerName, quote.designerId);
+                const avatarInitial = (quote.designerName || 'D').charAt(0).toUpperCase();
+
+                // Resume link
+                const resumeLink = dp.resume && dp.resume.url
+                    ? `<a href="${dp.resume.url}" target="_blank" class="vq-resume-link" onclick="event.stopPropagation()"><i class="fas fa-file-pdf"></i> Resume</a>` : '';
 
                 quotesHTML += `
-                    <div class="quote-item premium-quote-item quote-status-${statusClass}">
-                        <div class="quote-item-header">
-                            <div class="designer-info">
-                                <div class="designer-avatar">${quote.designerName.charAt(0).toUpperCase()}</div>
-                                <div class="designer-details"><h4>${quote.designerName}</h4><span class="quote-status-badge ${statusClass}"><i class="fas ${statusIcon}"></i> ${quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}</span></div>
+                    <div class="vq-quote-card ${canApprove ? 'vq-selectable' : ''} quote-status-${statusClass}"
+                         data-quote-id="${quote.id}"
+                         data-designer-id="${quote.designerId}"
+                         data-designer-name="${(quote.designerName || '').replace(/"/g, '&quot;')}"
+                         data-job-id="${quote.jobId}"
+                         ${canApprove ? `onclick="toggleQuoteSelection('${quote.id}')"` : ''}>
+                        ${canApprove ? `<div class="vq-checkbox" id="vq-chk-${quote.id}"><i class="fas fa-check"></i></div>` : ''}
+                        <div class="vq-quote-main">
+                            <div class="vq-quote-top-row">
+                                <div class="vq-designer-info">
+                                    <div class="vq-avatar">${avatarInitial}</div>
+                                    <div class="vq-designer-text">
+                                        <h4>${quote.designerName}</h4>
+                                        <div class="vq-designer-tags">
+                                            <span class="vq-status-pill ${statusClass}"><i class="fas ${statusIcon}"></i> ${quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}</span>
+                                            ${resumeLink}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="vq-quote-price">
+                                    <span class="vq-price-label">Quote Amount</span>
+                                    <span class="vq-price-value">${quote.quoteAmount}</span>
+                                    ${quote.timeline ? `<span class="vq-timeline"><i class="fas fa-clock"></i> ${quote.timeline} days</span>` : ''}
+                                </div>
                             </div>
-                            <div class="quote-amount"><span class="amount-label">Quote</span><span class="amount-value">${quote.quoteAmount}</span></div>
-                        </div>
-                        ${designerProfileSection}
-                        <div class="quote-details">
-                            ${quote.timeline ? `<div class="quote-meta-item"><i class="fas fa-calendar-alt"></i><span>Timeline: <strong>${quote.timeline} days</strong></span></div>` : ''}
-                            <div class="quote-description"><p>${quote.description}</p></div>
+                            <div class="vq-quote-desc"><p>${quote.description}</p></div>
                             ${attachmentSection}
+                            ${designerProfileSection}
+                            <div class="vq-quick-actions" onclick="event.stopPropagation()">
+                                <button class="btn btn-outline btn-sm" onclick="openConversation('${quote.jobId}', '${quote.designerId}')"><i class="fas fa-comments"></i> Message</button>
+                                <button class="btn btn-outline btn-sm" onclick="initiateVoiceCall(null, '${quote.designerId}', '${(quote.designerName || '').replace(/'/g, "\\'")}')" title="Call this designer"><i class="fas fa-phone-alt"></i> Call</button>
+                                ${canApprove ? `<button class="btn btn-success btn-sm vq-approve-single" onclick="approveQuote('${quote.id}', '${jobId}')"><i class="fas fa-check"></i> Approve This Quote</button>` : ''}
+                                ${quote.status === 'approved' ? `<span class="vq-approved-tag"><i class="fas fa-check-circle"></i> Approved</span>` : ''}
+                            </div>
                         </div>
-                        <div class="quote-actions">${actionButtons}</div>
                     </div>`;
             }
             quotesHTML += `</div>`;
         }
-        showGenericModal(quotesHTML, 'max-width: 900px;');
+        showGenericModal(quotesHTML, 'max-width: 960px; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column;');
 
-        // After rendering, lazy-load designer profiles that weren't enriched by the backend
+        // Make the list scrollable
+        const vqList = document.getElementById('vq-list');
+        if (vqList) vqList.style.cssText = 'overflow-y:auto; flex:1; padding: 0 24px 24px;';
+
+        // Lazy-load designer profiles
         quotes.forEach(quote => {
             if (!quote.designerProfile || (!quote.designerProfile.skills?.length && !quote.designerProfile.bio && !quote.designerProfile.experience)) {
                 loadDesignerProfileIntoCard(quote.designerId, quote.designerName);
@@ -3085,6 +3144,126 @@ async function viewQuotes(jobId) {
         console.error('Error viewing quotes:', error);
         showGenericModal(`<div class="modal-header premium-modal-header"><h3><i class="fas fa-exclamation-triangle"></i> Error</h3></div><div class="error-state premium-error"><p>Could not load quotes. Please try again.</p><button class="btn btn-primary" onclick="closeModal()">Close</button></div>`);
     }
+}
+
+// --- QUOTE SELECTION SYSTEM ---
+function toggleQuoteSelection(quoteId) {
+    const selected = appState._selectedQuoteIds || new Set();
+    const card = document.querySelector(`.vq-quote-card[data-quote-id="${quoteId}"]`);
+    if (!card) return;
+    if (selected.has(quoteId)) {
+        selected.delete(quoteId);
+        card.classList.remove('vq-selected');
+    } else {
+        selected.add(quoteId);
+        card.classList.add('vq-selected');
+    }
+    appState._selectedQuoteIds = selected;
+    updateQuoteSelectionBar();
+}
+
+function updateQuoteSelectionBar() {
+    const count = (appState._selectedQuoteIds || new Set()).size;
+    const bar = document.getElementById('vq-action-bar');
+    const countEl = document.getElementById('vq-selected-count');
+    const compareBtn = document.getElementById('vq-compare-btn');
+    if (!bar) return;
+    if (count > 0) {
+        bar.style.display = 'flex';
+        countEl.textContent = `${count} designer${count > 1 ? 's' : ''} selected`;
+        if (compareBtn) compareBtn.style.display = count >= 2 ? 'inline-flex' : 'none';
+        // Update step indicator
+        const step2 = document.getElementById('vq-step-2');
+        if (step2) step2.classList.add('active');
+    } else {
+        bar.style.display = 'none';
+        const step2 = document.getElementById('vq-step-2');
+        if (step2) step2.classList.remove('active');
+        const step3 = document.getElementById('vq-step-3');
+        if (step3) step3.classList.remove('active');
+    }
+}
+
+function messageSelectedDesigners() {
+    const selected = appState._selectedQuoteIds || new Set();
+    if (selected.size === 0) { showNotification('Please select at least one quote first.', 'warning'); return; }
+    const quotes = appState._viewingQuotes || [];
+    const firstSelected = quotes.find(q => selected.has(q.id));
+    if (firstSelected) {
+        closeModal();
+        openConversation(firstSelected.jobId, firstSelected.designerId);
+        if (selected.size > 1) {
+            showNotification(`Opening conversation with ${firstSelected.designerName}. You can message other designers from their quote cards.`, 'info', 5000);
+        }
+    }
+}
+
+function callSelectedDesigner() {
+    const selected = appState._selectedQuoteIds || new Set();
+    if (selected.size === 0) { showNotification('Please select a designer to call.', 'warning'); return; }
+    if (selected.size > 1) { showNotification('Please select only one designer to call.', 'warning'); return; }
+    const quotes = appState._viewingQuotes || [];
+    const selectedQuote = quotes.find(q => selected.has(q.id));
+    if (selectedQuote) {
+        initiateVoiceCall(null, selectedQuote.designerId, selectedQuote.designerName);
+    }
+}
+
+function approveSelectedQuote() {
+    const selected = appState._selectedQuoteIds || new Set();
+    if (selected.size === 0) { showNotification('Please select a quote to approve.', 'warning'); return; }
+    if (selected.size > 1) { showNotification('You can only approve one quote. Please select just one.', 'warning'); return; }
+    const quoteId = Array.from(selected)[0];
+    const jobId = appState._viewingJobId;
+    // Highlight step 3
+    const step3 = document.getElementById('vq-step-3');
+    if (step3) step3.classList.add('active');
+    approveQuote(quoteId, jobId);
+}
+
+function compareSelectedQuotes() {
+    const selected = appState._selectedQuoteIds || new Set();
+    if (selected.size < 2) { showNotification('Select at least 2 quotes to compare.', 'warning'); return; }
+    const quotes = (appState._viewingQuotes || []).filter(q => selected.has(q.id));
+    let compareHTML = `
+        <div class="vq-compare-header">
+            <button class="btn btn-outline btn-sm" onclick="closeCompareOverlay()"><i class="fas fa-arrow-left"></i> Back to Quotes</button>
+            <h3><i class="fas fa-columns"></i> Comparing ${quotes.length} Quotes</h3>
+        </div>
+        <div class="vq-compare-grid" style="grid-template-columns: repeat(${Math.min(quotes.length, 3)}, 1fr);">`;
+    for (const q of quotes) {
+        const dp = q.designerProfile || {};
+        const avatarInitial = (q.designerName || 'D').charAt(0).toUpperCase();
+        compareHTML += `
+            <div class="vq-compare-col">
+                <div class="vq-compare-designer">
+                    <div class="vq-avatar">${avatarInitial}</div>
+                    <h4>${q.designerName}</h4>
+                </div>
+                <div class="vq-compare-row"><span class="vq-compare-label">Quote Amount</span><span class="vq-compare-val vq-price-value">${q.quoteAmount}</span></div>
+                ${q.timeline ? `<div class="vq-compare-row"><span class="vq-compare-label">Timeline</span><span class="vq-compare-val">${q.timeline} days</span></div>` : ''}
+                ${dp.experience ? `<div class="vq-compare-row"><span class="vq-compare-label">Experience</span><span class="vq-compare-val">${dp.experience}</span></div>` : ''}
+                ${dp.skills?.length ? `<div class="vq-compare-row"><span class="vq-compare-label">Skills</span><span class="vq-compare-val">${dp.skills.slice(0,5).join(', ')}</span></div>` : ''}
+                ${dp.resume?.url ? `<div class="vq-compare-row"><span class="vq-compare-label">Resume</span><a href="${dp.resume.url}" target="_blank" class="vq-compare-val vq-resume-link"><i class="fas fa-file-pdf"></i> View</a></div>` : ''}
+                <div class="vq-compare-row vq-compare-desc"><span class="vq-compare-label">Proposal</span><p>${q.description}</p></div>
+                <div class="vq-compare-actions">
+                    <button class="btn btn-outline btn-sm" onclick="openConversation('${q.jobId}', '${q.designerId}'); closeModal();"><i class="fas fa-comments"></i> Message</button>
+                    <button class="btn btn-success btn-sm" onclick="approveQuote('${q.id}', '${q.jobId}')"><i class="fas fa-check"></i> Approve</button>
+                </div>
+            </div>`;
+    }
+    compareHTML += `</div>`;
+    const overlay = document.createElement('div');
+    overlay.id = 'vq-compare-overlay';
+    overlay.className = 'vq-compare-overlay';
+    overlay.innerHTML = compareHTML;
+    const modalContent = document.querySelector('.modal-content');
+    if (modalContent) modalContent.appendChild(overlay);
+}
+
+function closeCompareOverlay() {
+    const overlay = document.getElementById('vq-compare-overlay');
+    if (overlay) overlay.remove();
 }
 
 function buildDesignerProfileHTML(dp, designerName, designerId) {
