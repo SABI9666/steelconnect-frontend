@@ -1296,8 +1296,12 @@ function getNotificationActionButtons(notification) {
             }
             break;
         case 'estimation':
-            if (metadata?.action === 'estimation_completed') {
-                buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); renderAppSection('my-estimations')"><i class="fas fa-download"></i> View Result</button>`;
+            if (metadata?.action === 'estimation_completed' && metadata?.estimationId) {
+                buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); navigateToAIEstimationResult('${metadata.estimationId}')"><i class="fas fa-robot"></i> View AI Report</button>`;
+            } else if (metadata?.action === 'estimation_completed') {
+                buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); renderAppSection('my-estimations')"><i class="fas fa-chart-line"></i> View Estimations</button>`;
+            } else if (metadata?.action === 'estimation_submitted_confirmation') {
+                buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); renderAppSection('my-estimations')"><i class="fas fa-list"></i> Track Request</button>`;
             }
             break;
         case 'profile':
@@ -1356,7 +1360,11 @@ function handleNotificationClick(notificationId, type, metadata = {}) {
             renderAppSection('jobs');
             break;
         case 'estimation':
-            renderAppSection('my-estimations');
+            if (metadata.action === 'estimation_completed' && metadata.estimationId) {
+                navigateToAIEstimationResult(metadata.estimationId);
+            } else {
+                renderAppSection('my-estimations');
+            }
             break;
         case 'profile':
             if (metadata.action === 'profile_rejected' || metadata.action === 'profile_reminder') {
@@ -1679,6 +1687,42 @@ function viewMyAIReport(estimationId) {
     const estimation = appState.myEstimations.find(e => e._id === estimationId);
     if (!estimation || !estimation.aiEstimate) { showNotification('AI report not available.', 'error'); return; }
     renderAIEstimateResult(estimation.aiEstimate, { projectTitle: estimation.projectTitle, description: estimation.description });
+}
+
+async function navigateToAIEstimationResult(estimationId) {
+    // Close notification panel
+    const panel = document.getElementById('notification-panel');
+    if (panel) panel.classList.remove('active');
+
+    showNotification('Loading AI estimation report...', 'info');
+
+    // Load estimations if not already loaded
+    if (!appState.myEstimations || appState.myEstimations.length === 0) {
+        try { await loadUserEstimations(); } catch (e) { /* ignore */ }
+    }
+
+    // Find the estimation in cached data
+    let estimation = appState.myEstimations.find(e => e._id === estimationId || e.id === estimationId);
+
+    // If not found in cache, try fetching fresh data
+    if (!estimation) {
+        try {
+            await loadUserEstimations();
+            estimation = appState.myEstimations.find(e => e._id === estimationId || e.id === estimationId);
+        } catch (e) { /* ignore */ }
+    }
+
+    if (estimation && estimation.aiEstimate) {
+        renderAIEstimateResult(estimation.aiEstimate, { projectTitle: estimation.projectTitle, description: estimation.description });
+    } else if (estimation) {
+        // Estimation found but no AI report yet - go to my-estimations so they can see status
+        showNotification('AI report is still being generated. Showing your estimation requests.', 'info');
+        renderAppSection('my-estimations');
+    } else {
+        // Estimation not found - go to my-estimations page
+        showNotification('Loading your estimation requests...', 'info');
+        renderAppSection('my-estimations');
+    }
 }
 
 function viewEstimationDetails(estimationId) {
