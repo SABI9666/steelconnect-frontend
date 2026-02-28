@@ -3839,6 +3839,7 @@ function initializeSocketConnection() {
 
         voiceCallState.socket.on('call-accepted', async (data) => {
             console.log('[VOICE] Call accepted, creating WebRTC offer');
+            stopCallSound();
             updateCallUI('connecting');
             await createAndSendOffer(data.calleeId);
         });
@@ -3991,12 +3992,8 @@ function initiateVoiceCall(conversationId, calleeId, calleeName) {
 
     initializeSocketConnection();
 
-    setTimeout(() => {
-        if (!voiceCallState.socket || !voiceCallState.socket.connected) {
-            showNotification('Connection error. Please try again.', 'error');
-            return;
-        }
-
+    // Wait for socket to actually connect before emitting call
+    const startCall = () => {
         voiceCallState.socket.emit('call-initiate', {
             callerId: appState.currentUser.id,
             callerName: appState.currentUser.name,
@@ -4004,9 +4001,25 @@ function initiateVoiceCall(conversationId, calleeId, calleeName) {
             conversationId,
             callType: 'voice'
         });
-
         showOutgoingCallUI(calleeName, calleeId);
-    }, 500);
+    };
+
+    if (voiceCallState.socket && voiceCallState.socket.connected) {
+        startCall();
+    } else {
+        // Wait for socket to connect with retry (up to 5 seconds)
+        let waited = 0;
+        const waitInterval = setInterval(() => {
+            waited += 200;
+            if (voiceCallState.socket && voiceCallState.socket.connected) {
+                clearInterval(waitInterval);
+                startCall();
+            } else if (waited >= 5000) {
+                clearInterval(waitInterval);
+                showNotification('Connection error. Please try again.', 'error');
+            }
+        }, 200);
+    }
 }
 
 // Show outgoing call UI (caller's screen)
@@ -4647,6 +4660,15 @@ async function handleWebRTCOffer(data) {
 
         await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
 
+        // Flush any ICE candidates that arrived before remote description was set
+        if (voiceCallState._pendingCandidates && voiceCallState._pendingCandidates.length > 0) {
+            console.log(`[VOICE] Flushing ${voiceCallState._pendingCandidates.length} buffered ICE candidates`);
+            for (const candidate of voiceCallState._pendingCandidates) {
+                try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch (e) { /* ignore */ }
+            }
+            voiceCallState._pendingCandidates = [];
+        }
+
         const answer = await pc.createAnswer({
             offerToReceiveAudio: true,
             offerToReceiveVideo: false
@@ -4672,6 +4694,15 @@ async function handleWebRTCAnswer(data) {
         if (voiceCallState.peerConnection) {
             console.log('[VOICE] Setting remote answer');
             await voiceCallState.peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+
+            // Flush any ICE candidates that arrived before remote description was set
+            if (voiceCallState._pendingCandidates && voiceCallState._pendingCandidates.length > 0) {
+                console.log(`[VOICE] Flushing ${voiceCallState._pendingCandidates.length} buffered ICE candidates`);
+                for (const candidate of voiceCallState._pendingCandidates) {
+                    try { await voiceCallState.peerConnection.addIceCandidate(new RTCIceCandidate(candidate)); } catch (e) { /* ignore */ }
+                }
+                voiceCallState._pendingCandidates = [];
+            }
         }
     } catch (error) {
         console.error('[VOICE] Error handling answer:', error);
@@ -4908,7 +4939,9 @@ function stopCallSound() {
         try {
             if (voiceCallState.ringtoneAudio.interval) clearInterval(voiceCallState.ringtoneAudio.interval);
             if (voiceCallState.ringtoneAudio.masterGain) {
+                // Immediately silence: set gain to 0 and disconnect from output
                 voiceCallState.ringtoneAudio.masterGain.gain.setValueAtTime(0, voiceCallState.ringtoneAudio.ctx.currentTime);
+                voiceCallState.ringtoneAudio.masterGain.disconnect();
             }
             voiceCallState.ringtoneAudio.ctx.close();
         } catch (e) { /* ignore */ }
