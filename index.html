@@ -17,6 +17,27 @@
     <link rel="stylesheet" href="analytics-styles.css?v=20260222a">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://cdn.socket.io/4.7.4/socket.io.min.js" crossorigin="anonymous"></script>
+    <!-- Firebase SDK for push notifications (incoming calls when offline) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js"></script>
+    <script>
+        // Firebase config - set these values from your Firebase Console > Project Settings > Web App
+        // Push notifications for offline call receiving require Firebase Cloud Messaging
+        if (typeof firebase !== 'undefined') {
+            try {
+                firebase.initializeApp({
+                    apiKey: window.FIREBASE_API_KEY || "YOUR_FIREBASE_API_KEY",
+                    authDomain: window.FIREBASE_AUTH_DOMAIN || "YOUR_PROJECT.firebaseapp.com",
+                    projectId: window.FIREBASE_PROJECT_ID || "YOUR_PROJECT_ID",
+                    storageBucket: window.FIREBASE_STORAGE_BUCKET || "YOUR_PROJECT.appspot.com",
+                    messagingSenderId: window.FIREBASE_MESSAGING_SENDER_ID || "YOUR_SENDER_ID",
+                    appId: window.FIREBASE_APP_ID || "YOUR_APP_ID",
+                });
+            } catch (e) {
+                console.log('Firebase init deferred - configure credentials for push notifications');
+            }
+        }
+    </script>
     <style>
         /* Base and Original Variables */
         :root {
