@@ -3364,10 +3364,14 @@ function initializeSocketConnection() {
     try {
         voiceCallState.socket = io(socketUrl, {
             transports: ['websocket', 'polling'],
-            timeout: 10000,
+            timeout: 15000,
             reconnection: true,
-            reconnectionAttempts: 5,
-            reconnectionDelay: 2000
+            reconnectionAttempts: 10,
+            reconnectionDelay: 2000,
+            reconnectionDelayMax: 10000,
+            // Improved settings for cross-region connectivity (India, UK, etc.)
+            forceNew: false,
+            multiplex: true
         });
 
         voiceCallState.socket.on('connect', () => {
@@ -3743,33 +3747,108 @@ function updateCallUI(status) {
     }
 }
 
-// WebRTC: Create peer connection with STUN + free TURN servers
-function createPeerConnection() {
+// WebRTC: Fetch TURN credentials from backend for reliable global connectivity
+async function fetchTurnCredentials() {
+    try {
+        const backendUrl = IS_LOCAL ? 'http://localhost:10000' : 'https://steelconnect-backend.onrender.com';
+        const response = await fetch(`${backendUrl}/api/voice-calls/turn-credentials`);
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.iceServers) {
+                console.log('[VOICE] Fetched TURN credentials from server');
+                return data.iceServers;
+            }
+        }
+    } catch (err) {
+        console.warn('[VOICE] Could not fetch TURN credentials, using defaults:', err.message);
+    }
+    return null;
+}
+
+// WebRTC: Create peer connection with globally distributed STUN + TURN servers
+// Supports cross-region calls (India, UK, US, Asia, Europe, Middle East, etc.)
+async function createPeerConnection() {
+    // Try to get dynamic TURN credentials from backend first
+    const dynamicServers = await fetchTurnCredentials();
+
     const config = {
-        iceServers: [
+        iceServers: dynamicServers || [
+            // --- Globally distributed STUN servers ---
             { urls: 'stun:stun.l.google.com:19302' },
             { urls: 'stun:stun1.l.google.com:19302' },
             { urls: 'stun:stun2.l.google.com:19302' },
             { urls: 'stun:stun3.l.google.com:19302' },
             { urls: 'stun:stun4.l.google.com:19302' },
-            // Free TURN servers for users behind strict firewalls/NATs
-            { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-            { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-            { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
+            // Additional global STUN servers for redundancy
+            { urls: 'stun:stun.relay.metered.ca:80' },
+            { urls: 'stun:stun.stunprotocol.org:3478' },
+            // --- Metered.ca global TURN servers (free tier) ---
+            // Provides relay servers in US, Europe, Asia, India, Australia
+            {
+                urls: 'turn:global.relay.metered.ca:80',
+                username: 'e8dd65b92f4f1be4b7de7118',
+                credential: '4F0VEYoAbOCLpmhH'
+            },
+            {
+                urls: 'turn:global.relay.metered.ca:80?transport=tcp',
+                username: 'e8dd65b92f4f1be4b7de7118',
+                credential: '4F0VEYoAbOCLpmhH'
+            },
+            {
+                urls: 'turn:global.relay.metered.ca:443',
+                username: 'e8dd65b92f4f1be4b7de7118',
+                credential: '4F0VEYoAbOCLpmhH'
+            },
+            {
+                urls: 'turns:global.relay.metered.ca:443?transport=tcp',
+                username: 'e8dd65b92f4f1be4b7de7118',
+                credential: '4F0VEYoAbOCLpmhH'
+            }
         ],
-        iceCandidatePoolSize: 10
+        iceCandidatePoolSize: 10,
+        // Bundle policy for better cross-region performance
+        bundlePolicy: 'max-bundle',
+        rtcpMuxPolicy: 'require'
     };
 
     voiceCallState.peerConnection = new RTCPeerConnection(config);
+    voiceCallState._iceGatheringComplete = false;
+    voiceCallState._iceCandidateCount = 0;
+    voiceCallState._iceRestartAttempts = 0;
 
     voiceCallState.peerConnection.onicecandidate = (event) => {
         if (event.candidate && voiceCallState.socket) {
+            voiceCallState._iceCandidateCount++;
             const targetUserId = voiceCallState._targetUserId;
             voiceCallState.socket.emit('webrtc-ice-candidate', {
                 callId: voiceCallState.currentCallId,
                 targetUserId,
                 candidate: event.candidate
             });
+        } else if (!event.candidate) {
+            // ICE gathering complete
+            voiceCallState._iceGatheringComplete = true;
+            console.log(`[VOICE] ICE gathering complete. Total candidates: ${voiceCallState._iceCandidateCount}`);
+        }
+    };
+
+    // Monitor ICE gathering state for cross-region debugging
+    voiceCallState.peerConnection.onicegatheringstatechange = () => {
+        const state = voiceCallState.peerConnection.iceGatheringState;
+        console.log('[VOICE] ICE gathering state:', state);
+    };
+
+    // Monitor ICE connection state for faster failure detection & restart
+    voiceCallState.peerConnection.oniceconnectionstatechange = () => {
+        if (!voiceCallState.peerConnection) return;
+        const state = voiceCallState.peerConnection.iceConnectionState;
+        console.log('[VOICE] ICE connection state:', state);
+
+        if (state === 'failed' && voiceCallState._iceRestartAttempts < 3) {
+            // Attempt ICE restart for cross-region connectivity recovery
+            voiceCallState._iceRestartAttempts++;
+            console.log(`[VOICE] Attempting ICE restart (attempt ${voiceCallState._iceRestartAttempts}/3)`);
+            attemptIceRestart();
         }
     };
 
@@ -3778,23 +3857,43 @@ function createPeerConnection() {
         const remoteAudio = document.getElementById('remote-audio') || document.createElement('audio');
         remoteAudio.id = 'remote-audio';
         remoteAudio.autoplay = true;
+        remoteAudio.playsInline = true;
         remoteAudio.srcObject = event.streams[0];
         if (!document.getElementById('remote-audio')) {
             document.body.appendChild(remoteAudio);
         }
+        // Ensure audio plays (some mobile browsers block autoplay)
+        remoteAudio.play().catch(err => console.warn('[VOICE] Audio autoplay blocked:', err.message));
         voiceCallState.remoteStream = event.streams[0];
         stopCallSound();
         updateCallUI('connected');
     };
 
     voiceCallState.peerConnection.onconnectionstatechange = () => {
+        if (!voiceCallState.peerConnection) return;
         const state = voiceCallState.peerConnection.connectionState;
         console.log('[VOICE] Connection state:', state);
-        if (state === 'disconnected' || state === 'failed') {
-            showNotification('Call connection lost', 'error');
-            endVoiceCall();
-        }
-        if (state === 'connected') {
+        if (state === 'failed') {
+            if (voiceCallState._iceRestartAttempts >= 3) {
+                showNotification('Call connection failed. Please check your network and try again.', 'error');
+                endVoiceCall();
+            }
+        } else if (state === 'disconnected') {
+            // Wait briefly before ending - cross-region connections may recover
+            voiceCallState._disconnectTimer = setTimeout(() => {
+                if (voiceCallState.peerConnection &&
+                    voiceCallState.peerConnection.connectionState === 'disconnected') {
+                    showNotification('Call connection lost', 'error');
+                    endVoiceCall();
+                }
+            }, 5000);
+        } else if (state === 'connected') {
+            // Clear any pending disconnect timer
+            if (voiceCallState._disconnectTimer) {
+                clearTimeout(voiceCallState._disconnectTimer);
+                voiceCallState._disconnectTimer = null;
+            }
+            voiceCallState._iceRestartAttempts = 0;
             startConnectionQualityMonitor();
         }
     };
@@ -3802,13 +3901,44 @@ function createPeerConnection() {
     return voiceCallState.peerConnection;
 }
 
+// ICE restart for recovering failed cross-region connections
+async function attemptIceRestart() {
+    try {
+        if (!voiceCallState.peerConnection || !voiceCallState.socket) return;
+        const offer = await voiceCallState.peerConnection.createOffer({ iceRestart: true });
+        await voiceCallState.peerConnection.setLocalDescription(offer);
+        voiceCallState.socket.emit('webrtc-offer', {
+            callId: voiceCallState.currentCallId,
+            targetUserId: voiceCallState._targetUserId,
+            offer,
+            iceRestart: true
+        });
+        console.log('[VOICE] ICE restart offer sent');
+    } catch (err) {
+        console.error('[VOICE] ICE restart failed:', err);
+    }
+}
+
+// Optimized audio constraints for cross-region calls (India, UK, US, etc.)
+const VOICE_AUDIO_CONSTRAINTS = {
+    audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+        // Optimize for voice calls across high-latency connections
+        channelCount: 1,
+        sampleRate: 48000
+    },
+    video: false
+};
+
 // WebRTC: Get user media and create offer
 async function createAndSendOffer(targetUserId) {
     try {
         voiceCallState._targetUserId = targetUserId;
-        const pc = createPeerConnection();
+        const pc = await createPeerConnection();
 
-        voiceCallState.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        voiceCallState.localStream = await navigator.mediaDevices.getUserMedia(VOICE_AUDIO_CONSTRAINTS);
         voiceCallState.localStream.getTracks().forEach(track => {
             pc.addTrack(track, voiceCallState.localStream);
         });
@@ -3836,9 +3966,9 @@ async function createAndSendOffer(targetUserId) {
 async function handleWebRTCOffer(data) {
     try {
         voiceCallState._targetUserId = data.fromUserId;
-        const pc = createPeerConnection();
+        const pc = await createPeerConnection();
 
-        voiceCallState.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        voiceCallState.localStream = await navigator.mediaDevices.getUserMedia(VOICE_AUDIO_CONSTRAINTS);
         voiceCallState.localStream.getTracks().forEach(track => {
             pc.addTrack(track, voiceCallState.localStream);
         });
@@ -4012,6 +4142,12 @@ function endCallCleanup() {
         voiceCallState.callTimer = null;
     }
 
+    // Clear disconnect timer (used for cross-region reconnection grace period)
+    if (voiceCallState._disconnectTimer) {
+        clearTimeout(voiceCallState._disconnectTimer);
+        voiceCallState._disconnectTimer = null;
+    }
+
     if (voiceCallState.localStream) {
         voiceCallState.localStream.getTracks().forEach(track => track.stop());
         voiceCallState.localStream = null;
@@ -4038,6 +4174,9 @@ function endCallCleanup() {
     voiceCallState.isSpeakerOn = true;
     voiceCallState.isConnected = false;
     voiceCallState._targetUserId = null;
+    voiceCallState._iceRestartAttempts = 0;
+    voiceCallState._iceGatheringComplete = false;
+    voiceCallState._iceCandidateCount = 0;
 }
 
 // Message tab switching (Chats / Recent Calls)
