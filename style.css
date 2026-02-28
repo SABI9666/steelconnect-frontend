@@ -3209,6 +3209,532 @@ body {
 .quote-status-approved { border-left: 4px solid #10b981; background: linear-gradient(90deg, rgba(16, 185, 129, 0.03), transparent); }
 .quote-status-rejected { border-left: 4px solid #ef4444; background: linear-gradient(90deg, rgba(239, 68, 68, 0.03), transparent); }
 
+/* ========================================
+   VIEW QUOTES REDESIGN (.vq-)
+   Multi-select, compare, step-flow
+   ======================================== */
+
+/* --- Header --- */
+.vq-header {
+    padding: 24px 24px 0;
+    border-bottom: 1px solid #f1f5f9;
+    position: sticky;
+    top: 0;
+    background: #fff;
+    z-index: 10;
+    border-radius: 20px 20px 0 0;
+}
+.vq-header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
+}
+.vq-header-title {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+}
+.vq-header-title > i {
+    font-size: 1.5rem;
+    color: #6366f1;
+    margin-top: 2px;
+}
+.vq-header-title h3 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 2px;
+}
+.vq-header-title p {
+    font-size: 0.82rem;
+    color: #64748b;
+    margin: 0;
+}
+.vq-close-btn {
+    background: #f1f5f9;
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #64748b;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+.vq-close-btn:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+
+/* --- Steps Bar --- */
+.vq-steps-bar {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 16px 0;
+}
+.vq-step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    opacity: 0.4;
+    transition: all 0.3s;
+}
+.vq-step.active {
+    opacity: 1;
+}
+.vq-step-num {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: #e2e8f0;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.72rem;
+    font-weight: 700;
+    transition: all 0.3s;
+    flex-shrink: 0;
+}
+.vq-step.active .vq-step-num {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);
+}
+.vq-step-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #64748b;
+    white-space: nowrap;
+}
+.vq-step.active .vq-step-label {
+    color: #0f172a;
+}
+.vq-step-line {
+    flex: 1;
+    height: 2px;
+    background: #e2e8f0;
+    margin: 0 10px;
+    min-width: 20px;
+}
+
+/* --- Floating Action Bar --- */
+.vq-action-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 24px;
+    background: linear-gradient(135deg, #1e1b4b, #312e81);
+    margin: 0;
+    position: sticky;
+    top: 0;
+    z-index: 9;
+    animation: vqBarSlide 0.3s ease-out;
+}
+@keyframes vqBarSlide {
+    from { transform: translateY(-100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+.vq-action-bar-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.vq-selected-count {
+    color: #c7d2fe;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+.vq-action-bar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.vq-btn {
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+}
+.vq-btn-compare {
+    background: rgba(255,255,255,0.15);
+    color: #e0e7ff;
+}
+.vq-btn-compare:hover { background: rgba(255,255,255,0.25); }
+.vq-btn-message {
+    background: rgba(59, 130, 246, 0.9);
+    color: #fff;
+}
+.vq-btn-message:hover { background: #3b82f6; }
+.vq-btn-call {
+    background: rgba(16, 185, 129, 0.9);
+    color: #fff;
+}
+.vq-btn-call:hover { background: #10b981; }
+.vq-btn-approve {
+    background: linear-gradient(135deg, #f59e0b, #f97316);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.35);
+}
+.vq-btn-approve:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.45);
+}
+
+/* --- Quote Cards --- */
+.vq-list {
+    padding: 16px 24px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+.vq-quote-card {
+    background: #fff;
+    border: 2px solid #f1f5f9;
+    border-radius: 16px;
+    overflow: hidden;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+.vq-quote-card.vq-selectable {
+    cursor: pointer;
+}
+.vq-quote-card.vq-selectable:hover {
+    border-color: #c7d2fe;
+    box-shadow: 0 4px 16px rgba(99, 102, 241, 0.08);
+}
+.vq-quote-card.vq-selected {
+    border-color: #6366f1;
+    background: linear-gradient(135deg, #faf5ff 0%, #f5f3ff 50%, #eef2ff 100%);
+    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.15);
+}
+.vq-quote-card.quote-status-submitted { border-left: 4px solid #f59e0b; }
+.vq-quote-card.quote-status-approved { border-left: 4px solid #10b981; }
+.vq-quote-card.quote-status-rejected { border-left: 4px solid #ef4444; }
+
+/* Checkbox */
+.vq-checkbox {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    width: 24px;
+    height: 24px;
+    border: 2px solid #cbd5e1;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    background: #fff;
+    z-index: 2;
+}
+.vq-checkbox i {
+    font-size: 0.65rem;
+    color: transparent;
+    transition: all 0.2s;
+}
+.vq-quote-card.vq-selectable:hover .vq-checkbox {
+    border-color: #a5b4fc;
+}
+.vq-quote-card.vq-selected .vq-checkbox {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    border-color: #6366f1;
+    box-shadow: 0 2px 6px rgba(99, 102, 241, 0.35);
+}
+.vq-quote-card.vq-selected .vq-checkbox i {
+    color: #fff;
+}
+
+/* Card body */
+.vq-quote-main {
+    padding: 20px 20px 16px 52px;
+}
+.vq-quote-card:not(.vq-selectable) .vq-quote-main {
+    padding-left: 20px;
+}
+.vq-quote-top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 12px;
+}
+.vq-designer-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+}
+.vq-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #6366f1, #a78bfa);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    font-weight: 700;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
+}
+.vq-designer-text h4 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 4px;
+}
+.vq-designer-tags {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.vq-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+.vq-status-pill.submitted {
+    background: #fffbeb;
+    color: #b45309;
+    border: 1px solid #fde68a;
+}
+.vq-status-pill.approved {
+    background: #ecfdf5;
+    color: #059669;
+    border: 1px solid #a7f3d0;
+}
+.vq-status-pill.rejected {
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+}
+.vq-resume-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 8px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    background: #fef2f2;
+    color: #dc2626;
+    text-decoration: none;
+    border: 1px solid #fecaca;
+    transition: all 0.2s;
+}
+.vq-resume-link:hover {
+    background: #fee2e2;
+    transform: translateY(-1px);
+}
+
+/* Price section */
+.vq-quote-price {
+    text-align: right;
+    flex-shrink: 0;
+}
+.vq-price-label {
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #94a3b8;
+    margin-bottom: 2px;
+}
+.vq-price-value {
+    display: block;
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: -0.5px;
+    line-height: 1.2;
+}
+.vq-timeline {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.72rem;
+    color: #64748b;
+    margin-top: 4px;
+}
+.vq-timeline i { font-size: 0.65rem; }
+
+/* Description */
+.vq-quote-desc {
+    margin-bottom: 10px;
+}
+.vq-quote-desc p {
+    font-size: 0.85rem;
+    color: #475569;
+    line-height: 1.6;
+    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.vq-quote-card.vq-selected .vq-quote-desc p {
+    -webkit-line-clamp: unset;
+}
+
+/* Quick actions per card */
+.vq-quick-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #f1f5f9;
+    flex-wrap: wrap;
+}
+.vq-approve-single {
+    margin-left: auto;
+}
+.vq-approved-tag {
+    margin-left: auto;
+    color: #059669;
+    font-weight: 600;
+    font-size: 0.82rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+/* --- Compare Overlay --- */
+.vq-compare-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #fff;
+    z-index: 20;
+    overflow-y: auto;
+    border-radius: 20px;
+    animation: vqFadeIn 0.25s ease;
+    padding: 24px;
+}
+@keyframes vqFadeIn {
+    from { opacity: 0; transform: scale(0.98); }
+    to { opacity: 1; transform: scale(1); }
+}
+.vq-compare-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+.vq-compare-header h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.vq-compare-grid {
+    display: grid;
+    gap: 16px;
+}
+.vq-compare-col {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 20px;
+}
+.vq-compare-designer {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e2e8f0;
+}
+.vq-compare-designer h4 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0;
+}
+.vq-compare-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 8px 0;
+    border-bottom: 1px solid #f1f5f9;
+    gap: 10px;
+}
+.vq-compare-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    flex-shrink: 0;
+}
+.vq-compare-val {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #0f172a;
+    text-align: right;
+}
+.vq-compare-desc p {
+    font-size: 0.82rem;
+    color: #475569;
+    line-height: 1.5;
+    margin: 4px 0 0;
+    text-align: left;
+}
+.vq-compare-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid #e2e8f0;
+}
+
+/* --- Mobile responsive --- */
+@media (max-width: 768px) {
+    .vq-header { padding: 16px 16px 0; }
+    .vq-list { padding: 12px 16px 16px; }
+    .vq-quote-main { padding: 14px 14px 12px 42px; }
+    .vq-quote-card:not(.vq-selectable) .vq-quote-main { padding-left: 14px; }
+    .vq-checkbox { top: 12px; left: 10px; width: 22px; height: 22px; }
+    .vq-quote-top-row { flex-direction: column; gap: 10px; }
+    .vq-quote-price { text-align: left; }
+    .vq-avatar { width: 36px; height: 36px; font-size: 0.9rem; border-radius: 10px; }
+    .vq-steps-bar { overflow-x: auto; padding-bottom: 12px; }
+    .vq-action-bar { flex-direction: column; gap: 10px; padding: 12px 16px; }
+    .vq-action-bar-right { width: 100%; justify-content: stretch; flex-wrap: wrap; }
+    .vq-btn { flex: 1; min-width: 0; justify-content: center; padding: 8px 10px; font-size: 0.72rem; }
+    .vq-compare-grid { grid-template-columns: 1fr !important; }
+    .vq-quick-actions { flex-direction: column; align-items: stretch; }
+    .vq-approve-single { margin-left: 0; }
+}
+
 /* --- FILE MANAGEMENT STYLES (User Added) --- */
 .custom-file-input-wrapper {
     position: relative;
