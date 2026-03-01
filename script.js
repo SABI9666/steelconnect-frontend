@@ -2080,7 +2080,11 @@ async function toggleNotificationPanel(event) {
     const panel = document.getElementById('notification-panel');
     if (!panel) return;
     const isActive = panel.classList.toggle('active');
+    const backdrop = document.getElementById('notif-backdrop');
     if (isActive) {
+        if (backdrop) backdrop.classList.add('active');
+        // Lock body scroll on mobile when panel is full-screen
+        if (window.innerWidth <= 768) document.body.style.overflow = 'hidden';
         const panelList = document.getElementById('notification-panel-list');
         if (panelList && notificationState.notifications.length === 0) {
             panelList.innerHTML = `<div class="notification-loading-state"><div class="spinner"></div><p>Loading notifications...</p></div>`;
@@ -2090,6 +2094,8 @@ async function toggleNotificationPanel(event) {
             notificationState.unseenCount = 0;
             saveNotificationsToStorage();
         }
+    } else {
+        closeNotificationPanel();
     }
 }
 
@@ -2114,13 +2120,45 @@ function setupNotificationEventListeners() {
     if (bell) bell.addEventListener('click', toggleNotificationPanel);
     const clearBtn = document.getElementById('clear-notifications-btn');
     if (clearBtn) clearBtn.addEventListener('click', (e) => { e.stopPropagation(); markAllAsRead(); });
+
+    // Add mobile close button to notification panel header
+    const panelHeader = document.querySelector('.notification-panel-header');
+    if (panelHeader && !panelHeader.querySelector('.notif-close-btn')) {
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'notif-close-btn';
+        closeBtn.innerHTML = '<i class="fas fa-times"></i>';
+        closeBtn.setAttribute('aria-label', 'Close notifications');
+        closeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            closeNotificationPanel();
+        });
+        panelHeader.appendChild(closeBtn);
+    }
+
+    // Create backdrop overlay for mobile notification panel
+    if (!document.getElementById('notif-backdrop')) {
+        const backdrop = document.createElement('div');
+        backdrop.id = 'notif-backdrop';
+        backdrop.className = 'notif-backdrop';
+        backdrop.addEventListener('click', closeNotificationPanel);
+        document.body.appendChild(backdrop);
+    }
+
     document.addEventListener('click', (event) => {
         const panel = document.getElementById('notification-panel');
         const bellContainer = document.getElementById('notification-bell-container');
         if (panel && bellContainer && !bellContainer.contains(event.target) && !panel.contains(event.target)) {
-            panel.classList.remove('active');
+            closeNotificationPanel();
         }
     });
+}
+
+function closeNotificationPanel() {
+    const panel = document.getElementById('notification-panel');
+    const backdrop = document.getElementById('notif-backdrop');
+    if (panel) panel.classList.remove('active');
+    if (backdrop) backdrop.classList.remove('active');
+    document.body.style.overflow = '';
 }
 
 function cleanupNotificationSystem() {
