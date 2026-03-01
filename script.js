@@ -1660,6 +1660,8 @@ function getNotificationActionButtons(notification) {
                     <button class="notification-action-btn" onclick="event.stopPropagation(); renderProjectDetailView('${metadata.jobId}')"><i class="fas fa-eye"></i> View Project</button>`;
             } else if (metadata?.jobId) {
                 buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); renderProjectDetailView('${metadata.jobId}')"><i class="fas fa-eye"></i> View Project</button>`;
+            } else if (metadata?.meetingId) {
+                buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); showMeetingDetailModal('${metadata.meetingId}')"><i class="fas fa-calendar-check"></i> View Meeting</button>`;
             } else {
                 buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); renderAppSection('project-tracking')"><i class="fas fa-project-diagram"></i> Project Hub</button>`;
             }
@@ -1726,6 +1728,8 @@ function handleNotificationClick(notificationId, type, metadata = {}) {
         case 'meeting':
             if (metadata.jobId) {
                 renderProjectDetailView(metadata.jobId);
+            } else if (metadata.meetingId) {
+                showMeetingDetailModal(metadata.meetingId);
             } else {
                 renderAppSection('project-tracking');
             }
@@ -6091,6 +6095,7 @@ async function loadCallHistory() {
                             ${statusText}
                         </p>
                     </div>
+                    ${isMissedIncoming && call.conversationId ? `<div class="call-back-btn" onclick="event.stopPropagation(); initiateVoiceCall('${call.conversationId}', '${call.callerId}', '${(otherName || '').replace(/'/g, "\\'")}')" title="Call Back"><i class="fas fa-phone-alt"></i></div>` : ''}
                     ${call.conversationId ? `<div class="convo-arrow" onclick="renderConversationView('${call.conversationId}')"><i class="fas fa-chevron-right"></i></div>` : ''}
                 </div>`;
         }).join('');
@@ -6113,13 +6118,18 @@ async function loadMissedCallsBanner() {
         if (missedCalls.length > 0) {
             const lastCaller = missedCalls[0].callerName || 'Someone';
             const othersText = missedCalls.length > 1 ? ` and ${missedCalls.length - 1} other${missedCalls.length > 2 ? 's' : ''}` : '';
+            const lastMissed = missedCalls[0];
+            const callBackTarget = lastMissed.callerId;
+            const callBackName = (lastMissed.callerName || 'User').replace(/'/g, "\\'");
+            const callBackConvo = lastMissed.conversationId || '';
             banner.innerHTML = `
-                <div class="missed-calls-banner" onclick="renderAppSection('conversations')">
+                <div class="missed-calls-banner" onclick="renderAppSection('messages')">
                     <div class="missed-calls-icon"><i class="fas fa-phone-slash"></i></div>
                     <div class="missed-calls-info">
                         <h4>Missed Call${missedCalls.length > 1 ? 's' : ''}</h4>
                         <p>${lastCaller}${othersText} tried to call you</p>
                     </div>
+                    ${callBackConvo ? `<div class="missed-calls-callback" onclick="event.stopPropagation(); initiateVoiceCall('${callBackConvo}', '${callBackTarget}', '${callBackName}')" title="Call Back"><i class="fas fa-phone-alt"></i> Call Back</div>` : ''}
                     <div class="missed-calls-count">${missedCalls.length}</div>
                     <div class="missed-calls-arrow"><i class="fas fa-chevron-right"></i></div>
                 </div>`;
@@ -7264,7 +7274,7 @@ async function renderUpcomingMeetingsWidget() {
                 const totalCount = (m.attendees || []).length;
 
                 return `
-                    <div class="um-meeting-card ${urgencyClass}" data-meeting-id="${m.id}">
+                    <div class="um-meeting-card ${urgencyClass}" data-meeting-id="${m.id}" onclick="${m.jobId ? `renderProjectDetailView('${m.jobId}')` : `showMeetingDetailModal('${m.id}')`}" style="cursor:pointer">
                         <div class="um-meeting-time-block">
                             <span class="um-day-label">${dayLabel}</span>
                             <span class="um-time">${timeStr}</span>
@@ -12066,6 +12076,91 @@ async function cancelMeeting(meetingId) {
         if (jobIdEl) loadProjectMeetings(jobIdEl.dataset.currentJobId);
     } catch (error) {
         showNotification('Failed to cancel meeting.', 'error');
+    }
+}
+
+// Show full meeting details in a modal (used when no jobId available)
+async function showMeetingDetailModal(meetingId) {
+    if (!meetingId) { renderAppSection('project-tracking'); return; }
+    showGenericModal('<div style="padding:40px;text-align:center"><div class="spinner"></div><p style="margin-top:12px;color:var(--text-secondary)">Loading meeting details...</p></div>', 'max-width:560px;padding:0;border-radius:16px;overflow:hidden;');
+    try {
+        const response = await apiCall(`/meetings/${meetingId}`, 'GET');
+        const m = response.data;
+        if (!m) { closeModal(); showNotification('Meeting not found.', 'error'); return; }
+
+        const mDate = new Date(m.meetingDateTime);
+        const endDate = new Date(m.endDateTime || mDate.getTime() + (m.duration || 60) * 60000);
+        const isPast = mDate < new Date();
+        const isOrganizer = m.organizerId === appState.currentUser?.id;
+        const myAttendance = (m.attendees || []).find(a => a.id === appState.currentUser?.id);
+        const acceptedCount = (m.attendees || []).filter(a => a.status === 'accepted').length;
+        const totalCount = (m.attendees || []).length;
+
+        const dateStr = mDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+        const timeStr = mDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+        const endTimeStr = endDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+        const statusClass = m.status === 'cancelled' ? 'cancelled' : isPast ? 'past' : 'upcoming';
+        const statusLabel = m.status === 'cancelled' ? 'Cancelled' : isPast ? 'Completed' : 'Upcoming';
+        const statusIcon = m.status === 'cancelled' ? 'fa-times-circle' : isPast ? 'fa-check-circle' : 'fa-clock';
+
+        const attendeesList = (m.attendees || []).map(a => {
+            const statusBadge = a.status === 'accepted' ? '<span style="color:#10b981"><i class="fas fa-check-circle"></i></span>'
+                : a.status === 'declined' ? '<span style="color:#ef4444"><i class="fas fa-times-circle"></i></span>'
+                : '<span style="color:#f59e0b"><i class="fas fa-clock"></i></span>';
+            return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(0,0,0,0.05)">
+                ${statusBadge}
+                <span style="flex:1;font-size:14px">${a.name || 'User'}</span>
+                <span style="font-size:12px;color:var(--text-secondary);text-transform:capitalize">${a.status}</span>
+            </div>`;
+        }).join('');
+
+        let actionButtons = '';
+        if (!isPast && m.status !== 'cancelled') {
+            if (!isOrganizer && myAttendance && myAttendance.status === 'pending') {
+                actionButtons = `
+                    <div style="display:flex;gap:10px;margin-top:16px">
+                        <button class="btn btn-success" style="flex:1" onclick="respondToMeeting('${meetingId}','accepted');closeModal()"><i class="fas fa-check"></i> Accept</button>
+                        <button class="btn btn-outline" style="flex:1" onclick="respondToMeeting('${meetingId}','declined');closeModal()"><i class="fas fa-times"></i> Decline</button>
+                    </div>`;
+            } else if (isOrganizer) {
+                actionButtons = `
+                    <div style="display:flex;gap:10px;margin-top:16px">
+                        <button class="btn btn-outline" style="flex:1" onclick="cancelMeeting('${meetingId}');closeModal()"><i class="fas fa-ban"></i> Cancel Meeting</button>
+                    </div>`;
+            }
+        }
+        if (m.jobId) {
+            actionButtons += `<button class="btn btn-primary" style="width:100%;margin-top:10px" onclick="closeModal();renderProjectDetailView('${m.jobId}')"><i class="fas fa-project-diagram"></i> View Project</button>`;
+        }
+
+        const content = `
+            <div style="padding:0">
+                <div style="background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;padding:20px 24px;position:relative">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+                        <div>
+                            <h3 style="margin:0 0 6px;font-size:18px;font-weight:700">${m.title}</h3>
+                            <span style="font-size:13px;opacity:0.9">${m.meetingType ? m.meetingType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Meeting'}</span>
+                        </div>
+                        <span class="meeting-status-badge ${statusClass}" style="background:rgba(255,255,255,0.2);color:#fff;padding:4px 10px;border-radius:20px;font-size:12px"><i class="fas ${statusIcon}"></i> ${statusLabel}</span>
+                    </div>
+                </div>
+                <div style="padding:20px 24px">
+                    <div style="display:grid;gap:14px;margin-bottom:16px">
+                        <div style="display:flex;align-items:center;gap:10px"><i class="fas fa-calendar-day" style="color:#2563eb;width:18px;text-align:center"></i><span style="font-size:14px">${dateStr}</span></div>
+                        <div style="display:flex;align-items:center;gap:10px"><i class="fas fa-clock" style="color:#2563eb;width:18px;text-align:center"></i><span style="font-size:14px">${timeStr} - ${endTimeStr} (${m.duration} min)</span></div>
+                        <div style="display:flex;align-items:center;gap:10px"><i class="fas fa-map-marker-alt" style="color:#2563eb;width:18px;text-align:center"></i><span style="font-size:14px">${m.location || 'Online'}</span></div>
+                        <div style="display:flex;align-items:center;gap:10px"><i class="fas fa-user-tie" style="color:#2563eb;width:18px;text-align:center"></i><span style="font-size:14px">${isOrganizer ? 'You (Organizer)' : m.organizerName}</span></div>
+                        ${m.jobTitle ? `<div style="display:flex;align-items:center;gap:10px"><i class="fas fa-project-diagram" style="color:#2563eb;width:18px;text-align:center"></i><span style="font-size:14px">${m.jobTitle}</span></div>` : ''}
+                    </div>
+                    ${m.agenda ? `<div style="margin-bottom:16px"><h4 style="font-size:13px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-secondary);margin:0 0 6px">Agenda</h4><p style="font-size:14px;line-height:1.6;margin:0;color:var(--text-primary)">${m.agenda}</p></div>` : ''}
+                    <div style="margin-bottom:8px"><h4 style="font-size:13px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-secondary);margin:0 0 8px">Attendees (${acceptedCount}/${totalCount} accepted)</h4>${attendeesList}</div>
+                    ${actionButtons}
+                </div>
+            </div>`;
+        showGenericModal(content, 'max-width:560px;padding:0;border-radius:16px;overflow:hidden;');
+    } catch (error) {
+        closeModal();
+        showNotification('Failed to load meeting details.', 'error');
     }
 }
 

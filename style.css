@@ -21202,6 +21202,94 @@ body { overflow-x: hidden; }
     100% { transform: scale(1); }
 }
 
+/* Call Back button in call history */
+.call-back-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+    margin-right: 6px;
+}
+.call-back-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+.call-back-btn:active {
+    transform: scale(0.95);
+}
+
+/* Call Back button in missed calls banner */
+.missed-calls-callback {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    padding: 8px 14px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+    white-space: nowrap;
+}
+.missed-calls-callback:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+.missed-calls-callback:active {
+    transform: scale(0.97);
+}
+
+/* Upcoming meeting card clickable hover */
+.um-meeting-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    border-color: #2563eb;
+}
+.um-meeting-card:active {
+    transform: translateY(0);
+}
+
+/* Mobile responsive for call back and meeting detail modal */
+@media (max-width: 480px) {
+    .call-back-btn {
+        width: 34px;
+        height: 34px;
+        font-size: 12px;
+    }
+    .missed-calls-callback {
+        padding: 6px 10px;
+        font-size: 11px;
+    }
+    .missed-calls-banner {
+        padding: 12px 14px;
+        gap: 10px;
+    }
+    .missed-calls-icon {
+        width: 36px;
+        height: 36px;
+        font-size: 14px;
+    }
+    .call-history-card.missed-call::after {
+        top: 6px;
+        right: 8px;
+        font-size: 8px;
+        padding: 2px 6px;
+    }
+}
+
 /* ================================================================
    PROFESSIONAL MOBILE DESIGN OVERHAUL
    World-class mobile experience with premium polish
