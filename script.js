@@ -7628,7 +7628,7 @@ function getDashboardTemplate(user) {
         </div>
         <div class="db-action-card ${!isApproved ? 'db-locked' : ''}" onclick="${isApproved ? 'renderAppSection(\'project-tracking\')' : 'showRestrictedFeature(\'project-tracking\')'}">
             <div class="db-action-icon db-icon-cyan"><i class="fas fa-project-diagram"></i></div>
-            <div class="db-action-text"><h4>Project Tracking</h4><p>Status & milestones</p></div>
+            <div class="db-action-text"><h4>Project Hub</h4><p>Status, milestones & meetings</p></div>
             ${!isApproved ? '<div class="db-lock-overlay"><i class="fas fa-lock"></i></div>' : '<i class="fas fa-chevron-right db-action-arrow"></i>'}
         </div>
         <div class="db-action-card ${!isApproved ? 'db-locked' : ''}" onclick="${isApproved ? 'renderAppSection(\'quote-analysis\')' : 'showRestrictedFeature(\'quote-analysis\')'}">
@@ -7651,7 +7651,7 @@ function getDashboardTemplate(user) {
         </div>
         <div class="db-action-card ${!isApproved ? 'db-locked' : ''}" onclick="${isApproved ? 'renderAppSection(\'project-tracking\')' : 'showRestrictedFeature(\'project-tracking\')'}">
             <div class="db-action-icon db-icon-cyan"><i class="fas fa-project-diagram"></i></div>
-            <div class="db-action-text"><h4>Project Tracking</h4><p>Status & milestones</p></div>
+            <div class="db-action-text"><h4>Project Hub</h4><p>Status, milestones & meetings</p></div>
             ${!isApproved ? '<div class="db-lock-overlay"><i class="fas fa-lock"></i></div>' : '<i class="fas fa-chevron-right db-action-arrow"></i>'}
         </div>
         <div class="db-action-card ${!isApproved ? 'db-locked' : ''}" onclick="${isApproved ? 'renderAppSection(\'messages\')' : 'showRestrictedFeature(\'messages\')'}">
@@ -8460,7 +8460,7 @@ function buildSidebarNav() {
             </a>
             <a href="#" class="sidebar-nav-link" data-section="project-tracking">
                 <i class="fas fa-project-diagram fa-fw"></i>
-                <span>Project Tracking</span>
+                <span>Project Hub</span>
                 <span class="nav-badge">NEW</span>
             </a>`;
     } else {
@@ -8475,7 +8475,7 @@ function buildSidebarNav() {
             </a>
             <a href="#" class="sidebar-nav-link" data-section="project-tracking">
                 <i class="fas fa-project-diagram fa-fw"></i>
-                <span>Project Tracking</span>
+                <span>Project Hub</span>
                 <span class="nav-badge">NEW</span>
             </a>
             <a href="#" class="sidebar-nav-link" data-section="post-job">
@@ -9510,8 +9510,8 @@ async function renderProjectTrackingDashboard() {
     container.innerHTML = `
         <div class="section-header modern-header">
             <div class="header-content">
-                <h2><i class="fas fa-project-diagram"></i> Project Tracking</h2>
-                <p class="header-subtitle">Monitor all your projects, statuses, and communications in one place</p>
+                <h2><i class="fas fa-project-diagram"></i> Project Hub</h2>
+                <p class="header-subtitle">Your central command for projects, milestones, meetings & communications</p>
             </div>
         </div>
         <div class="pt-dashboard">
@@ -9733,7 +9733,7 @@ async function renderProjectDetailView(jobId) {
                         <i class="fas fa-arrow-left"></i>
                     </button>
                     <div class="pt-detail-breadcrumb">
-                        <span onclick="renderProjectTrackingDashboard()" class="pt-breadcrumb-link">Project Tracking</span>
+                        <span onclick="renderProjectTrackingDashboard()" class="pt-breadcrumb-link">Project Hub</span>
                         <i class="fas fa-chevron-right"></i>
                         <span class="pt-breadcrumb-current">${job.title}</span>
                     </div>
@@ -9802,6 +9802,13 @@ async function renderProjectDetailView(jobId) {
                         ${attachmentsHTML}
 
                         <div class="pt-detail-section">
+                            <h3><i class="fas fa-calendar-check"></i> Scheduled Meetings</h3>
+                            <div id="pt-meetings-list" class="pt-meetings-list" data-current-job-id="${job.id}">
+                                <div class="loading-spinner"><div class="spinner"></div><p>Loading meetings...</p></div>
+                            </div>
+                        </div>
+
+                        <div class="pt-detail-section">
                             <h3><i class="fas fa-comments"></i> Chat History</h3>
                             <div id="pt-chat-history" class="pt-chat-history">
                                 <div class="loading-spinner"><div class="spinner"></div><p>Loading conversations...</p></div>
@@ -9810,6 +9817,16 @@ async function renderProjectDetailView(jobId) {
                     </div>
 
                     <div class="pt-detail-sidebar">
+                        <div class="pt-sidebar-card pt-meeting-card">
+                            <h4><i class="fas fa-calendar-plus"></i> Schedule Meeting</h4>
+                            <div class="pt-meeting-info">
+                                <p class="pt-meeting-hint">Arrange a professional meeting with ${isDesignerView ? 'the client' : 'the designer'} for this project</p>
+                                <button class="btn btn-primary btn-block" onclick="openScheduleMeetingModal('${job.id}', '${job.title.replace(/'/g, "\\'")}', '${isDesignerView ? (job.posterId || '') : (job.assignedTo || '')}', '${isDesignerView ? (job.posterName || 'Client').replace(/'/g, "\\'") : (job.assignedToName || 'Designer').replace(/'/g, "\\'")}')">
+                                    <i class="fas fa-calendar-plus"></i> Schedule Meeting
+                                </button>
+                            </div>
+                        </div>
+
                         <div class="pt-sidebar-card">
                             <h4><i class="fas fa-info-circle"></i> Quick Info</h4>
                             <div class="pt-quick-info">
@@ -9845,7 +9862,7 @@ async function renderProjectDetailView(jobId) {
                                 ${!isDesignerView && job.status === 'assigned' && job.assignedTo ? `<button class="btn btn-primary btn-block" onclick="openConversation('${job.id}', '${job.assignedTo}')"><i class="fas fa-comments"></i> Message Designer</button>` : ''}
                                 ${isDesignerView && job.posterId ? `<button class="btn btn-primary btn-block" onclick="openConversation('${job.id}', '${job.posterId}')"><i class="fas fa-comments"></i> Message Client</button>` : ''}
                                 ${!isDesignerView && job.status === 'assigned' ? `<button class="btn btn-success btn-block" onclick="markJobCompleted('${job.id}')"><i class="fas fa-check-double"></i> Mark Completed</button>` : ''}
-                                <button class="btn btn-outline btn-block" onclick="renderProjectTrackingDashboard()"><i class="fas fa-arrow-left"></i> Back to Tracking</button>
+                                <button class="btn btn-outline btn-block" onclick="renderProjectTrackingDashboard()"><i class="fas fa-arrow-left"></i> Back to Project Hub</button>
                             </div>
                         </div>
                     </div>
@@ -9853,8 +9870,9 @@ async function renderProjectDetailView(jobId) {
             </div>`;
 
         loadProjectChatHistory(jobId);
+        loadProjectMeetings(jobId);
     } catch (error) {
-        container.innerHTML = `<div class="error-state premium-error"><div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div><h3>Error Loading Project</h3><p>Could not load project details. Please try again.</p><button class="btn btn-primary" onclick="renderProjectTrackingDashboard()">Back to Tracking</button></div>`;
+        container.innerHTML = `<div class="error-state premium-error"><div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div><h3>Error Loading Project</h3><p>Could not load project details. Please try again.</p><button class="btn btn-primary" onclick="renderProjectTrackingDashboard()">Back to Project Hub</button></div>`;
     }
 }
 
@@ -10016,6 +10034,258 @@ async function loadProjectChatHistory(jobId) {
                 <p>Could not load chat history.</p>
                 <button class="btn btn-outline btn-sm" onclick="loadProjectChatHistory('${jobId}')">Retry</button>
             </div>`;
+    }
+}
+
+
+// --- MEETING SCHEDULING FUNCTIONS ---
+
+function openScheduleMeetingModal(jobId, jobTitle, otherUserId, otherUserName) {
+    const isDesigner = appState.currentUser.type === 'designer';
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const minDate = tomorrow.toISOString().split('T')[0];
+
+    const content = `
+        <div class="meeting-modal">
+            <div class="meeting-modal-header">
+                <div class="meeting-modal-icon"><i class="fas fa-calendar-plus"></i></div>
+                <div>
+                    <h3>Schedule Meeting</h3>
+                    <p class="meeting-modal-subtitle">${jobTitle ? `Project: ${jobTitle}` : 'Arrange a professional meeting'}</p>
+                </div>
+            </div>
+            <form id="schedule-meeting-form" class="meeting-form" onsubmit="submitScheduleMeeting(event)">
+                <input type="hidden" name="jobId" value="${jobId || ''}">
+                <input type="hidden" name="attendeeId" value="${otherUserId || ''}">
+
+                <div class="meeting-form-row">
+                    <div class="meeting-form-group">
+                        <label><i class="fas fa-heading"></i> Meeting Title <span class="required">*</span></label>
+                        <input type="text" name="title" placeholder="e.g., Project Review Meeting" required maxlength="100">
+                    </div>
+                </div>
+
+                <div class="meeting-form-row meeting-form-row-2col">
+                    <div class="meeting-form-group">
+                        <label><i class="fas fa-calendar"></i> Date <span class="required">*</span></label>
+                        <input type="date" name="meetingDate" min="${minDate}" required>
+                    </div>
+                    <div class="meeting-form-group">
+                        <label><i class="fas fa-clock"></i> Time <span class="required">*</span></label>
+                        <input type="time" name="meetingTime" required>
+                    </div>
+                </div>
+
+                <div class="meeting-form-row meeting-form-row-2col">
+                    <div class="meeting-form-group">
+                        <label><i class="fas fa-hourglass-half"></i> Duration</label>
+                        <select name="duration">
+                            <option value="15">15 minutes</option>
+                            <option value="30" selected>30 minutes</option>
+                            <option value="45">45 minutes</option>
+                            <option value="60">1 hour</option>
+                            <option value="90">1.5 hours</option>
+                            <option value="120">2 hours</option>
+                        </select>
+                    </div>
+                    <div class="meeting-form-group">
+                        <label><i class="fas fa-map-marker-alt"></i> Location</label>
+                        <input type="text" name="location" placeholder="Online / Office address" value="Online">
+                    </div>
+                </div>
+
+                <div class="meeting-form-row">
+                    <div class="meeting-form-group">
+                        <label><i class="fas fa-tag"></i> Meeting Type</label>
+                        <select name="meetingType">
+                            <option value="project_discussion">Project Discussion</option>
+                            <option value="design_review">Design Review</option>
+                            <option value="progress_update">Progress Update</option>
+                            <option value="kickoff">Project Kickoff</option>
+                            <option value="final_review">Final Review</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="meeting-form-row">
+                    <div class="meeting-form-group">
+                        <label><i class="fas fa-list-ul"></i> Agenda</label>
+                        <textarea name="agenda" rows="3" placeholder="Meeting agenda items..."></textarea>
+                    </div>
+                </div>
+
+                <div class="meeting-form-row">
+                    <div class="meeting-form-group">
+                        <label><i class="fas fa-sticky-note"></i> Additional Notes</label>
+                        <textarea name="description" rows="2" placeholder="Any additional details..."></textarea>
+                    </div>
+                </div>
+
+                ${otherUserName ? `
+                <div class="meeting-attendee-preview">
+                    <span class="meeting-attendee-label"><i class="fas fa-users"></i> Inviting:</span>
+                    <span class="meeting-attendee-name">${otherUserName}</span>
+                </div>` : ''}
+
+                <div class="meeting-form-actions">
+                    <button type="button" class="btn btn-outline" onclick="closeGenericModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="meeting-submit-btn">
+                        <i class="fas fa-paper-plane"></i> Send Invitation
+                    </button>
+                </div>
+            </form>
+        </div>`;
+
+    showGenericModal(content, 'max-width: 600px; padding: 0; border-radius: 16px; overflow: hidden;');
+}
+
+async function submitScheduleMeeting(event) {
+    event.preventDefault();
+    const form = event.target;
+    const submitBtn = document.getElementById('meeting-submit-btn');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Scheduling...';
+
+    try {
+        const formData = new FormData(form);
+        const attendeeIds = [];
+        const attendeeId = formData.get('attendeeId');
+        if (attendeeId) attendeeIds.push(attendeeId);
+
+        const meetingPayload = {
+            jobId: formData.get('jobId') || undefined,
+            title: formData.get('title'),
+            description: formData.get('description') || '',
+            meetingDate: formData.get('meetingDate'),
+            meetingTime: formData.get('meetingTime'),
+            duration: formData.get('duration'),
+            location: formData.get('location') || 'Online',
+            meetingType: formData.get('meetingType'),
+            agenda: formData.get('agenda') || '',
+            attendeeIds
+        };
+
+        await apiCall('/meetings', 'POST', meetingPayload);
+        closeGenericModal();
+        showNotification('Meeting scheduled successfully! Invitations have been sent.', 'success');
+
+        // Reload project detail if on project view
+        if (document.querySelector('.pt-detail-container')) {
+            const jobId = formData.get('jobId');
+            if (jobId) loadProjectMeetings(jobId);
+        }
+    } catch (error) {
+        showNotification(error.message || 'Failed to schedule meeting. Please try again.', 'error');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Invitation';
+    }
+}
+
+async function loadProjectMeetings(jobId) {
+    const meetingsContainer = document.getElementById('pt-meetings-list');
+    if (!meetingsContainer) return;
+
+    try {
+        const response = await apiCall(`/meetings?jobId=${jobId}`, 'GET');
+        const meetings = response.data || [];
+
+        if (meetings.length === 0) {
+            meetingsContainer.innerHTML = `
+                <div class="pt-no-meetings">
+                    <i class="fas fa-calendar-day"></i>
+                    <p>No meetings scheduled yet.</p>
+                    <span>Schedule a meeting to coordinate with your team.</span>
+                </div>`;
+            return;
+        }
+
+        meetingsContainer.innerHTML = meetings.map(m => {
+            const mDate = new Date(m.meetingDateTime);
+            const isPast = mDate < new Date();
+            const isOrganizer = m.organizerId === appState.currentUser.id;
+            const myAttendance = (m.attendees || []).find(a => a.id === appState.currentUser.id);
+            const statusClass = m.status === 'cancelled' ? 'cancelled' : isPast ? 'past' : 'upcoming';
+
+            const monthShort = mDate.toLocaleDateString('en-US', { month: 'short' });
+            const dayNum = mDate.getDate();
+            const timeStr = mDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+            const dayStr = mDate.toLocaleDateString('en-US', { weekday: 'short' });
+
+            const acceptedCount = (m.attendees || []).filter(a => a.status === 'accepted').length;
+            const totalAttendees = (m.attendees || []).length;
+
+            return `
+                <div class="meeting-card ${statusClass}">
+                    <div class="meeting-card-date">
+                        <span class="meeting-date-month">${monthShort}</span>
+                        <span class="meeting-date-day">${dayNum}</span>
+                        <span class="meeting-date-weekday">${dayStr}</span>
+                    </div>
+                    <div class="meeting-card-details">
+                        <div class="meeting-card-header">
+                            <h4 class="meeting-card-title">${m.title}</h4>
+                            <span class="meeting-status-badge ${statusClass}">
+                                ${m.status === 'cancelled' ? '<i class="fas fa-times-circle"></i> Cancelled' :
+                                  isPast ? '<i class="fas fa-check-circle"></i> Completed' :
+                                  '<i class="fas fa-clock"></i> Upcoming'}
+                            </span>
+                        </div>
+                        <div class="meeting-card-meta">
+                            <span><i class="fas fa-clock"></i> ${timeStr} (${m.duration} min)</span>
+                            <span><i class="fas fa-map-marker-alt"></i> ${m.location || 'Online'}</span>
+                            <span><i class="fas fa-user"></i> ${isOrganizer ? 'You (Organizer)' : m.organizerName}</span>
+                            <span><i class="fas fa-users"></i> ${acceptedCount}/${totalAttendees} accepted</span>
+                        </div>
+                        ${m.agenda ? `<p class="meeting-card-agenda"><i class="fas fa-list-ul"></i> ${m.agenda.substring(0, 100)}${m.agenda.length > 100 ? '...' : ''}</p>` : ''}
+                        <div class="meeting-card-actions">
+                            ${!isOrganizer && myAttendance && myAttendance.status === 'pending' && !isPast && m.status !== 'cancelled' ? `
+                                <button class="btn btn-sm btn-success" onclick="respondToMeeting('${m.id}', 'accepted')"><i class="fas fa-check"></i> Accept</button>
+                                <button class="btn btn-sm btn-outline" onclick="respondToMeeting('${m.id}', 'declined')"><i class="fas fa-times"></i> Decline</button>
+                            ` : ''}
+                            ${!isOrganizer && myAttendance && myAttendance.status === 'accepted' ? `<span class="meeting-accepted-badge"><i class="fas fa-check-circle"></i> Accepted</span>` : ''}
+                            ${!isOrganizer && myAttendance && myAttendance.status === 'declined' ? `<span class="meeting-declined-badge"><i class="fas fa-times-circle"></i> Declined</span>` : ''}
+                            ${isOrganizer && !isPast && m.status !== 'cancelled' ? `
+                                <button class="btn btn-sm btn-outline" onclick="cancelMeeting('${m.id}')"><i class="fas fa-ban"></i> Cancel</button>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>`;
+        }).join('');
+    } catch (error) {
+        meetingsContainer.innerHTML = `
+            <div class="pt-no-meetings">
+                <i class="fas fa-exclamation-triangle"></i>
+                <p>Could not load meetings.</p>
+                <button class="btn btn-outline btn-sm" onclick="loadProjectMeetings('${jobId}')">Retry</button>
+            </div>`;
+    }
+}
+
+async function respondToMeeting(meetingId, response) {
+    try {
+        await apiCall(`/meetings/${meetingId}/respond`, 'PATCH', { response });
+        showNotification(`Meeting invitation ${response}.`, 'success');
+        // Reload meetings if in project view
+        const jobIdEl = document.querySelector('[data-current-job-id]');
+        if (jobIdEl) loadProjectMeetings(jobIdEl.dataset.currentJobId);
+        else location.reload();
+    } catch (error) {
+        showNotification('Failed to respond to meeting.', 'error');
+    }
+}
+
+async function cancelMeeting(meetingId) {
+    if (!confirm('Are you sure you want to cancel this meeting? All attendees will be notified.')) return;
+    try {
+        await apiCall(`/meetings/${meetingId}`, 'DELETE');
+        showNotification('Meeting cancelled. Attendees have been notified.', 'success');
+        const jobIdEl = document.querySelector('[data-current-job-id]');
+        if (jobIdEl) loadProjectMeetings(jobIdEl.dataset.currentJobId);
+    } catch (error) {
+        showNotification('Failed to cancel meeting.', 'error');
     }
 }
 
