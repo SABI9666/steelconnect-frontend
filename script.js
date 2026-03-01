@@ -75,12 +75,16 @@ const appState = {
 let deferredInstallPrompt = null;
 let pwaInstallDismissedThisSession = false;
 
-// Capture the browser's beforeinstallprompt event (fires when PWA is installable)
+// Detect platform
+const _isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const _isAndroid = /android/i.test(navigator.userAgent);
+const _isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent) || (_isIOS && !/(CriOS|FxiOS|OPiOS|EdgiOS)/.test(navigator.userAgent));
+
+// Capture the browser's beforeinstallprompt event (Chrome, Edge, Samsung, etc.)
 window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredInstallPrompt = e;
     console.log('[PWA] Install prompt captured and ready');
-    // If user is already logged in, show the install banner
     if (appState.currentUser && !pwaInstallDismissedThisSession) {
         showPWAInstallBanner();
     }
@@ -92,7 +96,7 @@ window.addEventListener('appinstalled', () => {
     deferredInstallPrompt = null;
     hidePWAInstallBanner();
     updateSidebarInstallButton();
-    showNotification('SteelConnect installed! You can now receive calls even when the browser is closed.', 'success');
+    showNotification('SteelConnect installed! You will now receive calls even when the browser is closed.', 'success');
 });
 
 // Check if app is already running as installed PWA
@@ -109,42 +113,71 @@ async function triggerPWAInstall() {
         console.log('[PWA] Install prompt result:', result.outcome);
         if (result.outcome === 'accepted') {
             deferredInstallPrompt = null;
+            hidePWAInstallBanner();
         }
     } else if (!isRunningAsPWA()) {
-        // Browser doesn't support auto-prompt — show manual instructions
         showManualInstallInstructions();
     }
 }
 
-// Show PWA install banner after login
+// Show PWA install banner after login (different for iOS vs Android/Desktop)
 function showPWAInstallBanner() {
-    if (isRunningAsPWA()) return; // Already installed
-    if (document.getElementById('pwa-install-banner')) return; // Already showing
-    if (localStorage.getItem('pwa_install_dismissed_permanent')) return; // User permanently dismissed
+    if (isRunningAsPWA()) return;
+    if (document.getElementById('pwa-install-banner')) return;
+    if (localStorage.getItem('pwa_install_dismissed_permanent')) return;
 
     const banner = document.createElement('div');
     banner.id = 'pwa-install-banner';
-    banner.innerHTML = `
-        <div class="pwa-install-inner">
-            <div class="pwa-install-icon">
-                <img src="/icon-192.png" alt="SteelConnect" width="48" height="48">
+
+    if (_isIOS) {
+        // iOS-specific banner with clear visual instructions
+        banner.innerHTML = `
+            <div class="pwa-install-inner pwa-install-ios">
+                <div class="pwa-install-icon">
+                    <img src="/icon-192.png" alt="SteelConnect" width="48" height="48">
+                </div>
+                <div class="pwa-install-text">
+                    <strong>Install SteelConnect on iPhone</strong>
+                    <span>Get call notifications like WhatsApp. Never miss a client call!</span>
+                </div>
+                <div class="pwa-install-actions">
+                    <button class="pwa-install-btn" onclick="showIOSInstallGuide()">
+                        <i class="fas fa-mobile-alt"></i> How to Install
+                    </button>
+                    <button class="pwa-install-dismiss" onclick="dismissPWAInstallBanner(false)" title="Later">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="pwa-ios-hint">
+                    <i class="fas fa-arrow-down"></i>
+                    Tap <strong>Share</strong> <span class="pwa-ios-share-icon"><i class="fas fa-share-square"></i></span> then <strong>"Add to Home Screen"</strong>
+                </div>
             </div>
-            <div class="pwa-install-text">
-                <strong>Install SteelConnect</strong>
-                <span>Get instant call notifications even when your browser is closed. Works on phone & laptop.</span>
+        `;
+    } else {
+        // Android / Desktop banner
+        banner.innerHTML = `
+            <div class="pwa-install-inner">
+                <div class="pwa-install-icon">
+                    <img src="/icon-192.png" alt="SteelConnect" width="48" height="48">
+                </div>
+                <div class="pwa-install-text">
+                    <strong>Install SteelConnect</strong>
+                    <span>Get instant call notifications even when your browser is closed. Works on phone & laptop.</span>
+                </div>
+                <div class="pwa-install-actions">
+                    <button class="pwa-install-btn" onclick="triggerPWAInstall()">
+                        <i class="fas fa-download"></i> Install App
+                    </button>
+                    <button class="pwa-install-dismiss" onclick="dismissPWAInstallBanner(false)" title="Remind me later">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
             </div>
-            <div class="pwa-install-actions">
-                <button class="pwa-install-btn" onclick="triggerPWAInstall()">
-                    <i class="fas fa-download"></i> Install App
-                </button>
-                <button class="pwa-install-dismiss" onclick="dismissPWAInstallBanner(false)" title="Remind me later">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-        </div>
-    `;
+        `;
+    }
+
     document.body.appendChild(banner);
-    // Animate in
     requestAnimationFrame(() => {
         requestAnimationFrame(() => {
             banner.classList.add('pwa-banner-visible');
@@ -168,48 +201,106 @@ function dismissPWAInstallBanner(permanent) {
     hidePWAInstallBanner();
 }
 
-// Show manual install instructions for browsers that don't support auto-prompt (Safari, Firefox)
-function showManualInstallInstructions() {
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-    const isFirefox = /firefox/i.test(navigator.userAgent);
+// Full-screen iOS install guide with step-by-step visuals
+function showIOSInstallGuide() {
+    hidePWAInstallBanner();
+    const overlay = document.createElement('div');
+    overlay.id = 'ios-install-guide';
+    overlay.className = 'modal-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:100000;padding:16px;backdrop-filter:blur(4px)';
+    overlay.innerHTML = `
+        <div class="ios-guide-card">
+            <button class="ios-guide-close" onclick="document.getElementById('ios-install-guide').remove()">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="ios-guide-header">
+                <img src="/icon-192.png" alt="SteelConnect" width="64" height="64" style="border-radius:16px;box-shadow:0 4px 12px rgba(0,0,0,0.2)">
+                <h2>Install SteelConnect</h2>
+                <p>Follow these 3 simple steps to get the app on your iPhone</p>
+            </div>
+            <div class="ios-guide-steps">
+                <div class="ios-guide-step">
+                    <div class="ios-step-number">1</div>
+                    <div class="ios-step-content">
+                        <div class="ios-step-title">Tap the Share button</div>
+                        <div class="ios-step-desc">Find the <strong>Share</strong> icon at the bottom of Safari</div>
+                        <div class="ios-step-visual">
+                            <div class="ios-share-icon-demo">
+                                <i class="fas fa-share-square"></i>
+                            </div>
+                            <span class="ios-step-arrow">← Tap this icon</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="ios-guide-step">
+                    <div class="ios-step-number">2</div>
+                    <div class="ios-step-content">
+                        <div class="ios-step-title">Tap "Add to Home Screen"</div>
+                        <div class="ios-step-desc">Scroll down in the share menu and tap:</div>
+                        <div class="ios-step-visual">
+                            <div class="ios-add-home-demo">
+                                <i class="fas fa-plus-square"></i>
+                                <span>Add to Home Screen</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="ios-guide-step">
+                    <div class="ios-step-number">3</div>
+                    <div class="ios-step-content">
+                        <div class="ios-step-title">Tap "Add" to confirm</div>
+                        <div class="ios-step-desc">The app will appear on your home screen like a real app!</div>
+                        <div class="ios-step-visual">
+                            <div class="ios-confirm-demo">
+                                <span class="ios-add-btn">Add</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="ios-guide-footer">
+                <div class="ios-guide-benefit"><i class="fas fa-phone-alt"></i> Receive calls like WhatsApp</div>
+                <div class="ios-guide-benefit"><i class="fas fa-bell"></i> Push notifications on lock screen</div>
+                <div class="ios-guide-benefit"><i class="fas fa-bolt"></i> Opens instantly from home screen</div>
+            </div>
+            <button class="ios-guide-done" onclick="dismissPWAInstallBanner(false);document.getElementById('ios-install-guide').remove()">
+                I'll do it now
+            </button>
+        </div>
+    `;
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
+}
 
+// Manual install instructions (for sidebar button on non-Chrome browsers)
+function showManualInstallInstructions() {
+    if (_isIOS || _isSafari) {
+        showIOSInstallGuide();
+        return;
+    }
+    const isFirefox = /firefox/i.test(navigator.userAgent);
     let instructions = '';
-    if (isIOS || isSafari) {
+    if (isFirefox) {
         instructions = `
-            <div style="text-align:center;padding:20px">
-                <i class="fas fa-share-square" style="font-size:48px;color:#4338ca;margin-bottom:16px;display:block"></i>
-                <h3 style="margin-bottom:12px">Install SteelConnect</h3>
-                <p style="margin-bottom:16px;color:#64748b">To install on your device:</p>
-                <ol style="text-align:left;max-width:300px;margin:0 auto;color:#334155;line-height:2">
-                    <li>Tap the <strong>Share</strong> button <i class="fas fa-share-square"></i> at the bottom of Safari</li>
-                    <li>Scroll down and tap <strong>"Add to Home Screen"</strong></li>
-                    <li>Tap <strong>"Add"</strong> to confirm</li>
-                </ol>
-                <button onclick="this.closest('.modal-overlay').remove()" style="margin-top:20px;padding:10px 24px;background:#4338ca;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px">Got it</button>
-            </div>`;
-    } else if (isFirefox) {
-        instructions = `
-            <div style="text-align:center;padding:20px">
+            <div style="text-align:center;padding:24px">
                 <i class="fas fa-download" style="font-size:48px;color:#4338ca;margin-bottom:16px;display:block"></i>
                 <h3 style="margin-bottom:12px">Install SteelConnect</h3>
                 <p style="margin-bottom:16px;color:#64748b">To install on your device:</p>
-                <ol style="text-align:left;max-width:300px;margin:0 auto;color:#334155;line-height:2">
-                    <li>Tap the <strong>menu</strong> button (three dots)</li>
+                <ol style="text-align:left;max-width:300px;margin:0 auto;color:#334155;line-height:2.2">
+                    <li>Tap the <strong>menu</strong> button <i class="fas fa-ellipsis-v"></i></li>
                     <li>Tap <strong>"Install"</strong> or <strong>"Add to Home Screen"</strong></li>
                 </ol>
-                <button onclick="this.closest('.modal-overlay').remove()" style="margin-top:20px;padding:10px 24px;background:#4338ca;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px">Got it</button>
+                <button onclick="this.closest('.modal-overlay').remove()" style="margin-top:20px;padding:12px 28px;background:#4338ca;color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:14px;font-weight:600">Got it</button>
             </div>`;
     } else {
         instructions = `
-            <div style="text-align:center;padding:20px">
+            <div style="text-align:center;padding:24px">
                 <i class="fas fa-download" style="font-size:48px;color:#4338ca;margin-bottom:16px;display:block"></i>
                 <h3 style="margin-bottom:12px">Install SteelConnect</h3>
-                <p style="color:#64748b">Click the install icon in your browser's address bar, or use the browser menu to install this app.</p>
-                <button onclick="this.closest('.modal-overlay').remove()" style="margin-top:20px;padding:10px 24px;background:#4338ca;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px">Got it</button>
+                <p style="color:#64748b;margin-bottom:16px">Look for the install icon <i class="fas fa-plus-square"></i> in your browser's address bar, or use the browser menu.</p>
+                <button onclick="this.closest('.modal-overlay').remove()" style="margin-top:8px;padding:12px 28px;background:#4338ca;color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:14px;font-weight:600">Got it</button>
             </div>`;
     }
-
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:100000';
@@ -529,13 +620,19 @@ function initializeApp() {
         }
     } else {
         showLandingPageView();
-        // Auto-open register modal if URL has ?action=register (from invite email)
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('action') === 'register') {
-            showAuthModal('register');
+        // If opened from a push notification call while logged out, show urgent login
+        const _pendingCall = sessionStorage.getItem('pendingCallId');
+        const _pendingCallerName = sessionStorage.getItem('pendingCallerName');
+        if (_pendingCall && _pendingCallerName) {
+            showIncomingCallLoginOverlay(_pendingCallerName);
         } else {
-            // Show the auth gateway overlay with 3 separate options over the website
-            showAuthGateway();
+            // Auto-open register modal if URL has ?action=register (from invite email)
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('action') === 'register') {
+                showAuthModal('register');
+            } else {
+                showAuthGateway();
+            }
         }
     }
 
@@ -6085,6 +6182,47 @@ function hideAuthGateway() {
     }, 400);
 }
 
+// Show urgent "Sign in to answer call" overlay when user opens app from push but is logged out
+function showIncomingCallLoginOverlay(callerName) {
+    // Remove existing auth gateway
+    hideAuthGateway();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'incoming-call-login-overlay';
+    overlay.innerHTML = `
+        <div class="icl-card">
+            <div class="icl-pulse-ring"></div>
+            <div class="icl-icon">
+                <i class="fas fa-phone-alt"></i>
+            </div>
+            <h2 class="icl-title">Incoming Call</h2>
+            <p class="icl-caller">${callerName || 'Someone'} is calling you</p>
+            <p class="icl-subtitle">Sign in quickly to answer the call</p>
+            <div class="icl-actions">
+                <button class="icl-signin-btn" onclick="document.getElementById('incoming-call-login-overlay').remove();showAuthModal('login')">
+                    <i class="fas fa-sign-in-alt"></i> Sign In to Answer
+                </button>
+                <div class="icl-google-btn" id="icl-google-render"></div>
+            </div>
+            <button class="icl-dismiss" onclick="sessionStorage.removeItem('pendingCallId');sessionStorage.removeItem('pendingCallerId');sessionStorage.removeItem('pendingCallerName');document.getElementById('incoming-call-login-overlay').remove();showAuthGateway()">
+                Dismiss Call
+            </button>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+
+    // Render Google sign-in in the overlay for one-tap login
+    const googleTarget = document.getElementById('icl-google-render');
+    if (googleTarget && ensureGoogleInitialized()) {
+        try {
+            google.accounts.id.renderButton(googleTarget, {
+                type: 'standard', theme: 'filled_blue', size: 'large',
+                text: 'signin_with', width: 280,
+                click_listener: () => { _googleSignInContext = 'login'; }
+            });
+        } catch (e) { /* Google not ready */ }
+    }
+}
 
 function showAuthModal(view) {
     const modal = document.getElementById('modal-container');
@@ -6237,6 +6375,9 @@ function showAppView() {
 function logout() {
     cleanupNotificationSystem();
     cleanupMenuBadgeSystem();
+    // Preserve push subscription data and install preference across logout
+    // so the user can still receive incoming call notifications when logged out
+    const pushDismissed = localStorage.getItem('pwa_install_dismissed_permanent');
     appState.currentUser = null;
     appState.jwtToken = null;
     appState.userSubmittedQuotes.clear();
@@ -6244,6 +6385,8 @@ function logout() {
     appState.notifications = [];
     appState.profileFiles = {};
     localStorage.clear();
+    // Restore preserved settings
+    if (pushDismissed) localStorage.setItem('pwa_install_dismissed_permanent', pushDismissed);
     clearTimeout(inactivityTimer);
     clearTimeout(warningTimer);
     dismissInactivityWarning();

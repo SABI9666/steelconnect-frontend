@@ -20413,3 +20413,374 @@ body { overflow-x: hidden; }
         justify-content: center;
     }
 }
+
+/* iOS install hint text below banner */
+.pwa-ios-hint {
+    width: 100%;
+    text-align: center;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    margin-top: 4px;
+    color: rgba(255,255,255,0.7);
+    font-size: 12px;
+    line-height: 1.6;
+}
+.pwa-ios-hint i { margin-right: 4px; }
+.pwa-ios-share-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 4px;
+    margin: 0 2px;
+    vertical-align: middle;
+    font-size: 11px;
+    color: #60a5fa;
+}
+
+/* ============================== */
+/* iOS INSTALL GUIDE MODAL        */
+/* ============================== */
+
+.ios-guide-card {
+    background: #fff;
+    border-radius: 20px;
+    max-width: 420px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.4);
+    position: relative;
+    animation: iosGuideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes iosGuideIn {
+    from { opacity: 0; transform: scale(0.9) translateY(20px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.ios-guide-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #f1f5f9;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #64748b;
+    font-size: 16px;
+    z-index: 2;
+    transition: all 0.2s;
+}
+.ios-guide-close:hover { background: #e2e8f0; color: #334155; }
+
+.ios-guide-header {
+    text-align: center;
+    padding: 32px 24px 20px;
+    background: linear-gradient(135deg, #f8fafc, #eef2ff);
+    border-radius: 20px 20px 0 0;
+}
+.ios-guide-header h2 {
+    font-size: 22px;
+    font-weight: 800;
+    color: #1e1b4b;
+    margin: 16px 0 6px;
+}
+.ios-guide-header p {
+    color: #64748b;
+    font-size: 14px;
+    margin: 0;
+}
+
+.ios-guide-steps {
+    padding: 20px 24px;
+}
+
+.ios-guide-step {
+    display: flex;
+    gap: 14px;
+    padding: 16px 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+.ios-guide-step:last-child { border-bottom: none; }
+
+.ios-step-number {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #4338ca, #7c3aed);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.ios-step-content { flex: 1; }
+
+.ios-step-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 4px;
+}
+.ios-step-desc {
+    font-size: 13px;
+    color: #64748b;
+    margin-bottom: 10px;
+}
+
+.ios-step-visual {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ios-share-icon-demo {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #4338ca, #6366f1);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    box-shadow: 0 2px 8px rgba(67, 56, 202, 0.3);
+    animation: iosSharePulse 2s infinite;
+}
+
+@keyframes iosSharePulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+.ios-step-arrow {
+    font-size: 12px;
+    color: #4338ca;
+    font-weight: 600;
+}
+
+.ios-add-home-demo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 14px;
+    color: #334155;
+    font-weight: 500;
+}
+.ios-add-home-demo i {
+    color: #4338ca;
+    font-size: 18px;
+}
+
+.ios-confirm-demo {
+    display: inline-block;
+}
+.ios-add-btn {
+    display: inline-block;
+    padding: 8px 24px;
+    background: #4338ca;
+    color: #fff;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.ios-guide-footer {
+    display: flex;
+    gap: 8px;
+    padding: 0 24px 16px;
+    flex-wrap: wrap;
+}
+.ios-guide-benefit {
+    flex: 1;
+    min-width: 120px;
+    text-align: center;
+    padding: 10px 8px;
+    background: #f0fdf4;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #059669;
+}
+.ios-guide-benefit i {
+    display: block;
+    font-size: 18px;
+    margin-bottom: 4px;
+    color: #10b981;
+}
+
+.ios-guide-done {
+    display: block;
+    width: calc(100% - 48px);
+    margin: 0 24px 24px;
+    padding: 14px;
+    background: linear-gradient(135deg, #4338ca, #7c3aed);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 12px rgba(67, 56, 202, 0.3);
+}
+.ios-guide-done:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(67, 56, 202, 0.4);
+}
+
+/* ============================== */
+/* INCOMING CALL LOGIN OVERLAY    */
+/* ============================== */
+
+#incoming-call-login-overlay {
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #312e81 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100001;
+    padding: 16px;
+    animation: iclFadeIn 0.3s ease;
+}
+
+@keyframes iclFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.icl-card {
+    text-align: center;
+    max-width: 380px;
+    width: 100%;
+    position: relative;
+}
+
+.icl-pulse-ring {
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    border: 3px solid rgba(16, 185, 129, 0.4);
+    animation: iclPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes iclPulse {
+    0% { transform: translateX(-50%) scale(0.8); opacity: 1; }
+    100% { transform: translateX(-50%) scale(1.5); opacity: 0; }
+}
+
+.icl-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #10b981, #059669);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 24px;
+    box-shadow: 0 8px 32px rgba(16, 185, 129, 0.4);
+    animation: iclRing 1s ease-in-out infinite;
+}
+
+@keyframes iclRing {
+    0%, 100% { transform: rotate(0deg); }
+    10% { transform: rotate(-15deg); }
+    20% { transform: rotate(15deg); }
+    30% { transform: rotate(-10deg); }
+    40% { transform: rotate(10deg); }
+    50% { transform: rotate(0deg); }
+}
+
+.icl-icon i {
+    font-size: 32px;
+    color: #fff;
+}
+
+.icl-title {
+    font-size: 28px;
+    font-weight: 800;
+    color: #fff;
+    margin: 0 0 8px;
+}
+
+.icl-caller {
+    font-size: 20px;
+    font-weight: 600;
+    color: #10b981;
+    margin: 0 0 8px;
+}
+
+.icl-subtitle {
+    font-size: 14px;
+    color: rgba(255,255,255,0.6);
+    margin: 0 0 32px;
+}
+
+.icl-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.icl-signin-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 280px;
+    padding: 14px 24px;
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4);
+}
+.icl-signin-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(16, 185, 129, 0.5);
+}
+
+.icl-google-btn {
+    min-height: 44px;
+}
+
+.icl-dismiss {
+    background: none;
+    border: 1px solid rgba(255,255,255,0.2);
+    color: rgba(255,255,255,0.5);
+    padding: 10px 24px;
+    border-radius: 10px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.icl-dismiss:hover {
+    border-color: rgba(255,255,255,0.4);
+    color: rgba(255,255,255,0.8);
+}
