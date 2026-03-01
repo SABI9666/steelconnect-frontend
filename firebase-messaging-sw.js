@@ -1,93 +1,108 @@
 // Service Worker for SteelConnect Push Notifications (Incoming Calls)
-// Handles background notifications when the app tab is not active
+// Handles background notifications when the app tab is not active or browser is closed.
+// Works with Web Push (VAPID) — no Firebase client SDK required.
 
 const BACKEND_URL = 'https://steelconnect-backend.onrender.com';
+const APP_NAME = 'SteelConnect';
 
-// Try to import Firebase messaging for FCM support (optional)
-try {
-    importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');
-    importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js');
-} catch (e) {
-    console.log('[SW] Firebase SDK not loaded, using basic push only');
-}
+// --- PUSH EVENT: Triggered by Web Push or FCM ---
+// This fires even when the browser tab is closed or the user is in another app.
+self.addEventListener('push', (event) => {
+    if (!event.data) return;
 
-// Initialize Firebase if available (configure with your Firebase project credentials)
-if (typeof firebase !== 'undefined') {
+    let data;
     try {
-        firebase.initializeApp({
-            apiKey: self.FIREBASE_API_KEY || '',
-            authDomain: self.FIREBASE_AUTH_DOMAIN || '',
-            projectId: self.FIREBASE_PROJECT_ID || '',
-            storageBucket: self.FIREBASE_STORAGE_BUCKET || '',
-            messagingSenderId: self.FIREBASE_MESSAGING_SENDER_ID || '',
-            appId: self.FIREBASE_APP_ID || '',
-        });
-
-        const messaging = firebase.messaging();
-
-        // Handle background FCM messages
-        messaging.onBackgroundMessage((payload) => {
-            console.log('[SW] Background FCM message:', payload);
-
-            if (payload.data && payload.data.type === 'incoming_call') {
-                showCallNotification(payload.data);
-            }
-        });
+        data = event.data.json();
     } catch (e) {
-        console.log('[SW] Firebase init skipped:', e.message);
+        console.log('[SW] Push data not JSON:', event.data.text());
+        return;
     }
-}
 
-// Show incoming call notification
-function showCallNotification(data) {
+    console.log('[SW] Push received:', data);
+
+    // Handle incoming call push
+    if (data.type === 'incoming_call' || (data.data && data.data.type === 'incoming_call')) {
+        const callData = data.data || data;
+        event.waitUntil(showIncomingCallNotification(callData));
+        return;
+    }
+
+    // Handle FCM notification payload (when Firebase is configured)
+    if (data.notification) {
+        const callPayload = data.data || {};
+        if (callPayload.type === 'incoming_call') {
+            event.waitUntil(showIncomingCallNotification(callPayload));
+            return;
+        }
+        // Generic notification
+        event.waitUntil(
+            self.registration.showNotification(data.notification.title || APP_NAME, {
+                body: data.notification.body || '',
+                icon: '/icon-192.png',
+                badge: '/icon-192.png',
+                tag: 'general-notification',
+                data: callPayload
+            })
+        );
+    }
+});
+
+// Show incoming call notification with answer/decline actions
+function showIncomingCallNotification(data) {
     const { callId, callerId, callerName, conversationId } = data;
+    const displayName = callerName || 'Someone';
 
     const options = {
-        body: `${callerName} is calling you on SteelConnect`,
+        body: `${displayName} is calling you`,
         icon: '/icon-192.png',
         badge: '/icon-192.png',
-        tag: `call-${callId}`,
-        requireInteraction: true,
-        vibrate: [300, 100, 300, 100, 300],
+        tag: `incoming-call-${callId}`,
+        requireInteraction: true,     // Notification stays until user acts (like a phone call)
+        renotify: true,               // Re-alert even if same tag exists
+        vibrate: [300, 100, 300, 100, 300, 100, 300, 100, 300],  // Long vibration pattern
+        silent: false,
+        urgency: 'high',
         actions: [
-            { action: 'answer', title: 'Answer' },
+            { action: 'answer', title: 'Answer', icon: '/icon-192.png' },
             { action: 'decline', title: 'Decline' }
         ],
-        data: { callId, callerId, callerName, conversationId }
+        data: { callId, callerId, callerName, conversationId, type: 'incoming_call' },
+        timestamp: Date.now()
     };
 
-    return self.registration.showNotification('Incoming Call', options);
+    return self.registration.showNotification(`Incoming Call - ${APP_NAME}`, options);
 }
 
-// Handle notification click actions
+// --- NOTIFICATION CLICK: User tapped the notification ---
 self.addEventListener('notificationclick', (event) => {
     const notification = event.notification;
-    const callData = notification.data;
+    const callData = notification.data || {};
     const action = event.action;
 
     notification.close();
 
+    // User clicked "Decline"
     if (action === 'decline') {
-        // Notify backend so caller is informed immediately instead of waiting for timeout
-        if (callData && callData.callId) {
+        if (callData.callId) {
             event.waitUntil(
-                fetch(BACKEND_URL + '/api/voice-calls/decline', {
+                fetch(`${BACKEND_URL}/api/voice-calls/decline`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ callId: callData.callId, reason: 'declined' })
-                }).catch(() => { /* ignore - call will timeout on backend */ })
+                }).catch(() => { /* backend will timeout the call */ })
             );
         }
         return;
     }
 
-    // "answer" action or notification body click - open the app
+    // User clicked "Answer" or tapped the notification body — open/focus the app
     event.waitUntil(
-        clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-            // Try to focus an existing window
-            for (const client of clientList) {
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+            // Try to find and focus an existing app window
+            for (const client of windowClients) {
                 if (client.url.includes(self.location.origin)) {
                     client.focus();
+                    // Tell the app to show/accept the incoming call
                     client.postMessage({
                         type: 'CALL_ANSWER',
                         callId: callData.callId,
@@ -97,9 +112,9 @@ self.addEventListener('notificationclick', (event) => {
                     return;
                 }
             }
-            // No existing window - open new one with call details
+            // No existing window — open a new one with call parameters
             const params = new URLSearchParams({
-                callId: callData.callId,
+                callId: callData.callId || '',
                 callerId: callData.callerId || '',
                 callerName: callData.callerName || ''
             });
@@ -108,21 +123,20 @@ self.addEventListener('notificationclick', (event) => {
     );
 });
 
-// Handle push events (for basic web push without FCM)
-self.addEventListener('push', (event) => {
-    if (!event.data) return;
-
-    try {
-        const data = event.data.json();
-        if (data.type === 'incoming_call' || (data.data && data.data.type === 'incoming_call')) {
-            const callData = data.data || data;
-            event.waitUntil(showCallNotification(callData));
-        }
-    } catch (e) {
-        console.log('[SW] Push parse error:', e);
-    }
+// --- NOTIFICATION CLOSE: User dismissed without answering ---
+self.addEventListener('notificationclose', (event) => {
+    const callData = event.notification.data || {};
+    console.log('[SW] Notification dismissed for call:', callData.callId);
+    // Don't auto-decline on dismiss — the call keeps ringing on other devices
 });
 
-// Service worker install/activate
-self.addEventListener('install', () => self.skipWaiting());
-self.addEventListener('activate', (event) => event.waitUntil(clients.claim()));
+// --- INSTALL & ACTIVATE: Take control immediately ---
+self.addEventListener('install', () => {
+    console.log('[SW] Service worker installed');
+    self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+    console.log('[SW] Service worker activated');
+    event.waitUntil(clients.claim());
+});
