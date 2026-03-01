@@ -17523,8 +17523,8 @@ body { overflow-x: hidden; }
     .empty-state p { font-size: 0.82rem; }
 
     /* ==== ALL: TABLES ==== */
-    .data-table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    .data-table-wrapper table { min-width: 600px; }
+    .data-table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 12px; position: relative; }
+    .data-table-wrapper table { min-width: 500px; }
 
     /* ==== ALL: NOTIFICATIONS ==== */
     .notification-panel { width: calc(100vw - 1rem); right: 0.5rem; left: 0.5rem; max-height: 60vh; }
@@ -20783,4 +20783,428 @@ body { overflow-x: hidden; }
 .icl-dismiss:hover {
     border-color: rgba(255,255,255,0.4);
     color: rgba(255,255,255,0.8);
+}
+
+/* ================================================================
+   PROFESSIONAL MOBILE DESIGN OVERHAUL
+   World-class mobile experience with premium polish
+   ================================================================ */
+
+/* --- GLOBAL MOBILE FOUNDATIONS --- */
+@supports (padding: env(safe-area-inset-bottom)) {
+    body {
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+    }
+}
+
+/* --- 768px: ENHANCED PORTAL MOBILE POLISH --- */
+@media (max-width: 768px) {
+
+    /* == iOS Input Zoom Prevention == */
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="number"],
+    input[type="tel"],
+    input[type="url"],
+    input[type="search"],
+    input[type="date"],
+    input[type="time"],
+    select,
+    textarea {
+        font-size: 16px !important;
+    }
+
+    /* == Global Touch Target Enforcement == */
+    button,
+    [role="button"],
+    a.btn,
+    .btn,
+    select {
+        min-height: 44px;
+    }
+
+    /* == Better Global Card Styling == */
+    .estimation-card-professional,
+    .job-card,
+    .quote-card,
+    .conversation-card,
+    .support-ticket-card,
+    .settings-card,
+    .db-status-card,
+    .db-kpi,
+    .db-action-card,
+    .db-widget {
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+        border: 1px solid rgba(0, 0, 0, 0.06);
+    }
+
+    /* == Smooth Scroll on All Scrollable == */
+    .chat-messages,
+    .sidebar-nav,
+    .notification-panel,
+    .modal-content,
+    .data-table-wrapper {
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+    }
+
+    /* == Better Form Inputs == */
+    .form-input,
+    .form-select,
+    .form-textarea,
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="number"],
+    input[type="tel"],
+    input[type="url"],
+    input[type="search"],
+    textarea,
+    select {
+        border-radius: 12px;
+        padding: 12px 14px;
+        min-height: 48px;
+        border: 1.5px solid var(--border-color, #e2e8f0);
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .form-input:focus,
+    .form-select:focus,
+    .form-textarea:focus,
+    input:focus,
+    textarea:focus,
+    select:focus {
+        border-color: var(--primary-color, #2563eb);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        outline: none;
+    }
+
+    /* == Community Feed Mobile == */
+    .cf-create-box {
+        padding: 14px;
+        border-radius: 14px;
+    }
+    .cf-create-left {
+        gap: 10px;
+    }
+    .cf-create-avatar {
+        width: 36px;
+        height: 36px;
+        font-size: 14px;
+    }
+    .cf-create-prompt {
+        font-size: 13px;
+    }
+    .cf-create-actions {
+        gap: 6px;
+        flex-wrap: wrap;
+    }
+    .cf-create-action {
+        font-size: 12px;
+        padding: 6px 10px;
+        min-height: 36px;
+    }
+    .cf-feed-tabs {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        gap: 4px;
+        padding: 4px;
+    }
+    .cf-feed-tabs::-webkit-scrollbar { display: none; }
+    .cf-post-card {
+        padding: 14px;
+        border-radius: 14px;
+        margin-bottom: 10px;
+    }
+    .cf-post-header {
+        gap: 10px;
+    }
+    .cf-post-avatar {
+        width: 36px;
+        height: 36px;
+        font-size: 14px;
+    }
+    .cf-post-author-info h4 {
+        font-size: 13.5px;
+    }
+    .cf-post-author-role {
+        font-size: 10px;
+    }
+    .cf-post-time {
+        font-size: 10px;
+    }
+
+    /* == Project Tracking Mobile Enhancements == */
+    .pt-detail-hero {
+        padding: 16px;
+        border-radius: 14px;
+    }
+    .pt-detail-title-row {
+        flex-direction: column;
+        gap: 8px;
+    }
+    .pt-detail-title-row h2 {
+        font-size: 17px;
+    }
+    .pt-detail-hero-stats {
+        flex-direction: column;
+        gap: 8px;
+    }
+    .pt-hero-stat {
+        padding: 10px 14px;
+        border-radius: 10px;
+    }
+    .pt-detail-grid {
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+    .pt-detail-section {
+        padding: 14px;
+        border-radius: 14px;
+    }
+    .pt-detail-section h3 {
+        font-size: 14px;
+    }
+
+    /* == Voice Call UI Mobile == */
+    #meeting-popup-container {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+        max-width: none;
+    }
+
+    /* == Meeting Cards Mobile == */
+    .meeting-card {
+        flex-direction: column;
+        gap: 10px;
+        padding: 14px;
+        border-radius: 14px;
+    }
+    .meeting-card-date {
+        flex-direction: row;
+        gap: 8px;
+        min-width: unset;
+    }
+    .meeting-card-actions {
+        flex-wrap: wrap;
+    }
+    .meeting-card-actions .btn {
+        flex: 1;
+        min-width: 0;
+        font-size: 12px;
+    }
+
+    /* == Prospect Bar Mobile Fix == */
+    .prospect-bar {
+        flex-direction: column;
+        gap: 10px;
+        padding: 14px 16px;
+        padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+    }
+    .prospect-bar-text {
+        font-size: 13px;
+        white-space: normal;
+        text-align: center;
+    }
+    .prospect-bar-form {
+        width: 100%;
+        flex-direction: column;
+    }
+    .prospect-bar-input {
+        width: 100%;
+        padding: 10px 14px;
+    }
+    .prospect-bar-btn {
+        width: 100%;
+        padding: 10px 14px;
+        min-height: 44px;
+    }
+
+    /* == Chatbot Widget Mobile == */
+    .sc-chatbot-widget {
+        bottom: 16px;
+        right: 16px;
+    }
+
+    /* == Better Scrollbar Hiding on Mobile == */
+    .sidebar-nav::-webkit-scrollbar,
+    .cf-feed-tabs::-webkit-scrollbar,
+    .header-stats-mini::-webkit-scrollbar {
+        display: none;
+    }
+    .sidebar-nav,
+    .cf-feed-tabs,
+    .header-stats-mini {
+        scrollbar-width: none;
+    }
+
+    /* == Analysis Portal Mobile == */
+    .analysis-portal-container {
+        padding: 1rem;
+    }
+
+    /* == Better Table Mobile Experience == */
+    .data-table-wrapper {
+        border-radius: 12px;
+        border: 1px solid var(--border-color, #e2e8f0);
+    }
+    .data-table-wrapper::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: 24px;
+        background: linear-gradient(to right, transparent, rgba(255,255,255,0.8));
+        pointer-events: none;
+        border-radius: 0 12px 12px 0;
+    }
+
+    /* == PWA Install Banner Safe Area == */
+    #pwa-install-banner.pwa-banner-visible {
+        bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+    }
+}
+
+/* --- 480px: SMALL PHONE PROFESSIONAL POLISH --- */
+@media (max-width: 480px) {
+
+    /* == Community Feed Small Phone == */
+    .cf-post-card {
+        padding: 12px;
+        border-radius: 12px;
+    }
+    .cf-create-box {
+        padding: 12px;
+        border-radius: 12px;
+    }
+    .cf-create-action {
+        font-size: 11px;
+        padding: 5px 8px;
+    }
+    .cf-post-avatar {
+        width: 32px;
+        height: 32px;
+        font-size: 12px;
+    }
+    .cf-post-author-info h4 {
+        font-size: 12.5px;
+    }
+
+    /* == Project Tracking Small Phone == */
+    .pt-detail-hero {
+        padding: 12px;
+    }
+    .pt-detail-title-row h2 {
+        font-size: 15px;
+    }
+    .pt-detail-section {
+        padding: 12px;
+    }
+    .pt-hero-stat-value {
+        font-size: 16px;
+    }
+    .pt-hero-stat-label {
+        font-size: 10px;
+    }
+
+    /* == Meetings Small Phone == */
+    .meeting-form-row-2col {
+        grid-template-columns: 1fr;
+    }
+
+    /* == Better Spacing == */
+    .section-header-mini {
+        flex-direction: column;
+        gap: 8px;
+        align-items: flex-start;
+    }
+    .section-header-mini h3 {
+        font-size: 14px;
+    }
+
+    /* == Chat Small Phone == */
+    .chat-header {
+        padding: 10px 12px;
+    }
+    .chat-header h3 {
+        font-size: 12.5px;
+    }
+    .message-bubble {
+        max-width: 88%;
+    }
+
+    /* == Chatbot Small Phone == */
+    .sc-chatbot-widget {
+        bottom: 12px;
+        right: 12px;
+    }
+
+    /* == Safe Area Bottom Padding == */
+    .main-content {
+        padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)) !important;
+    }
+}
+
+/* --- 360px: EXTRA SMALL PHONE POLISH --- */
+@media (max-width: 360px) {
+    /* == Ultra-compact cards == */
+    .cf-post-card {
+        padding: 10px;
+    }
+    .cf-create-actions {
+        flex-direction: column;
+    }
+    .cf-create-action {
+        width: 100%;
+        justify-content: center;
+    }
+    .pt-detail-section {
+        padding: 10px;
+    }
+    .meeting-card {
+        padding: 10px;
+    }
+    .meeting-card-actions .btn {
+        font-size: 11px;
+        padding: 6px 8px;
+    }
+
+    /* == Analysis portal == */
+    .analysis-portal-container {
+        padding: 0.75rem;
+    }
+}
+
+/* --- LANDSCAPE PHONE OPTIMIZATION --- */
+@media (max-height: 500px) and (orientation: landscape) {
+    .hero {
+        min-height: auto;
+        padding: 60px 0 40px;
+    }
+    .sidebar {
+        max-height: 100vh;
+        max-height: 100dvh;
+    }
+    .chat-container {
+        height: calc(100vh - 120px);
+    }
+    .modal-content {
+        max-height: 85vh;
+    }
+}
+
+/* --- DARK MODE MOBILE STATUS BAR --- */
+@media (max-width: 768px) {
+    @supports (padding: env(safe-area-inset-top)) {
+        .header {
+            padding-top: env(safe-area-inset-top);
+        }
+        .sidebar {
+            padding-top: env(safe-area-inset-top);
+        }
+    }
 }
