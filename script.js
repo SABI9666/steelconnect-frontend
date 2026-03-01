@@ -4403,13 +4403,19 @@ function initializeSocketConnection() {
     try {
         voiceCallState.socket = io(socketUrl, {
             transports: ['websocket', 'polling'],
-            timeout: 20000,
+            timeout: 30000,
             reconnection: true,
             reconnectionAttempts: Infinity,
             reconnectionDelay: 1000,
-            reconnectionDelayMax: 10000,
+            reconnectionDelayMax: 15000,
+            randomizationFactor: 0.5,
             forceNew: false,
-            multiplex: true
+            multiplex: true,
+            // Upgrade from polling to websocket quickly
+            upgrade: true,
+            // Improved settings for India/UK high-latency connections
+            pingTimeout: 35000,
+            pingInterval: 25000
         });
 
         voiceCallState.socket.on('connect', () => {
@@ -4954,7 +4960,13 @@ function updateCallUI(status) {
 async function fetchTurnCredentials() {
     try {
         const backendUrl = IS_LOCAL ? 'http://localhost:10000' : 'https://steelconnect-backend.onrender.com';
-        const response = await fetch(`${backendUrl}/api/voice-calls/turn-credentials`, { timeout: 5000 });
+        // Use AbortController for proper fetch timeout (fetch API does not support timeout option)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        const response = await fetch(`${backendUrl}/api/voice-calls/turn-credentials`, {
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
         if (response.ok) {
             const data = await response.json();
             if (data.success && data.iceServers && data.iceServers.length > 0) {
@@ -4963,7 +4975,11 @@ async function fetchTurnCredentials() {
             }
         }
     } catch (err) {
-        console.warn('[VOICE] Could not fetch TURN credentials, using built-in defaults:', err.message);
+        if (err.name === 'AbortError') {
+            console.warn('[VOICE] TURN credential fetch timed out after 8s, using built-in defaults');
+        } else {
+            console.warn('[VOICE] Could not fetch TURN credentials, using built-in defaults:', err.message);
+        }
     }
     return null;
 }
@@ -4972,12 +4988,17 @@ async function fetchTurnCredentials() {
 // These are used as fallback if backend TURN endpoint is unavailable
 function getDefaultIceServers() {
     return [
-        // --- Google global STUN servers ---
+        // --- Multi-provider STUN servers for redundancy ---
+        // Google (primary - widely accessible)
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' },
         { urls: 'stun:stun2.l.google.com:19302' },
         { urls: 'stun:stun3.l.google.com:19302' },
         { urls: 'stun:stun4.l.google.com:19302' },
+        // Twilio (US/EU/Asia presence - works well from India & UK)
+        { urls: 'stun:global.stun.twilio.com:3478' },
+        // Cloudflare (edge nodes in India & UK)
+        { urls: 'stun:stun.cloudflare.com:3478' },
         // --- Metered.ca global TURN relay servers ---
         // Free tier with servers in US, Europe, Asia, India, Australia, Middle East
         // UDP port 80 - standard path
@@ -5004,18 +5025,42 @@ function getDefaultIceServers() {
             urls: 'turns:global.relay.metered.ca:443?transport=tcp',
             username: 'e8dd65b92f4f1be4b7de7118',
             credential: '4F0VEYoAbOCLpmhH'
+        },
+        // --- OpenRelay TURN (free public fallback) ---
+        // Provides additional relay path if Metered.ca is down/expired
+        {
+            urls: 'turn:openrelay.metered.ca:80',
+            username: 'openrelayproject',
+            credential: 'openrelayproject'
+        },
+        {
+            urls: 'turn:openrelay.metered.ca:443',
+            username: 'openrelayproject',
+            credential: 'openrelayproject'
+        },
+        {
+            urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+            username: 'openrelayproject',
+            credential: 'openrelayproject'
+        },
+        {
+            urls: 'turns:openrelay.metered.ca:443?transport=tcp',
+            username: 'openrelayproject',
+            credential: 'openrelayproject'
         }
     ];
 }
 
 // Optimized audio constraints for cross-region calls (India, UK, US, etc.)
+// Uses adaptive sample rate for better compatibility on low-bandwidth international links
 const VOICE_AUDIO_CONSTRAINTS = {
     audio: {
         echoCancellation: true,
         noiseSuppression: true,
         autoGainControl: true,
         channelCount: 1,
-        sampleRate: 48000
+        sampleRate: { ideal: 48000, min: 16000 },
+        latency: { ideal: 0.01 }
     },
     video: false
 };
@@ -5029,7 +5074,8 @@ async function createPeerConnection(forceRelay) {
 
     const config = {
         iceServers: iceServers,
-        iceCandidatePoolSize: 10,
+        // Increased pool size for better international NAT traversal
+        iceCandidatePoolSize: 15,
         bundlePolicy: 'max-bundle',
         rtcpMuxPolicy: 'require',
         // For cross-region calls through symmetric NAT (India, Middle East),
@@ -5048,12 +5094,15 @@ async function createPeerConnection(forceRelay) {
     voiceCallState._hasReceivedAudio = false;
     voiceCallState._audioCheckTimer = null;
     voiceCallState._forceRelay = forceRelay || false;
+    voiceCallState._hasRelayCandidates = false;
+    voiceCallState._iceGatheringTimer = null;
 
     // --- ICE Candidate handling ---
     voiceCallState.peerConnection.onicecandidate = (event) => {
         if (event.candidate && voiceCallState.socket) {
             voiceCallState._iceCandidateCount++;
             const candidateType = event.candidate.type || 'unknown';
+            if (candidateType === 'relay') voiceCallState._hasRelayCandidates = true;
             console.log(`[VOICE] ICE candidate #${voiceCallState._iceCandidateCount}: ${candidateType} (${event.candidate.protocol || 'n/a'})`);
             voiceCallState.socket.emit('webrtc-ice-candidate', {
                 callId: voiceCallState.currentCallId,
@@ -5062,13 +5111,31 @@ async function createPeerConnection(forceRelay) {
             });
         } else if (!event.candidate) {
             voiceCallState._iceGatheringComplete = true;
-            console.log(`[VOICE] ICE gathering complete. Total candidates: ${voiceCallState._iceCandidateCount}`);
-            // If zero relay candidates were gathered, warn about TURN server issues
+            if (voiceCallState._iceGatheringTimer) {
+                clearTimeout(voiceCallState._iceGatheringTimer);
+                voiceCallState._iceGatheringTimer = null;
+            }
+            console.log(`[VOICE] ICE gathering complete. Total candidates: ${voiceCallState._iceCandidateCount} | relay: ${voiceCallState._hasRelayCandidates}`);
+            // If zero relay candidates were gathered, TURN servers are unreachable
             if (voiceCallState._iceCandidateCount === 0) {
                 console.warn('[VOICE] WARNING: No ICE candidates gathered - TURN servers may be unreachable');
+            } else if (!voiceCallState._hasRelayCandidates && !voiceCallState._forceRelay) {
+                console.warn('[VOICE] WARNING: No relay candidates - TURN credentials may be expired. Cross-region calls may fail.');
             }
         }
     };
+
+    // --- ICE gathering timeout (prevents stalling on restrictive networks) ---
+    voiceCallState._iceGatheringTimer = setTimeout(() => {
+        if (!voiceCallState._iceGatheringComplete && voiceCallState.peerConnection) {
+            console.warn(`[VOICE] ICE gathering timeout (15s) - gathered ${voiceCallState._iceCandidateCount} candidates so far`);
+            voiceCallState._iceGatheringComplete = true;
+            // If we have no relay candidates after timeout, immediately try relay mode
+            if (!voiceCallState._hasRelayCandidates && !voiceCallState._forceRelay && voiceCallState._iceCandidateCount > 0) {
+                console.warn('[VOICE] No relay candidates after timeout, scheduling relay retry');
+            }
+        }
+    }, 15000);
 
     // --- ICE gathering state monitoring ---
     voiceCallState.peerConnection.onicegatheringstatechange = () => {
@@ -5088,10 +5155,27 @@ async function createPeerConnection(forceRelay) {
                 // First failure on non-relay mode: retry with relay-only
                 console.log('[VOICE] Direct connection failed, retrying with TURN relay...');
                 retryWithRelay();
-            } else if (voiceCallState._iceRestartAttempts < 3) {
+            } else if (voiceCallState._iceRestartAttempts < 4) {
                 voiceCallState._iceRestartAttempts++;
-                console.log(`[VOICE] ICE restart attempt ${voiceCallState._iceRestartAttempts}/3`);
+                console.log(`[VOICE] ICE restart attempt ${voiceCallState._iceRestartAttempts}/4`);
                 attemptIceRestart();
+            }
+        } else if (state === 'checking') {
+            // Set a timeout for ICE checking phase - if stuck for too long, force relay
+            if (!voiceCallState._iceCheckingTimer) {
+                voiceCallState._iceCheckingTimer = setTimeout(() => {
+                    if (voiceCallState.peerConnection &&
+                        voiceCallState.peerConnection.iceConnectionState === 'checking' &&
+                        !voiceCallState._forceRelay) {
+                        console.warn('[VOICE] ICE checking stuck for 12s - switching to relay mode');
+                        retryWithRelay();
+                    }
+                }, 12000);
+            }
+        } else if (state === 'connected' || state === 'completed') {
+            if (voiceCallState._iceCheckingTimer) {
+                clearTimeout(voiceCallState._iceCheckingTimer);
+                voiceCallState._iceCheckingTimer = null;
             }
         }
     };
@@ -5176,18 +5260,30 @@ async function createPeerConnection(forceRelay) {
                 endVoiceCall();
             }
         } else if (state === 'disconnected') {
-            // Give cross-region connections time to recover (up to 8 seconds)
+            // Give cross-region connections (India <-> UK) time to recover
+            // International routes can have 5-10s packet loss spikes
             voiceCallState._disconnectTimer = setTimeout(() => {
                 if (voiceCallState.peerConnection &&
                     voiceCallState.peerConnection.connectionState === 'disconnected') {
-                    showNotification('Call connection lost', 'error');
-                    endVoiceCall();
+                    // Before giving up, try one ICE restart
+                    if (voiceCallState._iceRestartAttempts < 4) {
+                        console.log('[VOICE] Connection disconnected, attempting ICE restart recovery...');
+                        voiceCallState._iceRestartAttempts++;
+                        attemptIceRestart();
+                    } else {
+                        showNotification('Call connection lost', 'error');
+                        endVoiceCall();
+                    }
                 }
-            }, 8000);
+            }, 15000);
         } else if (state === 'connected') {
             if (voiceCallState._disconnectTimer) {
                 clearTimeout(voiceCallState._disconnectTimer);
                 voiceCallState._disconnectTimer = null;
+            }
+            if (voiceCallState._iceCheckingTimer) {
+                clearTimeout(voiceCallState._iceCheckingTimer);
+                voiceCallState._iceCheckingTimer = null;
             }
             voiceCallState._iceRestartAttempts = 0;
             startConnectionQualityMonitor();
@@ -5226,48 +5322,64 @@ async function logConnectionType() {
 function startAudioFlowCheck() {
     // Clear any existing check
     if (voiceCallState._audioCheckTimer) clearTimeout(voiceCallState._audioCheckTimer);
+    if (voiceCallState._audioCheckTimer2) clearTimeout(voiceCallState._audioCheckTimer2);
 
-    // Check audio flow after 5 seconds of being connected
-    voiceCallState._audioCheckTimer = setTimeout(async () => {
-        if (!voiceCallState.peerConnection || voiceCallState.peerConnection.connectionState !== 'connected') return;
+    // First check after 4 seconds
+    voiceCallState._audioCheckTimer = setTimeout(() => doAudioFlowCheck(false), 4000);
+    // Second check after 8 seconds (confirms no audio if first check passed but was borderline)
+    voiceCallState._audioCheckTimer2 = setTimeout(() => doAudioFlowCheck(true), 8000);
+}
 
-        try {
-            const stats = await voiceCallState.peerConnection.getStats();
-            let audioReceived = false;
-            let bytesReceived = 0;
-            let packetsReceived = 0;
+async function doAudioFlowCheck(isFinalCheck) {
+    if (!voiceCallState.peerConnection || voiceCallState.peerConnection.connectionState !== 'connected') return;
 
-            stats.forEach(report => {
-                if (report.type === 'inbound-rtp' && report.kind === 'audio') {
-                    bytesReceived = report.bytesReceived || 0;
-                    packetsReceived = report.packetsReceived || 0;
-                    if (bytesReceived > 0 && packetsReceived > 0) {
-                        audioReceived = true;
-                    }
+    try {
+        const stats = await voiceCallState.peerConnection.getStats();
+        let audioReceived = false;
+        let bytesReceived = 0;
+        let packetsReceived = 0;
+        let packetsLost = 0;
+        let jitter = 0;
+
+        stats.forEach(report => {
+            if (report.type === 'inbound-rtp' && report.kind === 'audio') {
+                bytesReceived = report.bytesReceived || 0;
+                packetsReceived = report.packetsReceived || 0;
+                packetsLost = report.packetsLost || 0;
+                jitter = report.jitter || 0;
+                if (bytesReceived > 0 && packetsReceived > 0) {
+                    audioReceived = true;
                 }
-            });
-
-            console.log(`[VOICE] Audio flow check: bytesReceived=${bytesReceived}, packetsReceived=${packetsReceived}`);
-
-            if (!audioReceived && !voiceCallState._forceRelay) {
-                // No audio flowing despite "connected" state
-                // This happens with symmetric NAT (India ISPs) - media can't traverse
-                console.warn('[VOICE] No audio detected! Retrying with TURN relay...');
-                retryWithRelay();
-            } else if (!audioReceived && voiceCallState._forceRelay) {
-                console.warn('[VOICE] No audio even in relay mode - TURN server may be unreachable');
-                // Try one more ICE restart
-                if (voiceCallState._iceRestartAttempts < 3) {
-                    voiceCallState._iceRestartAttempts++;
-                    attemptIceRestart();
-                }
-            } else {
-                console.log('[VOICE] Audio is flowing normally');
             }
-        } catch (e) {
-            console.warn('[VOICE] Audio flow check failed:', e.message);
+        });
+
+        console.log(`[VOICE] Audio flow check (final=${isFinalCheck}): bytesReceived=${bytesReceived}, packetsReceived=${packetsReceived}, packetsLost=${packetsLost}, jitter=${jitter}`);
+
+        if (!audioReceived && !voiceCallState._forceRelay) {
+            // No audio flowing despite "connected" state
+            // This happens with symmetric NAT (India ISPs) - media can't traverse
+            console.warn('[VOICE] No audio detected! Retrying with TURN relay...');
+            retryWithRelay();
+        } else if (!audioReceived && voiceCallState._forceRelay && isFinalCheck) {
+            console.warn('[VOICE] No audio even in relay mode - TURN server may be unreachable');
+            // Try ICE restart as last resort
+            if (voiceCallState._iceRestartAttempts < 4) {
+                voiceCallState._iceRestartAttempts++;
+                attemptIceRestart();
+            } else {
+                console.error('[VOICE] All audio recovery attempts exhausted');
+                showNotification('Audio connection issue. Try ending and restarting the call.', 'warning');
+            }
+        } else if (audioReceived) {
+            console.log('[VOICE] Audio is flowing normally');
+            // Log connection quality for diagnostics
+            if (jitter > 0.05) {
+                console.warn(`[VOICE] High jitter detected: ${(jitter * 1000).toFixed(1)}ms - possible network congestion on international route`);
+            }
         }
-    }, 5000);
+    } catch (e) {
+        console.warn('[VOICE] Audio flow check failed:', e.message);
+    }
 }
 
 // Retry the entire connection using relay-only mode (TURN)
@@ -5318,6 +5430,7 @@ async function retryWithRelay() {
 async function attemptIceRestart() {
     try {
         if (!voiceCallState.peerConnection || !voiceCallState.socket) return;
+        console.log(`[VOICE] ICE restart attempt ${voiceCallState._iceRestartAttempts}/4 - refreshing ICE candidates...`);
         const offer = await voiceCallState.peerConnection.createOffer({ iceRestart: true });
         await voiceCallState.peerConnection.setLocalDescription(offer);
         voiceCallState.socket.emit('webrtc-offer', {
@@ -5329,6 +5442,11 @@ async function attemptIceRestart() {
         console.log('[VOICE] ICE restart offer sent');
     } catch (err) {
         console.error('[VOICE] ICE restart failed:', err);
+        // If ICE restart fails and we haven't tried relay, switch to relay
+        if (!voiceCallState._forceRelay) {
+            console.log('[VOICE] ICE restart failed, falling back to relay mode...');
+            retryWithRelay();
+        }
     }
 }
 
@@ -5761,10 +5879,24 @@ function endCallCleanup() {
         voiceCallState._disconnectTimer = null;
     }
 
-    // Clear audio flow check timer
+    // Clear audio flow check timers
     if (voiceCallState._audioCheckTimer) {
         clearTimeout(voiceCallState._audioCheckTimer);
         voiceCallState._audioCheckTimer = null;
+    }
+    if (voiceCallState._audioCheckTimer2) {
+        clearTimeout(voiceCallState._audioCheckTimer2);
+        voiceCallState._audioCheckTimer2 = null;
+    }
+
+    // Clear ICE gathering and checking timers
+    if (voiceCallState._iceGatheringTimer) {
+        clearTimeout(voiceCallState._iceGatheringTimer);
+        voiceCallState._iceGatheringTimer = null;
+    }
+    if (voiceCallState._iceCheckingTimer) {
+        clearTimeout(voiceCallState._iceCheckingTimer);
+        voiceCallState._iceCheckingTimer = null;
     }
 
     if (voiceCallState.localStream) {
