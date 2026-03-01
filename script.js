@@ -4200,11 +4200,22 @@ async function acceptVoiceCall(callId, callerId) {
 // Reject incoming call
 function rejectVoiceCall(callId) {
     stopCallSound();
-    voiceCallState.socket.emit('call-reject', {
-        callId,
-        calleeId: appState.currentUser.id,
-        reason: 'declined'
-    });
+    if (voiceCallState.socket && voiceCallState.socket.connected) {
+        voiceCallState.socket.emit('call-reject', {
+            callId,
+            calleeId: appState.currentUser.id,
+            reason: 'declined'
+        });
+    } else {
+        // Socket not connected (e.g., just logged in from push notification)
+        // Use REST endpoint to decline
+        const backendUrl = IS_LOCAL ? 'http://localhost:10000' : 'https://steelconnect-backend.onrender.com';
+        fetch(`${backendUrl}/api/voice-calls/decline`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ callId, reason: 'declined' })
+        }).catch(() => { /* backend will timeout */ });
+    }
     endCallCleanup();
 }
 
