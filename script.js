@@ -3679,28 +3679,34 @@ async function viewQuotes(jobId) {
         const response = await apiCall(`/quotes/job/${jobId}`, 'GET');
         const quotes = response.data || [];
         const job = appState.jobs.find(j => j.id === jobId);
-        // Store quotes in state for the selection system
         appState._viewingQuotes = quotes;
         appState._viewingJobId = jobId;
         appState._selectedQuoteIds = new Set();
 
         let quotesHTML = `
-            <div class="vq-header">
-                <div class="vq-header-top">
-                    <div class="vq-header-title">
-                        <i class="fas fa-file-invoice-dollar"></i>
+            <div class="pqv-header">
+                <div class="pqv-header-top">
+                    <div class="pqv-header-left">
+                        <div class="pqv-header-icon"><i class="fas fa-file-invoice-dollar"></i></div>
                         <div>
-                            <h3>Received Quotes</h3>
-                            <p>${quotes.length} designer${quotes.length !== 1 ? 's' : ''} submitted quotes${job ? ` for <strong>${job.title}</strong>` : ''}</p>
+                            <h2 class="pqv-title">Proposals Received</h2>
+                            <p class="pqv-subtitle">${quotes.length} professional proposal${quotes.length !== 1 ? 's' : ''}${job ? ` for <strong>${job.title}</strong>` : ''}</p>
                         </div>
                     </div>
-                    <button class="vq-close-btn" onclick="closeModal()"><i class="fas fa-times"></i></button>
+                    <div class="pqv-header-right">
+                        ${quotes.length > 0 ? `<div class="pqv-summary-stats">
+                            <div class="pqv-stat"><span class="pqv-stat-num">${quotes.length}</span><span class="pqv-stat-label">Total</span></div>
+                            <div class="pqv-stat"><span class="pqv-stat-num">${quotes.filter(q => q.status === 'submitted').length}</span><span class="pqv-stat-label">Pending</span></div>
+                            <div class="pqv-stat"><span class="pqv-stat-num">${quotes.filter(q => q.status === 'approved').length}</span><span class="pqv-stat-label">Approved</span></div>
+                        </div>` : ''}
+                        <button class="pqv-close-btn" onclick="closeModal()"><i class="fas fa-times"></i></button>
+                    </div>
                 </div>`;
 
         if (quotes.length > 1 && job && job.status === 'open') {
             quotesHTML += `
                 <div class="vq-steps-bar">
-                    <div class="vq-step active" id="vq-step-1"><span class="vq-step-num">1</span><span class="vq-step-label">Select & Compare</span></div>
+                    <div class="vq-step active" id="vq-step-1"><span class="vq-step-num">1</span><span class="vq-step-label">Review & Select</span></div>
                     <div class="vq-step-line"></div>
                     <div class="vq-step" id="vq-step-2"><span class="vq-step-num">2</span><span class="vq-step-label">Message / Call</span></div>
                     <div class="vq-step-line"></div>
@@ -3709,7 +3715,7 @@ async function viewQuotes(jobId) {
         }
         quotesHTML += `</div>`;
 
-        // Floating selection action bar (hidden initially)
+        // Floating selection action bar
         quotesHTML += `
             <div class="vq-action-bar" id="vq-action-bar" style="display:none;">
                 <div class="vq-action-bar-left">
@@ -3724,105 +3730,143 @@ async function viewQuotes(jobId) {
             </div>`;
 
         if (quotes.length === 0) {
-            quotesHTML += `<div class="empty-state premium-empty"><div class="empty-icon"><i class="fas fa-file-invoice"></i></div><h3>No Quotes Received</h3><p>No quotes have been submitted yet.</p></div>`;
+            quotesHTML += `<div class="pqv-empty"><div class="pqv-empty-icon"><i class="fas fa-inbox"></i></div><h3>No Proposals Yet</h3><p>Designers haven't submitted proposals for this project yet. Check back soon.</p></div>`;
         } else {
-            quotesHTML += `<div class="vq-list" id="vq-list">`;
+            quotesHTML += `<div class="pqv-list" id="vq-list">`;
             for (const quote of quotes) {
                 const attachments = quote.attachments || [];
                 const hasAttachments = attachments.length > 0;
-                let attachmentSection = '';
-                if (hasAttachments) {
-                    attachmentSection = `
-                        <div class="quote-attachments">
-                            <div class="attachments-header"><i class="fas fa-paperclip"></i><span>Attachments (${attachments.length}):</span></div>
-                            <div class="attachment-actions">
-                                <button class="btn btn-outline btn-sm" onclick="viewQuoteAttachments('${quote.id}')"><i class="fas fa-folder-open"></i> View All</button>
-                                ${attachments.length > 1 ? `<button class="btn btn-success btn-sm" onclick="downloadAllAttachments('${quote.id}')"><i class="fas fa-download"></i> Download All</button>` : ''}
-                            </div>
-                        </div>`;
-                }
                 const canApprove = job && job.status === 'open' && quote.status === 'submitted';
                 const statusClass = quote.status;
                 const statusIcon = {'submitted': 'fa-clock', 'approved': 'fa-check-circle', 'rejected': 'fa-times-circle'}[quote.status] || 'fa-question-circle';
-
-                // Designer profile
                 const dp = quote.designerProfile || {};
-                const designerProfileSection = buildDesignerProfileHTML(dp, quote.designerName, quote.designerId);
                 const avatarInitial = (quote.designerName || 'D').charAt(0).toUpperCase();
-
-                // Resume link
-                const resumeLink = dp.resume && dp.resume.url
-                    ? `<a href="${dp.resume.url}" target="_blank" class="vq-resume-link" onclick="event.stopPropagation()"><i class="fas fa-file-pdf"></i> Resume</a>` : '';
+                const isVerified = dp.profileStatus === 'approved';
 
                 quotesHTML += `
-                    <div class="vq-quote-card ${canApprove ? 'vq-selectable' : ''} quote-status-${statusClass}"
+                    <div class="pqv-card ${canApprove ? 'vq-selectable' : ''} pqv-status-${statusClass}"
                          data-quote-id="${quote.id}"
                          data-designer-id="${quote.designerId}"
                          data-designer-name="${(quote.designerName || '').replace(/"/g, '&quot;')}"
                          data-job-id="${quote.jobId}"
                          ${canApprove ? `onclick="toggleQuoteSelection('${quote.id}')"` : ''}>
                         ${canApprove ? `<div class="vq-checkbox" id="vq-chk-${quote.id}"><i class="fas fa-check"></i></div>` : ''}
-                        <div class="vq-quote-main">
-                            <div class="vq-quote-top-row">
-                                <div class="vq-designer-info">
-                                    <div class="vq-avatar">${avatarInitial}</div>
-                                    <div class="vq-designer-text">
-                                        <h4>${quote.designerName}</h4>
-                                        <div class="vq-designer-tags">
-                                            <span class="vq-status-pill ${statusClass}"><i class="fas ${statusIcon}"></i> ${quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}</span>
-                                            ${resumeLink}
-                                        </div>
+
+                        <!-- Designer Profile Banner -->
+                        <div class="pqv-designer-banner">
+                            <div class="pqv-designer-main">
+                                <div class="pqv-avatar-wrap">
+                                    <div class="pqv-avatar">${avatarInitial}</div>
+                                    ${isVerified ? `<div class="pqv-verified-badge" title="Verified Professional"><i class="fas fa-check"></i></div>` : ''}
+                                </div>
+                                <div class="pqv-designer-details">
+                                    <div class="pqv-designer-name-row">
+                                        <h3>${quote.designerName}</h3>
+                                        <span class="pqv-status-badge pqv-badge-${statusClass}"><i class="fas ${statusIcon}"></i> ${quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}</span>
                                     </div>
-                                </div>
-                                <div class="vq-quote-price">
-                                    <span class="vq-price-label">Quote Amount</span>
-                                    <span class="vq-price-value">${quote.quoteAmount}</span>
-                                    ${quote.timeline ? `<span class="vq-timeline"><i class="fas fa-clock"></i> ${quote.timeline} days</span>` : ''}
+                                    <div class="pqv-designer-meta">
+                                        ${dp.experience ? `<span class="pqv-meta-chip"><i class="fas fa-briefcase"></i> ${dp.experience}</span>` : ''}
+                                        ${dp.education ? `<span class="pqv-meta-chip"><i class="fas fa-graduation-cap"></i> ${dp.education}</span>` : ''}
+                                        ${dp.hourlyRate ? `<span class="pqv-meta-chip"><i class="fas fa-dollar-sign"></i> $${dp.hourlyRate}/hr</span>` : ''}
+                                        ${dp.linkedinProfile ? `<a href="${dp.linkedinProfile}" target="_blank" class="pqv-meta-chip pqv-meta-link" onclick="event.stopPropagation()"><i class="fab fa-linkedin"></i> LinkedIn</a>` : ''}
+                                    </div>
+                                    ${dp.skills && dp.skills.length > 0 ? `
+                                        <div class="pqv-skills-row">
+                                            ${dp.skills.slice(0, 6).map(s => `<span class="pqv-skill-tag">${s}</span>`).join('')}
+                                            ${dp.skills.length > 6 ? `<span class="pqv-skill-more">+${dp.skills.length - 6}</span>` : ''}
+                                        </div>` : ''}
                                 </div>
                             </div>
-                            <div class="vq-quote-desc"><p>${quote.description}</p></div>
-                            ${attachmentSection}
-                            ${designerProfileSection}
-                            <div class="vq-quick-actions" onclick="event.stopPropagation()">
-                                ${canApprove ? `
-                                <div class="vq-action-group-left">
-                                    <label class="vq-select-toggle" onclick="event.stopPropagation(); toggleQuoteSelection('${quote.id}')">
-                                        <span class="vq-select-box" id="vq-sel-${quote.id}"><i class="fas fa-check"></i></span>
-                                        <span>Select</span>
-                                    </label>
+                            <div class="pqv-quote-highlight">
+                                <div class="pqv-price-block">
+                                    <span class="pqv-price-label">Quoted Price</span>
+                                    <span class="pqv-price-amount">${quote.quoteAmount}</span>
                                 </div>
-                                <div class="vq-action-group-center">
-                                    <button class="btn vq-card-btn vq-card-msg" onclick="openConversation('${quote.jobId}', '${quote.designerId}')"><i class="fas fa-comments"></i> Message</button>
-                                    <button class="btn vq-card-btn vq-card-call" onclick="initiateVoiceCall(null, '${quote.designerId}', '${(quote.designerName || '').replace(/'/g, "\\'")}')" title="Call this designer"><i class="fas fa-phone-alt"></i> Call</button>
-                                </div>
-                                <div class="vq-action-group-right">
-                                    <button class="btn vq-card-btn vq-card-approve" onclick="approveQuote('${quote.id}', '${jobId}')"><i class="fas fa-check-circle"></i> Approve & Assign</button>
-                                </div>
-                                ` : quote.status === 'approved' ? `
-                                <div class="vq-action-group-center">
-                                    <button class="btn vq-card-btn vq-card-msg" onclick="openConversation('${quote.jobId}', '${quote.designerId}')"><i class="fas fa-comments"></i> Message</button>
-                                    <button class="btn vq-card-btn vq-card-call" onclick="initiateVoiceCall(null, '${quote.designerId}', '${(quote.designerName || '').replace(/'/g, "\\'")}')" title="Call this designer"><i class="fas fa-phone-alt"></i> Call</button>
-                                </div>
-                                <div class="vq-action-group-right">
-                                    <span class="vq-approved-tag"><i class="fas fa-check-circle"></i> Approved</span>
-                                </div>
-                                ` : `
-                                <div class="vq-action-group-center">
-                                    <button class="btn vq-card-btn vq-card-msg" onclick="openConversation('${quote.jobId}', '${quote.designerId}')"><i class="fas fa-comments"></i> Message</button>
-                                    <button class="btn vq-card-btn vq-card-call" onclick="initiateVoiceCall(null, '${quote.designerId}', '${(quote.designerName || '').replace(/'/g, "\\'")}')" title="Call this designer"><i class="fas fa-phone-alt"></i> Call</button>
-                                </div>
-                                `}
+                                ${quote.timeline ? `<div class="pqv-timeline-block"><i class="fas fa-calendar-alt"></i><span>${quote.timeline} days</span></div>` : ''}
                             </div>
+                        </div>
+
+                        <!-- Proposal Content -->
+                        <div class="pqv-proposal-section">
+                            <div class="pqv-section-label"><i class="fas fa-file-alt"></i> Proposal</div>
+                            <div class="pqv-proposal-text"><p>${quote.description}</p></div>
+                        </div>
+
+                        <!-- Documents & Credentials Row -->
+                        <div class="pqv-docs-row">
+                            ${hasAttachments ? `
+                                <div class="pqv-doc-group">
+                                    <span class="pqv-doc-label"><i class="fas fa-paperclip"></i> Attachments (${attachments.length})</span>
+                                    <div class="pqv-doc-actions" onclick="event.stopPropagation()">
+                                        <button class="pqv-doc-btn" onclick="viewQuoteAttachments('${quote.id}')"><i class="fas fa-folder-open"></i> View</button>
+                                        ${attachments.length > 1 ? `<button class="pqv-doc-btn pqv-doc-download" onclick="downloadAllAttachments('${quote.id}')"><i class="fas fa-download"></i> Download All</button>` : ''}
+                                    </div>
+                                </div>` : ''}
+                            ${dp.resume && dp.resume.url ? `
+                                <div class="pqv-doc-group" onclick="event.stopPropagation()">
+                                    <a href="${dp.resume.url}" target="_blank" class="pqv-resume-btn"><i class="fas fa-file-pdf"></i> View Resume <small>${dp.resume.filename || ''}</small></a>
+                                </div>` : ''}
+                            ${dp.certificates && dp.certificates.length > 0 ? `
+                                <div class="pqv-doc-group" onclick="event.stopPropagation()">
+                                    <span class="pqv-doc-label"><i class="fas fa-certificate"></i> Certificates (${dp.certificates.length})</span>
+                                    <div class="pqv-cert-links">${dp.certificates.slice(0, 3).map(c => `<a href="${c.url || '#'}" target="_blank" class="pqv-cert-link">${c.filename || 'Certificate'}</a>`).join('')}${dp.certificates.length > 3 ? `<span class="pqv-cert-more">+${dp.certificates.length - 3} more</span>` : ''}</div>
+                                </div>` : ''}
+                        </div>
+
+                        <!-- Specializations & Bio -->
+                        ${dp.specializations && dp.specializations.length > 0 ? `
+                            <div class="pqv-specs-row">
+                                <i class="fas fa-star"></i>
+                                <span><strong>Specializations:</strong> ${dp.specializations.join(', ')}</span>
+                            </div>` : ''}
+                        ${dp.bio ? `<div class="pqv-bio-section"><div class="pqv-section-label"><i class="fas fa-user-circle"></i> About the Designer</div><p>${dp.bio}</p></div>` : ''}
+
+                        <!-- Expandable detailed profile (for lazy-loaded data) -->
+                        <div class="pqv-profile-expand" id="dp-card-${quote.designerId}">
+                            <div class="dp-body" id="dp-body-${quote.designerId}">
+                                ${(!dp.skills?.length && !dp.bio && !dp.experience) ? `<div class="dp-loading" id="dp-loading-${quote.designerId}"><div class="spinner" style="width:18px;height:18px;border-width:2px;"></div><span>Loading full profile...</span></div>` : ''}
+                            </div>
+                        </div>
+
+                        <!-- Actions Footer -->
+                        <div class="pqv-actions-footer" onclick="event.stopPropagation()">
+                            ${canApprove ? `
+                            <div class="pqv-action-left">
+                                <label class="vq-select-toggle" onclick="event.stopPropagation(); toggleQuoteSelection('${quote.id}')">
+                                    <span class="vq-select-box" id="vq-sel-${quote.id}"><i class="fas fa-check"></i></span>
+                                    <span>Select</span>
+                                </label>
+                            </div>
+                            <div class="pqv-action-center">
+                                <button class="btn pqv-act-btn pqv-act-msg" onclick="openConversation('${quote.jobId}', '${quote.designerId}')"><i class="fas fa-comments"></i> Message</button>
+                                <button class="btn pqv-act-btn pqv-act-call" onclick="initiateVoiceCall(null, '${quote.designerId}', '${(quote.designerName || '').replace(/'/g, "\\'")}')" title="Call this designer"><i class="fas fa-phone-alt"></i> Call</button>
+                            </div>
+                            <div class="pqv-action-right">
+                                <button class="btn pqv-act-btn pqv-act-approve" onclick="approveQuote('${quote.id}', '${jobId}')"><i class="fas fa-check-circle"></i> Approve & Assign</button>
+                            </div>
+                            ` : quote.status === 'approved' ? `
+                            <div class="pqv-action-center">
+                                <button class="btn pqv-act-btn pqv-act-msg" onclick="openConversation('${quote.jobId}', '${quote.designerId}')"><i class="fas fa-comments"></i> Message</button>
+                                <button class="btn pqv-act-btn pqv-act-call" onclick="initiateVoiceCall(null, '${quote.designerId}', '${(quote.designerName || '').replace(/'/g, "\\'")}')" title="Call this designer"><i class="fas fa-phone-alt"></i> Call</button>
+                            </div>
+                            <div class="pqv-action-right">
+                                <span class="pqv-approved-tag"><i class="fas fa-shield-alt"></i> Approved & Assigned</span>
+                            </div>
+                            ` : `
+                            <div class="pqv-action-center">
+                                <button class="btn pqv-act-btn pqv-act-msg" onclick="openConversation('${quote.jobId}', '${quote.designerId}')"><i class="fas fa-comments"></i> Message</button>
+                                <button class="btn pqv-act-btn pqv-act-call" onclick="initiateVoiceCall(null, '${quote.designerId}', '${(quote.designerName || '').replace(/'/g, "\\'")}')" title="Call this designer"><i class="fas fa-phone-alt"></i> Call</button>
+                            </div>
+                            `}
                         </div>
                     </div>`;
             }
             quotesHTML += `</div>`;
         }
-        showGenericModal(quotesHTML, 'max-width: 960px; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column;');
+        showGenericModal(quotesHTML, 'max-width: 1040px; max-height: 92vh; overflow: hidden; display: flex; flex-direction: column;');
 
-        // Make the list scrollable
         const vqList = document.getElementById('vq-list');
-        if (vqList) vqList.style.cssText = 'overflow-y:auto; flex:1; padding: 0 24px 24px;';
+        if (vqList) vqList.style.cssText = 'overflow-y:auto; flex:1; padding: 0 28px 28px;';
 
         // Lazy-load designer profiles
         quotes.forEach(quote => {
@@ -3921,29 +3965,40 @@ function compareSelectedQuotes() {
     if (selected.size < 2) { showNotification('Select at least 2 quotes to compare.', 'warning'); return; }
     const quotes = (appState._viewingQuotes || []).filter(q => selected.has(q.id));
     let compareHTML = `
-        <div class="vq-compare-header">
-            <button class="btn btn-outline btn-sm" onclick="closeCompareOverlay()"><i class="fas fa-arrow-left"></i> Back to Quotes</button>
-            <h3><i class="fas fa-columns"></i> Comparing ${quotes.length} Quotes</h3>
+        <div class="pqv-compare-header">
+            <button class="btn btn-outline btn-sm" onclick="closeCompareOverlay()"><i class="fas fa-arrow-left"></i> Back to Proposals</button>
+            <h3><i class="fas fa-columns"></i> Comparing ${quotes.length} Proposals</h3>
         </div>
-        <div class="vq-compare-grid" style="grid-template-columns: repeat(${Math.min(quotes.length, 3)}, 1fr);">`;
+        <div class="pqv-compare-grid" style="grid-template-columns: repeat(${Math.min(quotes.length, 3)}, 1fr);">`;
     for (const q of quotes) {
         const dp = q.designerProfile || {};
         const avatarInitial = (q.designerName || 'D').charAt(0).toUpperCase();
+        const isVerified = dp.profileStatus === 'approved';
         compareHTML += `
-            <div class="vq-compare-col">
-                <div class="vq-compare-designer">
-                    <div class="vq-avatar">${avatarInitial}</div>
-                    <h4>${q.designerName}</h4>
+            <div class="pqv-compare-col">
+                <div class="pqv-compare-designer-head">
+                    <div class="pqv-avatar-wrap" style="margin-right:10px;">
+                        <div class="pqv-avatar" style="width:40px;height:40px;font-size:1rem;">${avatarInitial}</div>
+                        ${isVerified ? `<div class="pqv-verified-badge" style="width:16px;height:16px;font-size:0.45rem;"><i class="fas fa-check"></i></div>` : ''}
+                    </div>
+                    <div>
+                        <h4>${q.designerName}</h4>
+                        ${dp.experience ? `<span class="pqv-compare-exp"><i class="fas fa-briefcase"></i> ${dp.experience}</span>` : ''}
+                    </div>
                 </div>
-                <div class="vq-compare-row"><span class="vq-compare-label">Quote Amount</span><span class="vq-compare-val vq-price-value">${q.quoteAmount}</span></div>
-                ${q.timeline ? `<div class="vq-compare-row"><span class="vq-compare-label">Timeline</span><span class="vq-compare-val">${q.timeline} days</span></div>` : ''}
-                ${dp.experience ? `<div class="vq-compare-row"><span class="vq-compare-label">Experience</span><span class="vq-compare-val">${dp.experience}</span></div>` : ''}
-                ${dp.skills?.length ? `<div class="vq-compare-row"><span class="vq-compare-label">Skills</span><span class="vq-compare-val">${dp.skills.slice(0,5).join(', ')}</span></div>` : ''}
-                ${dp.resume?.url ? `<div class="vq-compare-row"><span class="vq-compare-label">Resume</span><a href="${dp.resume.url}" target="_blank" class="vq-compare-val vq-resume-link"><i class="fas fa-file-pdf"></i> View</a></div>` : ''}
-                <div class="vq-compare-row vq-compare-desc"><span class="vq-compare-label">Proposal</span><p>${q.description}</p></div>
-                <div class="vq-compare-actions">
-                    <button class="btn btn-outline btn-sm" onclick="openConversation('${q.jobId}', '${q.designerId}'); closeModal();"><i class="fas fa-comments"></i> Message</button>
-                    <button class="btn btn-success btn-sm" onclick="approveQuote('${q.id}', '${q.jobId}')"><i class="fas fa-check"></i> Approve</button>
+                <div class="pqv-compare-price-box">
+                    <span class="pqv-compare-price-label">Quoted Price</span>
+                    <span class="pqv-compare-price-val">${q.quoteAmount}</span>
+                    ${q.timeline ? `<span class="pqv-compare-timeline"><i class="fas fa-calendar-alt"></i> ${q.timeline} days</span>` : ''}
+                </div>
+                ${dp.skills?.length ? `<div class="pqv-compare-row"><span class="pqv-compare-label">Skills</span><div class="pqv-compare-skills">${dp.skills.slice(0,5).map(s => `<span class="pqv-skill-tag">${s}</span>`).join('')}</div></div>` : ''}
+                ${dp.education ? `<div class="pqv-compare-row"><span class="pqv-compare-label">Education</span><span class="pqv-compare-val">${dp.education}</span></div>` : ''}
+                ${dp.hourlyRate ? `<div class="pqv-compare-row"><span class="pqv-compare-label">Hourly Rate</span><span class="pqv-compare-val">$${dp.hourlyRate}/hr</span></div>` : ''}
+                ${dp.resume?.url ? `<div class="pqv-compare-row"><span class="pqv-compare-label">Resume</span><a href="${dp.resume.url}" target="_blank" class="pqv-resume-btn" style="padding:4px 10px;font-size:0.72rem;"><i class="fas fa-file-pdf"></i> View</a></div>` : ''}
+                <div class="pqv-compare-proposal"><span class="pqv-compare-label">Proposal</span><p>${q.description}</p></div>
+                <div class="pqv-compare-actions">
+                    <button class="btn pqv-act-btn pqv-act-msg" style="font-size:0.75rem;padding:7px 14px;" onclick="openConversation('${q.jobId}', '${q.designerId}'); closeModal();"><i class="fas fa-comments"></i> Message</button>
+                    <button class="btn pqv-act-btn pqv-act-approve" style="font-size:0.75rem;padding:7px 14px;" onclick="approveQuote('${q.id}', '${q.jobId}')"><i class="fas fa-check-circle"></i> Approve</button>
                 </div>
             </div>`;
     }
@@ -3962,45 +4017,10 @@ function closeCompareOverlay() {
 }
 
 function buildDesignerProfileHTML(dp, designerName, designerId) {
-    const hasDetailedProfile = dp.skills?.length > 0 || dp.experience || dp.bio || dp.education || dp.hourlyRate || dp.linkedinProfile || dp.specializations?.length > 0 || dp.resume;
-    const skillsHTML = dp.skills && dp.skills.length > 0
-        ? `<div class="dp-skills">${dp.skills.slice(0, 8).map(s => `<span class="dp-skill-tag">${s}</span>`).join('')}${dp.skills.length > 8 ? `<span class="dp-skill-more">+${dp.skills.length - 8} more</span>` : ''}</div>` : '';
-    const specsHTML = dp.specializations && dp.specializations.length > 0
-        ? `<div class="dp-specs"><i class="fas fa-star"></i> <strong>Specializations:</strong> ${dp.specializations.join(', ')}</div>` : '';
-    const resumeHTML = dp.resume && dp.resume.url
-        ? `<div class="dp-resume"><a href="${dp.resume.url}" target="_blank" class="dp-resume-link"><i class="fas fa-file-pdf"></i> <span>View Resume</span> <small>(${dp.resume.filename || 'Resume'})</small></a></div>` : '';
-    const certsHTML = dp.certificates && dp.certificates.length > 0
-        ? `<div class="dp-certs"><span class="dp-certs-label"><i class="fas fa-certificate"></i> Certificates (${dp.certificates.length}):</span>${dp.certificates.map(c => `<a href="${c.url || '#'}" target="_blank" class="dp-cert-link">${c.filename || 'Certificate'}</a>`).join('')}</div>` : '';
-
-    const profileBodyContent = hasDetailedProfile ? `
-        ${dp.bio ? `<div class="dp-bio"><p>${dp.bio}</p></div>` : ''}
-        <div class="dp-details-grid">
-            ${dp.experience ? `<div class="dp-detail"><i class="fas fa-briefcase"></i><div><span class="dp-detail-label">Experience</span><span class="dp-detail-value">${dp.experience}</span></div></div>` : ''}
-            ${dp.education ? `<div class="dp-detail"><i class="fas fa-graduation-cap"></i><div><span class="dp-detail-label">Education</span><span class="dp-detail-value">${dp.education}</span></div></div>` : ''}
-            ${dp.hourlyRate ? `<div class="dp-detail"><i class="fas fa-dollar-sign"></i><div><span class="dp-detail-label">Hourly Rate</span><span class="dp-detail-value">$${dp.hourlyRate}/hr</span></div></div>` : ''}
-            ${dp.email ? `<div class="dp-detail"><i class="fas fa-envelope"></i><div><span class="dp-detail-label">Email</span><span class="dp-detail-value">${dp.email}</span></div></div>` : ''}
-            ${dp.linkedinProfile ? `<div class="dp-detail"><i class="fab fa-linkedin"></i><div><span class="dp-detail-label">LinkedIn</span><a href="${dp.linkedinProfile}" target="_blank" class="dp-detail-link">View Profile</a></div></div>` : ''}
-            ${dp.profileStatus ? `<div class="dp-detail"><i class="fas fa-shield-alt"></i><div><span class="dp-detail-label">Profile Status</span><span class="dp-detail-value dp-status-${dp.profileStatus}">${dp.profileStatus.charAt(0).toUpperCase() + dp.profileStatus.slice(1)}</span></div></div>` : ''}
-        </div>
-        ${skillsHTML}
-        ${specsHTML}
-        ${resumeHTML}
-        ${certsHTML}
-    ` : `<div class="dp-loading" id="dp-loading-${designerId}"><div class="spinner" style="width:20px;height:20px;border-width:2px;"></div> <span>Loading profile...</span></div>`;
-
-    return `
-        <div class="designer-profile-card expanded" id="dp-card-${designerId}">
-            <div class="dp-header" onclick="this.parentElement.classList.toggle('expanded')">
-                <div class="dp-header-left">
-                    <i class="fas fa-user-circle"></i>
-                    <span>Designer Profile - ${designerName}</span>
-                </div>
-                <i class="fas fa-chevron-down dp-toggle-icon"></i>
-            </div>
-            <div class="dp-body">
-                ${profileBodyContent}
-            </div>
-        </div>`;
+    // Profile data is now rendered directly in the pqv-card layout
+    // This function returns empty string since the new card design
+    // integrates designer info directly into the banner and sections
+    return '';
 }
 
 async function loadDesignerProfileIntoCard(designerId, designerName) {
@@ -4008,31 +4028,99 @@ async function loadDesignerProfileIntoCard(designerId, designerName) {
         const response = await apiCall(`/quotes/designer-profile/${designerId}`, 'GET');
         if (response.success && response.data) {
             const dp = response.data;
-            const card = document.getElementById(`dp-card-${designerId}`);
-            if (card) {
-                const bodyEl = card.querySelector('.dp-body');
-                if (bodyEl) {
-                    const hasDetailedData = dp.skills?.length > 0 || dp.experience || dp.bio || dp.education || dp.resume || dp.hourlyRate || dp.linkedinProfile || dp.specializations?.length > 0;
-                    if (hasDetailedData) {
-                        bodyEl.innerHTML = buildDesignerProfileBodyHTML(dp);
-                    } else {
-                        // Show basic info even without detailed profile
-                        bodyEl.innerHTML = `
-                            <div class="dp-basic-info">
-                                <div class="dp-details-grid">
-                                    ${dp.name ? `<div class="dp-detail"><i class="fas fa-user"></i><div><span class="dp-detail-label">Name</span><span class="dp-detail-value">${dp.name}</span></div></div>` : ''}
-                                    ${dp.email ? `<div class="dp-detail"><i class="fas fa-envelope"></i><div><span class="dp-detail-label">Email</span><span class="dp-detail-value">${dp.email}</span></div></div>` : ''}
-                                    ${dp.profileStatus ? `<div class="dp-detail"><i class="fas fa-shield-alt"></i><div><span class="dp-detail-label">Profile Status</span><span class="dp-detail-value dp-status-${dp.profileStatus}">${dp.profileStatus.charAt(0).toUpperCase() + dp.profileStatus.slice(1)}</span></div></div>` : ''}
-                                </div>
-                                <p class="dp-no-details" style="margin-top:10px;">Designer has not yet completed their detailed profile.</p>
-                            </div>`;
+            const isVerified = dp.profileStatus === 'approved';
+
+            // Update the designer banner with loaded profile data
+            const parentCard = document.querySelector(`.pqv-card[data-designer-id="${designerId}"]`);
+            if (parentCard) {
+                // Update meta chips in the banner
+                const metaRow = parentCard.querySelector('.pqv-designer-meta');
+                if (metaRow && metaRow.children.length === 0) {
+                    let metaHTML = '';
+                    if (dp.experience) metaHTML += `<span class="pqv-meta-chip"><i class="fas fa-briefcase"></i> ${dp.experience}</span>`;
+                    if (dp.education) metaHTML += `<span class="pqv-meta-chip"><i class="fas fa-graduation-cap"></i> ${dp.education}</span>`;
+                    if (dp.hourlyRate) metaHTML += `<span class="pqv-meta-chip"><i class="fas fa-dollar-sign"></i> $${dp.hourlyRate}/hr</span>`;
+                    if (dp.linkedinProfile) metaHTML += `<a href="${dp.linkedinProfile}" target="_blank" class="pqv-meta-chip pqv-meta-link" onclick="event.stopPropagation()"><i class="fab fa-linkedin"></i> LinkedIn</a>`;
+                    metaRow.innerHTML = metaHTML;
+                }
+
+                // Update skills row
+                const skillsContainer = parentCard.querySelector('.pqv-skills-row');
+                if (!skillsContainer && dp.skills && dp.skills.length > 0) {
+                    const designerDetails = parentCard.querySelector('.pqv-designer-details');
+                    if (designerDetails) {
+                        const skillsDiv = document.createElement('div');
+                        skillsDiv.className = 'pqv-skills-row';
+                        skillsDiv.innerHTML = dp.skills.slice(0, 6).map(s => `<span class="pqv-skill-tag">${s}</span>`).join('') +
+                            (dp.skills.length > 6 ? `<span class="pqv-skill-more">+${dp.skills.length - 6}</span>` : '');
+                        designerDetails.appendChild(skillsDiv);
                     }
                 }
+
+                // Add verified badge if not present
+                if (isVerified && !parentCard.querySelector('.pqv-verified-badge')) {
+                    const avatarWrap = parentCard.querySelector('.pqv-avatar-wrap');
+                    if (avatarWrap) {
+                        const badge = document.createElement('div');
+                        badge.className = 'pqv-verified-badge';
+                        badge.title = 'Verified Professional';
+                        badge.innerHTML = '<i class="fas fa-check"></i>';
+                        avatarWrap.appendChild(badge);
+                    }
+                }
+
+                // Add docs row content if missing
+                const docsRow = parentCard.querySelector('.pqv-docs-row');
+                if (docsRow) {
+                    if (dp.resume && dp.resume.url && !docsRow.querySelector('.pqv-resume-btn')) {
+                        const resumeGroup = document.createElement('div');
+                        resumeGroup.className = 'pqv-doc-group';
+                        resumeGroup.setAttribute('onclick', 'event.stopPropagation()');
+                        resumeGroup.innerHTML = `<a href="${dp.resume.url}" target="_blank" class="pqv-resume-btn"><i class="fas fa-file-pdf"></i> View Resume <small>${dp.resume.filename || ''}</small></a>`;
+                        docsRow.appendChild(resumeGroup);
+                    }
+                    if (dp.certificates && dp.certificates.length > 0 && !docsRow.querySelector('.pqv-cert-links')) {
+                        const certGroup = document.createElement('div');
+                        certGroup.className = 'pqv-doc-group';
+                        certGroup.setAttribute('onclick', 'event.stopPropagation()');
+                        certGroup.innerHTML = `<span class="pqv-doc-label"><i class="fas fa-certificate"></i> Certificates (${dp.certificates.length})</span><div class="pqv-cert-links">${dp.certificates.slice(0, 3).map(c => `<a href="${c.url || '#'}" target="_blank" class="pqv-cert-link">${c.filename || 'Certificate'}</a>`).join('')}${dp.certificates.length > 3 ? `<span class="pqv-cert-more">+${dp.certificates.length - 3} more</span>` : ''}</div>`;
+                        docsRow.appendChild(certGroup);
+                    }
+                }
+
+                // Add specializations if missing
+                if (dp.specializations && dp.specializations.length > 0 && !parentCard.querySelector('.pqv-specs-row')) {
+                    const docsRowEl = parentCard.querySelector('.pqv-docs-row');
+                    if (docsRowEl) {
+                        const specsDiv = document.createElement('div');
+                        specsDiv.className = 'pqv-specs-row';
+                        specsDiv.innerHTML = `<i class="fas fa-star"></i><span><strong>Specializations:</strong> ${dp.specializations.join(', ')}</span>`;
+                        docsRowEl.insertAdjacentElement('afterend', specsDiv);
+                    }
+                }
+
+                // Add bio section if missing
+                if (dp.bio && !parentCard.querySelector('.pqv-bio-section')) {
+                    const actionsFooter = parentCard.querySelector('.pqv-actions-footer');
+                    if (actionsFooter) {
+                        const bioDiv = document.createElement('div');
+                        bioDiv.className = 'pqv-bio-section';
+                        bioDiv.innerHTML = `<div class="pqv-section-label"><i class="fas fa-user-circle"></i> About the Designer</div><p>${dp.bio}</p>`;
+                        actionsFooter.insertAdjacentElement('beforebegin', bioDiv);
+                    }
+                }
+            }
+
+            // Remove loading indicator
+            const expandSection = document.getElementById(`dp-card-${designerId}`);
+            if (expandSection) {
+                const loadingEl = expandSection.querySelector('.dp-loading');
+                if (loadingEl) loadingEl.remove();
             }
         }
     } catch (error) {
         const loadingEl = document.getElementById(`dp-loading-${designerId}`);
-        if (loadingEl) loadingEl.innerHTML = `<p class="dp-no-details">Could not load designer profile details.</p>`;
+        if (loadingEl) loadingEl.innerHTML = `<p class="dp-no-details">Could not load full profile details.</p>`;
     }
 }
 
