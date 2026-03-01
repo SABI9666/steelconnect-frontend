@@ -6145,24 +6145,35 @@ async function renderUpcomingMeetingsWidget() {
     if (_upcomingMeetingsTimer) { clearInterval(_upcomingMeetingsTimer); _upcomingMeetingsTimer = null; }
 
     try {
-        // Fetch meetings for the next 48 hours (today + tomorrow)
-        const response = await apiCall('/meetings/upcoming/reminders?window=2880', 'GET');
-        let meetings = response.data || [];
+        // Fetch all user meetings — this is the reliable primary source
+        let allMeetings = [];
+        try {
+            const allResponse = await apiCall('/meetings', 'GET');
+            allMeetings = allResponse.data || [];
+        } catch (e) {
+            console.warn('Failed to fetch meetings list:', e);
+        }
 
-        // Also fetch all user meetings to get today's + tomorrow's including past-today ones
-        const allResponse = await apiCall('/meetings', 'GET');
-        const allMeetings = allResponse.data || [];
+        // Also try the upcoming reminders endpoint as a secondary source
+        let reminderMeetings = [];
+        try {
+            const response = await apiCall('/meetings/upcoming/reminders?window=10080', 'GET');
+            reminderMeetings = response.data || [];
+        } catch (e) {
+            console.warn('Reminders endpoint unavailable, using main meetings list:', e);
+        }
 
         const now = new Date();
         const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const tomorrowEnd = new Date(todayStart.getTime() + 2 * 86400000);
+        // Show meetings for the next 7 days (covers today through next week)
+        const windowEnd = new Date(todayStart.getTime() + 7 * 86400000);
 
-        // Combine: all scheduled meetings for today + tomorrow
+        // Combine both sources: all non-cancelled meetings within the window
         const meetingsMap = new Map();
-        [...meetings, ...allMeetings].forEach(m => {
+        [...reminderMeetings, ...allMeetings].forEach(m => {
             if (m.status === 'cancelled') return;
             const mt = new Date(m.meetingDateTime);
-            if (mt >= todayStart && mt < tomorrowEnd) {
+            if (mt >= todayStart && mt < windowEnd) {
                 meetingsMap.set(m.id, m);
             }
         });
@@ -6185,8 +6196,11 @@ async function renderUpcomingMeetingsWidget() {
                 const endDate = new Date(m.endDateTime || mDate.getTime() + (m.duration || 60) * 60000);
                 const diff = mDate.getTime() - currentTime;
                 const minutesUntil = Math.round(diff / 60000);
-                const isToday = mDate.toDateString() === now.toDateString();
-                const isTomorrow = mDate.toDateString() === new Date(now.getTime() + 86400000).toDateString();
+                const todayStr = now.toDateString();
+                const tomorrowStr = new Date(now.getTime() + 86400000).toDateString();
+                const meetingDateStr = mDate.toDateString();
+                const isToday = meetingDateStr === todayStr;
+                const isTomorrow = meetingDateStr === tomorrowStr;
 
                 const isPast = currentTime > endDate.getTime();
                 const isInProgress = currentTime >= mDate.getTime() && currentTime <= endDate.getTime();
@@ -6223,11 +6237,13 @@ async function renderUpcomingMeetingsWidget() {
                     urgencyIcon = 'fa-clock';
                 } else {
                     urgencyClass = isTomorrow ? 'um-tomorrow' : 'um-later';
-                    if (minutesUntil > 60) {
+                    if (isToday && minutesUntil > 60) {
                         const hrs = Math.floor(minutesUntil / 60);
                         urgencyLabel = `${hrs}h ${minutesUntil % 60}m`;
+                    } else if (isTomorrow) {
+                        urgencyLabel = 'Tomorrow';
                     } else {
-                        urgencyLabel = isTomorrow ? 'Tomorrow' : 'Today';
+                        urgencyLabel = mDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
                     }
                     urgencyIcon = 'fa-calendar';
                 }
