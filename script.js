@@ -5648,7 +5648,10 @@ const _checkAndInitSocket = setInterval(() => {
     }
 }, 3000);
 
-// --- PUSH NOTIFICATIONS FOR OFFLINE CALL RECEIVING ---
+// --- PUSH NOTIFICATIONS FOR CALL RECEIVING ---
+// Uses Web Push (VAPID) as primary mechanism — works even when browser is closed.
+// Falls back to FCM if Firebase is configured on the client.
+// This is what makes calls arrive like Teams/WhatsApp — even when in another app.
 async function initializePushNotifications() {
     try {
         // Check browser support
@@ -5657,67 +5660,34 @@ async function initializePushNotifications() {
             return;
         }
 
-        // Register service worker
+        // Register service worker (handles background push events)
         const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
         console.log('[PUSH] Service worker registered:', registration.scope);
 
-        // Check if Firebase messaging is available (loaded via CDN)
-        if (typeof firebase !== 'undefined' && firebase.messaging) {
-            const messaging = firebase.messaging();
+        // Wait for service worker to be ready
+        await navigator.serviceWorker.ready;
+        console.log('[PUSH] Service worker is ready');
 
-            // Request notification permission
-            const permission = await Notification.requestPermission();
-            if (permission !== 'granted') {
-                console.log('[PUSH] Notification permission denied');
-                return;
-            }
-
-            // Get FCM token
-            try {
-                const token = await messaging.getToken({
-                    vapidKey: window.FIREBASE_VAPID_KEY || '',
-                    serviceWorkerRegistration: registration
-                });
-
-                if (token) {
-                    console.log('[PUSH] FCM token obtained');
-                    // Register token with backend
-                    await registerFCMToken(token);
-
-                    // Also send via socket for immediate registration
-                    if (voiceCallState.socket && voiceCallState.socket.connected) {
-                        voiceCallState.socket.emit('register-fcm-token', {
-                            userId: appState.currentUser.id,
-                            token: token
-                        });
-                    }
-                }
-
-                // Handle foreground messages
-                messaging.onMessage((payload) => {
-                    console.log('[PUSH] Foreground message received:', payload);
-                    if (payload.data && payload.data.type === 'incoming_call') {
-                        // Call will come through socket if user is online, this is a backup
-                        console.log('[PUSH] Incoming call notification in foreground - socket should handle it');
-                    }
-                });
-            } catch (tokenErr) {
-                console.warn('[PUSH] FCM token error (Firebase may not be configured):', tokenErr.message);
-                // Fall back to basic web push without FCM
-                await setupBasicWebPush(registration);
-            }
-        } else {
-            // Firebase SDK not loaded - use basic service worker for notifications
-            console.log('[PUSH] Firebase SDK not loaded, using basic push notifications');
-            await setupBasicWebPush(registration);
+        // Request notification permission
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+            console.log('[PUSH] Notification permission not granted:', permission);
+            return;
         }
+        console.log('[PUSH] Notification permission granted');
 
-        // Listen for messages from service worker (e.g., user clicked "Answer" on notification)
+        // Subscribe to Web Push using VAPID key from backend
+        await subscribeToWebPush(registration);
+
+        // Also try FCM if Firebase is configured (optional, for broader compatibility)
+        await tryFCMSetup(registration);
+
+        // Listen for messages from service worker (user clicked "Answer" on push notification)
         navigator.serviceWorker.addEventListener('message', (event) => {
             if (event.data && event.data.type === 'CALL_ANSWER') {
                 const { callId, callerId } = event.data;
-                console.log('[PUSH] CALL_ANSWER received from service worker, callId:', callId);
-                // Initialize socket and accept the call once connected
+                console.log('[PUSH] CALL_ANSWER from service worker, callId:', callId);
+                // Ensure socket is connected and accept the call
                 initializeSocketConnection();
 
                 const tryAccept = () => {
@@ -5729,9 +5699,7 @@ async function initializePushNotifications() {
                     return false;
                 };
 
-                // If already connected, accept immediately
                 if (!tryAccept()) {
-                    // Wait for socket to connect (poll every 200ms, up to 5 seconds)
                     let waited = 0;
                     const waitInterval = setInterval(() => {
                         waited += 200;
@@ -5751,36 +5719,101 @@ async function initializePushNotifications() {
     }
 }
 
-async function setupBasicWebPush(registration) {
+// Subscribe to Web Push notifications using VAPID (no Firebase dependency)
+async function subscribeToWebPush(registration) {
     try {
-        const permission = await Notification.requestPermission();
-        if (permission !== 'granted') {
-            console.log('[PUSH] Notification permission denied');
+        const backendUrl = IS_LOCAL ? 'http://localhost:10000' : 'https://steelconnect-backend.onrender.com';
+
+        // Get VAPID public key from backend
+        const keyResponse = await fetch(`${backendUrl}/api/push/vapid-key`);
+        const keyData = await keyResponse.json();
+        if (!keyData.success || !keyData.publicKey) {
+            console.warn('[PUSH] Could not get VAPID public key from backend');
             return;
         }
-        console.log('[PUSH] Basic web push ready (notifications will show when tab is open)');
+
+        // Convert VAPID key from base64url to Uint8Array
+        const vapidPublicKey = urlBase64ToUint8Array(keyData.publicKey);
+
+        // Check for existing subscription
+        let subscription = await registration.pushManager.getSubscription();
+
+        if (!subscription) {
+            // Create new push subscription
+            subscription = await registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: vapidPublicKey
+            });
+            console.log('[PUSH] New Web Push subscription created');
+        } else {
+            console.log('[PUSH] Existing Web Push subscription found');
+        }
+
+        // Register subscription with backend (so it can send push to this device)
+        await fetch(`${backendUrl}/api/push/subscribe`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                userId: appState.currentUser.id,
+                subscription: subscription.toJSON()
+            })
+        });
+
+        console.log('[PUSH] Web Push subscription registered with backend');
     } catch (err) {
-        console.warn('[PUSH] Basic push setup error:', err.message);
+        console.warn('[PUSH] Web Push subscription error:', err.message);
     }
 }
 
-async function registerFCMToken(token) {
+// Convert base64url VAPID key to Uint8Array (required by PushManager.subscribe)
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; i++) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+}
+
+// Try FCM setup as a fallback (only works if Firebase is configured)
+async function tryFCMSetup(registration) {
     try {
-        const backendUrl = IS_LOCAL ? 'http://localhost:10000' : 'https://steelconnect-backend.onrender.com';
-        await fetch(`${backendUrl}/api/users/fcm-token`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${appState.jwtToken}`
-            },
-            body: JSON.stringify({
-                userId: appState.currentUser.id,
-                token: token
-            })
+        if (typeof firebase === 'undefined' || !firebase.messaging) return;
+
+        const messaging = firebase.messaging();
+        const token = await messaging.getToken({
+            vapidKey: window.FIREBASE_VAPID_KEY || '',
+            serviceWorkerRegistration: registration
         });
-        console.log('[PUSH] FCM token registered with backend');
+
+        if (token) {
+            const backendUrl = IS_LOCAL ? 'http://localhost:10000' : 'https://steelconnect-backend.onrender.com';
+            await fetch(`${backendUrl}/api/users/fcm-token`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: appState.currentUser.id, token })
+            });
+            console.log('[PUSH] FCM token also registered (fallback)');
+
+            if (voiceCallState.socket && voiceCallState.socket.connected) {
+                voiceCallState.socket.emit('register-fcm-token', {
+                    userId: appState.currentUser.id,
+                    token
+                });
+            }
+
+            // Handle foreground FCM messages
+            messaging.onMessage((payload) => {
+                if (payload.data && payload.data.type === 'incoming_call') {
+                    console.log('[PUSH] FCM foreground call — socket should handle it');
+                }
+            });
+        }
     } catch (err) {
-        console.error('[PUSH] Failed to register FCM token:', err.message);
+        // Firebase not configured — this is fine, Web Push handles it
+        console.log('[PUSH] FCM not available (Firebase not configured), using Web Push only');
     }
 }
 
