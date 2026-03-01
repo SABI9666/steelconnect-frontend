@@ -10228,6 +10228,8 @@ function renderProjectTrackingList(projects) {
         const deadlineStr = job.deadline ? new Date(job.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'No deadline';
         const createdStr = job.createdAt ? new Date(job.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
         const isOverdue = job.deadline && new Date(job.deadline) < new Date() && job.status !== 'completed';
+        const hasPendingUpdate = job.completionUpdate && job.completionUpdate.status === 'pending';
+        const isContractorView = appState.currentUser.type !== 'designer';
         return `
             <div class="pt-project-card" onclick="renderProjectDetailView('${job.id}')">
                 <div class="pt-project-header">
@@ -10241,12 +10243,14 @@ function renderProjectTrackingList(projects) {
                 </div>
                 <div class="pt-progress-section">
                     <div class="pt-progress-header">
-                        <span class="pt-progress-label">Progress</span>
+                        <span class="pt-progress-label">Completion</span>
                         <span class="pt-progress-value">${progress}%</span>
                     </div>
                     <div class="pt-progress-bar">
                         <div class="pt-progress-fill ${job.status}" style="width: ${progress}%"></div>
                     </div>
+                    ${hasPendingUpdate && isContractorView ? `<div class="pt-pending-update-badge"><i class="fas fa-clock"></i> Pending: ${job.completionUpdate.percentage}% update awaiting approval</div>` : ''}
+                    ${hasPendingUpdate && !isContractorView ? `<div class="pt-pending-update-badge designer"><i class="fas fa-hourglass-half"></i> ${job.completionUpdate.percentage}% update pending approval</div>` : ''}
                 </div>
                 <div class="pt-project-meta">
                     <div class="pt-meta-item">
@@ -10274,9 +10278,13 @@ function renderProjectTrackingList(projects) {
 
 function getProjectProgress(job) {
     if (job.status === 'completed') return 100;
-    if (job.status === 'assigned') return 60;
-    if (job.status === 'open' && (job.quotesCount || 0) > 0) return 30;
-    if (job.status === 'open') return 10;
+    // Use accepted completion percentage if available
+    if (job.completionPercentage !== undefined && job.completionPercentage !== null) {
+        return job.completionPercentage;
+    }
+    if (job.status === 'assigned') return 10;
+    if (job.status === 'open' && (job.quotesCount || 0) > 0) return 5;
+    if (job.status === 'open') return 0;
     return 0;
 }
 
@@ -10376,13 +10384,16 @@ async function renderProjectDetailView(jobId) {
                 <div class="pt-detail-grid">
                     <div class="pt-detail-main">
                         <div class="pt-detail-section">
-                            <h3><i class="fas fa-tasks"></i> Project Progress</h3>
+                            <h3><i class="fas fa-tasks"></i> Project Completion</h3>
                             <div class="pt-detail-progress">
                                 <div class="pt-detail-progress-bar">
                                     <div class="pt-progress-fill ${job.status}" style="width: ${progress}%"></div>
                                 </div>
                                 <span class="pt-detail-progress-text">${progress}% Complete</span>
                             </div>
+                            ${job.completionDetails ? `<p class="pt-completion-details-text"><i class="fas fa-info-circle"></i> ${job.completionDetails}</p>` : ''}
+                            ${job.completionAcceptedAt ? `<p class="pt-completion-accepted-date"><i class="fas fa-check-circle"></i> Last accepted: ${new Date(job.completionAcceptedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>` : ''}
+                            ${buildCompletionUpdateSection(job, isDesignerView)}
                         </div>
 
                         <div class="pt-detail-section">
@@ -10560,6 +10571,229 @@ function buildProjectMilestones(job) {
         });
     }
     return milestones;
+}
+
+// --- COMPLETION PERCENTAGE UPDATE FEATURE ---
+function buildCompletionUpdateSection(job, isDesignerView) {
+    if (job.status !== 'assigned') return '';
+
+    const pendingUpdate = job.completionUpdate && job.completionUpdate.status === 'pending' ? job.completionUpdate : null;
+    const lastRejected = job.completionUpdate && job.completionUpdate.status === 'rejected' ? job.completionUpdate : null;
+
+    let html = '';
+
+    // Designer view: show update form or pending status
+    if (isDesignerView) {
+        if (pendingUpdate) {
+            html = `
+                <div class="pt-completion-pending-card">
+                    <div class="pt-completion-pending-header">
+                        <i class="fas fa-hourglass-half"></i>
+                        <span>Completion Update Pending Approval</span>
+                    </div>
+                    <div class="pt-completion-pending-body">
+                        <div class="pt-completion-pending-pct">${pendingUpdate.percentage}%</div>
+                        <p class="pt-completion-pending-details">${pendingUpdate.details}</p>
+                        <span class="pt-completion-pending-date">Submitted ${new Date(pendingUpdate.submittedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
+                </div>`;
+        } else {
+            if (lastRejected) {
+                html += `
+                    <div class="pt-completion-rejected-card">
+                        <div class="pt-completion-rejected-header">
+                            <i class="fas fa-times-circle"></i>
+                            <span>Last Update Rejected</span>
+                        </div>
+                        <p class="pt-completion-rejected-details">${lastRejected.percentage}% - ${lastRejected.details}</p>
+                        ${lastRejected.rejectionReason ? `<p class="pt-completion-rejected-reason"><strong>Reason:</strong> ${lastRejected.rejectionReason}</p>` : ''}
+                    </div>`;
+            }
+            html += `
+                <button class="btn btn-primary btn-block pt-update-completion-btn" onclick="event.stopPropagation(); openCompletionUpdateModal('${job.id}', ${job.completionPercentage || 0})">
+                    <i class="fas fa-percentage"></i> Update Completion Percentage
+                </button>`;
+        }
+    }
+
+    // Contractor view: show accept/reject for pending updates
+    if (!isDesignerView) {
+        if (pendingUpdate) {
+            html = `
+                <div class="pt-completion-review-card">
+                    <div class="pt-completion-review-header">
+                        <i class="fas fa-bell"></i>
+                        <span>Completion Update Requires Your Approval</span>
+                    </div>
+                    <div class="pt-completion-review-body">
+                        <div class="pt-completion-review-pct">${pendingUpdate.percentage}%</div>
+                        <p class="pt-completion-review-details">${pendingUpdate.details}</p>
+                        <div class="pt-completion-review-meta">
+                            <span><i class="fas fa-user"></i> ${pendingUpdate.submittedByName}</span>
+                            <span><i class="fas fa-clock"></i> ${new Date(pendingUpdate.submittedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+                    </div>
+                    <div class="pt-completion-review-actions">
+                        <button class="btn btn-success" onclick="event.stopPropagation(); respondToCompletionUpdate('${job.id}', 'accept')">
+                            <i class="fas fa-check"></i> Accept
+                        </button>
+                        <button class="btn btn-danger" onclick="event.stopPropagation(); openRejectCompletionModal('${job.id}')">
+                            <i class="fas fa-times"></i> Reject
+                        </button>
+                    </div>
+                </div>`;
+        }
+    }
+
+    // Show completion history for both
+    if (job.completionHistory && job.completionHistory.length > 0) {
+        const recentHistory = job.completionHistory.slice(-5).reverse();
+        html += `
+            <div class="pt-completion-history">
+                <h4><i class="fas fa-history"></i> Completion History</h4>
+                <div class="pt-completion-history-list">
+                    ${recentHistory.map(entry => `
+                        <div class="pt-completion-history-item ${entry.status}">
+                            <div class="pt-completion-history-pct">${entry.percentage}%</div>
+                            <div class="pt-completion-history-info">
+                                <p>${entry.details}</p>
+                                <span class="pt-completion-history-meta">
+                                    ${new Date(entry.submittedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} -
+                                    <span class="pt-completion-status-badge ${entry.status}">${entry.status === 'accepted' ? 'Accepted' : entry.status === 'rejected' ? 'Rejected' : 'Pending'}</span>
+                                </span>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>`;
+    }
+
+    return html;
+}
+
+function openCompletionUpdateModal(jobId, currentPercentage) {
+    const modalOverlay = document.createElement('div');
+    modalOverlay.className = 'pt-modal-overlay';
+    modalOverlay.id = 'completion-update-modal';
+    modalOverlay.innerHTML = `
+        <div class="pt-modal-content">
+            <div class="pt-modal-header">
+                <h3><i class="fas fa-percentage"></i> Update Completion Percentage</h3>
+                <button class="pt-modal-close" onclick="document.getElementById('completion-update-modal').remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="pt-modal-body">
+                <div class="pt-completion-slider-group">
+                    <label>Completion Percentage</label>
+                    <div class="pt-completion-slider-row">
+                        <input type="range" id="completion-pct-slider" min="0" max="100" step="5" value="${currentPercentage}"
+                               oninput="document.getElementById('completion-pct-display').textContent = this.value + '%'; document.getElementById('completion-pct-input').value = this.value;">
+                        <span id="completion-pct-display" class="pt-completion-pct-display">${currentPercentage}%</span>
+                    </div>
+                    <input type="hidden" id="completion-pct-input" value="${currentPercentage}">
+                </div>
+                <div class="pt-completion-details-group">
+                    <label>Progress Details <span class="required">*</span></label>
+                    <textarea id="completion-details-input" placeholder="Describe what has been completed, current status, and next steps..." rows="4" maxlength="500"></textarea>
+                    <small class="pt-char-count"><span id="completion-chars">0</span>/500</small>
+                </div>
+            </div>
+            <div class="pt-modal-footer">
+                <button class="btn btn-outline" onclick="document.getElementById('completion-update-modal').remove()">Cancel</button>
+                <button class="btn btn-primary" id="submit-completion-btn" onclick="submitCompletionUpdate('${jobId}')">
+                    <i class="fas fa-paper-plane"></i> Submit for Approval
+                </button>
+            </div>
+        </div>`;
+    document.body.appendChild(modalOverlay);
+
+    // Character counter
+    document.getElementById('completion-details-input').addEventListener('input', function() {
+        document.getElementById('completion-chars').textContent = this.value.length;
+    });
+}
+
+async function submitCompletionUpdate(jobId) {
+    const percentage = parseInt(document.getElementById('completion-pct-input').value);
+    const details = document.getElementById('completion-details-input').value.trim();
+
+    if (!details) {
+        showNotification('Please provide details about the progress.', 'error');
+        return;
+    }
+    if (percentage <= 0) {
+        showNotification('Percentage must be greater than 0.', 'error');
+        return;
+    }
+
+    const submitBtn = document.getElementById('submit-completion-btn');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+
+    try {
+        await apiCall(`/jobs/${jobId}/completion`, 'PUT', { percentage, details }, 'Completion update submitted for approval!');
+        document.getElementById('completion-update-modal').remove();
+        addLocalNotification('Submitted', `${percentage}% completion update submitted for contractor approval.`, 'success');
+        renderProjectDetailView(jobId);
+    } catch (error) {
+        showNotification('Failed to submit completion update. Please try again.', 'error');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit for Approval';
+    }
+}
+
+async function respondToCompletionUpdate(jobId, action) {
+    if (action === 'accept') {
+        if (!confirm('Accept this completion percentage update?')) return;
+        try {
+            await apiCall(`/jobs/${jobId}/completion/respond`, 'PUT', { action: 'accept' }, 'Completion update accepted!');
+            addLocalNotification('Accepted', 'Completion percentage has been updated.', 'success');
+            renderProjectDetailView(jobId);
+        } catch (error) {
+            showNotification('Failed to accept completion update.', 'error');
+        }
+    }
+}
+
+function openRejectCompletionModal(jobId) {
+    const modalOverlay = document.createElement('div');
+    modalOverlay.className = 'pt-modal-overlay';
+    modalOverlay.id = 'reject-completion-modal';
+    modalOverlay.innerHTML = `
+        <div class="pt-modal-content">
+            <div class="pt-modal-header">
+                <h3><i class="fas fa-times-circle"></i> Reject Completion Update</h3>
+                <button class="pt-modal-close" onclick="document.getElementById('reject-completion-modal').remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="pt-modal-body">
+                <div class="pt-completion-details-group">
+                    <label>Reason for Rejection (Optional)</label>
+                    <textarea id="rejection-reason-input" placeholder="Explain why the completion update is being rejected..." rows="3" maxlength="300"></textarea>
+                </div>
+            </div>
+            <div class="pt-modal-footer">
+                <button class="btn btn-outline" onclick="document.getElementById('reject-completion-modal').remove()">Cancel</button>
+                <button class="btn btn-danger" onclick="submitCompletionRejection('${jobId}')">
+                    <i class="fas fa-times"></i> Reject Update
+                </button>
+            </div>
+        </div>`;
+    document.body.appendChild(modalOverlay);
+}
+
+async function submitCompletionRejection(jobId) {
+    const rejectionReason = document.getElementById('rejection-reason-input').value.trim();
+    try {
+        await apiCall(`/jobs/${jobId}/completion/respond`, 'PUT', { action: 'reject', rejectionReason }, 'Completion update rejected.');
+        document.getElementById('reject-completion-modal').remove();
+        addLocalNotification('Rejected', 'Completion update has been rejected.', 'info');
+        renderProjectDetailView(jobId);
+    } catch (error) {
+        showNotification('Failed to reject completion update.', 'error');
+    }
 }
 
 async function loadProjectChatHistory(jobId) {
