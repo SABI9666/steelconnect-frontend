@@ -4119,17 +4119,18 @@ const voiceCallState = {
 
 // Initialize Socket.IO connection for voice calls
 function initializeSocketConnection() {
+    if (!appState.currentUser) return;
+
     if (voiceCallState.socket) {
-        // Socket already exists - if connected, nothing to do
-        if (voiceCallState.socket.connected) return;
-        // Socket exists but disconnected - force reconnect, don't create a new one
-        // Creating a new socket causes duplicate connections and events not reaching caller
-        if (!voiceCallState.socket.connected) {
-            voiceCallState.socket.connect();
+        // Socket already exists - if connected, just re-register to ensure server mapping is fresh
+        if (voiceCallState.socket.connected) {
+            voiceCallState.socket.emit('register', appState.currentUser.id);
+            return;
         }
+        // Socket exists but disconnected - force reconnect
+        voiceCallState.socket.connect();
         return;
     }
-    if (!appState.currentUser) return;
 
     const socketUrl = IS_LOCAL ? 'http://localhost:10000' : 'https://steelconnect-backend.onrender.com';
     try {
@@ -4435,7 +4436,7 @@ function showIncomingCallUI(data) {
     if (voiceCallState.currentCallId) {
         // If same call is being delivered again (e.g., from socket after push notification), ignore
         if (voiceCallState.currentCallId === callId) return;
-        // Different call while already on a call — reject it
+        // Different call while already on a call — reject it as busy
         if (voiceCallState.socket && voiceCallState.socket.connected) {
             voiceCallState.socket.emit('call-reject', { callId, calleeId: appState.currentUser.id, reason: 'busy' });
         }
@@ -4487,6 +4488,58 @@ function showIncomingCallUI(data) {
     `;
     document.body.appendChild(overlay);
     playCallSound('incoming');
+
+    // Show browser notification so call is visible even when tab is in background
+    // (like Teams - calls ring even when app is minimized)
+    showIncomingCallBrowserNotification(callId, callerId, callerName);
+}
+
+// Browser Notification for incoming calls - ensures visibility when tab is in background
+function showIncomingCallBrowserNotification(callId, callerId, callerName) {
+    try {
+        if (!('Notification' in window)) return;
+        if (Notification.permission === 'granted') {
+            _createCallNotification(callId, callerId, callerName);
+        } else if (Notification.permission !== 'denied') {
+            Notification.requestPermission().then(permission => {
+                if (permission === 'granted') {
+                    _createCallNotification(callId, callerId, callerName);
+                }
+            });
+        }
+    } catch (e) {
+        console.warn('[VOICE] Browser notification error:', e);
+    }
+}
+
+function _createCallNotification(callId, callerId, callerName) {
+    try {
+        const notification = new Notification('Incoming Call - SteelConnect', {
+            body: `${callerName} is calling you`,
+            icon: '/icon-192.png',
+            badge: '/icon-192.png',
+            tag: `incoming-call-${callId}`,
+            requireInteraction: true,
+            vibrate: [300, 100, 300, 100, 300, 100, 300],
+            silent: false
+        });
+
+        // Store reference for cleanup
+        voiceCallState._browserNotification = notification;
+
+        // When user clicks the notification, focus the app window
+        notification.onclick = () => {
+            window.focus();
+            notification.close();
+        };
+
+        // Auto-close notification when call ends or is answered
+        notification.onclose = () => {
+            voiceCallState._browserNotification = null;
+        };
+    } catch (e) {
+        console.warn('[VOICE] Failed to create browser notification:', e);
+    }
 }
 
 // Accept incoming call
@@ -5232,9 +5285,14 @@ function playCallSound(type) {
     stopCallSound();
     try {
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        // Resume AudioContext if suspended by browser autoplay policy
+        if (ctx.state === 'suspended') {
+            ctx.resume().catch(() => {});
+        }
         const masterGain = ctx.createGain();
         masterGain.connect(ctx.destination);
-        masterGain.gain.value = 0.18;
+        // Louder volume for incoming calls so they are clearly audible
+        masterGain.gain.value = type === 'incoming' ? 0.6 : 0.25;
 
         let intervalId = null;
         const oscillators = [];
@@ -5383,6 +5441,12 @@ function stopCallSound() {
 function endCallCleanup() {
     stopCallSound();
 
+    // Close browser notification if open
+    if (voiceCallState._browserNotification) {
+        try { voiceCallState._browserNotification.close(); } catch (e) { /* ignore */ }
+        voiceCallState._browserNotification = null;
+    }
+
     if (voiceCallState._qualityInterval) {
         clearInterval(voiceCallState._qualityInterval);
         voiceCallState._qualityInterval = null;
@@ -5501,16 +5565,28 @@ async function loadCallHistory() {
     }
 }
 
-// Initialize socket when user logs in
-const _originalInitApp = typeof initializeApp === 'function' ? null : null;
-// Hook into app state changes to initialize socket and push notifications
+// Initialize socket when user logs in - keep polling so logout/re-login re-initializes
+let _socketInitializedForUser = null;
 const _checkAndInitSocket = setInterval(() => {
     if (appState.currentUser && appState.jwtToken) {
-        initializeSocketConnection();
-        initializePushNotifications();
-        clearInterval(_checkAndInitSocket);
+        // Only re-initialize if user changed or socket not connected
+        if (_socketInitializedForUser !== appState.currentUser.id ||
+            !voiceCallState.socket || !voiceCallState.socket.connected) {
+            _socketInitializedForUser = appState.currentUser.id;
+            initializeSocketConnection();
+            initializePushNotifications();
+        }
+    } else {
+        // User logged out - reset so we re-initialize on next login
+        if (_socketInitializedForUser) {
+            _socketInitializedForUser = null;
+            if (voiceCallState.socket) {
+                voiceCallState.socket.disconnect();
+                voiceCallState.socket = null;
+            }
+        }
     }
-}, 500);
+}, 2000);
 
 // --- PUSH NOTIFICATIONS FOR OFFLINE CALL RECEIVING ---
 async function initializePushNotifications() {
@@ -5646,6 +5722,43 @@ async function registerFCMToken(token) {
     } catch (err) {
         console.error('[PUSH] Failed to register FCM token:', err.message);
     }
+}
+
+// --- SOCKET HEALTH & VISIBILITY MANAGEMENT ---
+// Reconnect socket when user returns to the tab (like Teams keeps connection alive)
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && appState.currentUser && appState.jwtToken) {
+        // Tab became visible - ensure socket is connected
+        if (!voiceCallState.socket || !voiceCallState.socket.connected) {
+            console.log('[VOICE] Tab visible - reconnecting socket');
+            initializeSocketConnection();
+        } else {
+            // Socket is connected but re-register to refresh server-side mapping
+            voiceCallState.socket.emit('register', appState.currentUser.id);
+        }
+    }
+});
+
+// Reconnect socket on network recovery
+window.addEventListener('online', () => {
+    if (appState.currentUser && appState.jwtToken) {
+        console.log('[VOICE] Network online - reconnecting socket');
+        if (voiceCallState.socket && !voiceCallState.socket.connected) {
+            voiceCallState.socket.connect();
+        } else if (!voiceCallState.socket) {
+            initializeSocketConnection();
+        }
+    }
+});
+
+// Request notification permission early so incoming calls can show browser notifications
+if ('Notification' in window && Notification.permission === 'default') {
+    // Wait for user interaction before requesting (browser requirement)
+    const requestNotifPermission = () => {
+        Notification.requestPermission().catch(() => {});
+        document.removeEventListener('click', requestNotifPermission);
+    };
+    document.addEventListener('click', requestNotifPermission, { once: true });
 }
 
 
