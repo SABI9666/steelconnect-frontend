@@ -1654,6 +1654,10 @@ function getNotificationActionButtons(notification) {
                 buttons = `
                     <button class="notification-action-btn" onclick="event.stopPropagation(); respondToMeeting('${metadata.meetingId}', 'accepted')" style="color:#10b981"><i class="fas fa-check"></i> Accept</button>
                     <button class="notification-action-btn" onclick="event.stopPropagation(); respondToMeeting('${metadata.meetingId}', 'declined')" style="color:#ef4444"><i class="fas fa-times"></i> Decline</button>`;
+            } else if ((metadata?.action === 'meeting_declined' || metadata?.action === 'meeting_cancelled') && metadata?.jobId && metadata?.organizerId) {
+                buttons = `
+                    <button class="notification-action-btn" onclick="event.stopPropagation(); openConversation('${metadata.jobId}', '${metadata.respondentId || metadata.organizerId}')"><i class="fas fa-comment"></i> Message</button>
+                    <button class="notification-action-btn" onclick="event.stopPropagation(); renderProjectDetailView('${metadata.jobId}')"><i class="fas fa-eye"></i> View Project</button>`;
             } else if (metadata?.jobId) {
                 buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); renderProjectDetailView('${metadata.jobId}')"><i class="fas fa-eye"></i> View Project</button>`;
             } else {
@@ -1809,31 +1813,27 @@ function showMeetingPopup(notification) {
     localStorage.setItem('meetingPopupSeenIds', JSON.stringify(_meetingPopupSeenIds));
 
     // Determine popup variant
-    let icon, accentColor, headerBg, typeLabel;
+    let icon, accentColor, typeLabel;
     if (action === 'meeting_invitation') {
-        icon = 'fa-calendar-plus'; accentColor = '#2563eb'; headerBg = 'linear-gradient(135deg,#1e40af,#3b82f6)'; typeLabel = 'Meeting Invitation';
+        icon = 'fa-calendar-plus'; accentColor = '#2563eb'; typeLabel = 'Meeting Invitation';
     } else if (action === 'meeting_accepted') {
-        icon = 'fa-calendar-check'; accentColor = '#10b981'; headerBg = 'linear-gradient(135deg,#047857,#10b981)'; typeLabel = 'Meeting Accepted';
-    } else if (action === 'meeting_declined') {
-        icon = 'fa-calendar-times'; accentColor = '#ef4444'; headerBg = 'linear-gradient(135deg,#b91c1c,#ef4444)'; typeLabel = 'Meeting Declined';
+        icon = 'fa-calendar-check'; accentColor = '#10b981'; typeLabel = 'Accepted';
     } else if (action === 'meeting_rescheduled') {
-        icon = 'fa-calendar-day'; accentColor = '#f59e0b'; headerBg = 'linear-gradient(135deg,#b45309,#f59e0b)'; typeLabel = 'Meeting Rescheduled';
-    } else if (action === 'meeting_cancelled') {
-        icon = 'fa-calendar-times'; accentColor = '#ef4444'; headerBg = 'linear-gradient(135deg,#b91c1c,#ef4444)'; typeLabel = 'Meeting Cancelled';
+        icon = 'fa-calendar-day'; accentColor = '#f59e0b'; typeLabel = 'Rescheduled';
     } else if (action === 'meeting_scheduled_confirmation') {
-        icon = 'fa-calendar-check'; accentColor = '#10b981'; headerBg = 'linear-gradient(135deg,#047857,#10b981)'; typeLabel = 'Meeting Scheduled';
+        icon = 'fa-calendar-check'; accentColor = '#10b981'; typeLabel = 'Scheduled';
     } else {
-        icon = 'fa-calendar-check'; accentColor = '#2563eb'; headerBg = 'linear-gradient(135deg,#1e40af,#3b82f6)'; typeLabel = 'Meeting Update';
+        icon = 'fa-calendar-check'; accentColor = '#2563eb'; typeLabel = 'Meeting Update';
     }
 
-    // Format date/time if available
+    // Format date/time compact
     let dateTimeStr = '';
     if (meta.meetingDate && meta.meetingTime) {
         const dt = new Date(`${meta.meetingDate}T${meta.meetingTime}`);
-        dateTimeStr = dt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) + ' at ' + dt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+        dateTimeStr = dt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) + ', ' + dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
     }
 
-    // Build action buttons
+    // Build compact action buttons
     let actionsHTML = '';
     if (action === 'meeting_invitation' && meetingId) {
         actionsHTML = `
@@ -1849,7 +1849,7 @@ function showMeetingPopup(notification) {
         actionsHTML = `
             <div class="mtg-popup-actions">
                 <button class="mtg-popup-btn mtg-popup-view" onclick="renderProjectDetailView('${meta.jobId}'); this.closest('.mtg-popup').remove();">
-                    <i class="fas fa-external-link-alt"></i> View Project
+                    <i class="fas fa-external-link-alt"></i> View
                 </button>
             </div>`;
     }
@@ -1862,27 +1862,28 @@ function showMeetingPopup(notification) {
         document.body.appendChild(container);
     }
 
+    const meetingTitle = notification.title || meta.meetingTitle || 'Meeting';
+    const organizer = meta.organizerName && action === 'meeting_invitation' ? meta.organizerName : '';
+
     const popup = document.createElement('div');
     popup.className = 'mtg-popup';
     popup.innerHTML = `
-        <div class="mtg-popup-header" style="background:${headerBg}">
-            <div class="mtg-popup-header-icon"><i class="fas ${icon}"></i></div>
-            <div class="mtg-popup-header-text">
-                <span class="mtg-popup-type">${typeLabel}</span>
-                <span class="mtg-popup-brand">SteelConnect</span>
+        <div class="mtg-popup-strip" style="background:${accentColor}"></div>
+        <div class="mtg-popup-inner">
+            <div class="mtg-popup-top">
+                <div class="mtg-popup-icon" style="color:${accentColor}"><i class="fas ${icon}"></i></div>
+                <div class="mtg-popup-info">
+                    <span class="mtg-popup-label" style="color:${accentColor}">${typeLabel}</span>
+                    <span class="mtg-popup-title">${meetingTitle}</span>
+                </div>
+                <button class="mtg-popup-close" onclick="this.closest('.mtg-popup').remove()"><i class="fas fa-times"></i></button>
             </div>
-            <button class="mtg-popup-close" onclick="this.closest('.mtg-popup').remove()"><i class="fas fa-times"></i></button>
+            ${dateTimeStr || organizer ? `<div class="mtg-popup-meta">
+                ${dateTimeStr ? `<span class="mtg-popup-time"><i class="fas fa-clock"></i> ${dateTimeStr}</span>` : ''}
+                ${organizer ? `<span class="mtg-popup-org"><i class="fas fa-user"></i> ${organizer}</span>` : ''}
+            </div>` : ''}
+            ${actionsHTML}
         </div>
-        <div class="mtg-popup-body">
-            <div class="mtg-popup-title">${notification.title || meta.meetingTitle || 'Meeting'}</div>
-            <p class="mtg-popup-message">${notification.message || ''}</p>
-            ${dateTimeStr ? `<div class="mtg-popup-datetime"><i class="fas fa-clock"></i> ${dateTimeStr}</div>` : ''}
-            ${meta.organizerName && action === 'meeting_invitation' ? `<div class="mtg-popup-organizer"><i class="fas fa-user"></i> Organized by ${meta.organizerName}</div>` : ''}
-            ${meta.respondentName ? `<div class="mtg-popup-organizer"><i class="fas fa-user-check"></i> ${meta.respondentName}</div>` : ''}
-            ${meta.meetingTitle && notification.title !== meta.meetingTitle ? `<div class="mtg-popup-project"><i class="fas fa-folder-open"></i> ${meta.meetingTitle}</div>` : ''}
-            ${meta.jobTitle ? `<div class="mtg-popup-project"><i class="fas fa-project-diagram"></i> ${meta.jobTitle}</div>` : ''}
-        </div>
-        ${actionsHTML}
         <div class="mtg-popup-progress" style="background:${accentColor}"></div>`;
 
     container.appendChild(popup);
@@ -1904,12 +1905,13 @@ function showMeetingPopup(notification) {
 
 function checkForNewMeetingNotifications(notifications) {
     if (!notifications || notifications.length === 0) return;
-    const meetingActions = ['meeting_invitation', 'meeting_accepted', 'meeting_declined', 'meeting_rescheduled', 'meeting_cancelled', 'meeting_scheduled_confirmation'];
+    // Only show pop-ups for actionable meeting updates — skip declined & cancelled
+    const popupActions = ['meeting_invitation', 'meeting_accepted', 'meeting_rescheduled', 'meeting_scheduled_confirmation'];
     const now = Date.now();
     notifications.forEach(n => {
         if (n.type !== 'meeting') return;
         const action = n.metadata?.action;
-        if (!meetingActions.includes(action)) return;
+        if (!popupActions.includes(action)) return;
         // Only show pop-ups for notifications less than 2 minutes old
         const created = new Date(n.createdAt).getTime();
         if (now - created > 120000) return;
@@ -2004,34 +2006,18 @@ function showMeetingReminderPopup(meeting, urgencyLabel, minutesUntil) {
     const isNow = minutesUntil <= 1;
     const isSoon = minutesUntil <= 5;
 
-    const headerBg = isNow
-        ? 'linear-gradient(135deg, #dc2626, #ef4444)'
-        : isSoon
-            ? 'linear-gradient(135deg, #d97706, #f59e0b)'
-            : 'linear-gradient(135deg, #1e40af, #3b82f6)';
     const accentColor = isNow ? '#ef4444' : isSoon ? '#f59e0b' : '#3b82f6';
     const icon = isNow ? 'fa-bell' : 'fa-clock';
 
     const mDate = new Date(meeting.meetingDateTime);
-    const timeStr = mDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    const timeStr = mDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
     const dateStr = mDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 
     const isOrganizer = meeting.organizerId === appState.currentUser?.id;
     const myAttendance = (meeting.attendees || []).find(a => a.id === appState.currentUser?.id);
-    const acceptedCount = (meeting.attendees || []).filter(a => a.status === 'accepted').length;
-    const totalCount = (meeting.attendees || []).length;
 
-    // Build action buttons
+    // Build compact action buttons
     let actionsHTML = '';
-    if (meeting.jobId) {
-        actionsHTML = `
-            <div class="mtg-popup-actions">
-                <button class="mtg-popup-btn mtg-popup-view" onclick="renderProjectDetailView('${meeting.jobId}'); this.closest('.mtg-popup').remove();">
-                    <i class="fas fa-external-link-alt"></i> View Project
-                </button>
-            </div>`;
-    }
-    // If user hasn't responded yet, show accept/decline
     if (!isOrganizer && myAttendance && myAttendance.status === 'pending') {
         actionsHTML = `
             <div class="mtg-popup-actions">
@@ -2040,6 +2026,13 @@ function showMeetingReminderPopup(meeting, urgencyLabel, minutesUntil) {
                 </button>
                 <button class="mtg-popup-btn mtg-popup-decline" onclick="respondToMeeting('${meeting.id}','declined'); this.closest('.mtg-popup').remove();">
                     <i class="fas fa-times"></i> Decline
+                </button>
+            </div>`;
+    } else if (meeting.jobId) {
+        actionsHTML = `
+            <div class="mtg-popup-actions">
+                <button class="mtg-popup-btn mtg-popup-view" onclick="renderProjectDetailView('${meeting.jobId}'); this.closest('.mtg-popup').remove();">
+                    <i class="fas fa-external-link-alt"></i> View
                 </button>
             </div>`;
     }
@@ -2054,27 +2047,22 @@ function showMeetingReminderPopup(meeting, urgencyLabel, minutesUntil) {
     const popup = document.createElement('div');
     popup.className = 'mtg-popup mtg-reminder-popup' + (isNow ? ' mtg-reminder-urgent' : '');
     popup.innerHTML = `
-        <div class="mtg-popup-header" style="background:${headerBg}">
-            <div class="mtg-popup-header-icon"><i class="fas ${icon}"></i></div>
-            <div class="mtg-popup-header-text">
-                <span class="mtg-popup-type">${urgencyLabel}</span>
-                <span class="mtg-popup-brand">Meeting Reminder</span>
+        <div class="mtg-popup-strip" style="background:${accentColor}"></div>
+        <div class="mtg-popup-inner">
+            <div class="mtg-popup-top">
+                <div class="mtg-popup-icon" style="color:${accentColor}"><i class="fas ${icon}"></i></div>
+                <div class="mtg-popup-info">
+                    <span class="mtg-popup-label" style="color:${accentColor}">${urgencyLabel}</span>
+                    <span class="mtg-popup-title">${meeting.title}</span>
+                </div>
+                <button class="mtg-popup-close" onclick="this.closest('.mtg-popup').remove()"><i class="fas fa-times"></i></button>
             </div>
-            <button class="mtg-popup-close" onclick="this.closest('.mtg-popup').remove()"><i class="fas fa-times"></i></button>
-        </div>
-        <div class="mtg-popup-body">
-            <div class="mtg-popup-title">${meeting.title}</div>
-            <div class="mtg-popup-datetime"><i class="fas fa-calendar-alt"></i> ${dateStr} at ${timeStr}</div>
-            <div class="mtg-reminder-meta">
-                <span class="mtg-reminder-detail"><i class="fas fa-clock"></i> ${meeting.duration} min</span>
-                <span class="mtg-reminder-detail"><i class="fas fa-map-marker-alt"></i> ${meeting.location || 'Online'}</span>
-                <span class="mtg-reminder-detail"><i class="fas fa-users"></i> ${acceptedCount}/${totalCount} accepted</span>
+            <div class="mtg-popup-meta">
+                <span class="mtg-popup-time"><i class="fas fa-calendar-alt"></i> ${dateStr}, ${timeStr}</span>
+                <span class="mtg-popup-org"><i class="fas fa-clock"></i> ${meeting.duration} min</span>
             </div>
-            ${isOrganizer ? '<div class="mtg-popup-organizer"><i class="fas fa-crown"></i> You are the organizer</div>' : `<div class="mtg-popup-organizer"><i class="fas fa-user"></i> Organized by ${meeting.organizerName}</div>`}
-            ${meeting.jobTitle ? `<div class="mtg-popup-project"><i class="fas fa-project-diagram"></i> ${meeting.jobTitle}</div>` : ''}
-            ${meeting.agenda ? `<div class="mtg-popup-project"><i class="fas fa-list-ul"></i> ${meeting.agenda.substring(0, 80)}${meeting.agenda.length > 80 ? '...' : ''}</div>` : ''}
+            ${actionsHTML}
         </div>
-        ${actionsHTML}
         <div class="mtg-popup-progress" style="background:${accentColor}"></div>`;
 
     container.appendChild(popup);

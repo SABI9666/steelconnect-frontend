@@ -19869,297 +19869,257 @@ body { overflow-x: hidden; }
 }
 
 /* ==========================================
-   MEETING POP-UP NOTIFICATIONS (Outlook-style)
+   MEETING POP-UP NOTIFICATIONS (Compact Outlook-style)
    ========================================== */
 
 #meeting-popup-container {
     position: fixed;
-    top: 20px;
-    right: 20px;
+    top: 16px;
+    right: 16px;
     z-index: 100000;
     display: flex;
     flex-direction: column;
-    gap: 14px;
-    max-width: 400px;
+    gap: 8px;
+    max-width: 340px;
     pointer-events: none;
 }
 
 .mtg-popup {
-    width: 380px;
-    max-width: calc(100vw - 40px);
+    width: 320px;
+    max-width: calc(100vw - 32px);
     background: #fff;
-    border-radius: 14px;
-    box-shadow:
-        0 20px 60px rgba(0, 0, 0, 0.15),
-        0 4px 16px rgba(0, 0, 0, 0.08),
-        0 0 0 1px rgba(0, 0, 0, 0.04);
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.05);
     overflow: hidden;
-    animation: mtgPopupSlideIn 0.45s cubic-bezier(0.21, 1.02, 0.73, 1) forwards;
+    animation: mtgPopupSlideIn 0.3s cubic-bezier(0.21, 1.02, 0.73, 1) forwards;
     pointer-events: auto;
     position: relative;
+    display: flex;
+    flex-direction: row;
 }
 
 .mtg-popup-exit {
-    animation: mtgPopupSlideOut 0.4s cubic-bezier(0.55, 0.06, 0.68, 0.19) forwards;
+    animation: mtgPopupSlideOut 0.25s ease-in forwards;
 }
 
 @keyframes mtgPopupSlideIn {
-    0% { transform: translateX(120%) scale(0.9); opacity: 0; }
-    100% { transform: translateX(0) scale(1); opacity: 1; }
+    0% { transform: translateX(100%); opacity: 0; }
+    100% { transform: translateX(0); opacity: 1; }
 }
 
 @keyframes mtgPopupSlideOut {
-    0% { transform: translateX(0) scale(1); opacity: 1; }
-    100% { transform: translateX(120%) scale(0.85); opacity: 0; }
+    0% { transform: translateX(0); opacity: 1; }
+    100% { transform: translateX(100%); opacity: 0; }
 }
 
-/* Popup Header */
-.mtg-popup-header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 14px 16px;
-    color: #fff;
-    position: relative;
-}
-
-.mtg-popup-header-icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.2);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
+/* Left accent strip */
+.mtg-popup-strip {
+    width: 4px;
     flex-shrink: 0;
-    backdrop-filter: blur(4px);
 }
 
-.mtg-popup-header-text {
-    display: flex;
-    flex-direction: column;
+.mtg-popup-inner {
     flex: 1;
     min-width: 0;
-}
-
-.mtg-popup-type {
-    font-size: 14px;
-    font-weight: 700;
-    letter-spacing: 0.2px;
-}
-
-.mtg-popup-brand {
-    font-size: 11px;
-    opacity: 0.7;
-    font-weight: 500;
-}
-
-.mtg-popup-close {
-    background: rgba(255, 255, 255, 0.15);
-    border: none;
-    color: rgba(255, 255, 255, 0.8);
-    cursor: pointer;
-    width: 28px;
-    height: 28px;
-    border-radius: 8px;
+    padding: 10px 12px;
     display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 13px;
-    transition: all 0.15s ease;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* Top row: icon + info + close */
+.mtg-popup-top {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.mtg-popup-icon {
     flex-shrink: 0;
+    font-size: 14px;
+    margin-top: 1px;
 }
 
-.mtg-popup-close:hover {
-    background: rgba(255, 255, 255, 0.3);
-    color: #fff;
+.mtg-popup-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
 }
 
-/* Popup Body */
-.mtg-popup-body {
-    padding: 16px 18px 14px;
+.mtg-popup-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
 }
 
 .mtg-popup-title {
-    font-size: 15px;
-    font-weight: 700;
+    font-size: 13px;
+    font-weight: 600;
     color: #1e293b;
-    margin-bottom: 6px;
     line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.mtg-popup-message {
-    font-size: 13px;
-    color: #475569;
-    line-height: 1.55;
-    margin: 0 0 10px;
-}
-
-.mtg-popup-datetime {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 13px;
-    font-weight: 600;
-    color: #1e40af;
-    background: #eff6ff;
-    padding: 6px 12px;
-    border-radius: 8px;
-    margin-bottom: 8px;
-}
-
-.mtg-popup-datetime i {
-    font-size: 12px;
-    color: #3b82f6;
-}
-
-.mtg-popup-organizer,
-.mtg-popup-project {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    color: #64748b;
-    margin-top: 6px;
-}
-
-.mtg-popup-organizer i,
-.mtg-popup-project i {
-    color: #94a3b8;
-    font-size: 11px;
-    width: 14px;
-    text-align: center;
-}
-
-/* Popup Actions */
-.mtg-popup-actions {
-    display: flex;
-    gap: 8px;
-    padding: 0 18px 16px;
-}
-
-.mtg-popup-btn {
-    flex: 1;
-    padding: 9px 16px;
+.mtg-popup-close {
+    background: none;
     border: none;
-    border-radius: 9px;
-    font-size: 13px;
-    font-weight: 600;
+    color: #94a3b8;
     cursor: pointer;
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
     display: flex;
     align-items: center;
     justify-content: center;
+    font-size: 11px;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+    padding: 0;
+}
+
+.mtg-popup-close:hover {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+/* Compact meta row */
+.mtg-popup-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.mtg-popup-time,
+.mtg-popup-org {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: #64748b;
+}
+
+.mtg-popup-time i,
+.mtg-popup-org i {
+    font-size: 10px;
+    color: #94a3b8;
+}
+
+/* Compact action buttons */
+.mtg-popup-actions {
+    display: flex;
     gap: 6px;
-    transition: all 0.2s ease;
+}
+
+.mtg-popup-btn {
+    padding: 5px 12px;
+    border: none;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.15s ease;
     font-family: inherit;
 }
 
 .mtg-popup-accept {
-    background: linear-gradient(135deg, #10b981, #059669);
+    background: #10b981;
     color: #fff;
-    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
 }
 
 .mtg-popup-accept:hover {
-    background: linear-gradient(135deg, #059669, #047857);
-    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);
-    transform: translateY(-1px);
+    background: #059669;
 }
 
 .mtg-popup-decline {
-    background: #fef2f2;
+    background: #fff;
     color: #dc2626;
     border: 1px solid #fecaca;
 }
 
 .mtg-popup-decline:hover {
-    background: #fee2e2;
-    border-color: #fca5a5;
-    transform: translateY(-1px);
+    background: #fef2f2;
 }
 
 .mtg-popup-view {
-    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    background: #3b82f6;
     color: #fff;
-    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
 }
 
 .mtg-popup-view:hover {
-    background: linear-gradient(135deg, #2563eb, #1d4ed8);
-    box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
-    transform: translateY(-1px);
+    background: #2563eb;
 }
 
-/* Popup Progress Bar */
+/* Progress bar */
 .mtg-popup-progress {
     position: absolute;
     bottom: 0;
-    left: 0;
-    height: 3px;
-    width: 100%;
-    border-radius: 0 0 14px 14px;
+    left: 4px;
+    height: 2px;
+    width: calc(100% - 4px);
     animation: mtgPopupProgress 12s linear forwards;
-    opacity: 0.7;
+    opacity: 0.5;
 }
 
 @keyframes mtgPopupProgress {
-    from { width: 100%; }
+    from { width: calc(100% - 4px); }
     to { width: 0%; }
 }
 
 /* Meeting Reminder Variants */
 .mtg-reminder-popup {
-    box-shadow:
-        0 20px 60px rgba(0, 0, 0, 0.18),
-        0 4px 16px rgba(0, 0, 0, 0.1),
-        0 0 0 2px rgba(37, 99, 235, 0.15);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.14), 0 0 0 1px rgba(37, 99, 235, 0.15);
 }
 
 .mtg-reminder-urgent {
-    box-shadow:
-        0 20px 60px rgba(239, 68, 68, 0.2),
-        0 4px 16px rgba(239, 68, 68, 0.12),
-        0 0 0 2px rgba(239, 68, 68, 0.25);
-    animation: mtgPopupSlideIn 0.45s cubic-bezier(0.21, 1.02, 0.73, 1) forwards,
+    box-shadow: 0 4px 16px rgba(239, 68, 68, 0.18), 0 0 0 1px rgba(239, 68, 68, 0.2);
+    animation: mtgPopupSlideIn 0.3s cubic-bezier(0.21, 1.02, 0.73, 1) forwards,
                mtgUrgentPulse 2s ease-in-out infinite 0.5s;
 }
 
 @keyframes mtgUrgentPulse {
-    0%, 100% { box-shadow: 0 20px 60px rgba(239, 68, 68, 0.2), 0 4px 16px rgba(239, 68, 68, 0.12), 0 0 0 2px rgba(239, 68, 68, 0.25); }
-    50% { box-shadow: 0 20px 60px rgba(239, 68, 68, 0.3), 0 4px 16px rgba(239, 68, 68, 0.2), 0 0 0 3px rgba(239, 68, 68, 0.4); }
+    0%, 100% { box-shadow: 0 4px 16px rgba(239, 68, 68, 0.18), 0 0 0 1px rgba(239, 68, 68, 0.2); }
+    50% { box-shadow: 0 6px 20px rgba(239, 68, 68, 0.25), 0 0 0 2px rgba(239, 68, 68, 0.3); }
 }
 
 .mtg-reminder-meta {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
-    margin: 10px 0 8px;
+    gap: 6px;
+    margin: 2px 0;
 }
 
 .mtg-reminder-detail {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-    font-size: 12px;
+    gap: 4px;
+    font-size: 11px;
     color: #475569;
     background: #f8fafc;
     border: 1px solid #e2e8f0;
-    padding: 4px 10px;
-    border-radius: 6px;
+    padding: 2px 8px;
+    border-radius: 4px;
 }
 
 .mtg-reminder-detail i {
-    font-size: 11px;
+    font-size: 10px;
     color: #94a3b8;
 }
 
 /* Responsive */
 @media (max-width: 480px) {
     #meeting-popup-container {
-        top: 10px;
-        right: 10px;
-        left: 10px;
+        top: 8px;
+        right: 8px;
+        left: 8px;
         max-width: none;
     }
     .mtg-popup {
