@@ -1620,6 +1620,163 @@ function stopNotificationPolling() {
     }
 }
 
+// --- MEETING REMINDER SYSTEM (shows pop-up when scheduled time arrives) ---
+let _meetingReminderInterval = null;
+let _meetingReminderShownIds = JSON.parse(localStorage.getItem('meetingReminderShownIds') || '{}');
+
+function startMeetingReminderPolling() {
+    if (_meetingReminderInterval) clearInterval(_meetingReminderInterval);
+    // Check immediately, then every 30 seconds
+    checkUpcomingMeetingReminders();
+    _meetingReminderInterval = setInterval(() => {
+        if (appState.currentUser) checkUpcomingMeetingReminders();
+        else stopMeetingReminderPolling();
+    }, 30000);
+    console.log('📅 Meeting reminder polling started');
+}
+
+function stopMeetingReminderPolling() {
+    if (_meetingReminderInterval) {
+        clearInterval(_meetingReminderInterval);
+        _meetingReminderInterval = null;
+        console.log('📅 Meeting reminder polling stopped');
+    }
+}
+
+async function checkUpcomingMeetingReminders() {
+    if (!appState.currentUser) return;
+    try {
+        const response = await apiCall('/meetings/upcoming/reminders?window=60', 'GET');
+        const meetings = response.data || [];
+        const now = Date.now();
+
+        // Clean up old entries from shown IDs (older than 24 hours)
+        const cleanedShown = {};
+        Object.keys(_meetingReminderShownIds).forEach(key => {
+            if (now - _meetingReminderShownIds[key] < 86400000) {
+                cleanedShown[key] = _meetingReminderShownIds[key];
+            }
+        });
+        _meetingReminderShownIds = cleanedShown;
+
+        meetings.forEach(meeting => {
+            const meetingTime = new Date(meeting.meetingDateTime).getTime();
+            const minutesUntil = Math.round((meetingTime - now) / 60000);
+
+            // Show reminder at specific intervals: 15 min before, 5 min before, and at meeting time
+            const reminderPoints = [
+                { key: `${meeting.id}_15min`, minRange: 13, maxRange: 16, label: 'Starts in 15 minutes' },
+                { key: `${meeting.id}_5min`, minRange: 3, maxRange: 6, label: 'Starts in 5 minutes' },
+                { key: `${meeting.id}_now`, minRange: -2, maxRange: 1, label: 'Starting Now' }
+            ];
+
+            reminderPoints.forEach(point => {
+                if (minutesUntil >= point.minRange && minutesUntil <= point.maxRange && !_meetingReminderShownIds[point.key]) {
+                    _meetingReminderShownIds[point.key] = now;
+                    localStorage.setItem('meetingReminderShownIds', JSON.stringify(_meetingReminderShownIds));
+                    showMeetingReminderPopup(meeting, point.label, minutesUntil);
+                }
+            });
+        });
+    } catch (error) {
+        console.warn('Meeting reminder check failed:', error.message);
+    }
+}
+
+function showMeetingReminderPopup(meeting, urgencyLabel, minutesUntil) {
+    const isNow = minutesUntil <= 1;
+    const isSoon = minutesUntil <= 5;
+
+    const headerBg = isNow
+        ? 'linear-gradient(135deg, #dc2626, #ef4444)'
+        : isSoon
+            ? 'linear-gradient(135deg, #d97706, #f59e0b)'
+            : 'linear-gradient(135deg, #1e40af, #3b82f6)';
+    const accentColor = isNow ? '#ef4444' : isSoon ? '#f59e0b' : '#3b82f6';
+    const icon = isNow ? 'fa-bell' : 'fa-clock';
+
+    const mDate = new Date(meeting.meetingDateTime);
+    const timeStr = mDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    const dateStr = mDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+
+    const isOrganizer = meeting.organizerId === appState.currentUser?.id;
+    const myAttendance = (meeting.attendees || []).find(a => a.id === appState.currentUser?.id);
+    const acceptedCount = (meeting.attendees || []).filter(a => a.status === 'accepted').length;
+    const totalCount = (meeting.attendees || []).length;
+
+    // Build action buttons
+    let actionsHTML = '';
+    if (meeting.jobId) {
+        actionsHTML = `
+            <div class="mtg-popup-actions">
+                <button class="mtg-popup-btn mtg-popup-view" onclick="renderProjectDetailView('${meeting.jobId}'); this.closest('.mtg-popup').remove();">
+                    <i class="fas fa-external-link-alt"></i> View Project
+                </button>
+            </div>`;
+    }
+    // If user hasn't responded yet, show accept/decline
+    if (!isOrganizer && myAttendance && myAttendance.status === 'pending') {
+        actionsHTML = `
+            <div class="mtg-popup-actions">
+                <button class="mtg-popup-btn mtg-popup-accept" onclick="respondToMeeting('${meeting.id}','accepted'); this.closest('.mtg-popup').remove();">
+                    <i class="fas fa-check"></i> Accept
+                </button>
+                <button class="mtg-popup-btn mtg-popup-decline" onclick="respondToMeeting('${meeting.id}','declined'); this.closest('.mtg-popup').remove();">
+                    <i class="fas fa-times"></i> Decline
+                </button>
+            </div>`;
+    }
+
+    let container = document.getElementById('meeting-popup-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'meeting-popup-container';
+        document.body.appendChild(container);
+    }
+
+    const popup = document.createElement('div');
+    popup.className = 'mtg-popup mtg-reminder-popup' + (isNow ? ' mtg-reminder-urgent' : '');
+    popup.innerHTML = `
+        <div class="mtg-popup-header" style="background:${headerBg}">
+            <div class="mtg-popup-header-icon"><i class="fas ${icon}"></i></div>
+            <div class="mtg-popup-header-text">
+                <span class="mtg-popup-type">${urgencyLabel}</span>
+                <span class="mtg-popup-brand">Meeting Reminder</span>
+            </div>
+            <button class="mtg-popup-close" onclick="this.closest('.mtg-popup').remove()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="mtg-popup-body">
+            <div class="mtg-popup-title">${meeting.title}</div>
+            <div class="mtg-popup-datetime"><i class="fas fa-calendar-alt"></i> ${dateStr} at ${timeStr}</div>
+            <div class="mtg-reminder-meta">
+                <span class="mtg-reminder-detail"><i class="fas fa-clock"></i> ${meeting.duration} min</span>
+                <span class="mtg-reminder-detail"><i class="fas fa-map-marker-alt"></i> ${meeting.location || 'Online'}</span>
+                <span class="mtg-reminder-detail"><i class="fas fa-users"></i> ${acceptedCount}/${totalCount} accepted</span>
+            </div>
+            ${isOrganizer ? '<div class="mtg-popup-organizer"><i class="fas fa-crown"></i> You are the organizer</div>' : `<div class="mtg-popup-organizer"><i class="fas fa-user"></i> Organized by ${meeting.organizerName}</div>`}
+            ${meeting.jobTitle ? `<div class="mtg-popup-project"><i class="fas fa-project-diagram"></i> ${meeting.jobTitle}</div>` : ''}
+            ${meeting.agenda ? `<div class="mtg-popup-project"><i class="fas fa-list-ul"></i> ${meeting.agenda.substring(0, 80)}${meeting.agenda.length > 80 ? '...' : ''}</div>` : ''}
+        </div>
+        ${actionsHTML}
+        <div class="mtg-popup-progress" style="background:${accentColor}"></div>`;
+
+    container.appendChild(popup);
+
+    // Vibrate for urgent reminders
+    if (isNow || isSoon) {
+        try { navigator.vibrate?.([200, 100, 200]); } catch (e) {}
+    }
+
+    // Auto-dismiss: 20s for urgent, 15s otherwise
+    const dismissTime = isNow ? 20000 : 15000;
+    setTimeout(() => {
+        if (popup.parentElement) {
+            popup.classList.add('mtg-popup-exit');
+            setTimeout(() => popup.remove(), 400);
+        }
+    }, dismissTime);
+}
+
 async function toggleNotificationPanel(event) {
     event.stopPropagation();
     const panel = document.getElementById('notification-panel');
@@ -1646,7 +1803,10 @@ function initializeNotificationSystem() {
         renderNotificationPanel();
         updateNotificationBadge();
     }
-    if (appState.currentUser) startNotificationPolling();
+    if (appState.currentUser) {
+        startNotificationPolling();
+        startMeetingReminderPolling();
+    }
     setupNotificationEventListeners();
     console.log('✅ Notification system initialized');
 }
@@ -1667,6 +1827,7 @@ function setupNotificationEventListeners() {
 
 function cleanupNotificationSystem() {
     stopNotificationPolling();
+    stopMeetingReminderPolling();
     if (notificationState.notifications.length > 0) saveNotificationsToStorage();
     notificationState.notifications = [];
     notificationState.unreadCount = 0;
