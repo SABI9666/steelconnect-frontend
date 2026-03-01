@@ -1120,6 +1120,8 @@ async function fetchNotifications() {
             saveNotificationsToStorage();
             renderNotificationPanel();
             updateNotificationBadge();
+            // Show meeting pop-ups for new meeting notifications
+            checkForNewMeetingNotifications(processedNotifications);
             console.log(`📬 Fetched ${processedNotifications.length} notifications`);
         }
     } catch (error) {
@@ -1172,7 +1174,7 @@ function getNotificationIcon(type) {
         info: 'fa-info-circle', success: 'fa-check-circle', warning: 'fa-exclamation-triangle',
         error: 'fa-times-circle', message: 'fa-comment-alt', job: 'fa-briefcase',
         quote: 'fa-file-invoice-dollar', estimation: 'fa-calculator', profile: 'fa-user-circle',
-        user: 'fa-user', file: 'fa-paperclip', support: 'fa-life-ring'
+        user: 'fa-user', file: 'fa-paperclip', support: 'fa-life-ring', meeting: 'fa-calendar-check'
     };
     return iconMap[type] || 'fa-info-circle';
 }
@@ -1181,7 +1183,7 @@ function getNotificationColor(type) {
     const colorMap = {
         info: '#3b82f6', success: '#10b981', warning: '#f59e0b', error: '#ef4444',
         message: '#8b5cf6', job: '#06b6d4', quote: '#f97316', estimation: '#84cc16',
-        profile: '#6366f1', user: '#64748b', file: '#94a3b8', support: '#d946ef'
+        profile: '#6366f1', user: '#64748b', file: '#94a3b8', support: '#d946ef', meeting: '#2563eb'
     };
     return colorMap[type] || '#6b7280';
 }
@@ -1327,6 +1329,17 @@ function getNotificationActionButtons(notification) {
                 buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); renderAppSection('support')"><i class="fas fa-life-ring"></i> Support Center</button>`;
             }
             break;
+        case 'meeting':
+            if (metadata?.action === 'meeting_invitation' && metadata?.meetingId) {
+                buttons = `
+                    <button class="notification-action-btn" onclick="event.stopPropagation(); respondToMeeting('${metadata.meetingId}', 'accepted')" style="color:#10b981"><i class="fas fa-check"></i> Accept</button>
+                    <button class="notification-action-btn" onclick="event.stopPropagation(); respondToMeeting('${metadata.meetingId}', 'declined')" style="color:#ef4444"><i class="fas fa-times"></i> Decline</button>`;
+            } else if (metadata?.jobId) {
+                buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); renderProjectDetailView('${metadata.jobId}')"><i class="fas fa-eye"></i> View Project</button>`;
+            } else {
+                buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); renderAppSection('project-tracking')"><i class="fas fa-project-diagram"></i> Project Hub</button>`;
+            }
+            break;
         case 'business_analytics':
             if (metadata?.action === 'analytics_completed') {
                 buttons = `<button class="notification-action-btn" onclick="event.stopPropagation(); renderAppSection('ai-analytics')"><i class="fas fa-chart-line"></i> View Report</button>`;
@@ -1384,6 +1397,13 @@ function handleNotificationClick(notificationId, type, metadata = {}) {
             renderAppSection('support');
             if (metadata.ticketId) {
                 setTimeout(() => viewSupportTicketDetails(metadata.ticketId), 500);
+            }
+            break;
+        case 'meeting':
+            if (metadata.jobId) {
+                renderProjectDetailView(metadata.jobId);
+            } else {
+                renderAppSection('project-tracking');
             }
             break;
         case 'business_analytics':
@@ -1455,6 +1475,131 @@ function updateNotificationBadge() {
             badge.classList.remove('pulse');
         }
     }
+}
+
+// --- MEETING POP-UP NOTIFICATION SYSTEM ---
+let _meetingPopupSeenIds = JSON.parse(localStorage.getItem('meetingPopupSeenIds') || '[]');
+
+function showMeetingPopup(notification) {
+    const meta = notification.metadata || {};
+    const action = meta.action || '';
+    const meetingId = meta.meetingId || '';
+
+    // Don't show duplicate pop-ups
+    if (_meetingPopupSeenIds.includes(notification.id)) return;
+    _meetingPopupSeenIds.push(notification.id);
+    if (_meetingPopupSeenIds.length > 50) _meetingPopupSeenIds = _meetingPopupSeenIds.slice(-50);
+    localStorage.setItem('meetingPopupSeenIds', JSON.stringify(_meetingPopupSeenIds));
+
+    // Determine popup variant
+    let icon, accentColor, headerBg, typeLabel;
+    if (action === 'meeting_invitation') {
+        icon = 'fa-calendar-plus'; accentColor = '#2563eb'; headerBg = 'linear-gradient(135deg,#1e40af,#3b82f6)'; typeLabel = 'Meeting Invitation';
+    } else if (action === 'meeting_accepted') {
+        icon = 'fa-calendar-check'; accentColor = '#10b981'; headerBg = 'linear-gradient(135deg,#047857,#10b981)'; typeLabel = 'Meeting Accepted';
+    } else if (action === 'meeting_declined') {
+        icon = 'fa-calendar-times'; accentColor = '#ef4444'; headerBg = 'linear-gradient(135deg,#b91c1c,#ef4444)'; typeLabel = 'Meeting Declined';
+    } else if (action === 'meeting_rescheduled') {
+        icon = 'fa-calendar-day'; accentColor = '#f59e0b'; headerBg = 'linear-gradient(135deg,#b45309,#f59e0b)'; typeLabel = 'Meeting Rescheduled';
+    } else if (action === 'meeting_cancelled') {
+        icon = 'fa-calendar-times'; accentColor = '#ef4444'; headerBg = 'linear-gradient(135deg,#b91c1c,#ef4444)'; typeLabel = 'Meeting Cancelled';
+    } else if (action === 'meeting_scheduled_confirmation') {
+        icon = 'fa-calendar-check'; accentColor = '#10b981'; headerBg = 'linear-gradient(135deg,#047857,#10b981)'; typeLabel = 'Meeting Scheduled';
+    } else {
+        icon = 'fa-calendar-check'; accentColor = '#2563eb'; headerBg = 'linear-gradient(135deg,#1e40af,#3b82f6)'; typeLabel = 'Meeting Update';
+    }
+
+    // Format date/time if available
+    let dateTimeStr = '';
+    if (meta.meetingDate && meta.meetingTime) {
+        const dt = new Date(`${meta.meetingDate}T${meta.meetingTime}`);
+        dateTimeStr = dt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) + ' at ' + dt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    }
+
+    // Build action buttons
+    let actionsHTML = '';
+    if (action === 'meeting_invitation' && meetingId) {
+        actionsHTML = `
+            <div class="mtg-popup-actions">
+                <button class="mtg-popup-btn mtg-popup-accept" onclick="respondToMeeting('${meetingId}','accepted'); this.closest('.mtg-popup').remove();">
+                    <i class="fas fa-check"></i> Accept
+                </button>
+                <button class="mtg-popup-btn mtg-popup-decline" onclick="respondToMeeting('${meetingId}','declined'); this.closest('.mtg-popup').remove();">
+                    <i class="fas fa-times"></i> Decline
+                </button>
+            </div>`;
+    } else if (meta.jobId) {
+        actionsHTML = `
+            <div class="mtg-popup-actions">
+                <button class="mtg-popup-btn mtg-popup-view" onclick="renderProjectDetailView('${meta.jobId}'); this.closest('.mtg-popup').remove();">
+                    <i class="fas fa-external-link-alt"></i> View Project
+                </button>
+            </div>`;
+    }
+
+    // Create popup container if not exists
+    let container = document.getElementById('meeting-popup-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'meeting-popup-container';
+        document.body.appendChild(container);
+    }
+
+    const popup = document.createElement('div');
+    popup.className = 'mtg-popup';
+    popup.innerHTML = `
+        <div class="mtg-popup-header" style="background:${headerBg}">
+            <div class="mtg-popup-header-icon"><i class="fas ${icon}"></i></div>
+            <div class="mtg-popup-header-text">
+                <span class="mtg-popup-type">${typeLabel}</span>
+                <span class="mtg-popup-brand">SteelConnect</span>
+            </div>
+            <button class="mtg-popup-close" onclick="this.closest('.mtg-popup').remove()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="mtg-popup-body">
+            <div class="mtg-popup-title">${notification.title || meta.meetingTitle || 'Meeting'}</div>
+            <p class="mtg-popup-message">${notification.message || ''}</p>
+            ${dateTimeStr ? `<div class="mtg-popup-datetime"><i class="fas fa-clock"></i> ${dateTimeStr}</div>` : ''}
+            ${meta.organizerName && action === 'meeting_invitation' ? `<div class="mtg-popup-organizer"><i class="fas fa-user"></i> Organized by ${meta.organizerName}</div>` : ''}
+            ${meta.respondentName ? `<div class="mtg-popup-organizer"><i class="fas fa-user-check"></i> ${meta.respondentName}</div>` : ''}
+            ${meta.meetingTitle && notification.title !== meta.meetingTitle ? `<div class="mtg-popup-project"><i class="fas fa-folder-open"></i> ${meta.meetingTitle}</div>` : ''}
+            ${meta.jobTitle ? `<div class="mtg-popup-project"><i class="fas fa-project-diagram"></i> ${meta.jobTitle}</div>` : ''}
+        </div>
+        ${actionsHTML}
+        <div class="mtg-popup-progress" style="background:${accentColor}"></div>`;
+
+    container.appendChild(popup);
+
+    // Auto-sound for invitation
+    if (action === 'meeting_invitation') {
+        try { navigator.vibrate?.(200); } catch (e) {}
+    }
+
+    // Auto-dismiss after 12 seconds (longer for invitations)
+    const dismissTime = action === 'meeting_invitation' ? 15000 : 8000;
+    setTimeout(() => {
+        if (popup.parentElement) {
+            popup.classList.add('mtg-popup-exit');
+            setTimeout(() => popup.remove(), 400);
+        }
+    }, dismissTime);
+}
+
+function checkForNewMeetingNotifications(notifications) {
+    if (!notifications || notifications.length === 0) return;
+    const meetingActions = ['meeting_invitation', 'meeting_accepted', 'meeting_declined', 'meeting_rescheduled', 'meeting_cancelled', 'meeting_scheduled_confirmation'];
+    const now = Date.now();
+    notifications.forEach(n => {
+        if (n.type !== 'meeting') return;
+        const action = n.metadata?.action;
+        if (!meetingActions.includes(action)) return;
+        // Only show pop-ups for notifications less than 2 minutes old
+        const created = new Date(n.createdAt).getTime();
+        if (now - created > 120000) return;
+        // Don't show if already read
+        if (n.isRead || n.read) return;
+        showMeetingPopup(n);
+    });
 }
 
 function startNotificationPolling() {
@@ -10167,9 +10312,26 @@ async function submitScheduleMeeting(event) {
             attendeeIds
         };
 
-        await apiCall('/meetings', 'POST', meetingPayload);
+        const result = await apiCall('/meetings', 'POST', meetingPayload);
         closeModal();
-        showNotification('Meeting scheduled successfully! Invitations have been sent.', 'success');
+
+        // Show professional meeting pop-up
+        showMeetingPopup({
+            id: 'local-' + Date.now(),
+            title: 'Meeting Scheduled',
+            message: `"${meetingPayload.title}" has been scheduled. Invitations sent to all attendees.`,
+            type: 'meeting',
+            metadata: {
+                action: 'meeting_scheduled_confirmation',
+                meetingId: result?.data?.id || '',
+                meetingTitle: meetingPayload.title,
+                meetingDate: meetingPayload.meetingDate,
+                meetingTime: meetingPayload.meetingTime,
+                jobId: meetingPayload.jobId || '',
+                attendeeCount: attendeeIds.length
+            },
+            createdAt: new Date().toISOString()
+        });
 
         // Reload project detail if on project view
         if (document.querySelector('.pt-detail-container')) {
@@ -10267,11 +10429,27 @@ async function loadProjectMeetings(jobId) {
 async function respondToMeeting(meetingId, response) {
     try {
         await apiCall(`/meetings/${meetingId}/respond`, 'PATCH', { response });
-        showNotification(`Meeting invitation ${response}.`, 'success');
+
+        // Show professional meeting pop-up
+        showMeetingPopup({
+            id: 'local-resp-' + Date.now(),
+            title: response === 'accepted' ? 'Meeting Accepted' : 'Meeting Declined',
+            message: response === 'accepted'
+                ? 'You have accepted the meeting invitation. The organizer has been notified.'
+                : 'You have declined the meeting invitation. The organizer has been notified.',
+            type: 'meeting',
+            metadata: {
+                action: response === 'accepted' ? 'meeting_accepted' : 'meeting_declined',
+                meetingId
+            },
+            createdAt: new Date().toISOString()
+        });
+
         // Reload meetings if in project view
         const jobIdEl = document.querySelector('[data-current-job-id]');
         if (jobIdEl) loadProjectMeetings(jobIdEl.dataset.currentJobId);
-        else location.reload();
+        // Refresh notifications to pick up the change
+        fetchNotifications();
     } catch (error) {
         showNotification('Failed to respond to meeting.', 'error');
     }
