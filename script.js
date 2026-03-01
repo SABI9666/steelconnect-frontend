@@ -1734,10 +1734,7 @@ function handleNotificationClick(notificationId, type, metadata = {}) {
             break;
     }
     // Close notification panel
-    const panel = document.getElementById('notification-panel');
-    if (panel) {
-        panel.classList.remove('active');
-    }
+    closeNotificationPanel();
 }
 
 async function markNotificationAsRead(notificationId) {
@@ -2101,9 +2098,15 @@ async function toggleNotificationPanel(event) {
     event.stopPropagation();
     const panel = document.getElementById('notification-panel');
     if (!panel) return;
-    const isActive = panel.classList.toggle('active');
+    const isActive = !panel.classList.contains('active');
     const backdrop = document.getElementById('notif-backdrop');
     if (isActive) {
+        // On mobile, move panel to body so it escapes header's backdrop-filter containing block
+        if (window.innerWidth <= 768 && panel.parentElement !== document.body) {
+            panel._originalParent = panel.parentElement;
+            document.body.appendChild(panel);
+        }
+        panel.classList.add('active');
         if (backdrop) backdrop.classList.add('active');
         // Lock body scroll on mobile when panel is full-screen
         if (window.innerWidth <= 768) document.body.style.overflow = 'hidden';
@@ -2169,7 +2172,7 @@ function setupNotificationEventListeners() {
     document.addEventListener('click', (event) => {
         const panel = document.getElementById('notification-panel');
         const bellContainer = document.getElementById('notification-bell-container');
-        if (panel && bellContainer && !bellContainer.contains(event.target) && !panel.contains(event.target)) {
+        if (panel && panel.classList.contains('active') && bellContainer && !bellContainer.contains(event.target) && !panel.contains(event.target)) {
             closeNotificationPanel();
         }
     });
@@ -2178,7 +2181,14 @@ function setupNotificationEventListeners() {
 function closeNotificationPanel() {
     const panel = document.getElementById('notification-panel');
     const backdrop = document.getElementById('notif-backdrop');
-    if (panel) panel.classList.remove('active');
+    if (panel) {
+        panel.classList.remove('active');
+        // Move panel back to its original parent (bell container) after closing
+        if (panel._originalParent && panel.parentElement === document.body) {
+            panel._originalParent.appendChild(panel);
+            panel._originalParent = null;
+        }
+    }
     if (backdrop) backdrop.classList.remove('active');
     document.body.style.overflow = '';
 }
