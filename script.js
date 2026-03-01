@@ -71,6 +71,161 @@ const appState = {
     trackingProjects: [],
 };
 
+// === PWA INSTALL PROMPT ===
+let deferredInstallPrompt = null;
+let pwaInstallDismissedThisSession = false;
+
+// Capture the browser's beforeinstallprompt event (fires when PWA is installable)
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    console.log('[PWA] Install prompt captured and ready');
+    // If user is already logged in, show the install banner
+    if (appState.currentUser && !pwaInstallDismissedThisSession) {
+        showPWAInstallBanner();
+    }
+});
+
+// Detect when app is installed
+window.addEventListener('appinstalled', () => {
+    console.log('[PWA] App installed successfully');
+    deferredInstallPrompt = null;
+    hidePWAInstallBanner();
+    updateSidebarInstallButton();
+    showNotification('SteelConnect installed! You can now receive calls even when the browser is closed.', 'success');
+});
+
+// Check if app is already running as installed PWA
+function isRunningAsPWA() {
+    return window.matchMedia('(display-mode: standalone)').matches
+        || window.navigator.standalone === true;
+}
+
+// Trigger PWA install
+async function triggerPWAInstall() {
+    if (deferredInstallPrompt) {
+        deferredInstallPrompt.prompt();
+        const result = await deferredInstallPrompt.userChoice;
+        console.log('[PWA] Install prompt result:', result.outcome);
+        if (result.outcome === 'accepted') {
+            deferredInstallPrompt = null;
+        }
+    } else if (!isRunningAsPWA()) {
+        // Browser doesn't support auto-prompt — show manual instructions
+        showManualInstallInstructions();
+    }
+}
+
+// Show PWA install banner after login
+function showPWAInstallBanner() {
+    if (isRunningAsPWA()) return; // Already installed
+    if (document.getElementById('pwa-install-banner')) return; // Already showing
+    if (localStorage.getItem('pwa_install_dismissed_permanent')) return; // User permanently dismissed
+
+    const banner = document.createElement('div');
+    banner.id = 'pwa-install-banner';
+    banner.innerHTML = `
+        <div class="pwa-install-inner">
+            <div class="pwa-install-icon">
+                <img src="/icon-192.png" alt="SteelConnect" width="48" height="48">
+            </div>
+            <div class="pwa-install-text">
+                <strong>Install SteelConnect</strong>
+                <span>Get instant call notifications even when your browser is closed. Works on phone & laptop.</span>
+            </div>
+            <div class="pwa-install-actions">
+                <button class="pwa-install-btn" onclick="triggerPWAInstall()">
+                    <i class="fas fa-download"></i> Install App
+                </button>
+                <button class="pwa-install-dismiss" onclick="dismissPWAInstallBanner(false)" title="Remind me later">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(banner);
+    // Animate in
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            banner.classList.add('pwa-banner-visible');
+        });
+    });
+}
+
+function hidePWAInstallBanner() {
+    const banner = document.getElementById('pwa-install-banner');
+    if (banner) {
+        banner.classList.remove('pwa-banner-visible');
+        setTimeout(() => banner.remove(), 400);
+    }
+}
+
+function dismissPWAInstallBanner(permanent) {
+    pwaInstallDismissedThisSession = true;
+    if (permanent) {
+        localStorage.setItem('pwa_install_dismissed_permanent', 'true');
+    }
+    hidePWAInstallBanner();
+}
+
+// Show manual install instructions for browsers that don't support auto-prompt (Safari, Firefox)
+function showManualInstallInstructions() {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    const isFirefox = /firefox/i.test(navigator.userAgent);
+
+    let instructions = '';
+    if (isIOS || isSafari) {
+        instructions = `
+            <div style="text-align:center;padding:20px">
+                <i class="fas fa-share-square" style="font-size:48px;color:#4338ca;margin-bottom:16px;display:block"></i>
+                <h3 style="margin-bottom:12px">Install SteelConnect</h3>
+                <p style="margin-bottom:16px;color:#64748b">To install on your device:</p>
+                <ol style="text-align:left;max-width:300px;margin:0 auto;color:#334155;line-height:2">
+                    <li>Tap the <strong>Share</strong> button <i class="fas fa-share-square"></i> at the bottom of Safari</li>
+                    <li>Scroll down and tap <strong>"Add to Home Screen"</strong></li>
+                    <li>Tap <strong>"Add"</strong> to confirm</li>
+                </ol>
+                <button onclick="this.closest('.modal-overlay').remove()" style="margin-top:20px;padding:10px 24px;background:#4338ca;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px">Got it</button>
+            </div>`;
+    } else if (isFirefox) {
+        instructions = `
+            <div style="text-align:center;padding:20px">
+                <i class="fas fa-download" style="font-size:48px;color:#4338ca;margin-bottom:16px;display:block"></i>
+                <h3 style="margin-bottom:12px">Install SteelConnect</h3>
+                <p style="margin-bottom:16px;color:#64748b">To install on your device:</p>
+                <ol style="text-align:left;max-width:300px;margin:0 auto;color:#334155;line-height:2">
+                    <li>Tap the <strong>menu</strong> button (three dots)</li>
+                    <li>Tap <strong>"Install"</strong> or <strong>"Add to Home Screen"</strong></li>
+                </ol>
+                <button onclick="this.closest('.modal-overlay').remove()" style="margin-top:20px;padding:10px 24px;background:#4338ca;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px">Got it</button>
+            </div>`;
+    } else {
+        instructions = `
+            <div style="text-align:center;padding:20px">
+                <i class="fas fa-download" style="font-size:48px;color:#4338ca;margin-bottom:16px;display:block"></i>
+                <h3 style="margin-bottom:12px">Install SteelConnect</h3>
+                <p style="color:#64748b">Click the install icon in your browser's address bar, or use the browser menu to install this app.</p>
+                <button onclick="this.closest('.modal-overlay').remove()" style="margin-top:20px;padding:10px 24px;background:#4338ca;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px">Got it</button>
+            </div>`;
+    }
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:100000';
+    overlay.innerHTML = `<div style="background:#fff;border-radius:16px;max-width:400px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3)">${instructions}</div>`;
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
+}
+
+// Update sidebar install button visibility
+function updateSidebarInstallButton() {
+    const btn = document.getElementById('sidebar-install-btn');
+    if (btn) {
+        btn.style.display = isRunningAsPWA() ? 'none' : '';
+    }
+}
+
 // === BUSINESS ANALYTICS STATE ===
 // Business analytics state removed - clients view approved dashboards only (no uploads)
 
@@ -6038,6 +6193,11 @@ function showAppView() {
     initializeSocketConnection();
     initializePushNotifications();
 
+    // Show PWA install banner after login (if app not already installed)
+    if (!pwaInstallDismissedThisSession) {
+        setTimeout(() => showPWAInstallBanner(), 2000);
+    }
+
     // Check if user opened app from a push notification while logged out
     // The callId was saved to sessionStorage before the login flow
     const pendingCallId = sessionStorage.getItem('pendingCallId');
@@ -9370,6 +9530,16 @@ function buildSidebarNav() {
             <i class="fas fa-cog fa-fw"></i>
             <span>Settings</span>
         </a>`;
+    // Add Install App button (hidden if already running as PWA)
+    if (!isRunningAsPWA()) {
+        links += `
+        <hr class="sidebar-divider">
+        <a href="#" class="sidebar-nav-link sidebar-install-link" id="sidebar-install-btn" onclick="event.preventDefault();triggerPWAInstall()">
+            <i class="fas fa-download fa-fw"></i>
+            <span>Install App</span>
+            <span class="nav-badge" style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;">GET</span>
+        </a>`;
+    }
     nav.innerHTML = links;
     // Add event listeners
     nav.querySelectorAll('.sidebar-nav-link').forEach(link => {
