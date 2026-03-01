@@ -3848,6 +3848,12 @@ function initializeSocketConnection() {
         });
 
         voiceCallState.socket.on('call-accepted', async (data) => {
+            // Guard against duplicate listeners firing multiple times
+            if (voiceCallState._callAcceptedHandled) {
+                console.warn('[VOICE] Duplicate call-accepted event, ignoring');
+                return;
+            }
+            voiceCallState._callAcceptedHandled = true;
             console.log('[VOICE] Call accepted, creating WebRTC offer');
             stopCallSound();
             updateCallUI('connecting');
@@ -4600,8 +4606,23 @@ async function attemptIceRestart() {
 
 // WebRTC: Get user media and create offer
 async function createAndSendOffer(targetUserId) {
+    // Guard against duplicate calls (from duplicate event listeners)
+    if (voiceCallState._creatingOffer) {
+        console.warn('[VOICE] createAndSendOffer already in progress, skipping duplicate');
+        return;
+    }
+    voiceCallState._creatingOffer = true;
+
     try {
         voiceCallState._targetUserId = targetUserId;
+
+        // Close any existing peer connection before creating a new one
+        if (voiceCallState.peerConnection) {
+            console.log('[VOICE] Closing existing peer connection before new offer');
+            voiceCallState.peerConnection.close();
+            voiceCallState.peerConnection = null;
+        }
+
         const pc = await createPeerConnection(false);
 
         // Get microphone access
@@ -4634,11 +4655,20 @@ async function createAndSendOffer(targetUserId) {
             showNotification('Failed to start voice call. Check microphone permissions.', 'error');
         }
         endVoiceCall();
+    } finally {
+        voiceCallState._creatingOffer = false;
     }
 }
 
 // WebRTC: Handle incoming offer (including ICE restart offers)
 async function handleWebRTCOffer(data) {
+    // Guard against duplicate listeners calling this concurrently
+    if (voiceCallState._handlingOffer && !data.iceRestart) {
+        console.warn('[VOICE] handleWebRTCOffer already in progress, skipping duplicate');
+        return;
+    }
+    if (!data.iceRestart) voiceCallState._handlingOffer = true;
+
     try {
         // If this is an ICE restart offer for an existing connection
         if (data.iceRestart && voiceCallState.peerConnection) {
@@ -4702,6 +4732,8 @@ async function handleWebRTCOffer(data) {
         console.error('[VOICE] Error handling offer:', error);
         showNotification('Failed to connect call. Check microphone permissions.', 'error');
         endVoiceCall();
+    } finally {
+        voiceCallState._handlingOffer = false;
     }
 }
 
@@ -5031,6 +5063,9 @@ function endCallCleanup() {
     voiceCallState._hasReceivedAudio = false;
     voiceCallState._forceRelay = false;
     voiceCallState._pendingCandidates = null;
+    voiceCallState._creatingOffer = false;
+    voiceCallState._callAcceptedHandled = false;
+    voiceCallState._handlingOffer = false;
 }
 
 // Message tab switching (Chats / Recent Calls)
