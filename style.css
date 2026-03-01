@@ -12979,6 +12979,379 @@ textarea:focus-visible {
     white-space: nowrap;
 }
 
+/* --- Completion Update Badge on Cards --- */
+.pt-pending-update-badge {
+    margin-top: 6px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    color: #92400e;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+.pt-pending-update-badge.designer {
+    background: linear-gradient(135deg, #e0e7ff, #c7d2fe);
+    color: #3730a3;
+}
+
+/* --- Completion Details in Detail View --- */
+.pt-completion-details-text {
+    margin-top: 8px;
+    font-size: 13px;
+    color: #475569;
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+}
+.pt-completion-details-text i { color: #6366f1; margin-top: 2px; }
+.pt-completion-accepted-date {
+    margin-top: 4px;
+    font-size: 12px;
+    color: #10b981;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+/* --- Designer: Update Completion Button --- */
+.pt-update-completion-btn {
+    margin-top: 12px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
+    border: none !important;
+    font-weight: 600;
+}
+.pt-update-completion-btn:hover {
+    background: linear-gradient(135deg, #4f46e5, #7c3aed) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(99,102,241,0.3);
+}
+
+/* --- Completion Pending Card (Designer) --- */
+.pt-completion-pending-card {
+    margin-top: 12px;
+    border: 1px solid #e0e7ff;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #f8faff;
+}
+.pt-completion-pending-header {
+    padding: 10px 14px;
+    background: linear-gradient(135deg, #e0e7ff, #c7d2fe);
+    color: #3730a3;
+    font-weight: 600;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.pt-completion-pending-body {
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.pt-completion-pending-pct {
+    font-size: 28px;
+    font-weight: 800;
+    color: #4f46e5;
+}
+.pt-completion-pending-details {
+    font-size: 13px;
+    color: #475569;
+    line-height: 1.4;
+}
+.pt-completion-pending-date {
+    font-size: 11px;
+    color: #94a3b8;
+}
+
+/* --- Completion Rejected Card --- */
+.pt-completion-rejected-card {
+    margin-top: 10px;
+    margin-bottom: 8px;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    padding: 10px 14px;
+    background: #fef2f2;
+}
+.pt-completion-rejected-header {
+    font-weight: 600;
+    font-size: 13px;
+    color: #dc2626;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+.pt-completion-rejected-details {
+    font-size: 12px;
+    color: #7f1d1d;
+    margin: 0;
+}
+.pt-completion-rejected-reason {
+    font-size: 12px;
+    color: #991b1b;
+    margin: 4px 0 0;
+}
+
+/* --- Contractor: Review Completion Card --- */
+.pt-completion-review-card {
+    margin-top: 12px;
+    border: 2px solid #fbbf24;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #fffbeb;
+    box-shadow: 0 2px 8px rgba(251,191,36,0.15);
+}
+.pt-completion-review-header {
+    padding: 10px 14px;
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    color: #92400e;
+    font-weight: 700;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.pt-completion-review-body {
+    padding: 14px;
+}
+.pt-completion-review-pct {
+    font-size: 32px;
+    font-weight: 800;
+    color: #d97706;
+}
+.pt-completion-review-details {
+    font-size: 13px;
+    color: #78350f;
+    line-height: 1.5;
+    margin: 6px 0;
+}
+.pt-completion-review-meta {
+    display: flex;
+    gap: 16px;
+    font-size: 12px;
+    color: #92400e;
+    margin-top: 6px;
+}
+.pt-completion-review-meta span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.pt-completion-review-actions {
+    padding: 10px 14px;
+    display: flex;
+    gap: 10px;
+    border-top: 1px solid #fde68a;
+}
+.pt-completion-review-actions .btn {
+    flex: 1;
+    font-weight: 600;
+}
+
+/* --- Completion History --- */
+.pt-completion-history {
+    margin-top: 14px;
+}
+.pt-completion-history h4 {
+    font-size: 13px;
+    font-weight: 700;
+    color: #334155;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.pt-completion-history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.pt-completion-history-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+}
+.pt-completion-history-item.accepted {
+    border-left: 3px solid #10b981;
+}
+.pt-completion-history-item.rejected {
+    border-left: 3px solid #ef4444;
+}
+.pt-completion-history-item.pending {
+    border-left: 3px solid #f59e0b;
+}
+.pt-completion-history-pct {
+    font-size: 18px;
+    font-weight: 800;
+    color: #334155;
+    min-width: 40px;
+}
+.pt-completion-history-info p {
+    font-size: 12px;
+    color: #475569;
+    margin: 0;
+    line-height: 1.3;
+}
+.pt-completion-history-meta {
+    font-size: 11px;
+    color: #94a3b8;
+    margin-top: 2px;
+    display: block;
+}
+.pt-completion-status-badge {
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+.pt-completion-status-badge.accepted { background: #d1fae5; color: #065f46; }
+.pt-completion-status-badge.rejected { background: #fee2e2; color: #991b1b; }
+.pt-completion-status-badge.pending { background: #fef3c7; color: #92400e; }
+
+/* --- Completion Update Modal --- */
+.pt-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    backdrop-filter: blur(4px);
+}
+.pt-modal-content {
+    background: #fff;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 480px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    overflow: hidden;
+}
+.pt-modal-header {
+    padding: 16px 20px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.pt-modal-header h3 {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.pt-modal-close {
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: #fff;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+.pt-modal-close:hover { background: rgba(255,255,255,0.3); }
+.pt-modal-body {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+.pt-modal-footer {
+    padding: 14px 20px;
+    background: #f8fafc;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    border-top: 1px solid #e2e8f0;
+}
+
+/* Slider */
+.pt-completion-slider-group label,
+.pt-completion-details-group label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #334155;
+    margin-bottom: 6px;
+    display: block;
+}
+.pt-completion-slider-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+.pt-completion-slider-row input[type="range"] {
+    flex: 1;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 8px;
+    border-radius: 4px;
+    background: linear-gradient(to right, #e2e8f0, #6366f1);
+    outline: none;
+}
+.pt-completion-slider-row input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #6366f1;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(99,102,241,0.4);
+}
+.pt-completion-pct-display {
+    font-size: 24px;
+    font-weight: 800;
+    color: #6366f1;
+    min-width: 55px;
+    text-align: center;
+}
+.pt-completion-details-group textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 13px;
+    resize: vertical;
+    font-family: inherit;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+}
+.pt-completion-details-group textarea:focus {
+    border-color: #6366f1;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+}
+.pt-char-count {
+    font-size: 11px;
+    color: #94a3b8;
+    text-align: right;
+    display: block;
+    margin-top: 2px;
+}
+.pt-completion-details-group .required {
+    color: #ef4444;
+}
+
 /* --- Timeline --- */
 .pt-timeline {
     position: relative;
