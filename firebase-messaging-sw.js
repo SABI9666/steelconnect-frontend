@@ -68,7 +68,16 @@ self.addEventListener('notificationclick', (event) => {
     notification.close();
 
     if (action === 'decline') {
-        // No action needed - call will timeout on backend
+        // Notify backend so caller is informed immediately instead of waiting for timeout
+        if (callData && callData.callId) {
+            event.waitUntil(
+                fetch(BACKEND_URL + '/api/voice-calls/decline', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ callId: callData.callId, reason: 'declined' })
+                }).catch(() => { /* ignore - call will timeout on backend */ })
+            );
+        }
         return;
     }
 
@@ -88,8 +97,13 @@ self.addEventListener('notificationclick', (event) => {
                     return;
                 }
             }
-            // No existing window - open new one
-            return clients.openWindow('/?callId=' + callData.callId);
+            // No existing window - open new one with call details
+            const params = new URLSearchParams({
+                callId: callData.callId,
+                callerId: callData.callerId || '',
+                callerName: callData.callerName || ''
+            });
+            return clients.openWindow('/?' + params.toString());
         })
     );
 });

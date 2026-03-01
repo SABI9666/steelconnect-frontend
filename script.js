@@ -341,6 +341,21 @@ function initializeApp() {
         });
     }
 
+    // Capture call data from URL before login check (from push notification when logged out)
+    const _initUrlParams = new URLSearchParams(window.location.search);
+    const _pushCallId = _initUrlParams.get('callId');
+    if (_pushCallId) {
+        console.log('[PUSH] App opened with callId from push notification:', _pushCallId);
+        // Store call data so it survives the login process
+        sessionStorage.setItem('pendingCallId', _pushCallId);
+        const _pushCallerId = _initUrlParams.get('callerId');
+        const _pushCallerName = _initUrlParams.get('callerName');
+        if (_pushCallerId) sessionStorage.setItem('pendingCallerId', _pushCallerId);
+        if (_pushCallerName) sessionStorage.setItem('pendingCallerName', _pushCallerName);
+        // Clean URL without reload
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
     // Check for existing session
     const token = localStorage.getItem('jwtToken');
     const user = localStorage.getItem('currentUser');
@@ -4093,7 +4108,12 @@ function showIncomingCallUI(data) {
     const { callId, callerId, callerName, conversationId } = data;
 
     if (voiceCallState.currentCallId) {
-        voiceCallState.socket.emit('call-reject', { callId, calleeId: appState.currentUser.id, reason: 'busy' });
+        // If same call is being delivered again (e.g., from socket after push notification), ignore
+        if (voiceCallState.currentCallId === callId) return;
+        // Different call while already on a call — reject it
+        if (voiceCallState.socket && voiceCallState.socket.connected) {
+            voiceCallState.socket.emit('call-reject', { callId, calleeId: appState.currentUser.id, reason: 'busy' });
+        }
         return;
     }
 
@@ -4147,10 +4167,31 @@ function showIncomingCallUI(data) {
 // Accept incoming call
 async function acceptVoiceCall(callId, callerId) {
     stopCallSound();
-    voiceCallState.socket.emit('call-accept', {
-        callId,
-        calleeId: appState.currentUser.id
-    });
+
+    // Ensure socket is connected before accepting (handles push notification scenario)
+    if (!voiceCallState.socket || !voiceCallState.socket.connected) {
+        initializeSocketConnection();
+        let waited = 0;
+        const waitForSocket = setInterval(() => {
+            waited += 200;
+            if (voiceCallState.socket && voiceCallState.socket.connected) {
+                clearInterval(waitForSocket);
+                voiceCallState.socket.emit('call-accept', {
+                    callId,
+                    calleeId: appState.currentUser.id
+                });
+            } else if (waited >= 5000) {
+                clearInterval(waitForSocket);
+                showNotification('Connection error. Please try again.', 'error');
+                endCallCleanup();
+            }
+        }, 200);
+    } else {
+        voiceCallState.socket.emit('call-accept', {
+            callId,
+            calleeId: appState.currentUser.id
+        });
+    }
 
     // Transform incoming UI to active call UI
     updateCallUI('connecting');
@@ -5131,15 +5172,6 @@ const _checkAndInitSocket = setInterval(() => {
     if (appState.currentUser && appState.jwtToken) {
         initializeSocketConnection();
         initializePushNotifications();
-        // Check if opened from a push notification with callId
-        const urlParams = new URLSearchParams(window.location.search);
-        const pushCallId = urlParams.get('callId');
-        if (pushCallId) {
-            console.log('[PUSH] App opened from push notification for call:', pushCallId);
-            // Clean URL without reload
-            window.history.replaceState({}, document.title, window.location.pathname);
-            // Socket will receive the pending call via the register handler
-        }
         clearInterval(_checkAndInitSocket);
     }
 }, 500);
@@ -5212,14 +5244,34 @@ async function initializePushNotifications() {
         navigator.serviceWorker.addEventListener('message', (event) => {
             if (event.data && event.data.type === 'CALL_ANSWER') {
                 const { callId, callerId } = event.data;
-                // Initialize socket and accept the call
+                console.log('[PUSH] CALL_ANSWER received from service worker, callId:', callId);
+                // Initialize socket and accept the call once connected
                 initializeSocketConnection();
-                setTimeout(() => {
+
+                const tryAccept = () => {
                     if (voiceCallState.socket && voiceCallState.socket.connected) {
                         voiceCallState.currentCallId = callId;
                         acceptVoiceCall(callId, callerId);
+                        return true;
                     }
-                }, 1000);
+                    return false;
+                };
+
+                // If already connected, accept immediately
+                if (!tryAccept()) {
+                    // Wait for socket to connect (poll every 200ms, up to 5 seconds)
+                    let waited = 0;
+                    const waitInterval = setInterval(() => {
+                        waited += 200;
+                        if (tryAccept()) {
+                            clearInterval(waitInterval);
+                        } else if (waited >= 5000) {
+                            clearInterval(waitInterval);
+                            console.error('[PUSH] Socket not connected after 5s, cannot accept call');
+                            showNotification('Could not connect to accept the call. Please try again.', 'error');
+                        }
+                    }, 200);
+                }
             }
         });
     } catch (error) {
@@ -5443,6 +5495,30 @@ function showAppView() {
     // Initialize socket connection immediately so user can receive incoming calls
     initializeSocketConnection();
     initializePushNotifications();
+
+    // Check if user opened app from a push notification while logged out
+    // The callId was saved to sessionStorage before the login flow
+    const pendingCallId = sessionStorage.getItem('pendingCallId');
+    if (pendingCallId) {
+        const pendingCallerId = sessionStorage.getItem('pendingCallerId');
+        const pendingCallerName = sessionStorage.getItem('pendingCallerName');
+        sessionStorage.removeItem('pendingCallId');
+        sessionStorage.removeItem('pendingCallerId');
+        sessionStorage.removeItem('pendingCallerName');
+        console.log('[PUSH] Delivering pending call from push notification:', pendingCallId);
+        // The backend will deliver the pending call via socket 'incoming-call' event
+        // when our socket registers. But if we have caller info, show the incoming UI
+        // immediately so the user can answer faster.
+        if (pendingCallerId) {
+            voiceCallState.currentCallId = pendingCallId;
+            showIncomingCallUI({
+                callId: pendingCallId,
+                callerId: pendingCallerId,
+                callerName: pendingCallerName || 'Unknown',
+                conversationId: null
+            });
+        }
+    }
 
     // Let checkProfileAndRoute do its work, then fade in
     checkProfileAndRoute().then(() => {
