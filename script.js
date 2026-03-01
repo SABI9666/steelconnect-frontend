@@ -547,17 +547,18 @@ function initializeApp() {
     if (getStartedBtn) getStartedBtn.addEventListener('click', () => showAuthModal('register'));
     // Render standalone Google Sign-In buttons (header, hero, gateway)
     // GSI library is loaded async — poll briefly instead of waiting for full page load
-    if (typeof google !== 'undefined' && google.accounts) {
+    if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
         renderGoogleButtons();
     } else {
         let _gsiPollCount = 0;
         const _gsiPoll = setInterval(() => {
             _gsiPollCount++;
-            if (typeof google !== 'undefined' && google.accounts) {
+            if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
                 clearInterval(_gsiPoll);
                 renderGoogleButtons();
-            } else if (_gsiPollCount >= 50) {
-                clearInterval(_gsiPoll); // stop after 5s
+            } else if (_gsiPollCount >= 100) {
+                clearInterval(_gsiPoll); // stop after 10s
+                console.warn('Google Identity Services failed to load. Google Sign-In will be unavailable.');
             }
         }, 100);
     }
@@ -639,6 +640,28 @@ function initializeApp() {
     initializeHeaderRotation();
     initializePerformanceImprovements();
     setupConnectionMonitoring();
+
+    // Register service worker early for PWA update detection (works for all users, not just logged in)
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/firebase-messaging-sw.js').then((registration) => {
+            console.log('[SW] Service worker registered for update detection');
+            // Check for waiting worker (update available)
+            if (registration.waiting) {
+                showAppUpdateBanner(registration.waiting);
+            }
+            registration.addEventListener('updatefound', () => {
+                const newWorker = registration.installing;
+                if (!newWorker) return;
+                newWorker.addEventListener('statechange', () => {
+                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                        showAppUpdateBanner(newWorker);
+                    }
+                });
+            });
+        }).catch((err) => {
+            console.log('[SW] Service worker registration deferred:', err.message);
+        });
+    }
 }
 
 
@@ -804,19 +827,23 @@ let _googleInitialized = false;
 
 function ensureGoogleInitialized() {
     if (_googleInitialized) return true;
-    if (typeof google === 'undefined' || !google.accounts) {
-        console.warn('Google Identity Services not loaded');
+    if (typeof google === 'undefined' || !google.accounts || !google.accounts.id) {
+        console.warn('Google Identity Services not loaded yet');
         return false;
     }
-    google.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
-        callback: (response) => handleGoogleCallback(response, _googleSignInContext),
-        auto_select: false,
-        cancel_on_tap_outside: true,
-        use_fedcm_for_prompt: true
-    });
-    _googleInitialized = true;
-    return true;
+    try {
+        google.accounts.id.initialize({
+            client_id: GOOGLE_CLIENT_ID,
+            callback: (response) => handleGoogleCallback(response, _googleSignInContext),
+            auto_select: false,
+            cancel_on_tap_outside: true
+        });
+        _googleInitialized = true;
+        return true;
+    } catch (e) {
+        console.error('Google Identity Services initialization error:', e);
+        return false;
+    }
 }
 
 // Render Google Sign-In buttons on visible page elements (header, hero, gateway)
@@ -6044,9 +6071,36 @@ async function initializePushNotifications() {
             return;
         }
 
-        // Register service worker (handles background push events)
+        // Register service worker (handles background push events + app updates)
         const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
         console.log('[PUSH] Service worker registered:', registration.scope);
+
+        // --- APP UPDATE DETECTION ---
+        // Check for updates immediately
+        registration.update().catch(() => {});
+
+        // Detect when a new service worker is waiting to activate
+        if (registration.waiting) {
+            showAppUpdateBanner(registration.waiting);
+        }
+
+        // Listen for new service worker installations
+        registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing;
+            if (!newWorker) return;
+            newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    // New version is ready — show update prompt
+                    console.log('[SW] New version available');
+                    showAppUpdateBanner(newWorker);
+                }
+            });
+        });
+
+        // Periodically check for updates (every 30 minutes)
+        setInterval(() => {
+            registration.update().catch(() => {});
+        }, 30 * 60 * 1000);
 
         // Wait for service worker to be ready
         await navigator.serviceWorker.ready;
@@ -6066,8 +6120,9 @@ async function initializePushNotifications() {
         // Also try FCM if Firebase is configured (optional, for broader compatibility)
         await tryFCMSetup(registration);
 
-        // Listen for messages from service worker (user clicked "Answer" on push notification)
+        // Listen for messages from service worker
         navigator.serviceWorker.addEventListener('message', (event) => {
+            // Handle call answer from push notification
             if (event.data && event.data.type === 'CALL_ANSWER') {
                 const { callId, callerId } = event.data;
                 console.log('[PUSH] CALL_ANSWER from service worker, callId:', callId);
@@ -6097,10 +6152,66 @@ async function initializePushNotifications() {
                     }, 200);
                 }
             }
+
+            // Handle SW update notification
+            if (event.data && event.data.type === 'SW_UPDATED') {
+                console.log('[SW] Service worker updated to v' + event.data.version);
+            }
         });
     } catch (error) {
         console.error('[PUSH] Push notification setup error:', error);
     }
+}
+
+// Show app update banner when new service worker is ready
+function showAppUpdateBanner(waitingWorker) {
+    // Remove existing banner if any
+    const existing = document.getElementById('sw-update-banner');
+    if (existing) existing.remove();
+
+    const banner = document.createElement('div');
+    banner.id = 'sw-update-banner';
+    banner.innerHTML = `
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:200px;">
+                <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#4338ca,#6366f1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i class="fas fa-arrow-up" style="color:white;font-size:14px;"></i>
+                </div>
+                <div>
+                    <div style="font-weight:700;font-size:13px;color:#1e293b;">Update Available</div>
+                    <div style="font-size:11.5px;color:#64748b;">A new version of SteelConnect is ready.</div>
+                </div>
+            </div>
+            <div style="display:flex;gap:8px;">
+                <button id="sw-update-dismiss" style="padding:8px 14px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;color:#64748b;font-size:12px;font-weight:600;cursor:pointer;min-height:36px;">Later</button>
+                <button id="sw-update-reload" style="padding:8px 16px;border-radius:8px;border:none;background:linear-gradient(135deg,#4338ca,#6366f1);color:white;font-size:12px;font-weight:600;cursor:pointer;min-height:36px;">Update Now</button>
+            </div>
+        </div>
+    `;
+    banner.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:99999;background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:14px 18px;box-shadow:0 8px 32px rgba(0,0,0,0.12),0 2px 8px rgba(0,0,0,0.06);max-width:460px;width:calc(100% - 32px);animation:swBannerSlide 0.4s cubic-bezier(0.16,1,0.3,1);';
+
+    // Add animation keyframes
+    if (!document.getElementById('sw-update-styles')) {
+        const style = document.createElement('style');
+        style.id = 'sw-update-styles';
+        style.textContent = '@keyframes swBannerSlide{from{transform:translateX(-50%) translateY(100px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}';
+        document.head.appendChild(style);
+    }
+
+    document.body.appendChild(banner);
+
+    document.getElementById('sw-update-reload').addEventListener('click', () => {
+        waitingWorker.postMessage({ type: 'SKIP_WAITING' });
+        window.location.reload();
+    });
+
+    document.getElementById('sw-update-dismiss').addEventListener('click', () => {
+        banner.style.animation = 'none';
+        banner.style.transition = 'transform 0.3s, opacity 0.3s';
+        banner.style.transform = 'translateX(-50%) translateY(100px)';
+        banner.style.opacity = '0';
+        setTimeout(() => banner.remove(), 300);
+    });
 }
 
 // Subscribe to Web Push notifications using VAPID (no Firebase dependency)
