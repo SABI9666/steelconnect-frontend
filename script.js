@@ -3748,9 +3748,8 @@ async function viewQuotes(jobId) {
                          data-quote-id="${quote.id}"
                          data-designer-id="${quote.designerId}"
                          data-designer-name="${(quote.designerName || '').replace(/"/g, '&quot;')}"
-                         data-job-id="${quote.jobId}"
-                         ${canApprove ? `onclick="toggleQuoteSelection('${quote.id}')"` : ''}>
-                        ${canApprove ? `<div class="vq-checkbox" id="vq-chk-${quote.id}"><i class="fas fa-check"></i></div>` : ''}
+                         data-job-id="${quote.jobId}">
+                        ${canApprove ? `<div class="vq-checkbox" id="vq-chk-${quote.id}" onclick="event.stopPropagation(); toggleQuoteSelection('${quote.id}')" ontouchend="event.stopPropagation(); event.preventDefault(); toggleQuoteSelection('${quote.id}')"><i class="fas fa-check"></i></div>` : ''}
 
                         <!-- Designer Profile Banner -->
                         <div class="pqv-designer-banner">
@@ -3832,7 +3831,7 @@ async function viewQuotes(jobId) {
                         <div class="pqv-actions-footer" onclick="event.stopPropagation()">
                             ${canApprove ? `
                             <div class="pqv-action-left">
-                                <label class="vq-select-toggle" onclick="event.stopPropagation(); toggleQuoteSelection('${quote.id}')">
+                                <label class="vq-select-toggle" data-select-quote-id="${quote.id}" onclick="event.stopPropagation(); toggleQuoteSelection('${quote.id}')" ontouchend="event.stopPropagation(); event.preventDefault(); toggleQuoteSelection('${quote.id}')">
                                     <span class="vq-select-box" id="vq-sel-${quote.id}"><i class="fas fa-check"></i></span>
                                     <span>Select</span>
                                 </label>
@@ -3866,7 +3865,47 @@ async function viewQuotes(jobId) {
         showGenericModal(quotesHTML, 'max-width: 1040px; max-height: 92vh; overflow: hidden; display: flex; flex-direction: column;');
 
         const vqList = document.getElementById('vq-list');
-        if (vqList) vqList.style.cssText = 'overflow-y:auto; flex:1; padding: 0 28px 28px;';
+        if (vqList) {
+            vqList.style.cssText = 'overflow-y:auto; flex:1; padding: 0 28px 28px;';
+
+            // Event delegation for card selection - works on both touch and click
+            // Handles both web, mobile, and installed PWA
+            // Interactive elements that should NOT trigger card selection when clicked/tapped
+            const PQV_INTERACTIVE = 'button, a, .pqv-actions-footer, .pqv-doc-actions, .pqv-doc-group, .vq-select-toggle, .vq-checkbox, .pqv-meta-link';
+
+            vqList.addEventListener('click', function(e) {
+                // Don't trigger selection when clicking interactive elements
+                if (e.target.closest(PQV_INTERACTIVE)) return;
+                const card = e.target.closest('.pqv-card.vq-selectable');
+                if (card) {
+                    const quoteId = card.getAttribute('data-quote-id');
+                    if (quoteId) toggleQuoteSelection(quoteId);
+                }
+            });
+
+            // Touch event handling for better mobile/PWA responsiveness
+            let touchStartY = 0;
+            let touchMoved = false;
+            vqList.addEventListener('touchstart', function(e) {
+                touchStartY = e.touches[0].clientY;
+                touchMoved = false;
+            }, { passive: true });
+            vqList.addEventListener('touchmove', function(e) {
+                if (Math.abs(e.touches[0].clientY - touchStartY) > 10) {
+                    touchMoved = true;
+                }
+            }, { passive: true });
+            vqList.addEventListener('touchend', function(e) {
+                if (touchMoved) return; // User was scrolling, not tapping
+                if (e.target.closest(PQV_INTERACTIVE)) return; // Don't double-fire on interactive elements
+                const card = e.target.closest('.pqv-card.vq-selectable');
+                if (card) {
+                    e.preventDefault(); // Prevent ghost click on mobile
+                    const quoteId = card.getAttribute('data-quote-id');
+                    if (quoteId) toggleQuoteSelection(quoteId);
+                }
+            });
+        }
 
         // Lazy-load designer profiles
         quotes.forEach(quote => {
@@ -3883,7 +3922,9 @@ async function viewQuotes(jobId) {
 // --- QUOTE SELECTION SYSTEM ---
 function toggleQuoteSelection(quoteId) {
     const selected = appState._selectedQuoteIds || new Set();
-    const card = document.querySelector(`.vq-quote-card[data-quote-id="${quoteId}"]`);
+    // Support both old .vq-quote-card and new .pqv-card selectors
+    const card = document.querySelector(`.pqv-card[data-quote-id="${quoteId}"]`) ||
+                 document.querySelector(`.vq-quote-card[data-quote-id="${quoteId}"]`);
     if (!card) return;
     if (selected.has(quoteId)) {
         selected.delete(quoteId);
@@ -3897,6 +3938,11 @@ function toggleQuoteSelection(quoteId) {
     const selBox = document.getElementById(`vq-sel-${quoteId}`);
     if (selBox) {
         selBox.classList.toggle('checked', selected.has(quoteId));
+    }
+    // Sync top-left checkbox visual state
+    const chkBox = document.getElementById(`vq-chk-${quoteId}`);
+    if (chkBox) {
+        chkBox.classList.toggle('checked', selected.has(quoteId));
     }
     updateQuoteSelectionBar();
 }
