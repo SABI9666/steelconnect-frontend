@@ -5831,7 +5831,7 @@ function renderAppSection(sectionId) {
     if (sectionId === 'dashboard') {
         container.innerHTML = getDashboardTemplate(appState.currentUser);
         loadPortalAnnouncements();
-        if (isApproved) { renderRecentActivityWidgets(); initDashboardCharts(); }
+        if (isApproved) { renderRecentActivityWidgets(); renderUpcomingMeetingsWidget(); initDashboardCharts(); }
     } else if (sectionId === 'jobs') {
         const role = appState.currentUser.type;
         const title = role === 'designer' ? 'Available Projects' : 'My Posted Projects';
@@ -6129,6 +6129,157 @@ async function renderRecentActivityWidgets() {
         } catch (e) {
             quotesContainer.innerHTML = '<p class="widget-empty-text">Could not load quotes.</p>';
         }
+    }
+}
+
+// --- UPCOMING MEETINGS DASHBOARD WIDGET ---
+let _upcomingMeetingsTimer = null;
+
+async function renderUpcomingMeetingsWidget() {
+    const banner = document.getElementById('upcoming-meetings-banner');
+    const list = document.getElementById('upcoming-meetings-list');
+    const badge = document.getElementById('um-count-badge');
+    if (!banner || !list) return;
+
+    // Clear any previous countdown timer
+    if (_upcomingMeetingsTimer) { clearInterval(_upcomingMeetingsTimer); _upcomingMeetingsTimer = null; }
+
+    try {
+        // Fetch meetings for the next 48 hours (today + tomorrow)
+        const response = await apiCall('/meetings/upcoming/reminders?window=2880', 'GET');
+        let meetings = response.data || [];
+
+        // Also fetch all user meetings to get today's + tomorrow's including past-today ones
+        const allResponse = await apiCall('/meetings', 'GET');
+        const allMeetings = allResponse.data || [];
+
+        const now = new Date();
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const tomorrowEnd = new Date(todayStart.getTime() + 2 * 86400000);
+
+        // Combine: all scheduled meetings for today + tomorrow
+        const meetingsMap = new Map();
+        [...meetings, ...allMeetings].forEach(m => {
+            if (m.status === 'cancelled') return;
+            const mt = new Date(m.meetingDateTime);
+            if (mt >= todayStart && mt < tomorrowEnd) {
+                meetingsMap.set(m.id, m);
+            }
+        });
+
+        const upcomingMeetings = Array.from(meetingsMap.values())
+            .sort((a, b) => new Date(a.meetingDateTime) - new Date(b.meetingDateTime));
+
+        if (upcomingMeetings.length === 0) {
+            banner.style.display = 'none';
+            return;
+        }
+
+        banner.style.display = 'block';
+        badge.textContent = upcomingMeetings.length;
+
+        function renderMeetingsList() {
+            const currentTime = Date.now();
+            list.innerHTML = upcomingMeetings.map(m => {
+                const mDate = new Date(m.meetingDateTime);
+                const endDate = new Date(m.endDateTime || mDate.getTime() + (m.duration || 60) * 60000);
+                const diff = mDate.getTime() - currentTime;
+                const minutesUntil = Math.round(diff / 60000);
+                const isToday = mDate.toDateString() === now.toDateString();
+                const isTomorrow = mDate.toDateString() === new Date(now.getTime() + 86400000).toDateString();
+
+                const isPast = currentTime > endDate.getTime();
+                const isInProgress = currentTime >= mDate.getTime() && currentTime <= endDate.getTime();
+                const isStartingNow = minutesUntil >= -2 && minutesUntil <= 2;
+                const is5Min = minutesUntil > 2 && minutesUntil <= 5;
+                const is15Min = minutesUntil > 5 && minutesUntil <= 15;
+
+                let urgencyClass = '';
+                let urgencyLabel = '';
+                let urgencyIcon = '';
+                if (isPast) {
+                    urgencyClass = 'um-past';
+                    urgencyLabel = 'Ended';
+                    urgencyIcon = 'fa-check-circle';
+                } else if (isInProgress) {
+                    urgencyClass = 'um-in-progress';
+                    urgencyLabel = 'In Progress';
+                    urgencyIcon = 'fa-circle-notch fa-spin';
+                } else if (isStartingNow) {
+                    urgencyClass = 'um-now';
+                    urgencyLabel = 'Starting Now!';
+                    urgencyIcon = 'fa-bell';
+                } else if (is5Min) {
+                    urgencyClass = 'um-5min';
+                    urgencyLabel = `${minutesUntil} min`;
+                    urgencyIcon = 'fa-exclamation-circle';
+                } else if (is15Min) {
+                    urgencyClass = 'um-15min';
+                    urgencyLabel = `${minutesUntil} min`;
+                    urgencyIcon = 'fa-clock';
+                } else if (minutesUntil > 15 && minutesUntil <= 60) {
+                    urgencyClass = 'um-soon';
+                    urgencyLabel = `${minutesUntil} min`;
+                    urgencyIcon = 'fa-clock';
+                } else {
+                    urgencyClass = isTomorrow ? 'um-tomorrow' : 'um-later';
+                    if (minutesUntil > 60) {
+                        const hrs = Math.floor(minutesUntil / 60);
+                        urgencyLabel = `${hrs}h ${minutesUntil % 60}m`;
+                    } else {
+                        urgencyLabel = isTomorrow ? 'Tomorrow' : 'Today';
+                    }
+                    urgencyIcon = 'fa-calendar';
+                }
+
+                const timeStr = mDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+                const dayLabel = isToday ? 'Today' : isTomorrow ? 'Tomorrow' : mDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                const isOrganizer = m.organizerId === appState.currentUser?.id;
+                const myAttendance = (m.attendees || []).find(a => a.id === appState.currentUser?.id);
+                const acceptedCount = (m.attendees || []).filter(a => a.status === 'accepted').length;
+                const totalCount = (m.attendees || []).length;
+
+                return `
+                    <div class="um-meeting-card ${urgencyClass}" data-meeting-id="${m.id}">
+                        <div class="um-meeting-time-block">
+                            <span class="um-day-label">${dayLabel}</span>
+                            <span class="um-time">${timeStr}</span>
+                            <span class="um-duration">${m.duration} min</span>
+                        </div>
+                        <div class="um-meeting-info">
+                            <div class="um-meeting-title-row">
+                                <h4 class="um-meeting-title">${m.title}</h4>
+                                <span class="um-urgency-badge ${urgencyClass}">
+                                    <i class="fas ${urgencyIcon}"></i> ${urgencyLabel}
+                                </span>
+                            </div>
+                            <div class="um-meeting-meta">
+                                <span><i class="fas fa-map-marker-alt"></i> ${m.location || 'Online'}</span>
+                                <span><i class="fas fa-user"></i> ${isOrganizer ? 'You (Organizer)' : m.organizerName}</span>
+                                <span><i class="fas fa-users"></i> ${acceptedCount}/${totalCount}</span>
+                                ${m.jobTitle ? `<span><i class="fas fa-project-diagram"></i> ${m.jobTitle}</span>` : ''}
+                            </div>
+                            ${!isOrganizer && myAttendance && myAttendance.status === 'pending' && !isPast ? `
+                                <div class="um-meeting-actions">
+                                    <button class="um-action-btn um-accept" onclick="event.stopPropagation(); respondToMeeting('${m.id}','accepted')"><i class="fas fa-check"></i> Accept</button>
+                                    <button class="um-action-btn um-decline" onclick="event.stopPropagation(); respondToMeeting('${m.id}','declined')"><i class="fas fa-times"></i> Decline</button>
+                                </div>` : ''}
+                            ${!isOrganizer && myAttendance && myAttendance.status === 'accepted' ? `<span class="um-status-chip um-accepted"><i class="fas fa-check-circle"></i> Accepted</span>` : ''}
+                            ${!isOrganizer && myAttendance && myAttendance.status === 'declined' ? `<span class="um-status-chip um-declined"><i class="fas fa-times-circle"></i> Declined</span>` : ''}
+                        </div>
+                    </div>`;
+            }).join('');
+        }
+
+        // Initial render
+        renderMeetingsList();
+        // Update countdown every 30 seconds for live countdown
+        _upcomingMeetingsTimer = setInterval(renderMeetingsList, 30000);
+
+    } catch (error) {
+        console.warn('Failed to load upcoming meetings widget:', error);
+        list.innerHTML = '<p class="widget-empty-text">Could not load upcoming meetings.</p>';
+        banner.style.display = 'block';
     }
 }
 
@@ -8065,6 +8216,25 @@ function getDashboardTemplate(user) {
             </div>
 
             ${profileStatusCard}
+
+            <!-- Upcoming Meetings Banner -->
+            ${isApproved ? `
+            <div id="upcoming-meetings-banner" class="upcoming-meetings-banner" style="display:none;">
+                <div class="um-banner-header">
+                    <div class="um-banner-title">
+                        <i class="fas fa-calendar-check"></i>
+                        <h3>Upcoming Meetings</h3>
+                        <span class="um-badge" id="um-count-badge">0</span>
+                    </div>
+                    <button class="um-view-all-btn" onclick="renderAppSection('project-tracking')">
+                        <i class="fas fa-external-link-alt"></i> View All
+                    </button>
+                </div>
+                <div id="upcoming-meetings-list" class="um-meetings-list">
+                    <div class="um-loading"><div class="spinner"></div> Loading meetings...</div>
+                </div>
+            </div>` : ''}
+
             ${chartsSection}
 
             <div class="db-section-header">
