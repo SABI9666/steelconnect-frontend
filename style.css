@@ -17589,9 +17589,14 @@ body { overflow-x: hidden; }
         box-shadow: none !important;
         display: flex;
         flex-direction: column;
+        /* Override base hidden state - use transform for show/hide on mobile */
+        opacity: 1 !important;
+        visibility: visible !important;
+        pointer-events: none !important;
     }
     .notification-panel.active {
         transform: translateY(0) !important;
+        pointer-events: auto !important;
     }
     .notification-panel-header {
         padding: 0;
