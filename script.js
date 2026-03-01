@@ -4066,7 +4066,7 @@ async function fetchAndRenderConversations() {
         <div class="section-header modern-header"><div class="header-content"><h2><i class="fas fa-comments"></i> Messages</h2><p class="header-subtitle">Communicate with clients and designers</p></div></div>
         <div class="messages-tabs">
             <button class="msg-tab active" onclick="switchMessageTab('chats')"><i class="fas fa-comments"></i> Chats</button>
-            <button class="msg-tab" onclick="switchMessageTab('calls')"><i class="fas fa-phone-alt"></i> Recent Calls</button>
+            <button class="msg-tab" onclick="switchMessageTab('calls')"><i class="fas fa-phone-alt"></i> Recent Calls<span id="missed-call-tab-badge" class="missed-badge" style="display:none"></span></button>
         </div>
         <div id="conversations-list" class="conversations-container premium-conversations"></div>
         <div id="call-history-list" class="conversations-container premium-conversations" style="display:none"></div>`;
@@ -5990,28 +5990,47 @@ async function loadCallHistory() {
     try {
         const response = await apiCall('/voice-calls/history?limit=30', 'GET');
         const calls = response.data || [];
+
+        // Count missed incoming calls and update badge
+        const missedCalls = calls.filter(c => {
+            const isMissed = c.status === 'missed' || c.status === 'declined' || c.status === 'no_answer' || c.status === 'timeout';
+            return isMissed && c.callerId !== appState.currentUser.id;
+        });
+        const missedBadge = document.getElementById('missed-call-tab-badge');
+        if (missedBadge) {
+            if (missedCalls.length > 0) {
+                missedBadge.textContent = missedCalls.length;
+                missedBadge.style.display = 'inline-flex';
+            } else {
+                missedBadge.style.display = 'none';
+            }
+        }
+
         if (calls.length === 0) {
             container.innerHTML = '<div class="empty-state premium-empty"><div class="empty-icon"><i class="fas fa-phone-alt"></i></div><h3>No Calls Yet</h3><p>Start a voice call from any conversation.</p></div>';
             return;
         }
         container.innerHTML = calls.map(call => {
             const isOutgoing = call.callerId === appState.currentUser.id;
+            const isMissed = call.status === 'missed' || call.status === 'declined' || call.status === 'no_answer' || call.status === 'timeout';
+            const isMissedIncoming = isMissed && !isOutgoing;
             const otherName = isOutgoing ? (call.calleeName || 'User') : (call.callerName || 'User');
             const avatarColor = getAvatarColor(otherName);
-            const statusIcon = call.status === 'completed' ? 'fa-phone-alt' : call.status === 'missed' ? 'fa-phone-slash' : 'fa-phone-slash';
+            const statusIcon = call.status === 'completed' ? 'fa-phone-alt' : 'fa-phone-slash';
             const statusColor = call.status === 'completed' ? '#10b981' : '#ef4444';
             const directionIcon = isOutgoing ? 'fa-arrow-up' : 'fa-arrow-down';
             const duration = call.duration ? `${Math.floor(call.duration / 60)}:${(call.duration % 60).toString().padStart(2, '0')}` : '--:--';
             const timeAgo = getTimeAgo(call.startedAt);
+            const statusText = call.status === 'completed' ? duration : (isMissedIncoming ? 'Missed Call' : call.status.charAt(0).toUpperCase() + call.status.slice(1));
             return `
-                <div class="conversation-card premium-card call-history-card">
-                    <div class="convo-avatar" style="background-color: ${avatarColor}">${otherName.charAt(0).toUpperCase()}</div>
+                <div class="conversation-card premium-card call-history-card ${isMissedIncoming ? 'missed-call' : ''}">
+                    <div class="convo-avatar" style="background-color: ${isMissedIncoming ? '#ef4444' : avatarColor}">${otherName.charAt(0).toUpperCase()}</div>
                     <div class="convo-details">
-                        <div class="convo-header"><h4>${otherName}</h4><span class="convo-time">${timeAgo}</span></div>
-                        <p class="convo-preview">
-                            <i class="fas ${directionIcon}" style="color:${isOutgoing ? '#3b82f6' : '#10b981'};margin-right:4px;font-size:11px;"></i>
+                        <div class="convo-header"><h4 style="${isMissedIncoming ? 'color:#dc2626;font-weight:700;' : ''}">${otherName}</h4><span class="convo-time">${timeAgo}</span></div>
+                        <p class="convo-preview" style="${isMissedIncoming ? 'color:#ef4444;font-weight:600;' : ''}">
+                            <i class="fas ${directionIcon}" style="color:${isMissedIncoming ? '#ef4444' : isOutgoing ? '#3b82f6' : '#10b981'};margin-right:4px;font-size:11px;"></i>
                             <i class="fas ${statusIcon}" style="color:${statusColor};margin-right:6px;font-size:12px;"></i>
-                            ${call.status === 'completed' ? duration : call.status.charAt(0).toUpperCase() + call.status.slice(1)}
+                            ${statusText}
                         </p>
                     </div>
                     ${call.conversationId ? `<div class="convo-arrow" onclick="renderConversationView('${call.conversationId}')"><i class="fas fa-chevron-right"></i></div>` : ''}
@@ -6019,6 +6038,37 @@ async function loadCallHistory() {
         }).join('');
     } catch (error) {
         container.innerHTML = '<div class="error-state premium-error"><p>Failed to load call history.</p></div>';
+    }
+}
+
+// Missed calls banner on dashboard
+async function loadMissedCallsBanner() {
+    const banner = document.getElementById('missed-calls-dashboard-banner');
+    if (!banner) return;
+    try {
+        const response = await apiCall('/voice-calls/history?limit=20', 'GET');
+        const calls = response.data || [];
+        const missedCalls = calls.filter(c => {
+            const isMissed = c.status === 'missed' || c.status === 'declined' || c.status === 'no_answer' || c.status === 'timeout';
+            return isMissed && c.callerId !== appState.currentUser.id;
+        });
+        if (missedCalls.length > 0) {
+            const lastCaller = missedCalls[0].callerName || 'Someone';
+            const othersText = missedCalls.length > 1 ? ` and ${missedCalls.length - 1} other${missedCalls.length > 2 ? 's' : ''}` : '';
+            banner.innerHTML = `
+                <div class="missed-calls-banner" onclick="renderAppSection('conversations')">
+                    <div class="missed-calls-icon"><i class="fas fa-phone-slash"></i></div>
+                    <div class="missed-calls-info">
+                        <h4>Missed Call${missedCalls.length > 1 ? 's' : ''}</h4>
+                        <p>${lastCaller}${othersText} tried to call you</p>
+                    </div>
+                    <div class="missed-calls-count">${missedCalls.length}</div>
+                    <div class="missed-calls-arrow"><i class="fas fa-chevron-right"></i></div>
+                </div>`;
+            banner.style.display = 'block';
+        }
+    } catch (e) {
+        // Silently fail - missed calls banner is non-critical
     }
 }
 
@@ -6724,7 +6774,7 @@ function renderAppSection(sectionId) {
     if (sectionId === 'dashboard') {
         container.innerHTML = getDashboardTemplate(appState.currentUser);
         loadPortalAnnouncements();
-        if (isApproved) { renderRecentActivityWidgets(); renderUpcomingMeetingsWidget(); initDashboardCharts(); }
+        if (isApproved) { renderRecentActivityWidgets(); renderUpcomingMeetingsWidget(); initDashboardCharts(); loadMissedCallsBanner(); }
     } else if (sectionId === 'jobs') {
         const role = appState.currentUser.type;
         const title = role === 'designer' ? 'Available Projects' : 'My Posted Projects';
@@ -9125,6 +9175,9 @@ function getDashboardTemplate(user) {
             </div>
 
             ${profileStatusCard}
+
+            <!-- Missed Calls Banner (populated via JS) -->
+            <div id="missed-calls-dashboard-banner" style="display:none;"></div>
 
             <!-- Upcoming Meetings Banner -->
             ${isApproved ? `
