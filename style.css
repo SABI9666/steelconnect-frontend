@@ -4022,6 +4022,86 @@ body {
 .pqv-card.vq-selectable .vq-checkbox { top: 18px; left: 18px; }
 .pqv-card.vq-selectable .pqv-designer-banner { padding-left: 54px; }
 
+/* Checkbox selected states for pqv cards */
+.pqv-card.vq-selectable:hover .vq-checkbox {
+    border-color: #a5b4fc;
+}
+.pqv-card.vq-selected .vq-checkbox,
+.pqv-card .vq-checkbox.checked {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    border-color: #6366f1;
+    box-shadow: 0 2px 6px rgba(99, 102, 241, 0.35);
+}
+.pqv-card.vq-selected .vq-checkbox i,
+.pqv-card .vq-checkbox.checked i {
+    color: #fff;
+}
+
+/* Touch and interaction support for mobile & installed PWA */
+.pqv-card {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+/* Ensure actions footer is always interactive and above card click layer */
+.pqv-actions-footer {
+    position: relative;
+    z-index: 5;
+    pointer-events: auto;
+}
+.pqv-actions-footer .pqv-act-btn,
+.pqv-actions-footer .vq-select-toggle {
+    position: relative;
+    z-index: 6;
+    pointer-events: auto;
+    cursor: pointer;
+    -webkit-tap-highlight-color: rgba(99, 102, 241, 0.1);
+    touch-action: manipulation;
+    -webkit-user-select: none;
+    user-select: none;
+}
+/* Docs row buttons always clickable */
+.pqv-docs-row {
+    position: relative;
+    z-index: 4;
+    pointer-events: auto;
+}
+.pqv-docs-row .pqv-doc-btn,
+.pqv-docs-row .pqv-resume-btn,
+.pqv-docs-row .pqv-cert-link {
+    position: relative;
+    z-index: 6;
+    pointer-events: auto;
+    cursor: pointer;
+    -webkit-tap-highlight-color: rgba(99, 102, 241, 0.1);
+    touch-action: manipulation;
+}
+/* Checkbox always tappable */
+.pqv-card .vq-checkbox {
+    pointer-events: auto;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
+/* Active/pressed state for touch feedback */
+.pqv-act-btn:active {
+    transform: scale(0.96);
+    transition: transform 0.1s;
+}
+.pqv-act-approve:active {
+    transform: scale(0.97);
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
+}
+.vq-select-toggle:active {
+    transform: scale(0.96);
+    background: #eef2ff;
+}
+.pqv-doc-btn:active {
+    transform: scale(0.96);
+}
+.pqv-resume-btn:active {
+    transform: scale(0.97);
+}
+
 /* --- Designer Banner (Top Section) --- */
 .pqv-designer-banner {
     display: flex;
@@ -4598,34 +4678,85 @@ body {
     .pqv-list { padding: 14px 16px 16px; gap: 16px; }
     .pqv-designer-banner { flex-direction: column; padding: 16px; gap: 14px; }
     .pqv-card.vq-selectable .pqv-designer-banner { padding-left: 44px; }
-    .pqv-card.vq-selectable .vq-checkbox { top: 14px; left: 12px; }
+    .pqv-card.vq-selectable .vq-checkbox { top: 14px; left: 12px; width: 28px; height: 28px; border-radius: 9px; }
     .pqv-designer-main { flex-direction: column; text-align: center; align-items: center; }
     .pqv-designer-name-row { justify-content: center; }
     .pqv-designer-meta { justify-content: center; }
     .pqv-skills-row { justify-content: center; }
     .pqv-quote-highlight { align-items: center; }
     .pqv-proposal-section { padding: 14px 16px; }
-    .pqv-docs-row { padding: 12px 16px; flex-direction: column; align-items: flex-start; }
+    .pqv-docs-row { padding: 12px 16px; flex-direction: column; align-items: flex-start; gap: 10px; }
     .pqv-specs-row { padding: 10px 16px; }
     .pqv-bio-section { padding: 12px 16px; }
     .pqv-profile-expand { padding: 0 16px; }
-    .pqv-actions-footer { padding: 14px 16px; flex-direction: column; align-items: stretch; }
+    .pqv-actions-footer {
+        padding: 14px 16px;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
     .pqv-action-left,
     .pqv-action-center,
     .pqv-action-right { width: 100%; }
     .pqv-action-right { margin-left: 0; }
     .pqv-action-center { flex-wrap: wrap; }
-    .pqv-act-btn { flex: 1; justify-content: center; }
-    .pqv-act-approve { width: 100%; justify-content: center; }
+    /* Minimum 44px touch targets per WCAG */
+    .pqv-act-btn {
+        flex: 1;
+        justify-content: center;
+        min-height: 44px;
+        font-size: 0.85rem;
+        padding: 10px 14px;
+    }
+    .pqv-act-approve {
+        width: 100%;
+        justify-content: center;
+        min-height: 48px;
+        font-size: 0.9rem;
+    }
+    .vq-select-toggle {
+        min-height: 44px;
+        justify-content: center;
+        width: 100%;
+        font-size: 0.82rem;
+    }
+    .pqv-doc-btn {
+        min-height: 40px;
+        padding: 8px 14px;
+        font-size: 0.75rem;
+    }
+    .pqv-resume-btn {
+        min-height: 40px;
+        padding: 8px 14px;
+    }
     .pqv-compare-grid { grid-template-columns: 1fr !important; }
     .pqv-avatar { width: 44px; height: 44px; font-size: 1.05rem; }
+    /* Float action bar mobile */
+    .vq-action-bar {
+        flex-direction: column;
+        gap: 10px;
+        padding: 12px 16px;
+    }
+    .vq-action-bar-right {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+    .vq-btn {
+        flex: 1;
+        min-width: 0;
+        min-height: 42px;
+        justify-content: center;
+    }
 }
 @media (max-width: 480px) {
     .pqv-header-icon { width: 40px; height: 40px; font-size: 1rem; border-radius: 12px; }
     .pqv-title { font-size: 1.1rem; }
     .pqv-designer-banner { padding: 14px 12px; }
+    .pqv-card.vq-selectable .pqv-designer-banner { padding-left: 40px; }
     .pqv-meta-chip { font-size: 0.68rem; padding: 2px 8px; }
     .pqv-price-amount { font-size: 1.25rem; }
+    .pqv-actions-footer { padding: 12px; gap: 8px; }
+    .pqv-act-btn { font-size: 0.8rem; padding: 10px 10px; }
 }
 
 /* --- FILE MANAGEMENT STYLES (User Added) --- */
