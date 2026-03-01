@@ -3899,6 +3899,21 @@ function initializeSocketConnection() {
             endCallCleanup();
         });
 
+        // Call was answered or declined on another device
+        voiceCallState.socket.on('call-dismissed', (data) => {
+            const { callId, reason } = data;
+            console.log(`[VOICE] Call dismissed: ${callId} | reason: ${reason}`);
+            if (voiceCallState.currentCallId === callId) {
+                stopCallSound();
+                if (reason === 'answered_elsewhere') {
+                    showNotification('Call answered on another device', 'info');
+                } else if (reason === 'declined_elsewhere') {
+                    showNotification('Call declined on another device', 'info');
+                }
+                endCallCleanup();
+            }
+        });
+
         voiceCallState.socket.on('webrtc-offer', async (data) => {
             await handleWebRTCOffer(data);
         });
