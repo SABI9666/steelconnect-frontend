@@ -365,6 +365,8 @@ function initializeApp() {
             appState.jwtToken = token;
             appState.currentUser = JSON.parse(user);
             showAppView();
+            // Initialize socket immediately so voice calls work right away
+            initializeSocketConnection();
             console.log('Restored user session');
         } catch (error) {
             console.error("Error parsing user data from localStorage:", error);
@@ -835,6 +837,8 @@ function completeLogin(data) {
     const gatewayOverlay = document.getElementById('auth-gateway-overlay');
     if (gatewayOverlay) gatewayOverlay.style.display = 'none';
     showAppView();
+    // Initialize socket immediately so voice calls work right away
+    initializeSocketConnection();
     // Show welcome notification quickly for faster perceived login
     setTimeout(() => {
         showNotification(`Welcome to SteelConnect, ${data.user.name}!`, 'success');
@@ -3836,7 +3840,8 @@ function getTimeAgo(timestamp) {
 
 function getAvatarColor(name) {
     const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#84CC16', '#F97316'];
-    const index = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
+    const safeName = (name || 'U').toString();
+    const index = safeName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
     return colors[index];
 }
 
@@ -4121,33 +4126,42 @@ const voiceCallState = {
 function initializeSocketConnection() {
     if (!appState.currentUser) return;
 
+    // If socket already exists, just ensure it's connected and registered
     if (voiceCallState.socket) {
-        // Socket already exists - if connected, just re-register to ensure server mapping is fresh
         if (voiceCallState.socket.connected) {
             voiceCallState.socket.emit('register', appState.currentUser.id);
             return;
         }
-        // Socket exists but disconnected - force reconnect
-        voiceCallState.socket.connect();
+        // Socket exists but disconnected - reconnect
+        if (!voiceCallState.socket.connecting) {
+            voiceCallState.socket.connect();
+        }
+        return;
+    }
+
+    // Check that socket.io client library is loaded
+    if (typeof io === 'undefined') {
+        console.error('[VOICE] Socket.IO client library not loaded! Voice calls will not work.');
         return;
     }
 
     const socketUrl = IS_LOCAL ? 'http://localhost:10000' : 'https://steelconnect-backend.onrender.com';
+    console.log('[VOICE] Creating socket connection to:', socketUrl, '| userId:', appState.currentUser.id);
+
     try {
         voiceCallState.socket = io(socketUrl, {
             transports: ['websocket', 'polling'],
-            timeout: 15000,
+            timeout: 20000,
             reconnection: true,
-            reconnectionAttempts: 10,
-            reconnectionDelay: 2000,
+            reconnectionAttempts: Infinity,
+            reconnectionDelay: 1000,
             reconnectionDelayMax: 10000,
-            // Improved settings for cross-region connectivity (India, UK, etc.)
             forceNew: false,
             multiplex: true
         });
 
         voiceCallState.socket.on('connect', () => {
-            console.log('[VOICE] Socket connected:', voiceCallState.socket.id);
+            console.log('[VOICE] Socket connected:', voiceCallState.socket.id, '| registering userId:', appState.currentUser?.id);
             if (!appState.currentUser) return;
             voiceCallState.socket.emit('register', appState.currentUser.id);
             // Restore previous status on reconnect
@@ -4156,13 +4170,36 @@ function initializeSocketConnection() {
             }
         });
 
+        voiceCallState.socket.on('connect_error', (err) => {
+            console.error('[VOICE] Socket connection error:', err.message);
+        });
+
+        voiceCallState.socket.on('reconnect', (attemptNumber) => {
+            console.log('[VOICE] Socket reconnected after', attemptNumber, 'attempts');
+            if (appState.currentUser) {
+                voiceCallState.socket.emit('register', appState.currentUser.id);
+            }
+        });
+
+        voiceCallState.socket.on('reconnect_error', (err) => {
+            console.warn('[VOICE] Socket reconnection error:', err.message);
+        });
+
         voiceCallState.socket.on('incoming-call', (data) => {
-            showIncomingCallUI(data);
+            console.log('[VOICE] Incoming call received:', data?.callId, 'from:', data?.callerName);
+            try {
+                showIncomingCallUI(data);
+            } catch (err) {
+                console.error('[VOICE] Error showing incoming call UI:', err);
+                // Fallback: still try to show a browser notification
+                try {
+                    showIncomingCallBrowserNotification(data?.callId, data?.callerId, data?.callerName || 'Unknown');
+                } catch (e) { /* ignore */ }
+            }
         });
 
         voiceCallState.socket.on('call-ringing', (data) => {
             voiceCallState.currentCallId = data.callId;
-            // If push notification was sent to offline user, update the call status text
             if (data.pushNotified) {
                 const statusText = document.getElementById('call-status-text');
                 if (statusText) statusText.textContent = 'Notifying user...';
@@ -4170,13 +4207,11 @@ function initializeSocketConnection() {
         });
 
         voiceCallState.socket.on('call-accepted', async (data) => {
-            // Guard against duplicate listeners firing multiple times
             if (voiceCallState._callAcceptedHandled) {
                 console.warn('[VOICE] Duplicate call-accepted event, ignoring');
                 return;
             }
             voiceCallState._callAcceptedHandled = true;
-            // Ensure callId is set (safety net if call-ringing arrived late)
             if (data.callId && !voiceCallState.currentCallId) {
                 voiceCallState.currentCallId = data.callId;
             }
@@ -4210,7 +4245,6 @@ function initializeSocketConnection() {
             endCallCleanup();
         });
 
-        // Call was answered or declined on another device
         voiceCallState.socket.on('call-dismissed', (data) => {
             const { callId, reason } = data;
             console.log(`[VOICE] Call dismissed: ${callId} | reason: ${reason}`);
@@ -4258,8 +4292,12 @@ function initializeSocketConnection() {
             updatePresenceIndicator(data.userId, voiceCallState.peerStatuses[data.userId]);
         });
 
-        voiceCallState.socket.on('disconnect', () => {
-            console.log('[VOICE] Socket disconnected');
+        voiceCallState.socket.on('disconnect', (reason) => {
+            console.log('[VOICE] Socket disconnected, reason:', reason);
+            // If server disconnected us, force reconnect
+            if (reason === 'io server disconnect') {
+                voiceCallState.socket.connect();
+            }
         });
     } catch (error) {
         console.error('[VOICE] Socket initialization failed:', error);
@@ -4431,7 +4469,15 @@ function showOutgoingCallUI(calleeName, calleeId) {
 
 // Show incoming call UI (callee's screen)
 function showIncomingCallUI(data) {
-    const { callId, callerId, callerName, conversationId } = data;
+    const { callId, callerId, conversationId } = data;
+    const callerName = data.callerName || 'Unknown Caller';
+
+    console.log('[VOICE] showIncomingCallUI called | callId:', callId, '| callerId:', callerId, '| callerName:', callerName);
+
+    if (!callId || !callerId) {
+        console.error('[VOICE] Invalid incoming call data - missing callId or callerId');
+        return;
+    }
 
     if (voiceCallState.currentCallId) {
         // If same call is being delivered again (e.g., from socket after push notification), ignore
@@ -5565,28 +5611,42 @@ async function loadCallHistory() {
     }
 }
 
-// Initialize socket when user logs in - keep polling so logout/re-login re-initializes
-let _socketInitializedForUser = null;
+// Socket health-check: ensures socket stays connected and recovers from silent disconnects
+// Socket is initialized immediately on login/session-restore; this is just a safety net.
+let _pushNotificationsInitialized = false;
+let _socketHealthCheckUser = null;
 const _checkAndInitSocket = setInterval(() => {
     if (appState.currentUser && appState.jwtToken) {
-        // Only re-initialize if user changed or socket not connected
-        if (_socketInitializedForUser !== appState.currentUser.id ||
-            !voiceCallState.socket || !voiceCallState.socket.connected) {
-            _socketInitializedForUser = appState.currentUser.id;
+        const userId = appState.currentUser.id;
+
+        // Initialize push notifications once per user session (not repeatedly)
+        if (_socketHealthCheckUser !== userId) {
+            _socketHealthCheckUser = userId;
+            _pushNotificationsInitialized = false;
+        }
+
+        // Ensure socket exists and is connected
+        if (!voiceCallState.socket || !voiceCallState.socket.connected) {
             initializeSocketConnection();
+        }
+
+        // Initialize push notifications exactly once after socket is ready
+        if (!_pushNotificationsInitialized && voiceCallState.socket && voiceCallState.socket.connected) {
+            _pushNotificationsInitialized = true;
             initializePushNotifications();
         }
     } else {
-        // User logged out - reset so we re-initialize on next login
-        if (_socketInitializedForUser) {
-            _socketInitializedForUser = null;
+        // User logged out - clean up socket
+        if (_socketHealthCheckUser) {
+            _socketHealthCheckUser = null;
+            _pushNotificationsInitialized = false;
             if (voiceCallState.socket) {
                 voiceCallState.socket.disconnect();
                 voiceCallState.socket = null;
             }
         }
     }
-}, 2000);
+}, 3000);
 
 // --- PUSH NOTIFICATIONS FOR OFFLINE CALL RECEIVING ---
 async function initializePushNotifications() {
