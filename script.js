@@ -4205,6 +4205,21 @@ function initializeSocketConnection() {
             endCallCleanup();
         });
 
+        // Call was answered or declined on another device
+        voiceCallState.socket.on('call-dismissed', (data) => {
+            const { callId, reason } = data;
+            console.log(`[VOICE] Call dismissed: ${callId} | reason: ${reason}`);
+            if (voiceCallState.currentCallId === callId) {
+                stopCallSound();
+                if (reason === 'answered_elsewhere') {
+                    showNotification('Call answered on another device', 'info');
+                } else if (reason === 'declined_elsewhere') {
+                    showNotification('Call declined on another device', 'info');
+                }
+                endCallCleanup();
+            }
+        });
+
         voiceCallState.socket.on('webrtc-offer', async (data) => {
             await handleWebRTCOffer(data);
         });
@@ -4506,11 +4521,22 @@ async function acceptVoiceCall(callId, callerId) {
 // Reject incoming call
 function rejectVoiceCall(callId) {
     stopCallSound();
-    voiceCallState.socket.emit('call-reject', {
-        callId,
-        calleeId: appState.currentUser.id,
-        reason: 'declined'
-    });
+    if (voiceCallState.socket && voiceCallState.socket.connected) {
+        voiceCallState.socket.emit('call-reject', {
+            callId,
+            calleeId: appState.currentUser.id,
+            reason: 'declined'
+        });
+    } else {
+        // Socket not connected (e.g., just logged in from push notification)
+        // Use REST endpoint to decline
+        const backendUrl = IS_LOCAL ? 'http://localhost:10000' : 'https://steelconnect-backend.onrender.com';
+        fetch(`${backendUrl}/api/voice-calls/decline`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ callId, reason: 'declined' })
+        }).catch(() => { /* backend will timeout */ });
+    }
     endCallCleanup();
 }
 
