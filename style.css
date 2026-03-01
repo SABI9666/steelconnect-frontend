@@ -11818,11 +11818,6 @@ body {
 }
 
 @media (max-width: 480px) {
-    .notification-panel {
-        right: 0.5rem;
-        left: 0.5rem;
-        width: auto;
-    }
     .notification-container {
         right: 0.5rem;
         left: 0.5rem;
@@ -17594,7 +17589,7 @@ body { overflow-x: hidden; }
         box-shadow: none !important;
         display: flex !important;
         flex-direction: column;
-        overflow: visible !important;
+        overflow: hidden !important;
         /* Hidden by default on mobile — use opacity + visibility */
         opacity: 0 !important;
         visibility: hidden !important;
@@ -17953,9 +17948,6 @@ body { overflow-x: hidden; }
     .estimation-modal-header { padding: 12px 14px; margin: -1.25rem -1.25rem 0.75rem -1.25rem; }
     .modal-title-section h3 { font-size: 0.95rem; }
     .modal-status-icon { width: 32px; height: 32px; font-size: 0.9rem; }
-
-    /* Notification */
-    .notification-panel { right: 0.25rem; left: 0.25rem; }
 }
 
 /* ================================================================
