@@ -3869,7 +3869,11 @@ function initializeSocketConnection() {
                 return;
             }
             voiceCallState._callAcceptedHandled = true;
-            console.log('[VOICE] Call accepted, creating WebRTC offer');
+            // Ensure callId is set (safety net if call-ringing arrived late)
+            if (data.callId && !voiceCallState.currentCallId) {
+                voiceCallState.currentCallId = data.callId;
+            }
+            console.log('[VOICE] Call accepted, creating WebRTC offer | callId:', voiceCallState.currentCallId);
             stopCallSound();
             updateCallUI('connecting');
             await createAndSendOffer(data.calleeId);
