@@ -10130,7 +10130,7 @@ function openScheduleMeetingModal(jobId, jobTitle, otherUserId, otherUserName) {
                 </div>` : ''}
 
                 <div class="meeting-form-actions">
-                    <button type="button" class="btn btn-outline" onclick="closeGenericModal()">Cancel</button>
+                    <button type="button" class="btn btn-outline" onclick="closeModal()">Cancel</button>
                     <button type="submit" class="btn btn-primary" id="meeting-submit-btn">
                         <i class="fas fa-paper-plane"></i> Send Invitation
                     </button>
@@ -10168,7 +10168,7 @@ async function submitScheduleMeeting(event) {
         };
 
         await apiCall('/meetings', 'POST', meetingPayload);
-        closeGenericModal();
+        closeModal();
         showNotification('Meeting scheduled successfully! Invitations have been sent.', 'success');
 
         // Reload project detail if on project view
