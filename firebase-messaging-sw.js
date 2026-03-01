@@ -1,8 +1,9 @@
-// SteelConnect Service Worker
+// SteelConnect Service Worker v3
 // Handles: Push Notifications (incoming calls) + PWA App Update Detection + Caching
 // Works with Web Push (VAPID) — no Firebase client SDK required.
+// IMPORTANT: Bump SW_VERSION on every deploy to trigger update in installed PWA apps.
 
-const SW_VERSION = '2.0.0';
+const SW_VERSION = '3.0.0';
 const CACHE_NAME = 'steelconnect-v' + SW_VERSION;
 const BACKEND_URL = 'https://steelconnect-backend.onrender.com';
 const APP_NAME = 'SteelConnect';
@@ -27,15 +28,18 @@ self.addEventListener('install', (event) => {
         caches.open(CACHE_NAME)
             .then((cache) => {
                 console.log('[SW] Precaching app shell');
-                return cache.addAll(PRECACHE_URLS).catch((err) => {
-                    // Don't fail install if some assets are missing — cache what we can
-                    console.warn('[SW] Some precache assets failed:', err);
-                    return Promise.allSettled(
-                        PRECACHE_URLS.map(url => cache.add(url).catch(() => {}))
-                    );
+                // Fetch fresh copies with cache-busting query param
+                const requests = PRECACHE_URLS.map(url => {
+                    const bustUrl = url + (url.includes('?') ? '&' : '?') + '_sw=' + SW_VERSION;
+                    return fetch(new Request(bustUrl, { cache: 'no-cache' }))
+                        .then(resp => {
+                            if (resp.ok) return cache.put(url, resp);
+                        })
+                        .catch(() => {});
                 });
+                return Promise.allSettled(requests);
             })
-            .then(() => self.skipWaiting()) // Activate immediately, don't wait for old tabs to close
+            .then(() => self.skipWaiting())
     );
 });
 
@@ -69,45 +73,56 @@ self.addEventListener('activate', (event) => {
     );
 });
 
-// --- FETCH: Network-first strategy for HTML/API, cache-first for static assets ---
+// --- FETCH: Network-first for HTML, stale-while-revalidate for static ---
 self.addEventListener('fetch', (event) => {
     const { request } = event;
     const url = new URL(request.url);
 
-    // Skip non-GET requests and cross-origin API calls
+    // Skip non-GET requests
     if (request.method !== 'GET') return;
-    // Skip external resources (Google, Firebase, CDNs) — let browser handle them
-    if (!url.origin.includes(self.location.origin)) return;
+    // Skip external resources (Google, Firebase, CDNs)
+    if (url.origin !== self.location.origin) return;
     // Skip API calls — always go to network
     if (url.pathname.startsWith('/api/')) return;
 
     // For HTML pages — network-first with cache fallback
     if (request.mode === 'navigate' || request.headers.get('accept')?.includes('text/html')) {
         event.respondWith(
-            fetch(request)
+            fetch(request, { cache: 'no-cache' })
                 .then((response) => {
-                    // Cache the fresh response
                     const clone = response.clone();
                     caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
                     return response;
                 })
                 .catch(() => {
-                    // Offline — serve cached version
                     return caches.match(request).then((cached) => cached || caches.match('/'));
                 })
         );
         return;
     }
 
-    // For JS/CSS/images — stale-while-revalidate (serve cache, update in background)
+    // For JS/CSS — network-first so updates propagate fast, with cache fallback
+    if (url.pathname.endsWith('.js') || url.pathname.endsWith('.css')) {
+        event.respondWith(
+            fetch(request, { cache: 'no-cache' })
+                .then((response) => {
+                    const clone = response.clone();
+                    caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+                    return response;
+                })
+                .catch(() => caches.match(request))
+        );
+        return;
+    }
+
+    // For images/fonts/other — stale-while-revalidate
     event.respondWith(
         caches.match(request).then((cached) => {
             const fetchPromise = fetch(request).then((response) => {
-                // Update cache with fresh version
                 const clone = response.clone();
                 caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
                 return response;
-            }).catch(() => cached); // If network fails, cached version is already served
+            }).catch(() => cached);
 
             return cached || fetchPromise;
         })
@@ -274,13 +289,21 @@ self.addEventListener('notificationclose', (event) => {
 
 // --- MESSAGE: Handle messages from the main app ---
 self.addEventListener('message', (event) => {
-    if (event.data && event.data.type === 'SKIP_WAITING') {
+    if (!event.data) return;
+
+    if (event.data.type === 'SKIP_WAITING') {
         self.skipWaiting();
     }
-    if (event.data && event.data.type === 'GET_VERSION') {
+
+    if (event.data.type === 'GET_VERSION') {
         event.source.postMessage({
             type: 'SW_VERSION',
             version: SW_VERSION
         });
+    }
+
+    // Force update check from client
+    if (event.data.type === 'CHECK_UPDATE') {
+        self.registration.update().catch(() => {});
     }
 });

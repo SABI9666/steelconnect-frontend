@@ -645,6 +645,10 @@ function initializeApp() {
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/firebase-messaging-sw.js').then((registration) => {
             console.log('[SW] Service worker registered for update detection');
+
+            // Force check for updates immediately
+            registration.update().catch(() => {});
+
             // Check for waiting worker (update available)
             if (registration.waiting) {
                 showAppUpdateBanner(registration.waiting);
@@ -657,6 +661,24 @@ function initializeApp() {
                         showAppUpdateBanner(newWorker);
                     }
                 });
+            });
+
+            // For installed PWA — check for updates every 5 minutes (more aggressive)
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+                || window.navigator.standalone === true;
+            const updateInterval = isStandalone ? 5 * 60 * 1000 : 30 * 60 * 1000;
+            setInterval(() => {
+                registration.update().catch(() => {});
+            }, updateInterval);
+
+            // Listen for SW_UPDATED from the new service worker
+            navigator.serviceWorker.addEventListener('message', (event) => {
+                if (event.data && event.data.type === 'SW_UPDATED') {
+                    console.log('[SW] App updated to v' + event.data.version);
+                    if (isStandalone) {
+                        window.location.reload();
+                    }
+                }
             });
         }).catch((err) => {
             console.log('[SW] Service worker registration deferred:', err.message);
@@ -6241,9 +6263,16 @@ async function initializePushNotifications() {
                 }
             }
 
-            // Handle SW update notification
+            // Handle SW update notification — auto-reload for installed PWA
             if (event.data && event.data.type === 'SW_UPDATED') {
                 console.log('[SW] Service worker updated to v' + event.data.version);
+                // If running as installed PWA (standalone), auto-reload to apply update
+                const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+                    || window.navigator.standalone === true;
+                if (isStandalone) {
+                    console.log('[SW] Standalone PWA detected — auto-reloading to apply update');
+                    window.location.reload();
+                }
             }
         });
     } catch (error) {
