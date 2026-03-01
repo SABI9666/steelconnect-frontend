@@ -9263,8 +9263,8 @@ function getDashboardTemplate(user) {
                         <h3>Upcoming Meetings</h3>
                         <span class="um-badge" id="um-count-badge">0</span>
                     </div>
-                    <button class="um-view-all-btn" onclick="renderAppSection('project-tracking')">
-                        <i class="fas fa-external-link-alt"></i> View All
+                    <button class="um-view-all-btn" onclick="showAllMeetingsModal()">
+                        <i class="fas fa-calendar-alt"></i> View All
                     </button>
                 </div>
                 <div id="upcoming-meetings-list" class="um-meetings-list">
@@ -12082,7 +12082,7 @@ async function cancelMeeting(meetingId) {
 // Show full meeting details in a modal (used when no jobId available)
 async function showMeetingDetailModal(meetingId) {
     if (!meetingId) { renderAppSection('project-tracking'); return; }
-    showGenericModal('<div style="padding:40px;text-align:center"><div class="spinner"></div><p style="margin-top:12px;color:var(--text-secondary)">Loading meeting details...</p></div>', 'max-width:560px;padding:0;border-radius:16px;overflow:hidden;');
+    showGenericModal('<div style="padding:40px;text-align:center"><div class="spinner"></div><p style="margin-top:12px;color:var(--text-secondary)">Loading meeting details...</p></div>', 'max-width:560px;padding:0;');
     try {
         const response = await apiCall(`/meetings/${meetingId}`, 'GET');
         const m = response.data;
@@ -12157,13 +12157,76 @@ async function showMeetingDetailModal(meetingId) {
                     ${actionButtons}
                 </div>
             </div>`;
-        showGenericModal(content, 'max-width:560px;padding:0;border-radius:16px;overflow:hidden;');
+        showGenericModal(content, 'max-width:560px;padding:0;');
     } catch (error) {
         closeModal();
         showNotification('Failed to load meeting details.', 'error');
     }
 }
 
+// Show all meetings in a full modal (View All button from dashboard)
+async function showAllMeetingsModal() {
+    showGenericModal('<div style="padding:40px;text-align:center"><div class="spinner"></div><p style="margin-top:12px;color:var(--text-secondary)">Loading meetings...</p></div>', 'max-width:640px;padding:0;');
+    try {
+        const response = await apiCall('/meetings', 'GET');
+        const allMeetings = (response.data || []).filter(m => m.status !== 'cancelled');
+        const now = new Date();
+
+        // Split into upcoming and past
+        const upcoming = allMeetings.filter(m => new Date(m.meetingDateTime) >= now).sort((a, b) => new Date(a.meetingDateTime) - new Date(b.meetingDateTime));
+        const past = allMeetings.filter(m => new Date(m.meetingDateTime) < now).sort((a, b) => new Date(b.meetingDateTime) - new Date(a.meetingDateTime)).slice(0, 10);
+
+        const renderCard = (m, isPast) => {
+            const mDate = new Date(m.meetingDateTime);
+            const timeStr = mDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+            const dateStr = mDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+            const isOrganizer = m.organizerId === appState.currentUser?.id;
+            const acceptedCount = (m.attendees || []).filter(a => a.status === 'accepted').length;
+            const totalCount = (m.attendees || []).length;
+
+            return `<div class="all-meetings-card ${isPast ? 'past' : ''}" onclick="closeModal();showMeetingDetailModal('${m.id}')" style="cursor:pointer;display:flex;gap:14px;padding:14px 20px;border-bottom:1px solid #f1f5f9;transition:background 0.15s">
+                <div style="min-width:52px;text-align:center;flex-shrink:0">
+                    <div style="font-size:11px;font-weight:700;color:${isPast ? '#94a3b8' : '#2563eb'};text-transform:uppercase">${dateStr.split(',')[0]}</div>
+                    <div style="font-size:20px;font-weight:800;color:${isPast ? '#94a3b8' : '#0f172a'}">${mDate.getDate()}</div>
+                    <div style="font-size:10px;color:#64748b">${timeStr}</div>
+                </div>
+                <div style="flex:1;min-width:0">
+                    <div style="font-size:14px;font-weight:600;color:${isPast ? '#94a3b8' : '#0f172a'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m.title}</div>
+                    <div style="font-size:12px;color:#64748b;margin-top:3px;display:flex;gap:10px;flex-wrap:wrap">
+                        <span><i class="fas fa-user" style="margin-right:3px"></i>${isOrganizer ? 'You' : m.organizerName}</span>
+                        <span><i class="fas fa-users" style="margin-right:3px"></i>${acceptedCount}/${totalCount}</span>
+                        <span><i class="fas fa-clock" style="margin-right:3px"></i>${m.duration}m</span>
+                    </div>
+                </div>
+                <div style="display:flex;align-items:center;color:#94a3b8;font-size:14px;flex-shrink:0"><i class="fas fa-chevron-right"></i></div>
+            </div>`;
+        };
+
+        const upcomingHTML = upcoming.length > 0
+            ? upcoming.map(m => renderCard(m, false)).join('')
+            : '<div style="padding:24px;text-align:center;color:#94a3b8"><i class="fas fa-calendar-check" style="font-size:24px;margin-bottom:8px;display:block"></i>No upcoming meetings</div>';
+        const pastHTML = past.length > 0
+            ? past.map(m => renderCard(m, true)).join('')
+            : '';
+
+        const content = `
+            <div style="padding:0">
+                <div style="background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;padding:20px 24px">
+                    <h3 style="margin:0;font-size:18px;font-weight:700"><i class="fas fa-calendar-alt" style="margin-right:8px"></i>All Meetings</h3>
+                    <p style="margin:4px 0 0;font-size:13px;opacity:0.85">${upcoming.length} upcoming${past.length > 0 ? `, ${past.length} recent` : ''}</p>
+                </div>
+                <div style="max-height:60vh;overflow-y:auto">
+                    ${upcoming.length > 0 ? `<div style="padding:10px 20px 6px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#64748b">Upcoming</div>` : ''}
+                    ${upcomingHTML}
+                    ${past.length > 0 ? `<div style="padding:14px 20px 6px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;border-top:2px solid #f1f5f9">Past Meetings</div>${pastHTML}` : ''}
+                </div>
+            </div>`;
+        showGenericModal(content, 'max-width:640px;padding:0;');
+    } catch (error) {
+        closeModal();
+        showNotification('Failed to load meetings.', 'error');
+    }
+}
 
 // --- SUPPORT SECTION FUNCTIONS (UPDATED) ---
 let supportFiles = []; // Global variable for support files
