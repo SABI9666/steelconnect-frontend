@@ -3191,6 +3191,88 @@ body {
 }
 .empty-state h3 { margin-bottom: 8px; color: var(--text-dark); font-weight: 650; font-size: 1.1rem; }
 .empty-state p { color: var(--text-gray); font-size: 0.9rem; }
+/* ========================================
+   MY QUOTES PAGE (.mq-)
+   Professional quote management dashboard
+   ======================================== */
+.mq-page { padding: 0 4px; }
+.mq-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 0 16px; flex-wrap: wrap; gap: 12px; }
+.mq-header-left { display: flex; align-items: center; gap: 14px; }
+.mq-header-icon { width: 48px; height: 48px; border-radius: 14px; background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0; box-shadow: 0 4px 12px rgba(99,102,241,0.25); }
+.mq-title { font-size: 1.35rem; font-weight: 800; color: #0f172a; margin: 0; }
+.mq-subtitle { font-size: 0.82rem; color: #64748b; margin: 2px 0 0; }
+.mq-header-right { display: flex; gap: 8px; }
+
+/* Stats Bar */
+.mq-stats-bar { display: flex; gap: 12px; padding: 16px 0; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.mq-stats-bar::-webkit-scrollbar { display: none; }
+.mq-stat { display: flex; align-items: center; gap: 10px; background: #fff; border: 1px solid #f1f5f9; border-radius: 12px; padding: 12px 16px; min-width: 130px; flex: 1; box-shadow: 0 1px 3px rgba(0,0,0,0.04); transition: all 0.2s; }
+.mq-stat:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); transform: translateY(-1px); }
+.mq-stat-icon { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; flex-shrink: 0; }
+.mq-stat-icon.mq-stat-total { background: #eef2ff; color: #6366f1; }
+.mq-stat-icon.mq-stat-pending { background: #fffbeb; color: #d97706; }
+.mq-stat-icon.mq-stat-approved { background: #ecfdf5; color: #059669; }
+.mq-stat-icon.mq-stat-rejected { background: #fef2f2; color: #dc2626; }
+.mq-stat-icon.mq-stat-value { background: #f0fdf4; color: #16a34a; }
+.mq-stat-info { display: flex; flex-direction: column; }
+.mq-stat-num { font-size: 1.15rem; font-weight: 800; color: #0f172a; line-height: 1.2; }
+.mq-stat-label { font-size: 0.7rem; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+
+/* Filter Tabs */
+.mq-filters { display: flex; gap: 6px; padding: 0 0 14px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.mq-filters::-webkit-scrollbar { display: none; }
+.mq-filter-btn { display: inline-flex; align-items: center; gap: 5px; padding: 7px 16px; border-radius: 20px; border: 1px solid #e2e8f0; background: #fff; color: #64748b; font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+.mq-filter-btn:hover { border-color: #c7d2fe; color: #6366f1; background: #f5f3ff; }
+.mq-filter-btn.active { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff; border-color: #6366f1; box-shadow: 0 2px 8px rgba(99,102,241,0.3); }
+.mq-filter-btn.active i { color: #fff; }
+
+/* Quote Cards List */
+.mq-list { display: flex; flex-direction: column; gap: 12px; padding-bottom: 24px; }
+.mq-card { background: #fff; border: 1px solid #f1f5f9; border-radius: 16px; overflow: hidden; transition: all 0.25s cubic-bezier(0.4,0,0.2,1); }
+.mq-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.08); transform: translateY(-2px); }
+.mq-status-submitted { border-left: 4px solid #f59e0b; }
+.mq-status-approved { border-left: 4px solid #10b981; }
+.mq-status-rejected { border-left: 4px solid #ef4444; }
+
+.mq-card-top { display: flex; justify-content: space-between; align-items: flex-start; padding: 18px 20px 0; gap: 16px; }
+.mq-card-left { display: flex; align-items: flex-start; gap: 12px; flex: 1; min-width: 0; }
+.mq-job-icon { width: 40px; height: 40px; border-radius: 10px; background: #f8fafc; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: center; color: #64748b; font-size: 0.95rem; flex-shrink: 0; }
+.mq-card-title-wrap { flex: 1; min-width: 0; }
+.mq-card-title { font-size: 0.95rem; font-weight: 700; color: #0f172a; margin: 0 0 6px; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.mq-card-meta-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.mq-status-pill { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px; font-size: 0.68rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
+.mq-status-pill.submitted { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+.mq-status-pill.approved { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+.mq-status-pill.rejected { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+.mq-time-ago { font-size: 0.72rem; color: #94a3b8; display: inline-flex; align-items: center; gap: 4px; }
+.mq-time-ago i { font-size: 0.65rem; }
+
+.mq-card-right { text-align: right; flex-shrink: 0; }
+.mq-price-label { display: block; font-size: 0.65rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; color: #94a3b8; margin-bottom: 2px; }
+.mq-price-amount { display: block; font-size: 1.3rem; font-weight: 800; color: #0f172a; letter-spacing: -0.5px; line-height: 1.2; }
+.mq-timeline { display: inline-flex; align-items: center; gap: 4px; font-size: 0.72rem; color: #64748b; margin-top: 4px; }
+.mq-timeline i { font-size: 0.65rem; color: #94a3b8; }
+
+.mq-card-body { padding: 14px 20px 16px; }
+.mq-desc { margin-bottom: 12px; }
+.mq-desc p { font-size: 0.84rem; color: #475569; line-height: 1.6; margin: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.mq-card-footer { display: flex; justify-content: space-between; align-items: center; padding-top: 12px; border-top: 1px solid #f1f5f9; gap: 12px; flex-wrap: wrap; }
+.mq-card-info-chips { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.mq-chip { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 8px; font-size: 0.72rem; color: #64748b; background: #f8fafc; border: 1px solid #f1f5f9; white-space: nowrap; }
+.mq-chip i { font-size: 0.65rem; color: #94a3b8; }
+.mq-chip-clickable { cursor: pointer; transition: all 0.2s; }
+.mq-chip-clickable:hover { background: #eef2ff; border-color: #c7d2fe; color: #6366f1; }
+.mq-chip-clickable:hover i { color: #6366f1; }
+.mq-card-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.mq-card-actions .btn { font-size: 0.75rem; padding: 6px 12px; }
+.btn-danger-outline { color: #ef4444; border: 1px solid #fecaca; background: #fff; }
+.btn-danger-outline:hover { background: #fef2f2; }
+
+.mq-empty-filter { text-align: center; padding: 48px 20px; color: #94a3b8; }
+.mq-empty-filter i { font-size: 2rem; margin-bottom: 10px; display: block; }
+.mq-empty-filter p { font-size: 0.88rem; }
+
+/* Legacy fallback classes */
 .quote-card {
     border: 1px solid rgba(0, 0, 0, 0.06);
     padding: 20px;
@@ -3820,6 +3902,42 @@ body {
 }
 
 /* --- Mobile responsive --- */
+/* My Quotes Responsive */
+@media (max-width: 768px) {
+    .mq-header { padding: 16px 0 12px; }
+    .mq-header-icon { width: 40px; height: 40px; font-size: 1rem; border-radius: 12px; }
+    .mq-title { font-size: 1.1rem; }
+    .mq-subtitle { font-size: 0.75rem; }
+    .mq-stats-bar { gap: 8px; padding: 10px 0; }
+    .mq-stat { min-width: 100px; padding: 10px 12px; gap: 8px; border-radius: 10px; }
+    .mq-stat-icon { width: 32px; height: 32px; font-size: 0.8rem; border-radius: 8px; }
+    .mq-stat-num { font-size: 0.95rem; }
+    .mq-stat-label { font-size: 0.62rem; }
+    .mq-filters { padding: 0 0 10px; gap: 4px; }
+    .mq-filter-btn { padding: 6px 12px; font-size: 0.72rem; }
+    .mq-card-top { padding: 14px 14px 0; gap: 10px; flex-direction: column; }
+    .mq-card-right { text-align: left; display: flex; align-items: center; gap: 12px; }
+    .mq-price-label { display: none; }
+    .mq-price-amount { font-size: 1.1rem; }
+    .mq-timeline { margin-top: 0; }
+    .mq-card-body { padding: 10px 14px 14px; }
+    .mq-card-footer { flex-direction: column; align-items: stretch; gap: 10px; }
+    .mq-card-actions { justify-content: stretch; }
+    .mq-card-actions .btn { flex: 1; justify-content: center; text-align: center; }
+    .mq-job-icon { width: 34px; height: 34px; font-size: 0.85rem; border-radius: 8px; }
+    .mq-card-title { font-size: 0.88rem; }
+}
+@media (max-width: 480px) {
+    .mq-header { flex-direction: column; align-items: flex-start; }
+    .mq-header-right { width: 100%; }
+    .mq-header-right .btn { flex: 1; justify-content: center; }
+    .mq-stats-bar { gap: 6px; }
+    .mq-stat { min-width: 80px; padding: 8px 10px; flex-direction: column; text-align: center; gap: 4px; }
+    .mq-stat-icon { margin: 0 auto; }
+    .mq-card-actions .btn { font-size: 0.7rem; padding: 6px 8px; }
+    .mq-chip { font-size: 0.68rem; padding: 3px 8px; }
+}
+
 @media (max-width: 768px) {
     .vq-header { padding: 16px 16px 0; }
     .vq-list { padding: 12px 16px 16px; }
