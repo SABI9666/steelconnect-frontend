@@ -3023,14 +3023,29 @@ async function fetchAndRenderMyQuotes() {
     const container = document.getElementById('app-container');
     container.innerHTML = `
         <div id="dynamic-feature-header" class="dynamic-feature-header"></div>
-        <div class="section-header modern-header">
-            <div class="header-content">
-                <h2><i class="fas fa-file-invoice-dollar"></i> My Submitted Quotes</h2>
-                <p class="header-subtitle">Track your quote submissions</p>
+        <div class="mq-page">
+            <div class="mq-header">
+                <div class="mq-header-left">
+                    <div class="mq-header-icon"><i class="fas fa-file-invoice-dollar"></i></div>
+                    <div>
+                        <h2 class="mq-title">My Quotes</h2>
+                        <p class="mq-subtitle">Track and manage your submitted proposals</p>
+                    </div>
+                </div>
+                <div class="mq-header-right">
+                    <button class="btn btn-outline btn-sm" onclick="fetchAndRenderMyQuotes()"><i class="fas fa-sync-alt"></i> Refresh</button>
+                </div>
             </div>
-        </div>
-        <div id="my-quotes-list" class="jobs-grid"></div>`;
-        updateDynamicHeader();
+            <div id="mq-stats-bar" class="mq-stats-bar"></div>
+            <div id="mq-filters" class="mq-filters" style="display:none;">
+                <button class="mq-filter-btn active" data-filter="all" onclick="filterMyQuotes('all')">All</button>
+                <button class="mq-filter-btn" data-filter="submitted" onclick="filterMyQuotes('submitted')"><i class="fas fa-clock"></i> Pending</button>
+                <button class="mq-filter-btn" data-filter="approved" onclick="filterMyQuotes('approved')"><i class="fas fa-check-circle"></i> Approved</button>
+                <button class="mq-filter-btn" data-filter="rejected" onclick="filterMyQuotes('rejected')"><i class="fas fa-times-circle"></i> Rejected</button>
+            </div>
+            <div id="my-quotes-list" class="mq-list"></div>
+        </div>`;
+    updateDynamicHeader();
     const listContainer = document.getElementById('my-quotes-list');
     listContainer.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Loading your quotes...</p></div>';
 
@@ -3038,8 +3053,10 @@ async function fetchAndRenderMyQuotes() {
         const response = await apiCall(`/quotes/user/${appState.currentUser.id}`, 'GET');
         const quotes = response.data || [];
         appState.myQuotes = quotes;
+        appState._myQuotesFilter = 'all';
 
         if (quotes.length === 0) {
+            document.getElementById('mq-stats-bar').style.display = 'none';
             listContainer.innerHTML = `
                 <div class="empty-state premium-empty">
                     <div class="empty-icon"><i class="fas fa-file-invoice"></i></div>
@@ -3050,87 +3067,20 @@ async function fetchAndRenderMyQuotes() {
             return;
         }
 
-        listContainer.innerHTML = quotes.map(quote => {
-            const attachments = quote.attachments || [];
-            const hasAttachments = attachments.length > 0;
+        // Stats bar
+        const submitted = quotes.filter(q => q.status === 'submitted').length;
+        const approved = quotes.filter(q => q.status === 'approved').length;
+        const rejected = quotes.filter(q => q.status === 'rejected').length;
+        const totalValue = quotes.reduce((s, q) => s + (parseFloat(q.quoteAmount) || 0), 0);
+        document.getElementById('mq-stats-bar').innerHTML = `
+            <div class="mq-stat"><div class="mq-stat-icon mq-stat-total"><i class="fas fa-layer-group"></i></div><div class="mq-stat-info"><span class="mq-stat-num">${quotes.length}</span><span class="mq-stat-label">Total</span></div></div>
+            <div class="mq-stat"><div class="mq-stat-icon mq-stat-pending"><i class="fas fa-clock"></i></div><div class="mq-stat-info"><span class="mq-stat-num">${submitted}</span><span class="mq-stat-label">Pending</span></div></div>
+            <div class="mq-stat"><div class="mq-stat-icon mq-stat-approved"><i class="fas fa-check-circle"></i></div><div class="mq-stat-info"><span class="mq-stat-num">${approved}</span><span class="mq-stat-label">Approved</span></div></div>
+            <div class="mq-stat"><div class="mq-stat-icon mq-stat-rejected"><i class="fas fa-times-circle"></i></div><div class="mq-stat-info"><span class="mq-stat-num">${rejected}</span><span class="mq-stat-label">Rejected</span></div></div>
+            <div class="mq-stat"><div class="mq-stat-icon mq-stat-value"><i class="fas fa-dollar-sign"></i></div><div class="mq-stat-info"><span class="mq-stat-num">$${totalValue.toLocaleString()}</span><span class="mq-stat-label">Total Value</span></div></div>`;
+        document.getElementById('mq-filters').style.display = 'flex';
 
-            let attachmentSection = '';
-            if (hasAttachments) {
-                attachmentSection = `
-                    <div class="quote-attachment">
-                        <i class="fas fa-paperclip"></i>
-                        <span>Attachments (${attachments.length})</span>
-                        <button class="btn btn-xs btn-outline" onclick="viewQuoteAttachments('${quote.id}')">
-                            <i class="fas fa-eye"></i> View
-                        </button>
-                    </div>`;
-            }
-
-            const canDelete = quote.status === 'submitted';
-            const canEdit = quote.status === 'submitted';
-            const statusIcon = {
-                'submitted': 'fa-clock',
-                'approved': 'fa-check-circle',
-                'rejected': 'fa-times-circle'
-            }[quote.status] || 'fa-question-circle';
-            const statusClass = quote.status;
-
-            const actionButtons = [];
-            if (quote.status === 'approved') {
-                actionButtons.push(`
-                    <button class="btn btn-primary" onclick="openConversation('${quote.jobId}', '${quote.contractorId}')">
-                        <i class="fas fa-comments"></i> Message Client
-                    </button>`);
-            }
-            if (canEdit) {
-                actionButtons.push(`
-                    <button class="btn btn-outline" onclick="editQuote('${quote.id}')">
-                        <i class="fas fa-edit"></i> Edit
-                    </button>`);
-            }
-            if (canDelete) {
-                actionButtons.push(`
-                    <button class="btn btn-danger" onclick="deleteQuote('${quote.id}')">
-                        <i class="fas fa-trash"></i> Delete
-                    </button>`);
-            }
-
-            return `
-                <div class="quote-card premium-card quote-status-${statusClass}">
-                    <div class="quote-header">
-                        <div class="quote-title-section">
-                            <h3 class="quote-title">Quote for: ${quote.jobTitle || 'N/A'}</h3>
-                            <span class="quote-status-badge ${statusClass}">
-                                <i class="fas ${statusIcon}"></i>
-                                 ${quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}
-                            </span>
-                        </div>
-                        <div class="quote-amount-section">
-                            <span class="amount-label">Amount</span>
-                            <span class="amount-value">${quote.quoteAmount}</span>
-                        </div>
-                    </div>
-                    <div class="quote-meta">
-                        ${quote.timeline ? `
-                            <div class="quote-meta-item">
-                                <i class="fas fa-calendar-alt"></i>
-                                <span>Timeline: <strong>${quote.timeline} days</strong></span>
-                            </div>
-                        ` : ''}
-                        <div class="quote-meta-item">
-                            <i class="fas fa-clock"></i>
-                            <span>Submitted: <strong>${new Date(quote.createdAt?.toDate ? quote.createdAt.toDate() : quote.createdAt).toLocaleDateString()}</strong></span>
-                        </div>
-                    </div>
-                    <div class="quote-description">
-                        <p>${quote.description}</p>
-                    </div>
-                    ${attachmentSection}
-                    <div class="quote-actions">
-                        <div class="quote-actions-group">${actionButtons.join('')}</div>
-                    </div>
-                </div>`;
-        }).join('');
+        renderMyQuotesList(quotes);
     } catch (error) {
         console.error('Error loading quotes:', error);
         listContainer.innerHTML = `
@@ -3141,6 +3091,90 @@ async function fetchAndRenderMyQuotes() {
                 <button class="btn btn-primary" onclick="fetchAndRenderMyQuotes()">Retry</button>
             </div>`;
     }
+}
+
+function filterMyQuotes(status) {
+    appState._myQuotesFilter = status;
+    document.querySelectorAll('.mq-filter-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-filter') === status);
+    });
+    const filtered = status === 'all' ? appState.myQuotes : appState.myQuotes.filter(q => q.status === status);
+    renderMyQuotesList(filtered);
+}
+
+function renderMyQuotesList(quotes) {
+    const listContainer = document.getElementById('my-quotes-list');
+    if (quotes.length === 0) {
+        const filter = appState._myQuotesFilter || 'all';
+        listContainer.innerHTML = `<div class="mq-empty-filter"><i class="fas fa-filter"></i><p>No ${filter === 'all' ? '' : filter + ' '}quotes found.</p></div>`;
+        return;
+    }
+    listContainer.innerHTML = quotes.map(quote => {
+        const attachments = quote.attachments || [];
+        const hasAttachments = attachments.length > 0;
+        const canDelete = quote.status === 'submitted';
+        const canEdit = quote.status === 'submitted';
+        const statusIcon = { 'submitted': 'fa-clock', 'approved': 'fa-check-circle', 'rejected': 'fa-times-circle' }[quote.status] || 'fa-question-circle';
+        const statusClass = quote.status;
+        const createdDate = new Date(quote.createdAt?.toDate ? quote.createdAt.toDate() : quote.createdAt);
+        const timeAgo = getTimeAgo(createdDate);
+
+        const actionButtons = [];
+        if (quote.status === 'approved') {
+            actionButtons.push(`<button class="btn btn-primary btn-sm" onclick="openConversation('${quote.jobId}', '${quote.contractorId}')"><i class="fas fa-comments"></i> Message Client</button>`);
+        }
+        if (canEdit) {
+            actionButtons.push(`<button class="btn btn-outline btn-sm" onclick="editQuote('${quote.id}')"><i class="fas fa-edit"></i> Edit</button>`);
+        }
+        if (canDelete) {
+            actionButtons.push(`<button class="btn btn-danger-outline btn-sm" onclick="deleteQuote('${quote.id}')"><i class="fas fa-trash"></i> Delete</button>`);
+        }
+
+        return `
+            <div class="mq-card mq-status-${statusClass}">
+                <div class="mq-card-top">
+                    <div class="mq-card-left">
+                        <div class="mq-job-icon"><i class="fas fa-briefcase"></i></div>
+                        <div class="mq-card-title-wrap">
+                            <h3 class="mq-card-title">${quote.jobTitle || 'Untitled Project'}</h3>
+                            <div class="mq-card-meta-row">
+                                <span class="mq-status-pill ${statusClass}"><i class="fas ${statusIcon}"></i> ${quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}</span>
+                                <span class="mq-time-ago"><i class="fas fa-clock"></i> ${timeAgo}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mq-card-right">
+                        <span class="mq-price-label">Your Quote</span>
+                        <span class="mq-price-amount">$${parseFloat(quote.quoteAmount || 0).toLocaleString()}</span>
+                        ${quote.timeline ? `<span class="mq-timeline"><i class="fas fa-calendar-alt"></i> ${quote.timeline} days</span>` : ''}
+                    </div>
+                </div>
+                <div class="mq-card-body">
+                    <div class="mq-desc"><p>${quote.description || 'No description provided.'}</p></div>
+                    <div class="mq-card-footer">
+                        <div class="mq-card-info-chips">
+                            <span class="mq-chip"><i class="fas fa-calendar"></i> ${createdDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                            ${hasAttachments ? `<button class="mq-chip mq-chip-clickable" onclick="viewQuoteAttachments('${quote.id}')"><i class="fas fa-paperclip"></i> ${attachments.length} file${attachments.length > 1 ? 's' : ''}</button>` : ''}
+                        </div>
+                        <div class="mq-card-actions">${actionButtons.join('')}</div>
+                    </div>
+                </div>
+            </div>`;
+    }).join('');
+}
+
+function getTimeAgo(date) {
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    const diffHrs = Math.floor(diffMins / 60);
+    if (diffHrs < 24) return `${diffHrs}h ago`;
+    const diffDays = Math.floor(diffHrs / 24);
+    if (diffDays < 7) return `${diffDays}d ago`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
+    return `${Math.floor(diffDays / 30)}mo ago`;
 }
 
 // --- QUOTE FILE HANDLING FUNCTIONS (NEW) ---
