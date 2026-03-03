@@ -882,7 +882,10 @@ function renderGoogleButtons() {
         const opts = { type: t.type, theme: t.theme, size: t.size, shape: t.shape || 'rectangular',
             click_listener: () => { _googleSignInContext = 'login'; } };
         if (t.text) opts.text = t.text;
-        if (t.type === 'standard') opts.width = el.offsetWidth || 250;
+        if (t.type === 'standard') {
+            const containerWidth = el.offsetWidth || el.parentElement?.offsetWidth || 250;
+            opts.width = Math.min(containerWidth, 400);
+        }
         google.accounts.id.renderButton(el, opts);
     });
 }
