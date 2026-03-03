@@ -334,7 +334,7 @@ const headerFeatures = [
         icon: 'fa-drafting-compass',
         title: 'Expert Engineering',
         subtitle: 'Connect with certified professionals',
-        description: 'Access a network of qualified structural engineers and designers worldwide',
+        description: 'Access a network of qualified structural professionals worldwide',
         gradient: 'linear-gradient(135deg, #a855f7 0%, #f43f5e 100%)'
     },
     {
@@ -8815,7 +8815,7 @@ function showTermsConditionsModal(tab = 'terms') {
         <p>By accessing and using the SteelConnect platform ("Platform"), you agree to be bound by these Terms & Conditions ("Terms"). If you do not agree to these Terms, you must not use the Platform.</p>
 
         <h3>2. Platform Description</h3>
-        <p>SteelConnect is a professional marketplace that connects steel designers, structural engineers, and contractors. The Platform provides AI-powered estimation tools, project management features, and communication services for the structural steel industry.</p>
+        <p>SteelConnect is a professional marketplace that connects steel construction professionals and contractors. The Platform provides AI-powered estimation tools, project management features, and communication services for the structural steel industry.</p>
 
         <h3>3. User Accounts</h3>
         <p>You must provide accurate, current, and complete information during registration. You are responsible for maintaining the confidentiality of your account credentials and for all activities under your account. You must notify us immediately of any unauthorized use of your account.</p>
@@ -9326,7 +9326,7 @@ function getDashboardTemplate(user) {
 
     const contractorWidgets = `
         <div class="db-widget"><div class="db-widget-header"><h4><i class="fas fa-history"></i> Recent Projects</h4></div><div id="recent-projects-widget" class="db-widget-body">${!isApproved ? '<p class="db-widget-empty">Complete your profile to post projects.</p>' : ''}</div></div>
-        <div class="db-widget"><div class="db-widget-header"><h4><i class="fas fa-users"></i> Community Feed</h4></div><div class="db-widget-body"><p class="db-widget-promo">Discover talented designers and their latest projects.</p><button class="db-widget-link" onclick="renderAppSection('community-feed')"><i class="fas fa-arrow-right"></i> Open Community</button></div></div>`;
+        <div class="db-widget"><div class="db-widget-header"><h4><i class="fas fa-users"></i> Community Feed</h4></div><div class="db-widget-body"><p class="db-widget-promo">Discover talented professionals and their latest projects.</p><button class="db-widget-link" onclick="renderAppSection('community-feed')"><i class="fas fa-arrow-right"></i> Open Community</button></div></div>`;
 
     const designerWidgets = `
         <div class="db-widget"><div class="db-widget-header"><h4><i class="fas fa-history"></i> Recent Quotes</h4></div><div id="recent-quotes-widget" class="db-widget-body">${!isApproved ? '<p class="db-widget-empty">Complete your profile to submit quotes.</p>' : ''}</div></div>
@@ -10292,7 +10292,7 @@ async function renderCommunityFeed() {
                         <i class="fas fa-plus-circle"></i> Post a Project
                     </button>
                     <button class="cf-quick-link-btn" onclick="renderAppSection('jobs')">
-                        <i class="fas fa-search"></i> Find Designers
+                        <i class="fas fa-search"></i> Find Professionals
                     </button>`}
                 </div>
             </aside>
@@ -10303,7 +10303,7 @@ async function renderCommunityFeed() {
                 <div class="cf-hero-welcome">
                     <div class="cf-hero-content">
                         <h2><i class="fas fa-users"></i> Community Hub</h2>
-                        <p>${isDesigner ? 'Showcase your expertise and connect with contractors' : 'Discover talented designers and industry insights'}</p>
+                        <p>${isDesigner ? 'Showcase your expertise and connect with contractors' : 'Discover talented professionals and industry insights'}</p>
                     </div>
                     <div class="cf-hero-stats">
                         <div class="cf-hero-stat">
