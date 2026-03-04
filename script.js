@@ -4797,6 +4797,13 @@ function initializeSocketConnection() {
             }
         });
 
+        // Callee accepted via push notification (REST) — they're connecting now
+        voiceCallState.socket.on('call-accepted-pending', (data) => {
+            console.log('[VOICE] Callee accepted via push, connecting...', data.callId);
+            const statusText = document.getElementById('call-status-text');
+            if (statusText) statusText.textContent = 'Connecting...';
+        });
+
         voiceCallState.socket.on('call-accepted', async (data) => {
             if (voiceCallState._callAcceptedHandled) {
                 console.warn('[VOICE] Duplicate call-accepted event, ignoring');
@@ -6628,7 +6635,7 @@ async function subscribeToWebPush(registration) {
         console.log('[PUSH] New Web Push subscription created with current VAPID key');
 
         // Register subscription with backend (so it can send push to this device)
-        await fetch(`${backendUrl}/api/push/subscribe`, {
+        const subResponse = await fetch(`${backendUrl}/api/push/subscribe`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -6637,7 +6644,12 @@ async function subscribeToWebPush(registration) {
             })
         });
 
-        console.log('[PUSH] Web Push subscription registered with backend');
+        if (!subResponse.ok) {
+            const errData = await subResponse.json().catch(() => ({}));
+            console.error('[PUSH] Backend rejected push subscription:', errData.message || subResponse.status);
+        } else {
+            console.log('[PUSH] Web Push subscription registered with backend successfully');
+        }
     } catch (err) {
         console.warn('[PUSH] Web Push subscription error:', err.message);
     }
@@ -6955,7 +6967,11 @@ function showAppView() {
 
     // Initialize socket connection immediately so user can receive incoming calls
     initializeSocketConnection();
-    initializePushNotifications();
+    // Initialize push notifications and WAIT for subscription to complete.
+    // This ensures the backend has our push subscription before any calls arrive.
+    initializePushNotifications().catch(err => {
+        console.warn('[PUSH] Push notification setup failed:', err.message);
+    });
 
     // Show PWA install banner after login (if app not already installed)
     if (!pwaInstallDismissedThisSession) {
