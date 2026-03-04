@@ -3,7 +3,7 @@
 // Works with Web Push (VAPID) — no Firebase client SDK required.
 // IMPORTANT: Bump SW_VERSION on every deploy to trigger update in installed PWA apps.
 
-const SW_VERSION = '3.0.0';
+const SW_VERSION = '3.1.0';
 const CACHE_NAME = 'steelconnect-v' + SW_VERSION;
 const BACKEND_URL = 'https://steelconnect-backend.onrender.com';
 const APP_NAME = 'SteelConnect';
@@ -251,29 +251,38 @@ self.addEventListener('notificationclick', (event) => {
     }
 
     // User clicked "Answer" or tapped the notification body — open/focus the app
+    // Works for BOTH logged-in and logged-out users (like WhatsApp/Teams).
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+            const callParams = new URLSearchParams({
+                callId: callData.callId || '',
+                callerId: callData.callerId || '',
+                callerName: callData.callerName || ''
+            });
+
             // Try to find and focus an existing app window
             for (const client of windowClients) {
                 if (client.url.includes(self.location.origin)) {
-                    client.focus();
-                    // Tell the app to show/accept the incoming call
-                    client.postMessage({
-                        type: 'CALL_ANSWER',
-                        callId: callData.callId,
-                        callerId: callData.callerId,
-                        callerName: callData.callerName,
+                    // Navigate to URL with call params FIRST — this ensures the call data
+                    // is captured via URL even if the postMessage listener isn't active yet
+                    // (e.g., user is logged out). The app checks URL params on load.
+                    client.navigate('/?' + callParams.toString()).then((navigatedClient) => {
+                        if (navigatedClient) navigatedClient.focus();
+                    }).catch(() => {
+                        // navigate() not supported in some browsers — fall back to postMessage
+                        client.focus();
+                        client.postMessage({
+                            type: 'CALL_ANSWER',
+                            callId: callData.callId,
+                            callerId: callData.callerId,
+                            callerName: callData.callerName,
+                        });
                     });
                     return;
                 }
             }
             // No existing window — open a new one with call parameters
-            const params = new URLSearchParams({
-                callId: callData.callId || '',
-                callerId: callData.callerId || '',
-                callerName: callData.callerName || ''
-            });
-            return clients.openWindow('/?' + params.toString());
+            return clients.openWindow('/?' + callParams.toString());
         })
     );
 });
