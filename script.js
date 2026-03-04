@@ -6498,20 +6498,32 @@ async function initializePushNotifications() {
         await navigator.serviceWorker.ready;
         console.log('[PUSH] Service worker is ready');
 
-        // Request notification permission with a professional pre-prompt dialog.
-        // Once granted, this persists permanently until the user uninstalls the app
-        // or manually revokes in browser settings — no need to ever ask again.
+        // Request notification permission.
+        // For installed PWA: Auto-enable directly (no custom dialog — user already committed by installing).
+        // For browser: Show a professional pre-prompt dialog first to explain why.
+        // Once granted, persists permanently until app is uninstalled.
+        const isStandaloneApp = window.matchMedia('(display-mode: standalone)').matches
+            || window.navigator.standalone === true;
         let permission = Notification.permission;
+
         if (permission === 'default') {
-            // Show a custom pre-prompt dialog BEFORE the browser's native prompt.
-            // This explains WHY notifications are needed and gives a much better UX
-            // than the raw browser popup. Users who understand the value are more
-            // likely to tap "Allow".
-            permission = await showNotificationPermissionDialog();
+            if (isStandaloneApp) {
+                // PWA installed app: Auto-request permission directly.
+                // The browser shows its native prompt. No custom dialog needed —
+                // user installed the app, they want full functionality.
+                console.log('[PUSH] PWA detected — auto-requesting notification permission');
+                permission = await Notification.requestPermission();
+                if (permission === 'granted') {
+                    showNotificationEnabledToast();
+                }
+            } else {
+                // Browser: Show professional pre-prompt dialog before browser prompt
+                permission = await showNotificationPermissionDialog();
+            }
         }
+
         if (permission !== 'granted') {
             console.log('[PUSH] Notification permission not granted:', permission);
-            // Show a persistent but non-intrusive banner explaining how to enable
             if (permission === 'denied') {
                 showNotificationDeniedBanner();
             }
@@ -6794,7 +6806,7 @@ function showNotificationPermissionDialog() {
             </style>
             <div id="npd-card" style="background:#fff;border-radius:24px;max-width:380px;width:100%;padding:36px 28px 28px;box-shadow:0 24px 80px rgba(0,0,0,0.25);animation:npd-scalein 0.4s cubic-bezier(0.16,1,0.3,1);text-align:center;position:relative;overflow:hidden;">
                 <div id="npd-icon-wrap" style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#10b981,#059669);margin:0 auto 22px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(16,185,129,0.25);transition:all 0.5s ease;">
-                    <i id="npd-icon" class="fas fa-phone-alt" style="font-size:30px;color:white;animation:npd-ring 1.5s ease infinite;transition:all 0.4s ease;"></i>
+                    <svg id="npd-icon" width="32" height="32" viewBox="0 0 24 24" fill="white" style="animation:npd-ring 1.5s ease infinite;transition:all 0.4s ease;"><path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24 11.36 11.36 0 003.58.57 1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1 11.36 11.36 0 00.57 3.58 1 1 0 01-.25 1.01l-2.2 2.2z"/></svg>
                 </div>
                 <h3 id="npd-title" style="margin:0 0 10px;font-size:21px;font-weight:800;color:#1e293b;transition:all 0.3s ease;">Never Miss a Call</h3>
                 <p id="npd-desc" style="margin:0 0 8px;font-size:14px;color:#64748b;line-height:1.6;transition:all 0.3s ease;">
@@ -6802,20 +6814,20 @@ function showNotificationPermissionDialog() {
                 </p>
                 <div id="npd-features" style="margin:0 0 24px;text-align:left;padding:0 8px;">
                     <div style="display:flex;align-items:center;gap:10px;padding:6px 0;font-size:13px;color:#475569;">
-                        <i class="fas fa-check-circle" style="color:#10b981;font-size:15px;flex-shrink:0;"></i>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="#10b981" style="flex-shrink:0;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
                         <span>Ring on incoming calls like WhatsApp & Teams</span>
                     </div>
                     <div style="display:flex;align-items:center;gap:10px;padding:6px 0;font-size:13px;color:#475569;">
-                        <i class="fas fa-check-circle" style="color:#10b981;font-size:15px;flex-shrink:0;"></i>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="#10b981" style="flex-shrink:0;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
                         <span>Works even after logout or app is closed</span>
                     </div>
                     <div style="display:flex;align-items:center;gap:10px;padding:6px 0;font-size:13px;color:#475569;">
-                        <i class="fas fa-check-circle" style="color:#10b981;font-size:15px;flex-shrink:0;"></i>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="#10b981" style="flex-shrink:0;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
                         <span>Only call notifications — no spam, ever</span>
                     </div>
                 </div>
-                <button id="npd-allow" style="width:100%;padding:15px;border:none;border-radius:14px;background:linear-gradient(135deg,#10b981,#059669);color:white;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px;box-shadow:0 4px 14px rgba(16,185,129,0.3);transition:all 0.2s ease;animation:npd-pulse 2s ease-in-out infinite;display:flex;align-items:center;justify-content:center;gap:8px;">
-                    <i class="fas fa-bell" style="font-size:16px;"></i>
+                <button id="npd-allow" style="width:100%;padding:15px;border:none;border-radius:14px;background:linear-gradient(135deg,#10b981,#059669);color:white;font-size:16px;font-weight:700;cursor:pointer;margin-bottom:10px;box-shadow:0 4px 14px rgba(16,185,129,0.3);transition:all 0.2s ease;animation:npd-pulse 2s ease-in-out infinite;display:flex;align-items:center;justify-content:center;gap:10px;-webkit-tap-highlight-color:transparent;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="white" style="flex-shrink:0;"><path d="M12 22c1.1 0 2-.9 2-2h-4a2 2 0 002 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
                     <span id="npd-allow-text">Enable Call Notifications</span>
                 </button>
                 <p style="margin:4px 0 0;font-size:11px;color:#cbd5e1;">One tap — stays enabled permanently</p>
@@ -6830,19 +6842,19 @@ function showNotificationPermissionDialog() {
             if (processing) return;
             processing = true;
 
-            // Immediately show "enabling" state — no delay, no second popup feeling
+            // Immediately show "enabling" state
             const allowText = document.getElementById('npd-allow-text');
-            const bellIcon = allowBtn.querySelector('.fa-bell');
+            const btnSvg = allowBtn.querySelector('svg');
             allowBtn.style.animation = 'none';
             allowBtn.style.pointerEvents = 'none';
             allowText.textContent = 'Enabling...';
-            if (bellIcon) bellIcon.className = 'fas fa-spinner fa-spin';
+            if (btnSvg) btnSvg.innerHTML = '<circle cx="12" cy="12" r="10" stroke="white" stroke-width="2.5" fill="none" stroke-dasharray="30 30" stroke-linecap="round"><animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="0.8s" repeatCount="indefinite"/></circle>';
 
             // Trigger browser's native permission prompt
             const result = await Notification.requestPermission();
 
             if (result === 'granted') {
-                // Show success state inside the SAME dialog — seamless feel
+                // Show success state inside the SAME dialog — seamless
                 const iconWrap = document.getElementById('npd-icon-wrap');
                 const icon = document.getElementById('npd-icon');
                 const title = document.getElementById('npd-title');
@@ -6851,9 +6863,10 @@ function showNotificationPermissionDialog() {
 
                 // Transition to success
                 icon.style.animation = 'none';
-                icon.className = 'fas fa-check';
-                icon.style.fontSize = '36px';
-                icon.style.animation = 'npd-check 0.5s cubic-bezier(0.16,1,0.3,1) forwards';
+                icon.innerHTML = '<polyline points="20 6 9 17 4 12" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="animation:npd-check 0.5s cubic-bezier(0.16,1,0.3,1) forwards;"/>';
+                icon.setAttribute('width', '38');
+                icon.setAttribute('height', '38');
+                icon.setAttribute('viewBox', '0 0 24 24');
                 iconWrap.style.background = 'linear-gradient(135deg,#059669,#047857)';
                 iconWrap.style.boxShadow = '0 8px 24px rgba(5,150,105,0.35)';
 
@@ -6864,7 +6877,7 @@ function showNotificationPermissionDialog() {
 
                 allowBtn.style.background = 'linear-gradient(135deg,#059669,#047857)';
                 allowText.textContent = 'Notifications Enabled';
-                if (bellIcon) { bellIcon.className = 'fas fa-check-circle'; bellIcon.style.animation = 'none'; }
+                if (btnSvg) btnSvg.innerHTML = '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" fill="white"/>';
 
                 // Auto-close after 1.8 seconds
                 setTimeout(() => {
@@ -6876,7 +6889,7 @@ function showNotificationPermissionDialog() {
                     }, 300);
                 }, 1800);
             } else {
-                // Denied or dismissed — show denied state briefly, then close
+                // Denied or dismissed
                 const iconWrap = document.getElementById('npd-icon-wrap');
                 const icon = document.getElementById('npd-icon');
                 const title = document.getElementById('npd-title');
@@ -6884,8 +6897,7 @@ function showNotificationPermissionDialog() {
                 const features = document.getElementById('npd-features');
 
                 icon.style.animation = 'none';
-                icon.className = 'fas fa-bell-slash';
-                icon.style.fontSize = '30px';
+                icon.innerHTML = '<path d="M12 22c1.1 0 2-.9 2-2h-4a2 2 0 002 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" fill="white"/><line x1="3" y1="3" x2="21" y2="21" stroke="white" stroke-width="2.5" stroke-linecap="round"/>';
                 iconWrap.style.background = 'linear-gradient(135deg,#f59e0b,#d97706)';
                 iconWrap.style.boxShadow = '0 8px 24px rgba(245,158,11,0.3)';
 
@@ -6898,7 +6910,7 @@ function showNotificationPermissionDialog() {
                 allowBtn.style.color = '#64748b';
                 allowBtn.style.boxShadow = 'none';
                 allowText.textContent = 'Got it';
-                if (bellIcon) { bellIcon.className = 'fas fa-times'; bellIcon.style.animation = 'none'; }
+                if (btnSvg) btnSvg.innerHTML = '<line x1="18" y1="6" x2="6" y2="18" stroke="#64748b" stroke-width="2.5" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="#64748b" stroke-width="2.5" stroke-linecap="round"/>';
                 allowBtn.style.pointerEvents = 'auto';
 
                 // Allow closing by clicking "Got it"
@@ -6934,6 +6946,36 @@ function showNotificationPermissionDialog() {
     });
 }
 
+// Brief toast shown in installed PWA apps when notifications are auto-enabled
+function showNotificationEnabledToast() {
+    const toast = document.createElement('div');
+    toast.id = 'notif-enabled-toast';
+    toast.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-100px);z-index:100003;background:linear-gradient(135deg,#059669,#047857);color:white;border-radius:16px;padding:16px 24px;max-width:360px;width:calc(100% - 32px);box-shadow:0 8px 32px rgba(5,150,105,0.35);display:flex;align-items:center;gap:14px;transition:transform 0.5s cubic-bezier(0.16,1,0.3,1);';
+    toast.innerHTML = `
+        <div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        </div>
+        <div>
+            <div style="font-weight:700;font-size:15px;margin-bottom:2px;">Notifications Enabled</div>
+            <div style="font-size:12px;opacity:0.85;">You'll receive incoming calls even when the app is closed</div>
+        </div>
+    `;
+    document.body.appendChild(toast);
+
+    // Animate in
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            toast.style.transform = 'translateX(-50%) translateY(0)';
+        });
+    });
+
+    // Auto-dismiss after 3 seconds
+    setTimeout(() => {
+        toast.style.transform = 'translateX(-50%) translateY(-100px)';
+        setTimeout(() => { if (toast.parentElement) toast.remove(); }, 500);
+    }, 3000);
+}
+
 // Banner shown when user denied notification permission — explains how to re-enable
 function showNotificationDeniedBanner() {
     // Only show once per session
@@ -6945,14 +6987,14 @@ function showNotificationDeniedBanner() {
     banner.style.cssText = 'position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:99998;background:#fef3c7;border:1px solid #f59e0b;border-radius:12px;padding:12px 18px;max-width:420px;width:calc(100% - 32px);box-shadow:0 4px 16px rgba(0,0,0,0.1);display:flex;align-items:center;gap:12px;animation:swBannerSlide 0.4s cubic-bezier(0.16,1,0.3,1);';
     banner.innerHTML = `
         <div style="flex-shrink:0;width:32px;height:32px;border-radius:50%;background:#f59e0b;display:flex;align-items:center;justify-content:center;">
-            <i class="fas fa-bell-slash" style="color:white;font-size:13px;"></i>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M12 22c1.1 0 2-.9 2-2h-4a2 2 0 002 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/><line x1="3" y1="3" x2="21" y2="21" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg>
         </div>
         <div style="flex:1;min-width:0;">
             <div style="font-weight:700;font-size:12.5px;color:#92400e;">Notifications Blocked</div>
             <div style="font-size:11.5px;color:#a16207;line-height:1.4;">You won't receive incoming calls when the app is closed. Enable notifications in your browser settings to receive calls.</div>
         </div>
-        <button onclick="this.parentElement.remove()" style="flex-shrink:0;border:none;background:none;color:#a16207;cursor:pointer;font-size:16px;padding:4px;">
-            <i class="fas fa-times"></i>
+        <button onclick="this.parentElement.remove()" style="flex-shrink:0;border:none;background:none;color:#a16207;cursor:pointer;padding:4px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a16207" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
     `;
     document.body.appendChild(banner);
