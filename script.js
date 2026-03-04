@@ -687,7 +687,20 @@ function initializeApp() {
                     console.log('[SW-EARLY] CALL_ANSWER from service worker, callId:', callId);
 
                     if (appState.currentUser && appState.jwtToken) {
-                        // User is logged in — connect socket and accept the call
+                        // User is logged in — accept via REST immediately (doesn't need socket),
+                        // then connect socket for the actual WebRTC call
+                        const backendUrl = IS_LOCAL ? 'http://localhost:10000' : 'https://steelconnect-backend.onrender.com';
+                        fetch(`${backendUrl}/api/voice-calls/accept`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ callId, calleeId: appState.currentUser.id })
+                        }).then(r => r.json()).then(result => {
+                            console.log('[SW-EARLY] REST accept result:', result);
+                        }).catch(err => {
+                            console.warn('[SW-EARLY] REST accept failed:', err.message);
+                        });
+
+                        // Also connect socket for WebRTC setup
                         initializeSocketConnection();
                         const tryAccept = () => {
                             if (voiceCallState.socket && voiceCallState.socket.connected) {
@@ -703,15 +716,27 @@ function initializeApp() {
                                 waited += 200;
                                 if (tryAccept()) {
                                     clearInterval(waitInterval);
-                                } else if (waited >= 5000) {
+                                } else if (waited >= 8000) {
                                     clearInterval(waitInterval);
-                                    console.error('[SW-EARLY] Socket not connected after 5s');
-                                    showNotification('Could not connect to accept the call. Please try again.', 'error');
+                                    console.error('[SW-EARLY] Socket not connected after 8s');
+                                    showNotification('Connection slow. Reconnecting...', 'warning');
                                 }
                             }, 200);
                         }
                     } else {
-                        // User is LOGGED OUT — store call data and show urgent login overlay
+                        // User is LOGGED OUT — accept via REST using saved pushUserId,
+                        // then store call data and show urgent login overlay
+                        const savedUserId = localStorage.getItem('pushUserId');
+                        if (savedUserId && callId) {
+                            const backendUrl = IS_LOCAL ? 'http://localhost:10000' : 'https://steelconnect-backend.onrender.com';
+                            fetch(`${backendUrl}/api/voice-calls/accept`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ callId, calleeId: savedUserId })
+                            }).then(r => r.json()).then(result => {
+                                console.log('[SW-EARLY] REST accept (logged out) result:', result);
+                            }).catch(() => {});
+                        }
                         console.log('[SW-EARLY] User logged out, storing call for post-login delivery');
                         sessionStorage.setItem('pendingCallId', callId);
                         if (callerId) sessionStorage.setItem('pendingCallerId', callerId);
@@ -4744,8 +4769,16 @@ function initializeSocketConnection() {
         });
 
         voiceCallState.socket.on('incoming-call', (data) => {
-            console.log('[VOICE] Incoming call received:', data?.callId, 'from:', data?.callerName);
+            console.log('[VOICE] Incoming call received:', data?.callId, 'from:', data?.callerName, '| autoAccept:', data?.autoAccept);
             try {
+                // If user already tapped "Answer" on push notification (REST accept),
+                // auto-accept the call without showing the incoming UI again
+                if (data.autoAccept) {
+                    console.log('[VOICE] Auto-accepting call (user already answered via push notification)');
+                    voiceCallState.currentCallId = data.callId;
+                    acceptVoiceCall(data.callId, data.callerId);
+                    return;
+                }
                 showIncomingCallUI(data);
             } catch (err) {
                 console.error('[VOICE] Error showing incoming call UI:', err);
@@ -6554,7 +6587,11 @@ function showAppUpdateBanner(waitingWorker) {
     });
 }
 
-// Subscribe to Web Push notifications using VAPID (no Firebase dependency)
+// Subscribe to Web Push notifications using VAPID (no Firebase dependency).
+// IMPORTANT: Called on EVERY login to ensure subscription matches current VAPID keys.
+// If the backend restarted and generated new keys (now persisted in Firestore),
+// existing subscriptions created with old keys silently fail. We always unsubscribe
+// the old subscription and create a fresh one with the current VAPID key.
 async function subscribeToWebPush(registration) {
     try {
         const backendUrl = IS_LOCAL ? 'http://localhost:10000' : 'https://steelconnect-backend.onrender.com';
@@ -6570,19 +6607,25 @@ async function subscribeToWebPush(registration) {
         // Convert VAPID key from base64url to Uint8Array
         const vapidPublicKey = urlBase64ToUint8Array(keyData.publicKey);
 
-        // Check for existing subscription
+        // Always unsubscribe existing subscription and create fresh one.
+        // This guarantees the subscription uses the current VAPID key (which may have
+        // changed if server was restarted before VAPID persistence was deployed).
         let subscription = await registration.pushManager.getSubscription();
-
-        if (!subscription) {
-            // Create new push subscription
-            subscription = await registration.pushManager.subscribe({
-                userVisibleOnly: true,
-                applicationServerKey: vapidPublicKey
-            });
-            console.log('[PUSH] New Web Push subscription created');
-        } else {
-            console.log('[PUSH] Existing Web Push subscription found');
+        if (subscription) {
+            try {
+                await subscription.unsubscribe();
+                console.log('[PUSH] Unsubscribed old push subscription (will re-create with current VAPID key)');
+            } catch (e) {
+                console.warn('[PUSH] Failed to unsubscribe old subscription:', e.message);
+            }
         }
+
+        // Create new push subscription with the current VAPID key
+        subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: vapidPublicKey
+        });
+        console.log('[PUSH] New Web Push subscription created with current VAPID key');
 
         // Register subscription with backend (so it can send push to this device)
         await fetch(`${backendUrl}/api/push/subscribe`, {
@@ -6929,9 +6972,23 @@ function showAppView() {
         sessionStorage.removeItem('pendingCallerId');
         sessionStorage.removeItem('pendingCallerName');
         console.log('[PUSH] Delivering pending call from push notification:', pendingCallId);
-        // The backend will deliver the pending call via socket 'incoming-call' event
-        // when our socket registers. But if we have caller info, show the incoming UI
-        // immediately so the user can answer faster.
+
+        // Immediately tell backend we're accepting via REST (faster than waiting for socket)
+        const backendUrl = IS_LOCAL ? 'http://localhost:10000' : 'https://steelconnect-backend.onrender.com';
+        fetch(`${backendUrl}/api/voice-calls/accept`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ callId: pendingCallId, calleeId: appState.currentUser.id })
+        }).then(r => r.json()).then(result => {
+            console.log('[PUSH] REST accept on login result:', result);
+            if (result.expired) {
+                showNotification('The call has ended. You can call them back from Recent Calls.', 'info');
+            }
+        }).catch(err => console.warn('[PUSH] REST accept failed:', err.message));
+
+        // Show the incoming call UI so user can interact while socket connects.
+        // Backend will deliver via socket 'incoming-call' event with autoAccept=true
+        // when socket registers — that will handle the actual WebRTC setup.
         if (pendingCallerId) {
             voiceCallState.currentCallId = pendingCallId;
             showIncomingCallUI({
