@@ -6499,34 +6499,22 @@ async function initializePushNotifications() {
         console.log('[PUSH] Service worker is ready');
 
         // Request notification permission.
-        // For installed PWA: Auto-enable directly (no custom dialog — user already committed by installing).
-        // For browser: Show a professional pre-prompt dialog first to explain why.
-        // Once granted, persists permanently until app is uninstalled.
+        // Shows a helper guide overlay alongside the browser's native prompt
+        // so users know exactly what to tap. For denied state, guides to settings.
         const isStandaloneApp = window.matchMedia('(display-mode: standalone)').matches
             || window.navigator.standalone === true;
         let permission = Notification.permission;
 
         if (permission === 'default') {
-            if (isStandaloneApp) {
-                // PWA installed app: Auto-request permission directly.
-                // The browser shows its native prompt. No custom dialog needed —
-                // user installed the app, they want full functionality.
-                console.log('[PUSH] PWA detected — auto-requesting notification permission');
-                permission = await Notification.requestPermission();
-                if (permission === 'granted') {
-                    showNotificationEnabledToast();
-                }
-            } else {
-                // Browser: Show professional pre-prompt dialog before browser prompt
-                permission = await showNotificationPermissionDialog();
-            }
+            // Show guide overlay + trigger browser prompt together
+            permission = await requestNotificationWithGuide(isStandaloneApp);
+        } else if (permission === 'denied') {
+            // Previously denied — show settings guide
+            showNotificationSettingsGuide();
         }
 
         if (permission !== 'granted') {
             console.log('[PUSH] Notification permission not granted:', permission);
-            if (permission === 'denied') {
-                showNotificationDeniedBanner();
-            }
             return;
         }
         console.log('[PUSH] Notification permission granted — calls will ring even when app is closed');
@@ -6778,229 +6766,294 @@ window.addEventListener('online', () => {
     }
 });
 
-// Professional notification permission dialog — shown once on first login.
-// Explains WHY notifications are needed (incoming calls) before the browser's
-// native permission prompt. Much better conversion rate than raw browser popup.
-// Once granted, permission persists permanently (until app uninstall or manual revoke).
-function showNotificationPermissionDialog() {
-    return new Promise((resolve) => {
-        // If already decided, skip the dialog
+// ============================================================
+// NOTIFICATION PERMISSION — Guide overlay + browser prompt
+// Shows a helper guide that tells users exactly what to tap on
+// the browser's native permission popup. No confusion.
+// ============================================================
+
+// Main function: shows guide overlay BEHIND the browser prompt
+// so users see clear instructions on what to tap.
+function requestNotificationWithGuide(isStandaloneApp) {
+    return new Promise(async (resolve) => {
         if (Notification.permission !== 'default') {
             resolve(Notification.permission);
             return;
         }
 
-        const dialog = document.createElement('div');
-        dialog.id = 'notif-permission-dialog';
-        dialog.style.cssText = 'position:fixed;inset:0;z-index:100002;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(6px);animation:npd-fadein 0.3s ease;';
-        dialog.innerHTML = `
+        // Detect platform for tailored instructions
+        const isAndroid = /android/i.test(navigator.userAgent);
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        const isMobile = isAndroid || isIOS;
+
+        // Create guide overlay — appears BEHIND the browser prompt
+        const guide = document.createElement('div');
+        guide.id = 'notif-guide-overlay';
+        guide.style.cssText = 'position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,0.7);display:flex;flex-direction:column;align-items:center;justify-content:' + (isMobile ? 'flex-start' : 'center') + ';padding:16px;backdrop-filter:blur(4px);animation:npd-fadein 0.3s ease;';
+        guide.innerHTML = `
             <style>
                 @keyframes npd-fadein{from{opacity:0}to{opacity:1}}
-                @keyframes npd-scalein{from{transform:scale(0.85) translateY(20px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
-                @keyframes npd-ring{0%,100%{transform:rotate(0)}10%{transform:rotate(14deg)}20%{transform:rotate(-14deg)}30%{transform:rotate(10deg)}40%{transform:rotate(-8deg)}50%{transform:rotate(4deg)}60%{transform:rotate(0)}}
-                @keyframes npd-pulse{0%,100%{box-shadow:0 4px 14px rgba(16,185,129,0.3)}50%{box-shadow:0 4px 24px rgba(16,185,129,0.5)}}
-                @keyframes npd-check{0%{transform:scale(0) rotate(-45deg);opacity:0}50%{transform:scale(1.2) rotate(0deg);opacity:1}100%{transform:scale(1) rotate(0deg);opacity:1}}
-                @keyframes npd-success-bg{from{background:linear-gradient(135deg,#10b981,#059669)}to{background:linear-gradient(135deg,#059669,#047857)}}
-                #npd-allow:hover{transform:scale(1.02)!important}
-                #npd-allow:active{transform:scale(0.98)!important}
+                @keyframes npd-bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+                @keyframes npd-point{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+                @keyframes npd-glow{0%,100%{box-shadow:0 0 20px rgba(16,185,129,0.3)}50%{box-shadow:0 0 40px rgba(16,185,129,0.6)}}
             </style>
-            <div id="npd-card" style="background:#fff;border-radius:24px;max-width:380px;width:100%;padding:36px 28px 28px;box-shadow:0 24px 80px rgba(0,0,0,0.25);animation:npd-scalein 0.4s cubic-bezier(0.16,1,0.3,1);text-align:center;position:relative;overflow:hidden;">
-                <div id="npd-icon-wrap" style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#10b981,#059669);margin:0 auto 22px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(16,185,129,0.25);transition:all 0.5s ease;">
-                    <svg id="npd-icon" width="32" height="32" viewBox="0 0 24 24" fill="white" style="animation:npd-ring 1.5s ease infinite;transition:all 0.4s ease;"><path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24 11.36 11.36 0 003.58.57 1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1 11.36 11.36 0 00.57 3.58 1 1 0 01-.25 1.01l-2.2 2.2z"/></svg>
+
+            <!-- Arrow pointing UP to the browser prompt -->
+            <div id="npd-arrow-section" style="text-align:center;margin-top:${isMobile ? '8px' : '0'};margin-bottom:16px;animation:npd-point 1.2s ease-in-out infinite;">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 19V5M5 12l7-7 7 7"/>
+                </svg>
+                <div style="color:#10b981;font-size:16px;font-weight:800;margin-top:4px;text-transform:uppercase;letter-spacing:1px;">Tap "Allow" above</div>
+            </div>
+
+            <!-- Main instruction card -->
+            <div style="background:white;border-radius:24px;max-width:380px;width:100%;padding:28px 24px;box-shadow:0 20px 60px rgba(0,0,0,0.3);text-align:center;">
+                <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#10b981,#059669);margin:0 auto 18px;display:flex;align-items:center;justify-content:center;animation:npd-glow 2s ease-in-out infinite;">
+                    <svg width="30" height="30" viewBox="0 0 24 24" fill="white"><path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24 11.36 11.36 0 003.58.57 1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1 11.36 11.36 0 00.57 3.58 1 1 0 01-.25 1.01l-2.2 2.2z"/></svg>
                 </div>
-                <h3 id="npd-title" style="margin:0 0 10px;font-size:21px;font-weight:800;color:#1e293b;transition:all 0.3s ease;">Never Miss a Call</h3>
-                <p id="npd-desc" style="margin:0 0 8px;font-size:14px;color:#64748b;line-height:1.6;transition:all 0.3s ease;">
-                    Enable notifications to receive <strong>incoming calls</strong> on this device — even when the app is in the background or closed.
+
+                <h3 style="margin:0 0 8px;font-size:20px;font-weight:800;color:#1e293b;">Enable Call Notifications</h3>
+                <p style="margin:0 0 20px;font-size:14px;color:#64748b;line-height:1.5;">
+                    A popup will appear at the top.<br>
+                    <strong style="color:#1e293b;font-size:15px;">Tap "Allow"</strong> to receive incoming calls.
                 </p>
-                <div id="npd-features" style="margin:0 0 24px;text-align:left;padding:0 8px;">
-                    <div style="display:flex;align-items:center;gap:10px;padding:6px 0;font-size:13px;color:#475569;">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="#10b981" style="flex-shrink:0;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-                        <span>Ring on incoming calls like WhatsApp & Teams</span>
-                    </div>
-                    <div style="display:flex;align-items:center;gap:10px;padding:6px 0;font-size:13px;color:#475569;">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="#10b981" style="flex-shrink:0;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-                        <span>Works even after logout or app is closed</span>
-                    </div>
-                    <div style="display:flex;align-items:center;gap:10px;padding:6px 0;font-size:13px;color:#475569;">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="#10b981" style="flex-shrink:0;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-                        <span>Only call notifications — no spam, ever</span>
+
+                <!-- Visual mockup of what to tap -->
+                <div style="background:#f1f5f9;border-radius:14px;padding:16px;margin-bottom:20px;">
+                    <div style="font-size:12px;color:#94a3b8;margin-bottom:10px;font-weight:600;">WHEN YOU SEE THIS POPUP:</div>
+                    <div style="background:white;border-radius:10px;padding:12px 16px;box-shadow:0 2px 8px rgba(0,0,0,0.08);text-align:left;">
+                        <div style="font-size:13px;color:#475569;margin-bottom:10px;">SteelConnect wants to send you notifications</div>
+                        <div style="display:flex;gap:8px;justify-content:flex-end;">
+                            <div style="padding:8px 16px;border-radius:8px;background:#f1f5f9;color:#64748b;font-size:13px;font-weight:600;">Block</div>
+                            <div style="padding:8px 16px;border-radius:8px;background:linear-gradient(135deg,#10b981,#059669);color:white;font-size:13px;font-weight:700;animation:npd-bounce 1s ease-in-out infinite;position:relative;">
+                                Allow
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="3" stroke-linecap="round" style="position:absolute;top:-18px;left:50%;transform:translateX(-50%);">
+                                    <path d="M12 19V5M5 12l7-7 7 7"/>
+                                </svg>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <button id="npd-allow" style="width:100%;padding:15px;border:none;border-radius:14px;background:linear-gradient(135deg,#10b981,#059669);color:white;font-size:16px;font-weight:700;cursor:pointer;margin-bottom:10px;box-shadow:0 4px 14px rgba(16,185,129,0.3);transition:all 0.2s ease;animation:npd-pulse 2s ease-in-out infinite;display:flex;align-items:center;justify-content:center;gap:10px;-webkit-tap-highlight-color:transparent;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="white" style="flex-shrink:0;"><path d="M12 22c1.1 0 2-.9 2-2h-4a2 2 0 002 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
-                    <span id="npd-allow-text">Enable Call Notifications</span>
+
+                <div style="display:flex;flex-direction:column;gap:6px;text-align:left;padding:0 4px;margin-bottom:16px;">
+                    <div style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:#64748b;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="#10b981" style="flex-shrink:0;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                        Receive calls even when app is closed
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:#64748b;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="#10b981" style="flex-shrink:0;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                        Only call notifications — no spam
+                    </div>
+                </div>
+
+                <button id="npd-trigger-btn" style="width:100%;padding:14px;border:none;border-radius:14px;background:linear-gradient(135deg,#10b981,#059669);color:white;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(16,185,129,0.3);display:flex;align-items:center;justify-content:center;gap:8px;-webkit-tap-highlight-color:transparent;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M12 22c1.1 0 2-.9 2-2h-4a2 2 0 002 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+                    <span id="npd-trigger-text">Turn On Notifications</span>
                 </button>
-                <p style="margin:4px 0 0;font-size:11px;color:#cbd5e1;">One tap — stays enabled permanently</p>
             </div>
         `;
-        document.body.appendChild(dialog);
+        document.body.appendChild(guide);
 
-        const allowBtn = document.getElementById('npd-allow');
-        let processing = false;
+        let triggered = false;
+        const triggerBtn = document.getElementById('npd-trigger-btn');
 
-        allowBtn.addEventListener('click', async () => {
-            if (processing) return;
-            processing = true;
+        const doRequest = async () => {
+            if (triggered) return;
+            triggered = true;
 
-            // Immediately show "enabling" state
-            const allowText = document.getElementById('npd-allow-text');
-            const btnSvg = allowBtn.querySelector('svg');
-            allowBtn.style.animation = 'none';
-            allowBtn.style.pointerEvents = 'none';
-            allowText.textContent = 'Enabling...';
-            if (btnSvg) btnSvg.innerHTML = '<circle cx="12" cy="12" r="10" stroke="white" stroke-width="2.5" fill="none" stroke-dasharray="30 30" stroke-linecap="round"><animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="0.8s" repeatCount="indefinite"/></circle>';
+            // Update button to loading state
+            const triggerText = document.getElementById('npd-trigger-text');
+            triggerText.textContent = 'Waiting for your response...';
+            triggerBtn.style.opacity = '0.7';
+            triggerBtn.style.pointerEvents = 'none';
+
+            // Update the arrow section to be more prominent
+            const arrowSection = document.getElementById('npd-arrow-section');
+            if (arrowSection) {
+                arrowSection.querySelector('div').textContent = 'TAP "ALLOW" ON THE POPUP ABOVE';
+                arrowSection.querySelector('div').style.fontSize = '18px';
+            }
 
             // Trigger browser's native permission prompt
             const result = await Notification.requestPermission();
 
+            // Remove guide overlay
+            guide.style.transition = 'opacity 0.3s ease';
+            guide.style.opacity = '0';
+            setTimeout(() => guide.remove(), 300);
+
             if (result === 'granted') {
-                // Show success state inside the SAME dialog — seamless
-                const iconWrap = document.getElementById('npd-icon-wrap');
-                const icon = document.getElementById('npd-icon');
-                const title = document.getElementById('npd-title');
-                const desc = document.getElementById('npd-desc');
-                const features = document.getElementById('npd-features');
-
-                // Transition to success
-                icon.style.animation = 'none';
-                icon.innerHTML = '<polyline points="20 6 9 17 4 12" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="animation:npd-check 0.5s cubic-bezier(0.16,1,0.3,1) forwards;"/>';
-                icon.setAttribute('width', '38');
-                icon.setAttribute('height', '38');
-                icon.setAttribute('viewBox', '0 0 24 24');
-                iconWrap.style.background = 'linear-gradient(135deg,#059669,#047857)';
-                iconWrap.style.boxShadow = '0 8px 24px rgba(5,150,105,0.35)';
-
-                title.textContent = 'You\'re All Set!';
-                title.style.color = '#059669';
-                desc.innerHTML = 'Notifications are <strong>enabled</strong>. You\'ll receive incoming calls on this device even when the app is closed or you\'re logged out.';
-                features.style.display = 'none';
-
-                allowBtn.style.background = 'linear-gradient(135deg,#059669,#047857)';
-                allowText.textContent = 'Notifications Enabled';
-                if (btnSvg) btnSvg.innerHTML = '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" fill="white"/>';
-
-                // Auto-close after 1.8 seconds
-                setTimeout(() => {
-                    dialog.style.transition = 'opacity 0.3s ease';
-                    dialog.style.opacity = '0';
-                    setTimeout(() => {
-                        dialog.remove();
-                        resolve('granted');
-                    }, 300);
-                }, 1800);
+                // Show success toast
+                showNotificationSuccessToast();
+                resolve('granted');
             } else {
-                // Denied or dismissed
-                const iconWrap = document.getElementById('npd-icon-wrap');
-                const icon = document.getElementById('npd-icon');
-                const title = document.getElementById('npd-title');
-                const desc = document.getElementById('npd-desc');
-                const features = document.getElementById('npd-features');
-
-                icon.style.animation = 'none';
-                icon.innerHTML = '<path d="M12 22c1.1 0 2-.9 2-2h-4a2 2 0 002 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" fill="white"/><line x1="3" y1="3" x2="21" y2="21" stroke="white" stroke-width="2.5" stroke-linecap="round"/>';
-                iconWrap.style.background = 'linear-gradient(135deg,#f59e0b,#d97706)';
-                iconWrap.style.boxShadow = '0 8px 24px rgba(245,158,11,0.3)';
-
-                title.textContent = 'Notifications Blocked';
-                title.style.color = '#d97706';
-                desc.innerHTML = 'You won\'t receive calls when the app is closed.<br><span style="font-size:12px;color:#94a3b8;">You can enable notifications anytime from your browser settings.</span>';
-                features.style.display = 'none';
-
-                allowBtn.style.background = '#e2e8f0';
-                allowBtn.style.color = '#64748b';
-                allowBtn.style.boxShadow = 'none';
-                allowText.textContent = 'Got it';
-                if (btnSvg) btnSvg.innerHTML = '<line x1="18" y1="6" x2="6" y2="18" stroke="#64748b" stroke-width="2.5" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="#64748b" stroke-width="2.5" stroke-linecap="round"/>';
-                allowBtn.style.pointerEvents = 'auto';
-
-                // Allow closing by clicking "Got it"
-                allowBtn.onclick = () => {
-                    dialog.style.transition = 'opacity 0.3s ease';
-                    dialog.style.opacity = '0';
-                    setTimeout(() => {
-                        dialog.remove();
-                        resolve(result);
-                    }, 300);
-                };
-
-                // Also auto-close after 5 seconds
-                setTimeout(() => {
-                    if (dialog.parentElement) {
-                        dialog.style.transition = 'opacity 0.3s ease';
-                        dialog.style.opacity = '0';
-                        setTimeout(() => {
-                            dialog.remove();
-                            resolve(result);
-                        }, 300);
-                    }
-                }, 5000);
+                // Show settings guide for denied state
+                showNotificationSettingsGuide();
+                resolve(result);
             }
-        });
+        };
 
-        // Clicking outside the card also triggers the permission (treat as "enable")
-        dialog.addEventListener('click', (e) => {
-            if (e.target === dialog && !processing) {
-                allowBtn.click();
-            }
-        });
+        triggerBtn.addEventListener('click', doRequest);
+
+        // Auto-trigger the browser prompt after a brief delay (500ms)
+        // so the guide overlay is visible first
+        setTimeout(() => {
+            if (!triggered) doRequest();
+        }, 600);
     });
 }
 
-// Brief toast shown in installed PWA apps when notifications are auto-enabled
-function showNotificationEnabledToast() {
+// Success toast after notification permission granted
+function showNotificationSuccessToast() {
     const toast = document.createElement('div');
-    toast.id = 'notif-enabled-toast';
-    toast.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-100px);z-index:100003;background:linear-gradient(135deg,#059669,#047857);color:white;border-radius:16px;padding:16px 24px;max-width:360px;width:calc(100% - 32px);box-shadow:0 8px 32px rgba(5,150,105,0.35);display:flex;align-items:center;gap:14px;transition:transform 0.5s cubic-bezier(0.16,1,0.3,1);';
+    toast.id = 'notif-success-toast';
+    toast.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-100px);z-index:100003;background:linear-gradient(135deg,#059669,#047857);color:white;border-radius:16px;padding:16px 24px;max-width:380px;width:calc(100% - 32px);box-shadow:0 8px 32px rgba(5,150,105,0.35);display:flex;align-items:center;gap:14px;transition:transform 0.5s cubic-bezier(0.16,1,0.3,1);';
     toast.innerHTML = `
         <div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
         </div>
         <div>
-            <div style="font-weight:700;font-size:15px;margin-bottom:2px;">Notifications Enabled</div>
-            <div style="font-size:12px;opacity:0.85;">You'll receive incoming calls even when the app is closed</div>
+            <div style="font-weight:700;font-size:16px;margin-bottom:2px;">Notifications Enabled!</div>
+            <div style="font-size:13px;opacity:0.9;">You'll receive incoming calls even when the app is closed or you're logged out.</div>
         </div>
     `;
     document.body.appendChild(toast);
-
-    // Animate in
     requestAnimationFrame(() => {
         requestAnimationFrame(() => {
             toast.style.transform = 'translateX(-50%) translateY(0)';
         });
     });
-
-    // Auto-dismiss after 3 seconds
     setTimeout(() => {
         toast.style.transform = 'translateX(-50%) translateY(-100px)';
         setTimeout(() => { if (toast.parentElement) toast.remove(); }, 500);
-    }, 3000);
+    }, 4000);
 }
 
-// Banner shown when user denied notification permission — explains how to re-enable
-function showNotificationDeniedBanner() {
+// Settings guide — shown when notifications are DENIED.
+// Gives step-by-step instructions to enable from browser/device settings.
+function showNotificationSettingsGuide() {
     // Only show once per session
-    if (sessionStorage.getItem('notif_denied_banner_shown')) return;
-    sessionStorage.setItem('notif_denied_banner_shown', 'true');
+    if (sessionStorage.getItem('notif_settings_guide_shown')) return;
+    sessionStorage.setItem('notif_settings_guide_shown', 'true');
 
-    const banner = document.createElement('div');
-    banner.id = 'notif-denied-banner';
-    banner.style.cssText = 'position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:99998;background:#fef3c7;border:1px solid #f59e0b;border-radius:12px;padding:12px 18px;max-width:420px;width:calc(100% - 32px);box-shadow:0 4px 16px rgba(0,0,0,0.1);display:flex;align-items:center;gap:12px;animation:swBannerSlide 0.4s cubic-bezier(0.16,1,0.3,1);';
-    banner.innerHTML = `
-        <div style="flex-shrink:0;width:32px;height:32px;border-radius:50%;background:#f59e0b;display:flex;align-items:center;justify-content:center;">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M12 22c1.1 0 2-.9 2-2h-4a2 2 0 002 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/><line x1="3" y1="3" x2="21" y2="21" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg>
+    const isAndroid = /android/i.test(navigator.userAgent);
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isChrome = /chrome/i.test(navigator.userAgent) && !/edg/i.test(navigator.userAgent);
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+
+    // Platform-specific instructions
+    let steps = '';
+    if (isAndroid && isStandalone) {
+        steps = `
+            <div style="font-weight:700;font-size:13px;color:#92400e;margin-bottom:8px;">How to enable:</div>
+            <div style="font-size:13px;color:#78350f;line-height:1.8;">
+                <strong>Step 1:</strong> Long-press the SteelConnect app icon<br>
+                <strong>Step 2:</strong> Tap <strong>"App info"</strong> or <strong>"i"</strong> icon<br>
+                <strong>Step 3:</strong> Tap <strong>"Notifications"</strong><br>
+                <strong>Step 4:</strong> Toggle <strong>ON</strong> "Allow notifications"
+            </div>
+        `;
+    } else if (isAndroid) {
+        steps = `
+            <div style="font-weight:700;font-size:13px;color:#92400e;margin-bottom:8px;">How to enable:</div>
+            <div style="font-size:13px;color:#78350f;line-height:1.8;">
+                <strong>Step 1:</strong> Tap the <strong>lock icon</strong> (left of URL bar)<br>
+                <strong>Step 2:</strong> Tap <strong>"Permissions"</strong> or <strong>"Site settings"</strong><br>
+                <strong>Step 3:</strong> Find <strong>"Notifications"</strong><br>
+                <strong>Step 4:</strong> Change to <strong>"Allow"</strong>
+            </div>
+        `;
+    } else if (isIOS) {
+        steps = `
+            <div style="font-weight:700;font-size:13px;color:#92400e;margin-bottom:8px;">How to enable:</div>
+            <div style="font-size:13px;color:#78350f;line-height:1.8;">
+                <strong>Step 1:</strong> Open iPhone <strong>Settings</strong><br>
+                <strong>Step 2:</strong> Scroll down to <strong>SteelConnect</strong><br>
+                <strong>Step 3:</strong> Tap <strong>"Notifications"</strong><br>
+                <strong>Step 4:</strong> Toggle <strong>ON</strong> "Allow Notifications"
+            </div>
+        `;
+    } else {
+        // Desktop browser
+        steps = `
+            <div style="font-weight:700;font-size:13px;color:#92400e;margin-bottom:8px;">How to enable:</div>
+            <div style="font-size:13px;color:#78350f;line-height:1.8;">
+                <strong>Step 1:</strong> Click the <strong>lock/tune icon</strong> in the address bar<br>
+                <strong>Step 2:</strong> Find <strong>"Notifications"</strong><br>
+                <strong>Step 3:</strong> Change from "Block" to <strong>"Allow"</strong><br>
+                <strong>Step 4:</strong> Refresh the page
+            </div>
+        `;
+    }
+
+    const guide = document.createElement('div');
+    guide.id = 'notif-settings-guide';
+    guide.style.cssText = 'position:fixed;inset:0;z-index:100001;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(4px);animation:npd-fadein 0.3s ease;';
+    guide.innerHTML = `
+        <style>@keyframes npd-fadein{from{opacity:0}to{opacity:1}}</style>
+        <div style="background:white;border-radius:24px;max-width:400px;width:100%;padding:28px 24px;box-shadow:0 20px 60px rgba(0,0,0,0.25);text-align:center;">
+            <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#f59e0b,#d97706);margin:0 auto 18px;display:flex;align-items:center;justify-content:center;">
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="white"><path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1115.6 12 3.6 3.6 0 0112 15.6z"/></svg>
+            </div>
+
+            <h3 style="margin:0 0 6px;font-size:19px;font-weight:800;color:#1e293b;">Notifications Are Blocked</h3>
+            <p style="margin:0 0 18px;font-size:13.5px;color:#64748b;line-height:1.5;">
+                You won't receive incoming calls when the app is closed. Follow these steps to enable:
+            </p>
+
+            <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:14px;padding:16px;text-align:left;margin-bottom:20px;">
+                ${steps}
+            </div>
+
+            ${isAndroid && !isStandalone ? `
+            <a id="npd-open-settings" href="#" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:13px;border:none;border-radius:14px;background:linear-gradient(135deg,#3b82f6,#2563eb);color:white;font-size:14px;font-weight:700;cursor:pointer;text-decoration:none;box-shadow:0 4px 14px rgba(59,130,246,0.3);margin-bottom:10px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58z"/></svg>
+                Open Site Settings
+            </a>
+            ` : ''}
+
+            <button id="npd-settings-close" style="width:100%;padding:12px;border:none;border-radius:12px;background:#f1f5f9;color:#64748b;font-size:14px;font-weight:600;cursor:pointer;">
+                I'll do it later
+            </button>
         </div>
-        <div style="flex:1;min-width:0;">
-            <div style="font-weight:700;font-size:12.5px;color:#92400e;">Notifications Blocked</div>
-            <div style="font-size:11.5px;color:#a16207;line-height:1.4;">You won't receive incoming calls when the app is closed. Enable notifications in your browser settings to receive calls.</div>
-        </div>
-        <button onclick="this.parentElement.remove()" style="flex-shrink:0;border:none;background:none;color:#a16207;cursor:pointer;padding:4px;">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a16207" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
     `;
-    document.body.appendChild(banner);
+    document.body.appendChild(guide);
 
-    // Auto-dismiss after 15 seconds
-    setTimeout(() => { if (banner.parentElement) banner.remove(); }, 15000);
+    // Close button
+    document.getElementById('npd-settings-close').addEventListener('click', () => {
+        guide.style.transition = 'opacity 0.3s ease';
+        guide.style.opacity = '0';
+        setTimeout(() => guide.remove(), 300);
+    });
+
+    // Open site settings on Android Chrome (browser mode)
+    const openSettingsBtn = document.getElementById('npd-open-settings');
+    if (openSettingsBtn) {
+        openSettingsBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            // Try to open site notification settings via intent
+            try {
+                // Chrome Android: open the site-specific settings page
+                const url = new URL(window.location.href);
+                window.open('intent://settings/notifications#Intent;scheme=android-app;package=com.android.chrome;S.options_url=' + encodeURIComponent(url.origin) + ';end', '_blank');
+            } catch(err) {
+                // Fallback: just show more detailed instructions
+                openSettingsBtn.innerHTML = '<span style="font-size:13px;">Open Chrome Menu → Settings → Site settings → Notifications</span>';
+                openSettingsBtn.style.background = '#e2e8f0';
+                openSettingsBtn.style.color = '#475569';
+                openSettingsBtn.style.boxShadow = 'none';
+            }
+        });
+    }
+
+    // Click outside to close
+    guide.addEventListener('click', (e) => {
+        if (e.target === guide) {
+            guide.style.transition = 'opacity 0.3s ease';
+            guide.style.opacity = '0';
+            setTimeout(() => guide.remove(), 300);
+        }
+    });
 }
 
 
