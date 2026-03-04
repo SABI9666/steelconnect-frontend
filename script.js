@@ -679,6 +679,46 @@ function initializeApp() {
                         window.location.reload();
                     }
                 }
+
+                // Handle CALL_ANSWER from push notification — works even when logged out.
+                // This is the EARLY listener that catches calls before initializePushNotifications() runs.
+                if (event.data && event.data.type === 'CALL_ANSWER') {
+                    const { callId, callerId, callerName } = event.data;
+                    console.log('[SW-EARLY] CALL_ANSWER from service worker, callId:', callId);
+
+                    if (appState.currentUser && appState.jwtToken) {
+                        // User is logged in — connect socket and accept the call
+                        initializeSocketConnection();
+                        const tryAccept = () => {
+                            if (voiceCallState.socket && voiceCallState.socket.connected) {
+                                voiceCallState.currentCallId = callId;
+                                acceptVoiceCall(callId, callerId);
+                                return true;
+                            }
+                            return false;
+                        };
+                        if (!tryAccept()) {
+                            let waited = 0;
+                            const waitInterval = setInterval(() => {
+                                waited += 200;
+                                if (tryAccept()) {
+                                    clearInterval(waitInterval);
+                                } else if (waited >= 5000) {
+                                    clearInterval(waitInterval);
+                                    console.error('[SW-EARLY] Socket not connected after 5s');
+                                    showNotification('Could not connect to accept the call. Please try again.', 'error');
+                                }
+                            }, 200);
+                        }
+                    } else {
+                        // User is LOGGED OUT — store call data and show urgent login overlay
+                        console.log('[SW-EARLY] User logged out, storing call for post-login delivery');
+                        sessionStorage.setItem('pendingCallId', callId);
+                        if (callerId) sessionStorage.setItem('pendingCallerId', callerId);
+                        if (callerName) sessionStorage.setItem('pendingCallerName', callerName);
+                        showIncomingCallLoginOverlay(callerName || 'Someone');
+                    }
+                }
             });
         }).catch((err) => {
             console.log('[SW] Service worker registration deferred:', err.message);
@@ -6914,9 +6954,33 @@ function showAppView() {
 function logout() {
     cleanupNotificationSystem();
     cleanupMenuBadgeSystem();
-    // Preserve push subscription data and install preference across logout
-    // so the user can still receive incoming call notifications when logged out
+
+    // Preserve push-related data across logout so the user can still receive
+    // incoming call notifications even when logged out (like WhatsApp/Teams).
+    // The push subscription lives in the browser's Push API and the backend
+    // keeps the userId->subscription mapping — we just need to preserve the
+    // userId so re-login can re-associate correctly.
     const pushDismissed = localStorage.getItem('pwa_install_dismissed_permanent');
+    const pushUserId = appState.currentUser ? appState.currentUser.id : null;
+
+    // Gracefully disconnect socket (don't force-close — let backend handle ringing calls via push)
+    if (voiceCallState.socket) {
+        voiceCallState.socket.disconnect();
+        voiceCallState.socket = null;
+    }
+    // Clean up any active call UI
+    const callOverlay = document.querySelector('.voice-call-overlay');
+    if (callOverlay) callOverlay.remove();
+    voiceCallState.currentCallId = null;
+    if (voiceCallState.localStream) {
+        voiceCallState.localStream.getTracks().forEach(t => t.stop());
+        voiceCallState.localStream = null;
+    }
+    if (voiceCallState.peerConnection) {
+        voiceCallState.peerConnection.close();
+        voiceCallState.peerConnection = null;
+    }
+
     appState.currentUser = null;
     appState.jwtToken = null;
     appState.userSubmittedQuotes.clear();
@@ -6924,8 +6988,13 @@ function logout() {
     appState.notifications = [];
     appState.profileFiles = {};
     localStorage.clear();
+
     // Restore preserved settings
     if (pushDismissed) localStorage.setItem('pwa_install_dismissed_permanent', pushDismissed);
+    // Preserve push userId so the service worker push subscription stays linked
+    // to this user — enables receiving calls while logged out
+    if (pushUserId) localStorage.setItem('pushUserId', pushUserId);
+
     clearTimeout(inactivityTimer);
     clearTimeout(warningTimer);
     dismissInactivityWarning();
