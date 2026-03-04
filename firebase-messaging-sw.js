@@ -3,7 +3,7 @@
 // Works with Web Push (VAPID) — no Firebase client SDK required.
 // IMPORTANT: Bump SW_VERSION on every deploy to trigger update in installed PWA apps.
 
-const SW_VERSION = '3.2.0';
+const SW_VERSION = '3.3.0';
 const CACHE_NAME = 'steelconnect-v' + SW_VERSION;
 const IS_LOCAL = self.location.hostname === 'localhost' || self.location.hostname === '127.0.0.1';
 const BACKEND_URL = IS_LOCAL ? 'http://localhost:10000' : 'https://steelconnect-backend.onrender.com';
@@ -187,9 +187,14 @@ self.addEventListener('push', (event) => {
 });
 
 // Show incoming call notification with answer/decline actions
-function showIncomingCallNotification(data) {
+// Uses high-priority options to wake mobile devices from sleep/doze
+async function showIncomingCallNotification(data) {
     const { callId, callerId, callerName, conversationId } = data;
     const displayName = callerName || 'Someone';
+
+    // Close any existing call notifications first (prevent stacking)
+    const existingNotifs = await self.registration.getNotifications({ tag: `incoming-call-${callId}` });
+    existingNotifs.forEach(n => n.close());
 
     const options = {
         body: `${displayName} is calling you`,
@@ -198,9 +203,8 @@ function showIncomingCallNotification(data) {
         tag: `incoming-call-${callId}`,
         requireInteraction: true,     // Notification stays until user acts (like a phone call)
         renotify: true,               // Re-alert even if same tag exists
-        vibrate: [300, 100, 300, 100, 300, 100, 300, 100, 300],  // Long vibration pattern
+        vibrate: [300, 100, 300, 100, 300, 100, 300, 100, 300],  // Long vibration pattern (like phone ringtone)
         silent: false,
-        urgency: 'high',
         actions: [
             { action: 'answer', title: 'Answer', icon: '/icon-192.png' },
             { action: 'decline', title: 'Decline' }
