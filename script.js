@@ -4838,6 +4838,25 @@ function initializeSocketConnection() {
             endCallCleanup();
         });
 
+        // Other party's socket temporarily disconnected — call may recover
+        voiceCallState.socket.on('call-reconnecting', (data) => {
+            console.log('[VOICE] Other party reconnecting...', data.callId);
+            const statusText = document.getElementById('call-status-text');
+            if (statusText) statusText.textContent = 'Reconnecting...';
+            const qualityEl = document.getElementById('call-quality');
+            if (qualityEl) qualityEl.innerHTML = '<i class="fas fa-wifi" style="color:#f59e0b"></i> Unstable';
+        });
+
+        // Other party reconnected — call continues
+        voiceCallState.socket.on('call-reconnected', (data) => {
+            console.log('[VOICE] Other party reconnected', data.callId);
+            const statusText = document.getElementById('call-status-text');
+            if (statusText) statusText.textContent = 'Connected';
+            const qualityEl = document.getElementById('call-quality');
+            if (qualityEl) qualityEl.innerHTML = '<i class="fas fa-wifi" style="color:#10b981"></i> Good';
+            showNotification('Call reconnected', 'success');
+        });
+
         voiceCallState.socket.on('call-timeout', (data) => {
             showNotification('No answer. Please try again later.', 'warning');
             endCallCleanup();
@@ -6842,7 +6861,11 @@ function showIncomingCallLoginOverlay(callerName) {
                 </button>
                 <div class="icl-google-btn" id="icl-google-render"></div>
             </div>
-            <button class="icl-dismiss" onclick="sessionStorage.removeItem('pendingCallId');sessionStorage.removeItem('pendingCallerId');sessionStorage.removeItem('pendingCallerName');document.getElementById('incoming-call-login-overlay').remove();showAuthGateway()">
+            <button class="icl-dismiss" onclick="
+                var cid=sessionStorage.getItem('pendingCallId');
+                if(cid){var bu=window.IS_LOCAL?'http://localhost:10000':'https://steelconnect-backend.onrender.com';fetch(bu+'/api/voice-calls/decline',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({callId:cid,reason:'declined'})}).catch(function(){});}
+                sessionStorage.removeItem('pendingCallId');sessionStorage.removeItem('pendingCallerId');sessionStorage.removeItem('pendingCallerName');
+                document.getElementById('incoming-call-login-overlay').remove();showAuthGateway();">
                 Dismiss Call
             </button>
         </div>
