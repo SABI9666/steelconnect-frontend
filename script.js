@@ -7289,6 +7289,9 @@ function showAppView() {
         console.warn('[PUSH] Push notification setup failed:', err.message);
     });
 
+    // Start periodic reminder popup if notifications are not enabled
+    startNotificationReminder();
+
     // Show PWA install banner after login (if app not already installed)
     if (!pwaInstallDismissedThisSession) {
         setTimeout(() => showPWAInstallBanner(), 2000);
@@ -7347,6 +7350,7 @@ function showAppView() {
 function logout() {
     cleanupNotificationSystem();
     cleanupMenuBadgeSystem();
+    stopNotificationReminder();
 
     // Preserve push-related data across logout so the user can still receive
     // incoming call notifications even when logged out (like WhatsApp/Teams).
@@ -7478,7 +7482,7 @@ function renderAppSection(sectionId) {
         return;
     }
     if (sectionId === 'profile-completion') { renderProfileCompletionView(); return; }
-    if (sectionId === 'settings') { container.innerHTML = getSettingsTemplate(appState.currentUser); return; }
+    if (sectionId === 'settings') { container.innerHTML = getSettingsTemplate(appState.currentUser); initSettingsNotificationHandlers(); return; }
     if (sectionId === 'dashboard') {
         container.innerHTML = getDashboardTemplate(appState.currentUser);
         loadPortalAnnouncements();
@@ -10463,13 +10467,274 @@ function getSettingsTemplate(user) {
     else if (profileStatus === 'pending') profileSection = `<div class="settings-card"><h3><i class="fas fa-clock"></i> Profile Under Review</h3><p>Your profile is under review by our admin team. You can view or update your profile while waiting.</p><button class="btn btn-outline" onclick="renderAppSection('profile-completion')"><i class="fas fa-eye"></i> View Profile</button></div>`;
     else if (profileStatus === 'rejected') profileSection = `<div class="settings-card"><h3><i class="fas fa-exclamation-triangle"></i> Profile Needs Update</h3><p>Your profile needs updates. ${user.rejectionReason ? `<strong>Reason:</strong> ${user.rejectionReason}` : ''}</p><button class="btn btn-primary" onclick="renderAppSection('profile-completion')"><i class="fas fa-edit"></i> Update Profile</button></div>`;
     else if (profileStatus === 'approved') profileSection = `<div class="settings-card"><h3><i class="fas fa-check-circle"></i> Profile Approved</h3><p>Your profile is approved.</p><button class="btn btn-outline" onclick="renderAppSection('profile-completion')"><i class="fas fa-edit"></i> Update Information</button></div>`;
+
+    // Notification settings card
+    const notifPermission = ('Notification' in window) ? Notification.permission : 'unsupported';
+    const isGranted = notifPermission === 'granted';
+    const isDenied = notifPermission === 'denied';
+    const isDefault = notifPermission === 'default';
+    const isUnsupported = notifPermission === 'unsupported';
+
+    const notifStatusColor = isGranted ? '#059669' : isDenied ? '#dc2626' : '#f59e0b';
+    const notifStatusText = isGranted ? 'Enabled' : isDenied ? 'Blocked' : isDefault ? 'Not Set' : 'Not Supported';
+    const notifStatusIcon = isGranted ? 'fa-check-circle' : isDenied ? 'fa-times-circle' : 'fa-exclamation-circle';
+
+    const notificationCard = `
+        <div class="settings-card" id="settings-notification-card">
+            <h3><i class="fas fa-bell"></i> Call Notifications</h3>
+            <p style="color:#64748b;font-size:13.5px;margin-bottom:16px;">Receive incoming voice calls on this device even when you're logged out or the app is closed — just like WhatsApp & Teams.</p>
+
+            <div style="display:flex;align-items:center;justify-content:space-between;background:${isGranted ? '#f0fdf4' : isDenied ? '#fef2f2' : '#fffbeb'};border:1px solid ${isGranted ? '#bbf7d0' : isDenied ? '#fecaca' : '#fde68a'};border-radius:12px;padding:14px 16px;margin-bottom:16px;">
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <i class="fas ${notifStatusIcon}" style="color:${notifStatusColor};font-size:20px;"></i>
+                    <div>
+                        <div style="font-weight:700;font-size:14px;color:#1e293b;">Notifications: ${notifStatusText}</div>
+                        <div style="font-size:12px;color:#64748b;">${isGranted ? 'You will receive calls when logged out' : isDenied ? 'Calls won\'t ring when app is closed' : isDefault ? 'Enable to receive calls when offline' : 'Your browser does not support notifications'}</div>
+                    </div>
+                </div>
+                ${!isUnsupported ? `
+                <label class="notif-toggle-switch" style="position:relative;display:inline-block;width:52px;height:28px;flex-shrink:0;">
+                    <input type="checkbox" id="settings-notif-toggle" ${isGranted ? 'checked' : ''} ${isDenied ? 'data-denied="true"' : ''} style="opacity:0;width:0;height:0;">
+                    <span class="notif-toggle-slider" style="position:absolute;cursor:pointer;inset:0;background:${isGranted ? '#10b981' : '#cbd5e1'};border-radius:28px;transition:all 0.3s ease;">
+                        <span style="position:absolute;content:'';height:22px;width:22px;left:${isGranted ? '27px' : '3px'};bottom:3px;background:white;border-radius:50%;transition:all 0.3s ease;box-shadow:0 1px 3px rgba(0,0,0,0.15);"></span>
+                    </span>
+                </label>
+                ` : ''}
+            </div>
+
+            ${isDenied ? `
+            <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:10px;padding:12px 14px;margin-bottom:14px;">
+                <div style="font-weight:700;font-size:12.5px;color:#92400e;margin-bottom:6px;"><i class="fas fa-info-circle"></i> Notifications are blocked by your browser</div>
+                <div style="font-size:12px;color:#a16207;line-height:1.6;">To enable, you need to allow notifications in your browser settings:</div>
+            </div>
+            <button class="btn btn-primary" id="settings-open-notif-guide" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;">
+                <i class="fas fa-cog"></i> Open Notification Settings Guide
+            </button>
+            ` : isDefault ? `
+            <button class="btn btn-primary" id="settings-enable-notif-btn" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,#10b981,#059669);border:none;padding:13px;">
+                <i class="fas fa-bell"></i> Turn On Call Notifications
+            </button>
+            ` : isGranted ? `
+            <div style="display:flex;flex-direction:column;gap:8px;">
+                <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#059669;"><i class="fas fa-check" style="font-size:11px;"></i> Incoming calls will ring on this device</div>
+                <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#059669;"><i class="fas fa-check" style="font-size:11px;"></i> Works even after logout or app close</div>
+                <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#059669;"><i class="fas fa-check" style="font-size:11px;"></i> Only call notifications — no spam</div>
+            </div>
+            ` : ''}
+        </div>`;
+
     return `
         <div class="section-header modern-header"><div class="header-content"><h2><i class="fas fa-cog"></i> Settings</h2><p class="header-subtitle">Manage your account and profile</p></div></div>
         <div class="settings-container">
             ${profileSection}
+            ${notificationCard}
             <div class="settings-card"><h3><i class="fas fa-user-edit"></i> Personal Information</h3><form class="premium-form" onsubmit="event.preventDefault(); showNotification('Profile updated!', 'success');"><div class="form-group"><label class="form-label">Full Name</label><input type="text" class="form-input" value="${user.name}" required></div><div class="form-group"><label class="form-label">Email Address</label><input type="email" class="form-input" value="${user.email}" disabled></div><button type="submit" class="btn btn-primary">Save Changes</button></form></div>
             <div class="settings-card"><h3><i class="fas fa-shield-alt"></i> Security</h3><form class="premium-form" onsubmit="event.preventDefault(); showNotification('Password functionality not implemented.', 'info');"><div class="form-group"><label class="form-label">New Password</label><input type="password" class="form-input"></div><button type="submit" class="btn btn-primary">Change Password</button></form></div>
         </div>`;
+}
+
+// Wire up event handlers for the notification settings card
+function initSettingsNotificationHandlers() {
+    // Toggle switch
+    const toggle = document.getElementById('settings-notif-toggle');
+    if (toggle) {
+        toggle.addEventListener('change', async function() {
+            const permission = Notification.permission;
+            if (this.checked) {
+                // User wants to enable notifications
+                if (permission === 'granted') {
+                    // Already granted — just subscribe to push
+                    const registration = await navigator.serviceWorker.ready;
+                    await subscribeToWebPush(registration);
+                    showNotification('Call notifications are enabled!', 'success');
+                    renderAppSection('settings'); // Refresh card
+                } else if (permission === 'denied') {
+                    // Blocked — show settings guide
+                    this.checked = false;
+                    showNotificationSettingsGuide();
+                } else {
+                    // Default — request permission with guide
+                    const result = await requestNotificationWithGuide(false);
+                    if (result === 'granted') {
+                        const registration = await navigator.serviceWorker.ready;
+                        await subscribeToWebPush(registration);
+                        showNotification('Call notifications are enabled!', 'success');
+                    }
+                    renderAppSection('settings'); // Refresh card
+                }
+            } else {
+                // User toggled OFF — unsubscribe from push
+                try {
+                    const registration = await navigator.serviceWorker.ready;
+                    const subscription = await registration.pushManager.getSubscription();
+                    if (subscription) {
+                        await subscription.unsubscribe();
+                    }
+                    showNotification('Call notifications turned off. You won\'t receive calls when logged out.', 'info');
+                } catch (err) {
+                    console.warn('[SETTINGS] Unsubscribe error:', err);
+                }
+            }
+        });
+    }
+
+    // "Turn On Call Notifications" button (for 'default' state)
+    const enableBtn = document.getElementById('settings-enable-notif-btn');
+    if (enableBtn) {
+        enableBtn.addEventListener('click', async () => {
+            enableBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enabling...';
+            enableBtn.style.pointerEvents = 'none';
+            const result = await requestNotificationWithGuide(false);
+            if (result === 'granted') {
+                const registration = await navigator.serviceWorker.ready;
+                await subscribeToWebPush(registration);
+                showNotification('Call notifications are enabled!', 'success');
+            }
+            renderAppSection('settings'); // Refresh card to show new state
+        });
+    }
+
+    // "Open Notification Settings Guide" button (for 'denied' state)
+    const guideBtn = document.getElementById('settings-open-notif-guide');
+    if (guideBtn) {
+        guideBtn.addEventListener('click', () => {
+            showNotificationSettingsGuide();
+        });
+    }
+}
+
+// Periodic in-app popup reminding users to enable notifications.
+// Shows as a non-blocking bottom banner every 5 minutes if notifications are off.
+// Dismissed for the session once user clicks "Enable" or "Dismiss".
+let _notifReminderInterval = null;
+function startNotificationReminder() {
+    // Don't start if already running
+    if (_notifReminderInterval) return;
+    // Don't remind if not supported
+    if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
+
+    const checkAndShow = () => {
+        // Skip if already granted or dismissed this session
+        if (Notification.permission === 'granted') {
+            stopNotificationReminder();
+            return;
+        }
+        if (sessionStorage.getItem('notif_reminder_dismissed')) return;
+        // Don't show if another guide/overlay is already visible
+        if (document.getElementById('notif-guide-overlay') || document.getElementById('notif-settings-guide')) return;
+
+        showNotificationReminderPopup();
+    };
+
+    // First reminder after 30 seconds, then every 5 minutes
+    setTimeout(checkAndShow, 30000);
+    _notifReminderInterval = setInterval(checkAndShow, 5 * 60 * 1000);
+}
+
+function stopNotificationReminder() {
+    if (_notifReminderInterval) {
+        clearInterval(_notifReminderInterval);
+        _notifReminderInterval = null;
+    }
+}
+
+function showNotificationReminderPopup() {
+    // Remove existing reminder if any
+    const existing = document.getElementById('notif-reminder-popup');
+    if (existing) existing.remove();
+
+    const isDenied = Notification.permission === 'denied';
+
+    const popup = document.createElement('div');
+    popup.id = 'notif-reminder-popup';
+    popup.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(120px);z-index:99999;background:white;border-radius:20px;max-width:400px;width:calc(100% - 32px);padding:20px;box-shadow:0 16px 48px rgba(0,0,0,0.18),0 0 0 1px rgba(0,0,0,0.05);transition:transform 0.5s cubic-bezier(0.16,1,0.3,1);';
+    popup.innerHTML = `
+        <div style="display:flex;gap:14px;align-items:flex-start;">
+            <div style="width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,#10b981,#059669);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i class="fas fa-phone-alt" style="color:white;font-size:18px;"></i>
+            </div>
+            <div style="flex:1;min-width:0;">
+                <div style="font-weight:800;font-size:15px;color:#1e293b;margin-bottom:4px;">Enable Call Notifications</div>
+                <div style="font-size:13px;color:#64748b;line-height:1.5;margin-bottom:14px;">Turn on notifications in <strong>Settings</strong> to receive incoming calls even when you're logged out or the app is closed.</div>
+                <div style="display:flex;gap:8px;">
+                    ${isDenied ? `
+                    <button id="notif-reminder-settings" style="flex:1;padding:10px;border:none;border-radius:10px;background:linear-gradient(135deg,#3b82f6,#2563eb);color:white;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+                        <i class="fas fa-cog"></i> How to Enable
+                    </button>
+                    ` : `
+                    <button id="notif-reminder-enable" style="flex:1;padding:10px;border:none;border-radius:10px;background:linear-gradient(135deg,#10b981,#059669);color:white;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+                        <i class="fas fa-bell"></i> Turn On Now
+                    </button>
+                    `}
+                    <button id="notif-reminder-go-settings" style="flex:1;padding:10px;border:none;border-radius:10px;background:#f1f5f9;color:#475569;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+                        <i class="fas fa-cog"></i> Go to Settings
+                    </button>
+                </div>
+            </div>
+            <button id="notif-reminder-close" style="border:none;background:none;color:#94a3b8;cursor:pointer;padding:2px;margin-top:-4px;margin-right:-4px;">
+                <i class="fas fa-times" style="font-size:14px;"></i>
+            </button>
+        </div>
+    `;
+    document.body.appendChild(popup);
+
+    // Animate in
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            popup.style.transform = 'translateX(-50%) translateY(0)';
+        });
+    });
+
+    const closePopup = () => {
+        popup.style.transform = 'translateX(-50%) translateY(120px)';
+        setTimeout(() => { if (popup.parentElement) popup.remove(); }, 500);
+    };
+
+    // Close button — dismiss for this session
+    document.getElementById('notif-reminder-close').addEventListener('click', () => {
+        sessionStorage.setItem('notif_reminder_dismissed', 'true');
+        closePopup();
+    });
+
+    // "Turn On Now" button
+    const enableBtn = document.getElementById('notif-reminder-enable');
+    if (enableBtn) {
+        enableBtn.addEventListener('click', async () => {
+            closePopup();
+            const result = await requestNotificationWithGuide(false);
+            if (result === 'granted') {
+                const registration = await navigator.serviceWorker.ready;
+                await subscribeToWebPush(registration);
+                showNotification('Call notifications are enabled!', 'success');
+                stopNotificationReminder();
+            }
+        });
+    }
+
+    // "How to Enable" button (for denied state)
+    const settingsBtn = document.getElementById('notif-reminder-settings');
+    if (settingsBtn) {
+        settingsBtn.addEventListener('click', () => {
+            closePopup();
+            showNotificationSettingsGuide();
+        });
+    }
+
+    // "Go to Settings" button
+    document.getElementById('notif-reminder-go-settings').addEventListener('click', () => {
+        closePopup();
+        renderAppSection('settings');
+        // Scroll to notification card
+        setTimeout(() => {
+            const card = document.getElementById('settings-notification-card');
+            if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 300);
+    });
+
+    // Auto-dismiss after 30 seconds
+    setTimeout(() => {
+        if (popup.parentElement) closePopup();
+    }, 30000);
 }
 
 // ===================================
