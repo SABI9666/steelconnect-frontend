@@ -6498,23 +6498,15 @@ async function initializePushNotifications() {
         await navigator.serviceWorker.ready;
         console.log('[PUSH] Service worker is ready');
 
-        // Request notification permission.
-        // Shows a helper guide overlay alongside the browser's native prompt
-        // so users know exactly what to tap. For denied state, guides to settings.
+        // Request notification permission directly (no blocking overlay).
+        // A non-intrusive side popup will appear 5s after login via startNotificationReminder().
         const isStandaloneApp = window.matchMedia('(display-mode: standalone)').matches
             || window.navigator.standalone === true;
         let permission = Notification.permission;
 
-        if (permission === 'default') {
-            // Show guide overlay + trigger browser prompt together
-            permission = await requestNotificationWithGuide(isStandaloneApp);
-        } else if (permission === 'denied') {
-            // Previously denied — show settings guide
-            showNotificationSettingsGuide();
-        }
-
         if (permission !== 'granted') {
-            console.log('[PUSH] Notification permission not granted:', permission);
+            // Don't block login flow — the side popup handles prompting
+            console.log('[PUSH] Notification permission:', permission, '— side popup will prompt user');
             return;
         }
         console.log('[PUSH] Notification permission granted — calls will ring even when app is closed');
@@ -6767,166 +6759,39 @@ window.addEventListener('online', () => {
 });
 
 // ============================================================
-// NOTIFICATION PERMISSION — Guide overlay + browser prompt
-// Shows a helper guide that tells users exactly what to tap on
-// the browser's native permission popup. No confusion.
+// NOTIFICATION PERMISSION — Single side popup + settings toggle
+// One non-intrusive popup at the side of page, 5s after login.
+// Has "Enable Now" button + "Go to Settings" option.
 // ============================================================
 
-// Main function: shows guide overlay BEHIND the browser prompt
-// so users see clear instructions on what to tap.
-function requestNotificationWithGuide(isStandaloneApp) {
-    return new Promise(async (resolve) => {
-        if (Notification.permission !== 'default') {
-            resolve(Notification.permission);
-            return;
-        }
-
-        // Detect platform for tailored instructions
-        const isAndroid = /android/i.test(navigator.userAgent);
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-        const isMobile = isAndroid || isIOS;
-
-        // Create guide overlay — appears BEHIND the browser prompt
-        const guide = document.createElement('div');
-        guide.id = 'notif-guide-overlay';
-        guide.style.cssText = 'position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,0.7);display:flex;flex-direction:column;align-items:center;justify-content:' + (isMobile ? 'flex-start' : 'center') + ';padding:16px;backdrop-filter:blur(4px);animation:npd-fadein 0.3s ease;';
-        guide.innerHTML = `
-            <style>
-                @keyframes npd-fadein{from{opacity:0}to{opacity:1}}
-                @keyframes npd-bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
-                @keyframes npd-point{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
-                @keyframes npd-glow{0%,100%{box-shadow:0 0 20px rgba(16,185,129,0.3)}50%{box-shadow:0 0 40px rgba(16,185,129,0.6)}}
-            </style>
-
-            <!-- Arrow pointing UP to the browser prompt -->
-            <div id="npd-arrow-section" style="text-align:center;margin-top:${isMobile ? '8px' : '0'};margin-bottom:16px;animation:npd-point 1.2s ease-in-out infinite;">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 19V5M5 12l7-7 7 7"/>
-                </svg>
-                <div style="color:#10b981;font-size:16px;font-weight:800;margin-top:4px;text-transform:uppercase;letter-spacing:1px;">Tap "Allow" above</div>
-            </div>
-
-            <!-- Main instruction card -->
-            <div style="background:white;border-radius:24px;max-width:380px;width:100%;padding:28px 24px;box-shadow:0 20px 60px rgba(0,0,0,0.3);text-align:center;">
-                <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#10b981,#059669);margin:0 auto 18px;display:flex;align-items:center;justify-content:center;animation:npd-glow 2s ease-in-out infinite;">
-                    <svg width="30" height="30" viewBox="0 0 24 24" fill="white"><path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24 11.36 11.36 0 003.58.57 1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1 11.36 11.36 0 00.57 3.58 1 1 0 01-.25 1.01l-2.2 2.2z"/></svg>
-                </div>
-
-                <h3 style="margin:0 0 8px;font-size:20px;font-weight:800;color:#1e293b;">Enable Call Notifications</h3>
-                <p style="margin:0 0 20px;font-size:14px;color:#64748b;line-height:1.5;">
-                    A popup will appear at the top.<br>
-                    <strong style="color:#1e293b;font-size:15px;">Tap "Allow"</strong> to receive incoming calls.
-                </p>
-
-                <!-- Visual mockup of what to tap -->
-                <div style="background:#f1f5f9;border-radius:14px;padding:16px;margin-bottom:20px;">
-                    <div style="font-size:12px;color:#94a3b8;margin-bottom:10px;font-weight:600;">WHEN YOU SEE THIS POPUP:</div>
-                    <div style="background:white;border-radius:10px;padding:12px 16px;box-shadow:0 2px 8px rgba(0,0,0,0.08);text-align:left;">
-                        <div style="font-size:13px;color:#475569;margin-bottom:10px;">SteelConnect wants to send you notifications</div>
-                        <div style="display:flex;gap:8px;justify-content:flex-end;">
-                            <div style="padding:8px 16px;border-radius:8px;background:#f1f5f9;color:#64748b;font-size:13px;font-weight:600;">Block</div>
-                            <div style="padding:8px 16px;border-radius:8px;background:linear-gradient(135deg,#10b981,#059669);color:white;font-size:13px;font-weight:700;animation:npd-bounce 1s ease-in-out infinite;position:relative;">
-                                Allow
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="3" stroke-linecap="round" style="position:absolute;top:-18px;left:50%;transform:translateX(-50%);">
-                                    <path d="M12 19V5M5 12l7-7 7 7"/>
-                                </svg>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div style="display:flex;flex-direction:column;gap:6px;text-align:left;padding:0 4px;margin-bottom:16px;">
-                    <div style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:#64748b;">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="#10b981" style="flex-shrink:0;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-                        Receive calls even when app is closed
-                    </div>
-                    <div style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:#64748b;">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="#10b981" style="flex-shrink:0;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-                        Only call notifications — no spam
-                    </div>
-                </div>
-
-                <button id="npd-trigger-btn" style="width:100%;padding:14px;border:none;border-radius:14px;background:linear-gradient(135deg,#10b981,#059669);color:white;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(16,185,129,0.3);display:flex;align-items:center;justify-content:center;gap:8px;-webkit-tap-highlight-color:transparent;">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M12 22c1.1 0 2-.9 2-2h-4a2 2 0 002 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
-                    <span id="npd-trigger-text">Turn On Notifications</span>
-                </button>
-            </div>
-        `;
-        document.body.appendChild(guide);
-
-        let triggered = false;
-        const triggerBtn = document.getElementById('npd-trigger-btn');
-
-        const doRequest = async () => {
-            if (triggered) return;
-            triggered = true;
-
-            // Update button to loading state
-            const triggerText = document.getElementById('npd-trigger-text');
-            triggerText.textContent = 'Waiting for your response...';
-            triggerBtn.style.opacity = '0.7';
-            triggerBtn.style.pointerEvents = 'none';
-
-            // Update the arrow section to be more prominent
-            const arrowSection = document.getElementById('npd-arrow-section');
-            if (arrowSection) {
-                arrowSection.querySelector('div').textContent = 'TAP "ALLOW" ON THE POPUP ABOVE';
-                arrowSection.querySelector('div').style.fontSize = '18px';
-            }
-
-            // Trigger browser's native permission prompt
-            const result = await Notification.requestPermission();
-
-            // Remove guide overlay
-            guide.style.transition = 'opacity 0.3s ease';
-            guide.style.opacity = '0';
-            setTimeout(() => guide.remove(), 300);
-
-            if (result === 'granted') {
-                // Show success toast
-                showNotificationSuccessToast();
-                resolve('granted');
-            } else {
-                // Show settings guide for denied state
-                showNotificationSettingsGuide();
-                resolve(result);
-            }
-        };
-
-        triggerBtn.addEventListener('click', doRequest);
-
-        // Auto-trigger the browser prompt after a brief delay (500ms)
-        // so the guide overlay is visible first
-        setTimeout(() => {
-            if (!triggered) doRequest();
-        }, 600);
-    });
-}
-
-// Success toast after notification permission granted
-function showNotificationSuccessToast() {
-    const toast = document.createElement('div');
-    toast.id = 'notif-success-toast';
-    toast.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-100px);z-index:100003;background:linear-gradient(135deg,#059669,#047857);color:white;border-radius:16px;padding:16px 24px;max-width:380px;width:calc(100% - 32px);box-shadow:0 8px 32px rgba(5,150,105,0.35);display:flex;align-items:center;gap:14px;transition:transform 0.5s cubic-bezier(0.16,1,0.3,1);';
-    toast.innerHTML = `
-        <div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-        </div>
-        <div>
-            <div style="font-weight:700;font-size:16px;margin-bottom:2px;">Notifications Enabled!</div>
-            <div style="font-size:13px;opacity:0.9;">You'll receive incoming calls even when the app is closed or you're logged out.</div>
-        </div>
-    `;
-    document.body.appendChild(toast);
-    requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-            toast.style.transform = 'translateX(-50%) translateY(0)';
-        });
-    });
-    setTimeout(() => {
-        toast.style.transform = 'translateX(-50%) translateY(-100px)';
-        setTimeout(() => { if (toast.parentElement) toast.remove(); }, 500);
-    }, 4000);
+// Enable notifications directly (triggers browser permission + subscribes to push)
+async function enableNotificationsNow() {
+    const permission = Notification.permission;
+    if (permission === 'granted') {
+        // Already granted — just ensure push subscription exists
+        try {
+            const registration = await navigator.serviceWorker.ready;
+            await subscribeToWebPush(registration);
+        } catch (e) { console.warn('[NOTIF] Subscribe error:', e); }
+        return 'granted';
+    }
+    if (permission === 'denied') {
+        showNotificationSettingsGuide();
+        return 'denied';
+    }
+    // permission === 'default' — ask the browser
+    const result = await Notification.requestPermission();
+    if (result === 'granted') {
+        try {
+            const registration = await navigator.serviceWorker.ready;
+            await subscribeToWebPush(registration);
+            showNotification('Call notifications enabled! You\'ll receive calls even when logged out.', 'success');
+            stopNotificationReminder();
+        } catch (e) { console.warn('[NOTIF] Subscribe error:', e); }
+    } else {
+        showNotificationSettingsGuide();
+    }
+    return result;
 }
 
 // Settings guide — shown when notifications are DENIED.
@@ -6938,10 +6803,8 @@ function showNotificationSettingsGuide() {
 
     const isAndroid = /android/i.test(navigator.userAgent);
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    const isChrome = /chrome/i.test(navigator.userAgent) && !/edg/i.test(navigator.userAgent);
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 
-    // Platform-specific instructions
     let steps = '';
     if (isAndroid && isStandalone) {
         steps = `
@@ -6951,8 +6814,7 @@ function showNotificationSettingsGuide() {
                 <strong>Step 2:</strong> Tap <strong>"App info"</strong> or <strong>"i"</strong> icon<br>
                 <strong>Step 3:</strong> Tap <strong>"Notifications"</strong><br>
                 <strong>Step 4:</strong> Toggle <strong>ON</strong> "Allow notifications"
-            </div>
-        `;
+            </div>`;
     } else if (isAndroid) {
         steps = `
             <div style="font-weight:700;font-size:13px;color:#92400e;margin-bottom:8px;">How to enable:</div>
@@ -6961,8 +6823,7 @@ function showNotificationSettingsGuide() {
                 <strong>Step 2:</strong> Tap <strong>"Permissions"</strong> or <strong>"Site settings"</strong><br>
                 <strong>Step 3:</strong> Find <strong>"Notifications"</strong><br>
                 <strong>Step 4:</strong> Change to <strong>"Allow"</strong>
-            </div>
-        `;
+            </div>`;
     } else if (isIOS) {
         steps = `
             <div style="font-weight:700;font-size:13px;color:#92400e;margin-bottom:8px;">How to enable:</div>
@@ -6971,10 +6832,8 @@ function showNotificationSettingsGuide() {
                 <strong>Step 2:</strong> Scroll down to <strong>SteelConnect</strong><br>
                 <strong>Step 3:</strong> Tap <strong>"Notifications"</strong><br>
                 <strong>Step 4:</strong> Toggle <strong>ON</strong> "Allow Notifications"
-            </div>
-        `;
+            </div>`;
     } else {
-        // Desktop browser
         steps = `
             <div style="font-weight:700;font-size:13px;color:#92400e;margin-bottom:8px;">How to enable:</div>
             <div style="font-size:13px;color:#78350f;line-height:1.8;">
@@ -6982,8 +6841,7 @@ function showNotificationSettingsGuide() {
                 <strong>Step 2:</strong> Find <strong>"Notifications"</strong><br>
                 <strong>Step 3:</strong> Change from "Block" to <strong>"Allow"</strong><br>
                 <strong>Step 4:</strong> Refresh the page
-            </div>
-        `;
+            </div>`;
     }
 
     const guide = document.createElement('div');
@@ -6993,60 +6851,27 @@ function showNotificationSettingsGuide() {
         <style>@keyframes npd-fadein{from{opacity:0}to{opacity:1}}</style>
         <div style="background:white;border-radius:24px;max-width:400px;width:100%;padding:28px 24px;box-shadow:0 20px 60px rgba(0,0,0,0.25);text-align:center;">
             <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#f59e0b,#d97706);margin:0 auto 18px;display:flex;align-items:center;justify-content:center;">
-                <svg width="30" height="30" viewBox="0 0 24 24" fill="white"><path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1115.6 12 3.6 3.6 0 0112 15.6z"/></svg>
+                <i class="fas fa-cog" style="color:white;font-size:28px;"></i>
             </div>
-
             <h3 style="margin:0 0 6px;font-size:19px;font-weight:800;color:#1e293b;">Notifications Are Blocked</h3>
             <p style="margin:0 0 18px;font-size:13.5px;color:#64748b;line-height:1.5;">
                 You won't receive incoming calls when the app is closed. Follow these steps to enable:
             </p>
-
             <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:14px;padding:16px;text-align:left;margin-bottom:20px;">
                 ${steps}
             </div>
-
-            ${isAndroid && !isStandalone ? `
-            <a id="npd-open-settings" href="#" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:13px;border:none;border-radius:14px;background:linear-gradient(135deg,#3b82f6,#2563eb);color:white;font-size:14px;font-weight:700;cursor:pointer;text-decoration:none;box-shadow:0 4px 14px rgba(59,130,246,0.3);margin-bottom:10px;">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58z"/></svg>
-                Open Site Settings
-            </a>
-            ` : ''}
-
             <button id="npd-settings-close" style="width:100%;padding:12px;border:none;border-radius:12px;background:#f1f5f9;color:#64748b;font-size:14px;font-weight:600;cursor:pointer;">
-                I'll do it later
+                Got it
             </button>
         </div>
     `;
     document.body.appendChild(guide);
 
-    // Close button
     document.getElementById('npd-settings-close').addEventListener('click', () => {
         guide.style.transition = 'opacity 0.3s ease';
         guide.style.opacity = '0';
         setTimeout(() => guide.remove(), 300);
     });
-
-    // Open site settings on Android Chrome (browser mode)
-    const openSettingsBtn = document.getElementById('npd-open-settings');
-    if (openSettingsBtn) {
-        openSettingsBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            // Try to open site notification settings via intent
-            try {
-                // Chrome Android: open the site-specific settings page
-                const url = new URL(window.location.href);
-                window.open('intent://settings/notifications#Intent;scheme=android-app;package=com.android.chrome;S.options_url=' + encodeURIComponent(url.origin) + ';end', '_blank');
-            } catch(err) {
-                // Fallback: just show more detailed instructions
-                openSettingsBtn.innerHTML = '<span style="font-size:13px;">Open Chrome Menu → Settings → Site settings → Notifications</span>';
-                openSettingsBtn.style.background = '#e2e8f0';
-                openSettingsBtn.style.color = '#475569';
-                openSettingsBtn.style.boxShadow = 'none';
-            }
-        });
-    }
-
-    // Click outside to close
     guide.addEventListener('click', (e) => {
         if (e.target === guide) {
             guide.style.transition = 'opacity 0.3s ease';
@@ -10518,7 +10343,7 @@ function getSettingsTemplate(user) {
             <div style="display:flex;flex-direction:column;gap:8px;">
                 <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#059669;"><i class="fas fa-check" style="font-size:11px;"></i> Incoming calls will ring on this device</div>
                 <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#059669;"><i class="fas fa-check" style="font-size:11px;"></i> Works even after logout or app close</div>
-                <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#059669;"><i class="fas fa-check" style="font-size:11px;"></i> Only call notifications — no spam</div>
+                <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#059669;"><i class="fas fa-check" style="font-size:11px;"></i> Only call notifications — nothing else</div>
             </div>
             ` : ''}
         </div>`;
@@ -10539,37 +10364,15 @@ function initSettingsNotificationHandlers() {
     const toggle = document.getElementById('settings-notif-toggle');
     if (toggle) {
         toggle.addEventListener('change', async function() {
-            const permission = Notification.permission;
             if (this.checked) {
-                // User wants to enable notifications
-                if (permission === 'granted') {
-                    // Already granted — just subscribe to push
-                    const registration = await navigator.serviceWorker.ready;
-                    await subscribeToWebPush(registration);
-                    showNotification('Call notifications are enabled!', 'success');
-                    renderAppSection('settings'); // Refresh card
-                } else if (permission === 'denied') {
-                    // Blocked — show settings guide
-                    this.checked = false;
-                    showNotificationSettingsGuide();
-                } else {
-                    // Default — request permission with guide
-                    const result = await requestNotificationWithGuide(false);
-                    if (result === 'granted') {
-                        const registration = await navigator.serviceWorker.ready;
-                        await subscribeToWebPush(registration);
-                        showNotification('Call notifications are enabled!', 'success');
-                    }
-                    renderAppSection('settings'); // Refresh card
-                }
+                const result = await enableNotificationsNow();
+                renderAppSection('settings');
             } else {
                 // User toggled OFF — unsubscribe from push
                 try {
                     const registration = await navigator.serviceWorker.ready;
                     const subscription = await registration.pushManager.getSubscription();
-                    if (subscription) {
-                        await subscription.unsubscribe();
-                    }
+                    if (subscription) await subscription.unsubscribe();
                     showNotification('Call notifications turned off. You won\'t receive calls when logged out.', 'info');
                 } catch (err) {
                     console.warn('[SETTINGS] Unsubscribe error:', err);
@@ -10584,13 +10387,8 @@ function initSettingsNotificationHandlers() {
         enableBtn.addEventListener('click', async () => {
             enableBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enabling...';
             enableBtn.style.pointerEvents = 'none';
-            const result = await requestNotificationWithGuide(false);
-            if (result === 'granted') {
-                const registration = await navigator.serviceWorker.ready;
-                await subscribeToWebPush(registration);
-                showNotification('Call notifications are enabled!', 'success');
-            }
-            renderAppSection('settings'); // Refresh card to show new state
+            await enableNotificationsNow();
+            renderAppSection('settings');
         });
     }
 
@@ -10603,76 +10401,72 @@ function initSettingsNotificationHandlers() {
     }
 }
 
-// Periodic in-app popup reminding users to enable notifications.
-// Shows as a non-blocking bottom banner every 5 minutes if notifications are off.
-// Dismissed for the session once user clicks "Enable" or "Dismiss".
-let _notifReminderInterval = null;
+// Single notification popup — appears at the side of the page, 5 seconds after login.
+// Non-intrusive, has "Enable Now" button and "Go to Settings" option.
+// Shows only ONCE per session. Works on both desktop (right side) and mobile (bottom).
+let _notifReminderTimer = null;
 function startNotificationReminder() {
-    // Don't start if already running
-    if (_notifReminderInterval) return;
-    // Don't remind if not supported
+    if (_notifReminderTimer) return;
     if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
+    // Skip if already granted or already shown this session
+    if (Notification.permission === 'granted') return;
+    if (sessionStorage.getItem('notif_reminder_shown')) return;
 
-    const checkAndShow = () => {
-        // Skip if already granted or dismissed this session
-        if (Notification.permission === 'granted') {
-            stopNotificationReminder();
-            return;
-        }
-        if (sessionStorage.getItem('notif_reminder_dismissed')) return;
-        // Don't show if another guide/overlay is already visible
-        if (document.getElementById('notif-guide-overlay') || document.getElementById('notif-settings-guide')) return;
-
+    // Show once after 5 seconds
+    _notifReminderTimer = setTimeout(() => {
+        if (Notification.permission === 'granted') return;
+        if (sessionStorage.getItem('notif_reminder_shown')) return;
+        sessionStorage.setItem('notif_reminder_shown', 'true');
         showNotificationReminderPopup();
-    };
-
-    // First reminder after 30 seconds, then every 5 minutes
-    setTimeout(checkAndShow, 30000);
-    _notifReminderInterval = setInterval(checkAndShow, 5 * 60 * 1000);
+    }, 5000);
 }
 
 function stopNotificationReminder() {
-    if (_notifReminderInterval) {
-        clearInterval(_notifReminderInterval);
-        _notifReminderInterval = null;
+    if (_notifReminderTimer) {
+        clearTimeout(_notifReminderTimer);
+        _notifReminderTimer = null;
     }
 }
 
 function showNotificationReminderPopup() {
-    // Remove existing reminder if any
     const existing = document.getElementById('notif-reminder-popup');
     if (existing) existing.remove();
 
     const isDenied = Notification.permission === 'denied';
+    const isMobile = window.innerWidth <= 768;
 
     const popup = document.createElement('div');
     popup.id = 'notif-reminder-popup';
-    popup.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(120px);z-index:99999;background:white;border-radius:20px;max-width:400px;width:calc(100% - 32px);padding:20px;box-shadow:0 16px 48px rgba(0,0,0,0.18),0 0 0 1px rgba(0,0,0,0.05);transition:transform 0.5s cubic-bezier(0.16,1,0.3,1);';
+    // Desktop: right side. Mobile: bottom of screen
+    popup.style.cssText = isMobile
+        ? 'position:fixed;bottom:16px;left:12px;right:12px;z-index:99999;background:white;border-radius:18px;padding:18px;box-shadow:0 12px 40px rgba(0,0,0,0.18),0 0 0 1px rgba(0,0,0,0.04);transform:translateY(120%);transition:transform 0.5s cubic-bezier(0.16,1,0.3,1);'
+        : 'position:fixed;bottom:24px;right:24px;z-index:99999;background:white;border-radius:18px;padding:20px;width:360px;box-shadow:0 12px 40px rgba(0,0,0,0.18),0 0 0 1px rgba(0,0,0,0.04);transform:translateX(120%);transition:transform 0.5s cubic-bezier(0.16,1,0.3,1);';
+
     popup.innerHTML = `
-        <div style="display:flex;gap:14px;align-items:flex-start;">
-            <div style="width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,#10b981,#059669);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                <i class="fas fa-phone-alt" style="color:white;font-size:18px;"></i>
+        <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:14px;">
+            <div style="width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,#10b981,#059669);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i class="fas fa-phone-alt" style="color:white;font-size:16px;"></i>
             </div>
             <div style="flex:1;min-width:0;">
-                <div style="font-weight:800;font-size:15px;color:#1e293b;margin-bottom:4px;">Enable Call Notifications</div>
-                <div style="font-size:13px;color:#64748b;line-height:1.5;margin-bottom:14px;">Turn on notifications in <strong>Settings</strong> to receive incoming calls even when you're logged out or the app is closed.</div>
-                <div style="display:flex;gap:8px;">
-                    ${isDenied ? `
-                    <button id="notif-reminder-settings" style="flex:1;padding:10px;border:none;border-radius:10px;background:linear-gradient(135deg,#3b82f6,#2563eb);color:white;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
-                        <i class="fas fa-cog"></i> How to Enable
-                    </button>
-                    ` : `
-                    <button id="notif-reminder-enable" style="flex:1;padding:10px;border:none;border-radius:10px;background:linear-gradient(135deg,#10b981,#059669);color:white;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
-                        <i class="fas fa-bell"></i> Turn On Now
-                    </button>
-                    `}
-                    <button id="notif-reminder-go-settings" style="flex:1;padding:10px;border:none;border-radius:10px;background:#f1f5f9;color:#475569;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
-                        <i class="fas fa-cog"></i> Go to Settings
-                    </button>
-                </div>
+                <div style="font-weight:800;font-size:14.5px;color:#1e293b;margin-bottom:3px;">Incoming Call Notifications</div>
+                <div style="font-size:12.5px;color:#64748b;line-height:1.5;">Enable notifications to receive incoming calls even when you're logged out or the app is closed.</div>
             </div>
-            <button id="notif-reminder-close" style="border:none;background:none;color:#94a3b8;cursor:pointer;padding:2px;margin-top:-4px;margin-right:-4px;">
+            <button id="notif-reminder-close" style="border:none;background:none;color:#94a3b8;cursor:pointer;padding:0;line-height:1;flex-shrink:0;">
                 <i class="fas fa-times" style="font-size:14px;"></i>
+            </button>
+        </div>
+        <div style="display:flex;gap:8px;">
+            ${isDenied ? `
+            <button id="notif-reminder-settings-guide" style="flex:1;padding:10px;border:none;border-radius:10px;background:linear-gradient(135deg,#3b82f6,#2563eb);color:white;font-size:12.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+                <i class="fas fa-cog"></i> How to Enable
+            </button>
+            ` : `
+            <button id="notif-reminder-enable" style="flex:1;padding:10px;border:none;border-radius:10px;background:linear-gradient(135deg,#10b981,#059669);color:white;font-size:12.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+                <i class="fas fa-bell"></i> Enable Now
+            </button>
+            `}
+            <button id="notif-reminder-go-settings" style="flex:1;padding:10px;border:none;border-radius:10px;background:#f1f5f9;color:#475569;font-size:12.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+                <i class="fas fa-cog"></i> Go to Settings
             </button>
         </div>
     `;
@@ -10681,40 +10475,38 @@ function showNotificationReminderPopup() {
     // Animate in
     requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-            popup.style.transform = 'translateX(-50%) translateY(0)';
+            popup.style.transform = isMobile ? 'translateY(0)' : 'translateX(0)';
         });
     });
 
     const closePopup = () => {
-        popup.style.transform = 'translateX(-50%) translateY(120px)';
+        popup.style.transform = isMobile ? 'translateY(120%)' : 'translateX(120%)';
         setTimeout(() => { if (popup.parentElement) popup.remove(); }, 500);
     };
 
-    // Close button — dismiss for this session
-    document.getElementById('notif-reminder-close').addEventListener('click', () => {
-        sessionStorage.setItem('notif_reminder_dismissed', 'true');
-        closePopup();
-    });
+    // Close button
+    document.getElementById('notif-reminder-close').addEventListener('click', closePopup);
 
-    // "Turn On Now" button
+    // "Enable Now" button
     const enableBtn = document.getElementById('notif-reminder-enable');
     if (enableBtn) {
         enableBtn.addEventListener('click', async () => {
+            enableBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enabling...';
+            enableBtn.style.pointerEvents = 'none';
+            const result = await enableNotificationsNow();
             closePopup();
-            const result = await requestNotificationWithGuide(false);
             if (result === 'granted') {
-                const registration = await navigator.serviceWorker.ready;
-                await subscribeToWebPush(registration);
-                showNotification('Call notifications are enabled!', 'success');
-                stopNotificationReminder();
+                // Refresh settings page if visible
+                const settingsCard = document.getElementById('settings-notification-card');
+                if (settingsCard) renderAppSection('settings');
             }
         });
     }
 
-    // "How to Enable" button (for denied state)
-    const settingsBtn = document.getElementById('notif-reminder-settings');
-    if (settingsBtn) {
-        settingsBtn.addEventListener('click', () => {
+    // "How to Enable" button (denied state)
+    const guideBtn = document.getElementById('notif-reminder-settings-guide');
+    if (guideBtn) {
+        guideBtn.addEventListener('click', () => {
             closePopup();
             showNotificationSettingsGuide();
         });
@@ -10724,17 +10516,16 @@ function showNotificationReminderPopup() {
     document.getElementById('notif-reminder-go-settings').addEventListener('click', () => {
         closePopup();
         renderAppSection('settings');
-        // Scroll to notification card
         setTimeout(() => {
             const card = document.getElementById('settings-notification-card');
             if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }, 300);
     });
 
-    // Auto-dismiss after 30 seconds
+    // Auto-dismiss after 20 seconds
     setTimeout(() => {
         if (popup.parentElement) closePopup();
-    }, 30000);
+    }, 20000);
 }
 
 // ===================================
