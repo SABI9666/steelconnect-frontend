@@ -6644,8 +6644,15 @@ async function subscribeToWebPush(registration) {
         let subscription = await registration.pushManager.getSubscription();
         if (subscription) {
             try {
+                const oldEndpoint = subscription.endpoint;
                 await subscription.unsubscribe();
                 console.log('[PUSH] Unsubscribed old push subscription (will re-create with current VAPID key)');
+                // Tell backend to remove old subscription so it doesn't try sending to dead endpoint
+                fetch(`${backendUrl}/api/push/unsubscribe`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: appState.currentUser.id, endpoint: oldEndpoint })
+                }).catch(() => {});
             } catch (e) {
                 console.warn('[PUSH] Failed to unsubscribe old subscription:', e.message);
             }
@@ -6772,6 +6779,7 @@ async function enableNotificationsNow() {
         try {
             const registration = await navigator.serviceWorker.ready;
             await subscribeToWebPush(registration);
+            await tryFCMSetup(registration);
         } catch (e) { console.warn('[NOTIF] Subscribe error:', e); }
         return 'granted';
     }
@@ -6785,6 +6793,7 @@ async function enableNotificationsNow() {
         try {
             const registration = await navigator.serviceWorker.ready;
             await subscribeToWebPush(registration);
+            await tryFCMSetup(registration);
             showNotification('Call notifications enabled! You\'ll receive calls even when logged out.', 'success');
             stopNotificationReminder();
         } catch (e) { console.warn('[NOTIF] Subscribe error:', e); }
