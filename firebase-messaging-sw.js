@@ -3,9 +3,10 @@
 // Works with Web Push (VAPID) — no Firebase client SDK required.
 // IMPORTANT: Bump SW_VERSION on every deploy to trigger update in installed PWA apps.
 
-const SW_VERSION = '3.1.0';
+const SW_VERSION = '3.2.0';
 const CACHE_NAME = 'steelconnect-v' + SW_VERSION;
-const BACKEND_URL = 'https://steelconnect-backend.onrender.com';
+const IS_LOCAL = self.location.hostname === 'localhost' || self.location.hostname === '127.0.0.1';
+const BACKEND_URL = IS_LOCAL ? 'http://localhost:10000' : 'https://steelconnect-backend.onrender.com';
 const APP_NAME = 'SteelConnect';
 
 // Files to precache for offline shell (critical app assets)
