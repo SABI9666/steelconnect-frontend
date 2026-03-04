@@ -6780,44 +6780,156 @@ function showNotificationPermissionDialog() {
 
         const dialog = document.createElement('div');
         dialog.id = 'notif-permission-dialog';
-        dialog.style.cssText = 'position:fixed;inset:0;z-index:100002;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(4px);animation:npd-fadein 0.3s ease;';
+        dialog.style.cssText = 'position:fixed;inset:0;z-index:100002;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(6px);animation:npd-fadein 0.3s ease;';
         dialog.innerHTML = `
             <style>
                 @keyframes npd-fadein{from{opacity:0}to{opacity:1}}
-                @keyframes npd-scalein{from{transform:scale(0.9);opacity:0}to{transform:scale(1);opacity:1}}
+                @keyframes npd-scalein{from{transform:scale(0.85) translateY(20px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
                 @keyframes npd-ring{0%,100%{transform:rotate(0)}10%{transform:rotate(14deg)}20%{transform:rotate(-14deg)}30%{transform:rotate(10deg)}40%{transform:rotate(-8deg)}50%{transform:rotate(4deg)}60%{transform:rotate(0)}}
+                @keyframes npd-pulse{0%,100%{box-shadow:0 4px 14px rgba(16,185,129,0.3)}50%{box-shadow:0 4px 24px rgba(16,185,129,0.5)}}
+                @keyframes npd-check{0%{transform:scale(0) rotate(-45deg);opacity:0}50%{transform:scale(1.2) rotate(0deg);opacity:1}100%{transform:scale(1) rotate(0deg);opacity:1}}
+                @keyframes npd-success-bg{from{background:linear-gradient(135deg,#10b981,#059669)}to{background:linear-gradient(135deg,#059669,#047857)}}
+                #npd-allow:hover{transform:scale(1.02)!important}
+                #npd-allow:active{transform:scale(0.98)!important}
             </style>
-            <div style="background:#fff;border-radius:20px;max-width:380px;width:100%;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,0.2);animation:npd-scalein 0.35s cubic-bezier(0.16,1,0.3,1);text-align:center;">
-                <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#10b981,#059669);margin:0 auto 20px;display:flex;align-items:center;justify-content:center;">
-                    <i class="fas fa-phone-alt" style="font-size:28px;color:white;animation:npd-ring 1.5s ease infinite;"></i>
+            <div id="npd-card" style="background:#fff;border-radius:24px;max-width:380px;width:100%;padding:36px 28px 28px;box-shadow:0 24px 80px rgba(0,0,0,0.25);animation:npd-scalein 0.4s cubic-bezier(0.16,1,0.3,1);text-align:center;position:relative;overflow:hidden;">
+                <div id="npd-icon-wrap" style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#10b981,#059669);margin:0 auto 22px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(16,185,129,0.25);transition:all 0.5s ease;">
+                    <i id="npd-icon" class="fas fa-phone-alt" style="font-size:30px;color:white;animation:npd-ring 1.5s ease infinite;transition:all 0.4s ease;"></i>
                 </div>
-                <h3 style="margin:0 0 8px;font-size:20px;font-weight:800;color:#1e293b;">Never Miss a Call</h3>
-                <p style="margin:0 0 6px;font-size:14px;color:#64748b;line-height:1.5;">
-                    SteelConnect needs notification permission to ring your device for incoming calls — <strong>even when the app is closed</strong>.
+                <h3 id="npd-title" style="margin:0 0 10px;font-size:21px;font-weight:800;color:#1e293b;transition:all 0.3s ease;">Never Miss a Call</h3>
+                <p id="npd-desc" style="margin:0 0 8px;font-size:14px;color:#64748b;line-height:1.6;transition:all 0.3s ease;">
+                    Enable notifications to receive <strong>incoming calls</strong> on this device — even when the app is in the background or closed.
                 </p>
-                <p style="margin:0 0 24px;font-size:12.5px;color:#94a3b8;">
-                    Works like WhatsApp & Teams. You'll only get call notifications.
-                </p>
-                <button id="npd-allow" style="width:100%;padding:14px;border:none;border-radius:12px;background:linear-gradient(135deg,#10b981,#059669);color:white;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px;box-shadow:0 4px 14px rgba(16,185,129,0.3);transition:transform 0.15s;">
-                    <i class="fas fa-bell" style="margin-right:8px;"></i> Allow Call Notifications
+                <div id="npd-features" style="margin:0 0 24px;text-align:left;padding:0 8px;">
+                    <div style="display:flex;align-items:center;gap:10px;padding:6px 0;font-size:13px;color:#475569;">
+                        <i class="fas fa-check-circle" style="color:#10b981;font-size:15px;flex-shrink:0;"></i>
+                        <span>Ring on incoming calls like WhatsApp & Teams</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px;padding:6px 0;font-size:13px;color:#475569;">
+                        <i class="fas fa-check-circle" style="color:#10b981;font-size:15px;flex-shrink:0;"></i>
+                        <span>Works even after logout or app is closed</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px;padding:6px 0;font-size:13px;color:#475569;">
+                        <i class="fas fa-check-circle" style="color:#10b981;font-size:15px;flex-shrink:0;"></i>
+                        <span>Only call notifications — no spam, ever</span>
+                    </div>
+                </div>
+                <button id="npd-allow" style="width:100%;padding:15px;border:none;border-radius:14px;background:linear-gradient(135deg,#10b981,#059669);color:white;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px;box-shadow:0 4px 14px rgba(16,185,129,0.3);transition:all 0.2s ease;animation:npd-pulse 2s ease-in-out infinite;display:flex;align-items:center;justify-content:center;gap:8px;">
+                    <i class="fas fa-bell" style="font-size:16px;"></i>
+                    <span id="npd-allow-text">Enable Call Notifications</span>
                 </button>
-                <button id="npd-skip" style="width:100%;padding:10px;border:none;border-radius:10px;background:transparent;color:#94a3b8;font-size:13px;cursor:pointer;">
-                    Not now
-                </button>
+                <p style="margin:4px 0 0;font-size:11px;color:#cbd5e1;">One tap — stays enabled permanently</p>
             </div>
         `;
         document.body.appendChild(dialog);
 
-        document.getElementById('npd-allow').addEventListener('click', async () => {
-            dialog.remove();
-            // Now trigger the browser's native permission prompt
+        const allowBtn = document.getElementById('npd-allow');
+        let processing = false;
+
+        allowBtn.addEventListener('click', async () => {
+            if (processing) return;
+            processing = true;
+
+            // Immediately show "enabling" state — no delay, no second popup feeling
+            const allowText = document.getElementById('npd-allow-text');
+            const bellIcon = allowBtn.querySelector('.fa-bell');
+            allowBtn.style.animation = 'none';
+            allowBtn.style.pointerEvents = 'none';
+            allowText.textContent = 'Enabling...';
+            if (bellIcon) bellIcon.className = 'fas fa-spinner fa-spin';
+
+            // Trigger browser's native permission prompt
             const result = await Notification.requestPermission();
-            resolve(result);
+
+            if (result === 'granted') {
+                // Show success state inside the SAME dialog — seamless feel
+                const iconWrap = document.getElementById('npd-icon-wrap');
+                const icon = document.getElementById('npd-icon');
+                const title = document.getElementById('npd-title');
+                const desc = document.getElementById('npd-desc');
+                const features = document.getElementById('npd-features');
+
+                // Transition to success
+                icon.style.animation = 'none';
+                icon.className = 'fas fa-check';
+                icon.style.fontSize = '36px';
+                icon.style.animation = 'npd-check 0.5s cubic-bezier(0.16,1,0.3,1) forwards';
+                iconWrap.style.background = 'linear-gradient(135deg,#059669,#047857)';
+                iconWrap.style.boxShadow = '0 8px 24px rgba(5,150,105,0.35)';
+
+                title.textContent = 'You\'re All Set!';
+                title.style.color = '#059669';
+                desc.innerHTML = 'Notifications are <strong>enabled</strong>. You\'ll receive incoming calls on this device even when the app is closed or you\'re logged out.';
+                features.style.display = 'none';
+
+                allowBtn.style.background = 'linear-gradient(135deg,#059669,#047857)';
+                allowText.textContent = 'Notifications Enabled';
+                if (bellIcon) { bellIcon.className = 'fas fa-check-circle'; bellIcon.style.animation = 'none'; }
+
+                // Auto-close after 1.8 seconds
+                setTimeout(() => {
+                    dialog.style.transition = 'opacity 0.3s ease';
+                    dialog.style.opacity = '0';
+                    setTimeout(() => {
+                        dialog.remove();
+                        resolve('granted');
+                    }, 300);
+                }, 1800);
+            } else {
+                // Denied or dismissed — show denied state briefly, then close
+                const iconWrap = document.getElementById('npd-icon-wrap');
+                const icon = document.getElementById('npd-icon');
+                const title = document.getElementById('npd-title');
+                const desc = document.getElementById('npd-desc');
+                const features = document.getElementById('npd-features');
+
+                icon.style.animation = 'none';
+                icon.className = 'fas fa-bell-slash';
+                icon.style.fontSize = '30px';
+                iconWrap.style.background = 'linear-gradient(135deg,#f59e0b,#d97706)';
+                iconWrap.style.boxShadow = '0 8px 24px rgba(245,158,11,0.3)';
+
+                title.textContent = 'Notifications Blocked';
+                title.style.color = '#d97706';
+                desc.innerHTML = 'You won\'t receive calls when the app is closed.<br><span style="font-size:12px;color:#94a3b8;">You can enable notifications anytime from your browser settings.</span>';
+                features.style.display = 'none';
+
+                allowBtn.style.background = '#e2e8f0';
+                allowBtn.style.color = '#64748b';
+                allowBtn.style.boxShadow = 'none';
+                allowText.textContent = 'Got it';
+                if (bellIcon) { bellIcon.className = 'fas fa-times'; bellIcon.style.animation = 'none'; }
+                allowBtn.style.pointerEvents = 'auto';
+
+                // Allow closing by clicking "Got it"
+                allowBtn.onclick = () => {
+                    dialog.style.transition = 'opacity 0.3s ease';
+                    dialog.style.opacity = '0';
+                    setTimeout(() => {
+                        dialog.remove();
+                        resolve(result);
+                    }, 300);
+                };
+
+                // Also auto-close after 5 seconds
+                setTimeout(() => {
+                    if (dialog.parentElement) {
+                        dialog.style.transition = 'opacity 0.3s ease';
+                        dialog.style.opacity = '0';
+                        setTimeout(() => {
+                            dialog.remove();
+                            resolve(result);
+                        }, 300);
+                    }
+                }, 5000);
+            }
         });
 
-        document.getElementById('npd-skip').addEventListener('click', () => {
-            dialog.remove();
-            resolve('default');
+        // Clicking outside the card also triggers the permission (treat as "enable")
+        dialog.addEventListener('click', (e) => {
+            if (e.target === dialog && !processing) {
+                allowBtn.click();
+            }
         });
     });
 }
