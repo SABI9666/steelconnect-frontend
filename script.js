@@ -6526,6 +6526,13 @@ async function initializePushNotifications() {
             await tryFCMSetup(registration);
 
             console.log('[PUSH] Push fully configured — calls will ring even when app is closed');
+
+            // On Android mobile: show battery optimization guide ONCE after first notification enable
+            const isAndroid = /android/i.test(navigator.userAgent);
+            if (isAndroid && !localStorage.getItem('battery_opt_shown')) {
+                localStorage.setItem('battery_opt_shown', 'true');
+                setTimeout(() => showBatteryOptimizationGuide(), 1500);
+            }
         }
 
         // Listen for messages from service worker
@@ -6649,34 +6656,58 @@ async function subscribeToWebPush(registration) {
         // Convert VAPID key from base64url to Uint8Array
         const vapidPublicKey = urlBase64ToUint8Array(keyData.publicKey);
 
-        // Always unsubscribe existing subscription and create fresh one.
-        // This guarantees the subscription uses the current VAPID key (which may have
-        // changed if server was restarted before VAPID persistence was deployed).
+        // IMPORTANT: Reuse existing subscription if VAPID key hasn't changed.
+        // Destroying and recreating the subscription on every login creates a NEW endpoint,
+        // which invalidates the old one. The old endpoint was the one the backend had registered
+        // for sending push notifications — including when the user is logged out.
+        // By keeping the same subscription, the push endpoint stays stable and push notifications
+        // continue to work even after logout (like WhatsApp/Teams).
         let subscription = await registration.pushManager.getSubscription();
+
         if (subscription) {
+            // Compare existing subscription's VAPID key with the current one from backend
+            let sameKey = false;
             try {
+                const existingKey = subscription.options && subscription.options.applicationServerKey;
+                if (existingKey) {
+                    const existingArr = new Uint8Array(existingKey);
+                    sameKey = existingArr.length === vapidPublicKey.length &&
+                        existingArr.every((val, i) => val === vapidPublicKey[i]);
+                }
+            } catch (e) {
+                console.warn('[PUSH] Could not compare VAPID keys:', e.message);
+            }
+
+            if (sameKey) {
+                // Same VAPID key — keep existing subscription (preserves endpoint across login/logout)
+                console.log('[PUSH] Reusing existing Web Push subscription (VAPID key unchanged)');
+            } else {
+                // VAPID key changed (server restarted with new keys) — must create new subscription
+                console.log('[PUSH] VAPID key changed — replacing push subscription');
                 const oldEndpoint = subscription.endpoint;
                 await subscription.unsubscribe();
-                console.log('[PUSH] Unsubscribed old push subscription (will re-create with current VAPID key)');
-                // Tell backend to remove old subscription so it doesn't try sending to dead endpoint
+                // Tell backend to remove old subscription (endpoint is now dead)
                 fetch(`${backendUrl}/api/push/unsubscribe`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ userId: appState.currentUser.id, endpoint: oldEndpoint })
                 }).catch(() => {});
-            } catch (e) {
-                console.warn('[PUSH] Failed to unsubscribe old subscription:', e.message);
+                subscription = null;
             }
         }
 
-        // Create new push subscription with the current VAPID key
-        subscription = await registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: vapidPublicKey
-        });
-        console.log('[PUSH] New Web Push subscription created with current VAPID key');
+        if (!subscription) {
+            // Create new push subscription with the current VAPID key
+            subscription = await registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: vapidPublicKey
+            });
+            console.log('[PUSH] New Web Push subscription created');
+        }
 
-        // Register subscription with backend (so it can send push to this device)
+        // Always register/re-register subscription with backend on login.
+        // This ensures the userId → subscription mapping exists even if the
+        // subscription endpoint hasn't changed (e.g., after logout and re-login).
         const subResponse = await fetch(`${backendUrl}/api/push/subscribe`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -6812,6 +6843,81 @@ async function enableNotificationsNow() {
         showNotificationSettingsGuide();
     }
     return result;
+}
+
+// Battery optimization guide — shown ONCE on Android after notification permission granted.
+// Provides a button to open Android battery settings directly so user can whitelist Chrome.
+function showBatteryOptimizationGuide() {
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    const appName = isStandalone ? 'SteelConnect' : 'Chrome';
+
+    const guide = document.createElement('div');
+    guide.id = 'battery-opt-guide';
+    guide.style.cssText = 'position:fixed;inset:0;z-index:100001;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(4px);animation:npd-fadein 0.3s ease;';
+    guide.innerHTML = `
+        <style>@keyframes npd-fadein{from{opacity:0}to{opacity:1}}</style>
+        <div style="background:white;border-radius:24px;max-width:400px;width:100%;padding:28px 24px;box-shadow:0 20px 60px rgba(0,0,0,0.25);text-align:center;">
+            <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#10b981,#059669);margin:0 auto 18px;display:flex;align-items:center;justify-content:center;">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="6" width="18" height="12" rx="2" ry="2"/><line x1="23" y1="13" x2="23" y2="11"/><line x1="6" y1="10" x2="6" y2="14"/><line x1="10" y1="10" x2="10" y2="14"/><line x1="14" y1="10" x2="14" y2="14"/></svg>
+            </div>
+            <h3 style="margin:0 0 8px;font-size:19px;font-weight:800;color:#1e293b;">One More Step</h3>
+            <p style="margin:0 0 6px;font-size:14.5px;color:#1e293b;font-weight:600;">
+                Disable Battery Optimization for ${appName}
+            </p>
+            <p style="margin:0 0 20px;font-size:13px;color:#64748b;line-height:1.6;">
+                Android may block incoming calls to save battery. Disable optimization so calls always ring — even when screen is off.
+            </p>
+
+            <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:14px;padding:14px;text-align:left;margin-bottom:16px;">
+                <div style="font-size:13px;color:#166534;line-height:1.8;">
+                    <strong>When settings open:</strong><br>
+                    1. Find <strong>${appName}</strong> in the app list<br>
+                    2. Tap on it<br>
+                    3. Select <strong>"Unrestricted"</strong> or <strong>"Don't optimize"</strong>
+                </div>
+            </div>
+
+            <button id="battery-opt-open" style="width:100%;padding:14px;border:none;border-radius:14px;background:linear-gradient(135deg,#10b981,#059669);color:white;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(16,185,129,0.3);display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:10px;-webkit-tap-highlight-color:transparent;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Open Battery Settings
+            </button>
+            <button id="battery-opt-skip" style="width:100%;padding:11px;border:none;border-radius:12px;background:#f1f5f9;color:#64748b;font-size:13.5px;font-weight:600;cursor:pointer;">
+                I'll do it later
+            </button>
+        </div>
+    `;
+    document.body.appendChild(guide);
+
+    const closeGuide = () => {
+        guide.style.transition = 'opacity 0.3s ease';
+        guide.style.opacity = '0';
+        setTimeout(() => guide.remove(), 300);
+    };
+
+    // "Open Battery Settings" — tries Android intent, fallback to general settings
+    document.getElementById('battery-opt-open').addEventListener('click', () => {
+        try {
+            // Try to open battery optimization settings via Android intent
+            const intentUrl = 'intent:#Intent;action=android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS;end;';
+            const link = document.createElement('a');
+            link.href = intentUrl;
+            link.click();
+        } catch (e) {
+            try {
+                // Fallback: open general battery settings
+                const fallback = 'intent:#Intent;action=android.settings.BATTERY_SAVER_SETTINGS;end;';
+                const link2 = document.createElement('a');
+                link2.href = fallback;
+                link2.click();
+            } catch (e2) {
+                // Last fallback: show manual instructions
+                showNotification('Open your phone Settings → Apps → ' + appName + ' → Battery → Unrestricted', 'info');
+            }
+        }
+        closeGuide();
+    });
+
+    document.getElementById('battery-opt-skip').addEventListener('click', closeGuide);
+    guide.addEventListener('click', (e) => { if (e.target === guide) closeGuide(); });
 }
 
 // Settings guide — shown when notifications are DENIED.
@@ -7130,8 +7236,11 @@ function showAppView() {
     initializeSocketConnection();
     // Initialize push notifications and WAIT for subscription to complete.
     // This ensures the backend has our push subscription before any calls arrive.
+    // Set flag to prevent duplicate initialization from health check interval.
+    _pushNotificationsInitialized = true;
     initializePushNotifications().catch(err => {
         console.warn('[PUSH] Push notification setup failed:', err.message);
+        _pushNotificationsInitialized = false; // Allow retry on failure
     });
 
     // Start periodic reminder popup if notifications are not enabled
@@ -7204,6 +7313,7 @@ function logout() {
     // userId so re-login can re-associate correctly.
     const pushDismissed = localStorage.getItem('pwa_install_dismissed_permanent');
     const pushUserId = appState.currentUser ? appState.currentUser.id : null;
+    const batteryOptShown = localStorage.getItem('battery_opt_shown');
 
     // Gracefully disconnect socket (don't force-close — let backend handle ringing calls via push)
     if (voiceCallState.socket) {
@@ -7231,8 +7341,9 @@ function logout() {
     appState.profileFiles = {};
     localStorage.clear();
 
-    // Restore preserved settings
+    // Restore preserved settings across logout
     if (pushDismissed) localStorage.setItem('pwa_install_dismissed_permanent', pushDismissed);
+    if (batteryOptShown) localStorage.setItem('battery_opt_shown', batteryOptShown);
     // Preserve push userId so the service worker push subscription stays linked
     // to this user — enables receiving calls while logged out
     if (pushUserId) localStorage.setItem('pushUserId', pushUserId);
@@ -10367,10 +10478,11 @@ function getSettingsTemplate(user) {
             </div>
             <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:14px;margin-bottom:0;">
                 <div style="font-weight:700;font-size:13px;color:#0369a1;margin-bottom:8px;"><i class="fas fa-lightbulb" style="margin-right:4px;"></i> Tips to never miss a call</div>
-                <div style="font-size:12.5px;color:#0c4a6e;line-height:1.7;">
-                    <strong>Mobile:</strong> Install the app (Add to Home Screen), disable battery optimization for Chrome/SteelConnect in phone Settings.<br>
+                <div style="font-size:12.5px;color:#0c4a6e;line-height:1.7;margin-bottom:${/android/i.test(navigator.userAgent) ? '12px' : '0'};">
+                    <strong>Mobile:</strong> Install the app (Add to Home Screen) and disable battery optimization so calls ring even when screen is off.<br>
                     <strong>Desktop:</strong> Install the app or keep Chrome open. Pin SteelConnect to your taskbar so it stays running in background.
                 </div>
+                ${/android/i.test(navigator.userAgent) ? '<button id="settings-battery-opt-btn" class="btn btn-primary" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,#10b981,#059669);border:none;padding:11px;font-size:13px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="6" width="18" height="12" rx="2" ry="2"/><line x1="23" y1="13" x2="23" y2="11"/></svg> Disable Battery Optimization</button>' : ''}
             </div>
             ` : ''}
         </div>`;
@@ -10399,7 +10511,17 @@ function initSettingsNotificationHandlers() {
                 try {
                     const registration = await navigator.serviceWorker.ready;
                     const subscription = await registration.pushManager.getSubscription();
-                    if (subscription) await subscription.unsubscribe();
+                    if (subscription) {
+                        const endpoint = subscription.endpoint;
+                        await subscription.unsubscribe();
+                        // Tell backend to remove subscription so it doesn't send to dead endpoint
+                        const backendUrl = IS_LOCAL ? 'http://localhost:10000' : 'https://steelconnect-backend.onrender.com';
+                        fetch(`${backendUrl}/api/push/unsubscribe`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ userId: appState.currentUser.id, endpoint })
+                        }).catch(() => {});
+                    }
                     showNotification('Call notifications turned off. You won\'t receive calls when logged out.', 'info');
                 } catch (err) {
                     console.warn('[SETTINGS] Unsubscribe error:', err);
@@ -10424,6 +10546,14 @@ function initSettingsNotificationHandlers() {
     if (guideBtn) {
         guideBtn.addEventListener('click', () => {
             showNotificationSettingsGuide();
+        });
+    }
+
+    // "Disable Battery Optimization" button (Android only)
+    const batteryBtn = document.getElementById('settings-battery-opt-btn');
+    if (batteryBtn) {
+        batteryBtn.addEventListener('click', () => {
+            showBatteryOptimizationGuide();
         });
     }
 }
