@@ -6498,24 +6498,35 @@ async function initializePushNotifications() {
         await navigator.serviceWorker.ready;
         console.log('[PUSH] Service worker is ready');
 
-        // Request notification permission directly (no blocking overlay).
-        // A non-intrusive side popup will appear 5s after login via startNotificationReminder().
+        // Request notification permission directly on every login.
+        // This is CRITICAL — without permission, push notifications won't work
+        // and the user won't receive calls when logged out or app is closed.
         const isStandaloneApp = window.matchMedia('(display-mode: standalone)').matches
             || window.navigator.standalone === true;
         let permission = Notification.permission;
 
-        if (permission !== 'granted') {
-            // Don't block login flow — the side popup handles prompting
-            console.log('[PUSH] Notification permission:', permission, '— side popup will prompt user');
-            return;
+        if (permission === 'default') {
+            // Ask for permission now — browser shows native prompt
+            console.log('[PUSH] Requesting notification permission...');
+            permission = await Notification.requestPermission();
         }
-        console.log('[PUSH] Notification permission granted — calls will ring even when app is closed');
 
-        // Subscribe to Web Push using VAPID key from backend
-        await subscribeToWebPush(registration);
+        if (permission === 'denied') {
+            console.log('[PUSH] Notification permission denied — showing settings guide');
+            // Don't return — still set up SW message listener below
+            // Settings guide will be shown by the side popup
+        }
 
-        // Also try FCM if Firebase is configured (optional, for broader compatibility)
-        await tryFCMSetup(registration);
+        if (permission === 'granted') {
+            console.log('[PUSH] Notification permission granted — setting up push subscription');
+            // Subscribe to Web Push using VAPID key from backend
+            await subscribeToWebPush(registration);
+
+            // Also try FCM if Firebase is configured (optional, for broader compatibility)
+            await tryFCMSetup(registration);
+
+            console.log('[PUSH] Push fully configured — calls will ring even when app is closed');
+        }
 
         // Listen for messages from service worker
         navigator.serviceWorker.addEventListener('message', (event) => {
@@ -10349,10 +10360,17 @@ function getSettingsTemplate(user) {
                 <i class="fas fa-bell"></i> Turn On Call Notifications
             </button>
             ` : isGranted ? `
-            <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
                 <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#059669;"><i class="fas fa-check" style="font-size:11px;"></i> Incoming calls will ring on this device</div>
                 <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#059669;"><i class="fas fa-check" style="font-size:11px;"></i> Works even after logout or app close</div>
                 <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#059669;"><i class="fas fa-check" style="font-size:11px;"></i> Only call notifications — nothing else</div>
+            </div>
+            <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:14px;margin-bottom:0;">
+                <div style="font-weight:700;font-size:13px;color:#0369a1;margin-bottom:8px;"><i class="fas fa-lightbulb" style="margin-right:4px;"></i> Tips to never miss a call</div>
+                <div style="font-size:12.5px;color:#0c4a6e;line-height:1.7;">
+                    <strong>Mobile:</strong> Install the app (Add to Home Screen), disable battery optimization for Chrome/SteelConnect in phone Settings.<br>
+                    <strong>Desktop:</strong> Install the app or keep Chrome open. Pin SteelConnect to your taskbar so it stays running in background.
+                </div>
             </div>
             ` : ''}
         </div>`;
@@ -10458,7 +10476,7 @@ function showNotificationReminderPopup() {
             </div>
             <div style="flex:1;min-width:0;">
                 <div style="font-weight:800;font-size:14.5px;color:#1e293b;margin-bottom:3px;">Incoming Call Notifications</div>
-                <div style="font-size:12.5px;color:#64748b;line-height:1.5;">Enable notifications to receive incoming calls even when you're logged out or the app is closed.</div>
+                <div style="font-size:12.5px;color:#64748b;line-height:1.5;">Turn on notifications to receive incoming calls even when you're logged out. Go to <strong>Settings</strong> for more options.</div>
             </div>
             <button id="notif-reminder-close" style="border:none;background:none;color:#94a3b8;cursor:pointer;padding:0;line-height:1;flex-shrink:0;">
                 <i class="fas fa-times" style="font-size:14px;"></i>
