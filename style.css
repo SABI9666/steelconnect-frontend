@@ -22538,6 +22538,16 @@ body { overflow-x: hidden; }
 .call-back-btn:active {
     transform: scale(0.95);
 }
+/* Pulsing animation for missed call callback — draws attention like WhatsApp */
+.call-back-btn.call-back-missed {
+    animation: callbackPulse 2s ease-in-out infinite;
+    background: linear-gradient(135deg, #10b981, #047857);
+    box-shadow: 0 3px 12px rgba(16, 185, 129, 0.45);
+}
+@keyframes callbackPulse {
+    0%, 100% { box-shadow: 0 3px 12px rgba(16, 185, 129, 0.45); }
+    50% { box-shadow: 0 3px 18px rgba(16, 185, 129, 0.7); }
+}
 
 /* Call Back button in missed calls banner */
 .missed-calls-callback {

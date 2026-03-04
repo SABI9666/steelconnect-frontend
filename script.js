@@ -4951,6 +4951,7 @@ function initiateVoiceCall(conversationId, calleeId, calleeName) {
             callerId: appState.currentUser.id,
             callerName: appState.currentUser.name,
             calleeId,
+            calleeName: calleeName || '',
             conversationId,
             callType: 'voice'
         });
@@ -6288,6 +6289,9 @@ async function loadCallHistory() {
             const isMissed = call.status === 'missed' || call.status === 'declined' || call.status === 'no_answer' || call.status === 'timeout';
             const isMissedIncoming = isMissed && !isOutgoing;
             const otherName = isOutgoing ? (call.calleeName || 'User') : (call.callerName || 'User');
+            // For callback: determine who to call (the other party)
+            const callBackUserId = isOutgoing ? call.calleeId : call.callerId;
+            const callBackName = (otherName || '').replace(/'/g, "\\'");
             const avatarColor = getAvatarColor(otherName);
             const statusIcon = call.status === 'completed' ? 'fa-phone-alt' : 'fa-phone-slash';
             const statusColor = call.status === 'completed' ? '#10b981' : '#ef4444';
@@ -6306,7 +6310,7 @@ async function loadCallHistory() {
                             ${statusText}
                         </p>
                     </div>
-                    ${isMissedIncoming && call.conversationId ? `<div class="call-back-btn" onclick="event.stopPropagation(); initiateVoiceCall('${call.conversationId}', '${call.callerId}', '${(otherName || '').replace(/'/g, "\\'")}')" title="Call Back"><i class="fas fa-phone-alt"></i></div>` : ''}
+                    ${call.conversationId ? `<div class="call-back-btn ${isMissedIncoming ? 'call-back-missed' : ''}" onclick="event.stopPropagation(); initiateVoiceCall('${call.conversationId}', '${callBackUserId}', '${callBackName}')" title="Call ${otherName}"><i class="fas fa-phone-alt"></i></div>` : ''}
                     ${call.conversationId ? `<div class="convo-arrow" onclick="renderConversationView('${call.conversationId}')"><i class="fas fa-chevron-right"></i></div>` : ''}
                 </div>`;
         }).join('');
