@@ -649,24 +649,41 @@ function initializeApp() {
             // Force check for updates immediately
             registration.update().catch(() => {});
 
-            // Check for waiting worker (update available)
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+                || window.navigator.standalone === true;
+
+            // Auto-update logic: For installed PWA apps, update SILENTLY without
+            // showing a banner — just apply and reload. Users always get the latest
+            // version automatically. For browser users, show the update banner.
+            const applyUpdate = (waitingWorker) => {
+                if (isStandalone) {
+                    // PWA: Auto-update silently — skip waiting and reload
+                    console.log('[SW] PWA auto-updating silently...');
+                    waitingWorker.postMessage({ type: 'SKIP_WAITING' });
+                    // Reload happens on SW_UPDATED message (below)
+                } else {
+                    // Browser: Show update banner so user can choose when to update
+                    showAppUpdateBanner(waitingWorker);
+                }
+            };
+
+            // Check for waiting worker (update already downloaded)
             if (registration.waiting) {
-                showAppUpdateBanner(registration.waiting);
+                applyUpdate(registration.waiting);
             }
             registration.addEventListener('updatefound', () => {
                 const newWorker = registration.installing;
                 if (!newWorker) return;
                 newWorker.addEventListener('statechange', () => {
                     if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                        showAppUpdateBanner(newWorker);
+                        applyUpdate(newWorker);
                     }
                 });
             });
 
-            // For installed PWA — check for updates every 5 minutes (more aggressive)
-            const isStandalone = window.matchMedia('(display-mode: standalone)').matches
-                || window.navigator.standalone === true;
-            const updateInterval = isStandalone ? 5 * 60 * 1000 : 30 * 60 * 1000;
+            // PWA: Check for updates every 2 minutes (aggressive — always up to date)
+            // Browser: Check every 30 minutes (less aggressive)
+            const updateInterval = isStandalone ? 2 * 60 * 1000 : 30 * 60 * 1000;
             setInterval(() => {
                 registration.update().catch(() => {});
             }, updateInterval);
@@ -676,6 +693,7 @@ function initializeApp() {
                 if (event.data && event.data.type === 'SW_UPDATED') {
                     console.log('[SW] App updated to v' + event.data.version);
                     if (isStandalone) {
+                        // PWA: Auto-reload to apply the update immediately
                         window.location.reload();
                     }
                 }
@@ -6468,43 +6486,38 @@ async function initializePushNotifications() {
         console.log('[PUSH] Service worker registered:', registration.scope);
 
         // --- APP UPDATE DETECTION ---
-        // Check for updates immediately
+        // Note: Update detection and auto-update logic is handled by the early
+        // SW registration block (near top of file). That block handles:
+        // - Silent auto-update for installed PWA apps (no banner)
+        // - Update banner for browser users
+        // - Periodic update checks (2min PWA, 30min browser)
+        // We just trigger an immediate check here for freshness.
         registration.update().catch(() => {});
-
-        // Detect when a new service worker is waiting to activate
-        if (registration.waiting) {
-            showAppUpdateBanner(registration.waiting);
-        }
-
-        // Listen for new service worker installations
-        registration.addEventListener('updatefound', () => {
-            const newWorker = registration.installing;
-            if (!newWorker) return;
-            newWorker.addEventListener('statechange', () => {
-                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                    // New version is ready — show update prompt
-                    console.log('[SW] New version available');
-                    showAppUpdateBanner(newWorker);
-                }
-            });
-        });
-
-        // Periodically check for updates (every 30 minutes)
-        setInterval(() => {
-            registration.update().catch(() => {});
-        }, 30 * 60 * 1000);
 
         // Wait for service worker to be ready
         await navigator.serviceWorker.ready;
         console.log('[PUSH] Service worker is ready');
 
-        // Request notification permission
-        const permission = await Notification.requestPermission();
+        // Request notification permission with a professional pre-prompt dialog.
+        // Once granted, this persists permanently until the user uninstalls the app
+        // or manually revokes in browser settings — no need to ever ask again.
+        let permission = Notification.permission;
+        if (permission === 'default') {
+            // Show a custom pre-prompt dialog BEFORE the browser's native prompt.
+            // This explains WHY notifications are needed and gives a much better UX
+            // than the raw browser popup. Users who understand the value are more
+            // likely to tap "Allow".
+            permission = await showNotificationPermissionDialog();
+        }
         if (permission !== 'granted') {
             console.log('[PUSH] Notification permission not granted:', permission);
+            // Show a persistent but non-intrusive banner explaining how to enable
+            if (permission === 'denied') {
+                showNotificationDeniedBanner();
+            }
             return;
         }
-        console.log('[PUSH] Notification permission granted');
+        console.log('[PUSH] Notification permission granted — calls will ring even when app is closed');
 
         // Subscribe to Web Push using VAPID key from backend
         await subscribeToWebPush(registration);
@@ -6753,14 +6766,87 @@ window.addEventListener('online', () => {
     }
 });
 
-// Request notification permission early so incoming calls can show browser notifications
-if ('Notification' in window && Notification.permission === 'default') {
-    // Wait for user interaction before requesting (browser requirement)
-    const requestNotifPermission = () => {
-        Notification.requestPermission().catch(() => {});
-        document.removeEventListener('click', requestNotifPermission);
-    };
-    document.addEventListener('click', requestNotifPermission, { once: true });
+// Professional notification permission dialog — shown once on first login.
+// Explains WHY notifications are needed (incoming calls) before the browser's
+// native permission prompt. Much better conversion rate than raw browser popup.
+// Once granted, permission persists permanently (until app uninstall or manual revoke).
+function showNotificationPermissionDialog() {
+    return new Promise((resolve) => {
+        // If already decided, skip the dialog
+        if (Notification.permission !== 'default') {
+            resolve(Notification.permission);
+            return;
+        }
+
+        const dialog = document.createElement('div');
+        dialog.id = 'notif-permission-dialog';
+        dialog.style.cssText = 'position:fixed;inset:0;z-index:100002;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(4px);animation:npd-fadein 0.3s ease;';
+        dialog.innerHTML = `
+            <style>
+                @keyframes npd-fadein{from{opacity:0}to{opacity:1}}
+                @keyframes npd-scalein{from{transform:scale(0.9);opacity:0}to{transform:scale(1);opacity:1}}
+                @keyframes npd-ring{0%,100%{transform:rotate(0)}10%{transform:rotate(14deg)}20%{transform:rotate(-14deg)}30%{transform:rotate(10deg)}40%{transform:rotate(-8deg)}50%{transform:rotate(4deg)}60%{transform:rotate(0)}}
+            </style>
+            <div style="background:#fff;border-radius:20px;max-width:380px;width:100%;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,0.2);animation:npd-scalein 0.35s cubic-bezier(0.16,1,0.3,1);text-align:center;">
+                <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#10b981,#059669);margin:0 auto 20px;display:flex;align-items:center;justify-content:center;">
+                    <i class="fas fa-phone-alt" style="font-size:28px;color:white;animation:npd-ring 1.5s ease infinite;"></i>
+                </div>
+                <h3 style="margin:0 0 8px;font-size:20px;font-weight:800;color:#1e293b;">Never Miss a Call</h3>
+                <p style="margin:0 0 6px;font-size:14px;color:#64748b;line-height:1.5;">
+                    SteelConnect needs notification permission to ring your device for incoming calls — <strong>even when the app is closed</strong>.
+                </p>
+                <p style="margin:0 0 24px;font-size:12.5px;color:#94a3b8;">
+                    Works like WhatsApp & Teams. You'll only get call notifications.
+                </p>
+                <button id="npd-allow" style="width:100%;padding:14px;border:none;border-radius:12px;background:linear-gradient(135deg,#10b981,#059669);color:white;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px;box-shadow:0 4px 14px rgba(16,185,129,0.3);transition:transform 0.15s;">
+                    <i class="fas fa-bell" style="margin-right:8px;"></i> Allow Call Notifications
+                </button>
+                <button id="npd-skip" style="width:100%;padding:10px;border:none;border-radius:10px;background:transparent;color:#94a3b8;font-size:13px;cursor:pointer;">
+                    Not now
+                </button>
+            </div>
+        `;
+        document.body.appendChild(dialog);
+
+        document.getElementById('npd-allow').addEventListener('click', async () => {
+            dialog.remove();
+            // Now trigger the browser's native permission prompt
+            const result = await Notification.requestPermission();
+            resolve(result);
+        });
+
+        document.getElementById('npd-skip').addEventListener('click', () => {
+            dialog.remove();
+            resolve('default');
+        });
+    });
+}
+
+// Banner shown when user denied notification permission — explains how to re-enable
+function showNotificationDeniedBanner() {
+    // Only show once per session
+    if (sessionStorage.getItem('notif_denied_banner_shown')) return;
+    sessionStorage.setItem('notif_denied_banner_shown', 'true');
+
+    const banner = document.createElement('div');
+    banner.id = 'notif-denied-banner';
+    banner.style.cssText = 'position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:99998;background:#fef3c7;border:1px solid #f59e0b;border-radius:12px;padding:12px 18px;max-width:420px;width:calc(100% - 32px);box-shadow:0 4px 16px rgba(0,0,0,0.1);display:flex;align-items:center;gap:12px;animation:swBannerSlide 0.4s cubic-bezier(0.16,1,0.3,1);';
+    banner.innerHTML = `
+        <div style="flex-shrink:0;width:32px;height:32px;border-radius:50%;background:#f59e0b;display:flex;align-items:center;justify-content:center;">
+            <i class="fas fa-bell-slash" style="color:white;font-size:13px;"></i>
+        </div>
+        <div style="flex:1;min-width:0;">
+            <div style="font-weight:700;font-size:12.5px;color:#92400e;">Notifications Blocked</div>
+            <div style="font-size:11.5px;color:#a16207;line-height:1.4;">You won't receive incoming calls when the app is closed. Enable notifications in your browser settings to receive calls.</div>
+        </div>
+        <button onclick="this.parentElement.remove()" style="flex-shrink:0;border:none;background:none;color:#a16207;cursor:pointer;font-size:16px;padding:4px;">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    document.body.appendChild(banner);
+
+    // Auto-dismiss after 15 seconds
+    setTimeout(() => { if (banner.parentElement) banner.remove(); }, 15000);
 }
 
 
