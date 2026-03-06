@@ -588,9 +588,11 @@ function initializeApp() {
         });
     }
 
-    // Capture call data from URL before login check (from push notification when logged out)
+    // Capture deep link params from URL (from email links or push notifications)
     const _initUrlParams = new URLSearchParams(window.location.search);
     const _pushCallId = _initUrlParams.get('callId');
+    const _deepLinkSection = _initUrlParams.get('section');
+    const _deepLinkEstimationId = _initUrlParams.get('estimationId');
     if (_pushCallId) {
         console.log('[PUSH] App opened with callId from push notification:', _pushCallId);
         // Store call data so it survives the login process
@@ -599,7 +601,17 @@ function initializeApp() {
         const _pushCallerName = _initUrlParams.get('callerName');
         if (_pushCallerId) sessionStorage.setItem('pendingCallerId', _pushCallerId);
         if (_pushCallerName) sessionStorage.setItem('pendingCallerName', _pushCallerName);
-        // Clean URL without reload
+    }
+    // Store deep link data for estimation results from email
+    if (_deepLinkSection) {
+        sessionStorage.setItem('pendingDeepLinkSection', _deepLinkSection);
+        if (_deepLinkEstimationId) {
+            sessionStorage.setItem('pendingDeepLinkEstimationId', _deepLinkEstimationId);
+        }
+        console.log(`[DEEP-LINK] Captured: section=${_deepLinkSection}, estimationId=${_deepLinkEstimationId || 'none'}`);
+    }
+    // Clean URL without reload
+    if (_pushCallId || _deepLinkSection) {
         window.history.replaceState({}, document.title, window.location.pathname);
     }
 
@@ -615,6 +627,23 @@ function initializeApp() {
             // Initialize socket immediately so voice calls work right away
             initializeSocketConnection();
             console.log('Restored user session');
+
+            // Handle deep link navigation from email (e.g. ?section=my-estimations&estimationId=xxx)
+            const pendingSection = sessionStorage.getItem('pendingDeepLinkSection');
+            const pendingEstimationId = sessionStorage.getItem('pendingDeepLinkEstimationId');
+            if (pendingSection) {
+                sessionStorage.removeItem('pendingDeepLinkSection');
+                sessionStorage.removeItem('pendingDeepLinkEstimationId');
+                console.log(`[DEEP-LINK] Navigating to: ${pendingSection}, estimationId: ${pendingEstimationId || 'none'}`);
+                // Small delay to let app initialize before navigation
+                setTimeout(() => {
+                    if (pendingEstimationId && pendingSection === 'my-estimations') {
+                        navigateToAIEstimationResult(pendingEstimationId);
+                    } else {
+                        renderAppSection(pendingSection);
+                    }
+                }, 500);
+            }
         } catch (error) {
             console.error("Error parsing user data from localStorage:", error);
             logout();
@@ -1325,6 +1354,22 @@ function completeLogin(data) {
     setTimeout(() => {
         showNotification(`Welcome to SteelConnect, ${data.user.name}!`, 'success');
     }, 300);
+
+    // Handle deep link navigation after login (e.g. from email link ?section=my-estimations&estimationId=xxx)
+    const pendingSection = sessionStorage.getItem('pendingDeepLinkSection');
+    const pendingEstimationId = sessionStorage.getItem('pendingDeepLinkEstimationId');
+    if (pendingSection) {
+        sessionStorage.removeItem('pendingDeepLinkSection');
+        sessionStorage.removeItem('pendingDeepLinkEstimationId');
+        console.log(`[DEEP-LINK] Post-login navigation to: ${pendingSection}, estimationId: ${pendingEstimationId || 'none'}`);
+        setTimeout(() => {
+            if (pendingEstimationId && pendingSection === 'my-estimations') {
+                navigateToAIEstimationResult(pendingEstimationId);
+            } else {
+                renderAppSection(pendingSection);
+            }
+        }, 800);
+    }
 }
 
 // Handle OTP verification
@@ -5049,6 +5094,17 @@ function initializeSocketConnection() {
             // If server disconnected us, force reconnect
             if (reason === 'io server disconnect') {
                 voiceCallState.socket.connect();
+            }
+        });
+
+        // Listen for real-time notifications (e.g. AI estimation completed)
+        voiceCallState.socket.on('new-notification', (data) => {
+            console.log('[NOTIFICATION] Real-time notification received:', data.title);
+            // Refresh notifications from server to get the full notification with ID
+            fetchNotifications();
+            // Show toast notification immediately
+            if (data.title && data.message) {
+                showNotification(`${data.title}: ${data.message}`, 'success');
             }
         });
     } catch (error) {
