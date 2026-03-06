@@ -809,65 +809,160 @@ function updateDynamicHeader() {
 }
 
 // Optimized API call function with better error handling
+// === SCALABILITY: API Response Cache & Request Deduplication ===
+// Caches GET responses to reduce redundant server requests from 100K+ users
+const _apiCache = new Map();
+const _API_CACHE_TTL = 30000; // 30 seconds default TTL
+const _inflightRequests = new Map(); // Deduplicates concurrent identical GET requests
+
+function _getCacheKey(endpoint, method) {
+    return `${method}:${endpoint}`;
+}
+
+function _getCachedResponse(key) {
+    const entry = _apiCache.get(key);
+    if (!entry) return null;
+    if (Date.now() - entry.timestamp > entry.ttl) {
+        _apiCache.delete(key);
+        return null;
+    }
+    return entry.data;
+}
+
+function _setCachedResponse(key, data, ttl = _API_CACHE_TTL) {
+    // Cap cache size to prevent memory issues
+    if (_apiCache.size > 200) {
+        const firstKey = _apiCache.keys().next().value;
+        _apiCache.delete(firstKey);
+    }
+    _apiCache.set(key, { data, timestamp: Date.now(), ttl });
+}
+
+// Invalidate cache entries matching a pattern (call after mutations)
+function invalidateApiCache(pattern) {
+    for (const key of _apiCache.keys()) {
+        if (key.includes(pattern)) _apiCache.delete(key);
+    }
+}
+
+// === SCALABILITY: Debounce utility for search/filter operations ===
+function debounce(fn, delay = 300) {
+    let timer;
+    return function (...args) {
+        clearTimeout(timer);
+        timer = setTimeout(() => fn.apply(this, args), delay);
+    };
+}
+
+// === SCALABILITY: Throttle utility for scroll/resize handlers ===
+function throttle(fn, limit = 200) {
+    let inThrottle = false;
+    return function (...args) {
+        if (!inThrottle) {
+            fn.apply(this, args);
+            inThrottle = true;
+            setTimeout(() => { inThrottle = false; }, limit);
+        }
+    };
+}
+
 async function apiCall(endpoint, method, body = null, successMessage = null) {
-    const controller = new AbortController();
-    // Use longer timeout for file uploads (FormData), shorter for regular API calls
     const isFileUpload = body instanceof FormData;
-    const timeout = isFileUpload ? 120000 : 30000; // 2 min for file uploads, 30s for rest
+    const cacheKey = _getCacheKey(endpoint, method);
+
+    // For GET requests: check cache first
+    if (method === 'GET' && !isFileUpload) {
+        const cached = _getCachedResponse(cacheKey);
+        if (cached) {
+            if (successMessage) showNotification(successMessage, 'success');
+            return cached;
+        }
+
+        // Deduplicate: if the same GET is already in-flight, wait for it
+        if (_inflightRequests.has(cacheKey)) {
+            return _inflightRequests.get(cacheKey);
+        }
+    }
+
+    const controller = new AbortController();
+    const timeout = isFileUpload ? 120000 : 30000;
     const timeoutId = setTimeout(() => controller.abort(), timeout);
 
-    try {
-        const options = {
-             method,
-             headers: {},
-            signal: controller.signal
-        };
+    const requestPromise = (async () => {
+        try {
+            const options = {
+                method,
+                headers: {},
+                signal: controller.signal
+            };
 
-        if (appState.jwtToken) {
-            options.headers['Authorization'] = `Bearer ${appState.jwtToken}`;
-        }
-
-        if (body) {
-            if (body instanceof FormData) {
-                options.body = body;
-            } else {
-                options.headers['Content-Type'] = 'application/json';
-                options.body = JSON.stringify(body);
+            if (appState.jwtToken) {
+                options.headers['Authorization'] = `Bearer ${appState.jwtToken}`;
             }
-        }
-        const response = await fetch(BACKEND_URL + endpoint, options);
-        clearTimeout(timeoutId);
-        if (response.status === 204 || response.headers.get("content-length") === "0") {
+
+            if (body) {
+                if (body instanceof FormData) {
+                    options.body = body;
+                } else {
+                    options.headers['Content-Type'] = 'application/json';
+                    options.body = JSON.stringify(body);
+                }
+            }
+            const response = await fetch(BACKEND_URL + endpoint, options);
+            clearTimeout(timeoutId);
+            if (response.status === 204 || response.headers.get("content-length") === "0") {
+                if (!response.ok) {
+                    const errorMsg = response.headers.get('X-Error-Message') ||
+                                   `Request failed with status ${response.status}`;
+                    throw new Error(errorMsg);
+                }
+                if (successMessage) showNotification(successMessage, 'success');
+                return { success: true };
+            }
+            const responseData = await response.json();
             if (!response.ok) {
-                const errorMsg = response.headers.get('X-Error-Message') ||
-                               `Request failed with status ${response.status}`;
-                throw new Error(errorMsg);
+                throw new Error(responseData.message || responseData.error ||
+                               `Request failed with status ${response.status}`);
             }
-            if (successMessage) showNotification(successMessage, 'success');
-            return { success: true };
-        }
-        const responseData = await response.json();
-        if (!response.ok) {
-            throw new Error(responseData.message || responseData.error ||
-                           `Request failed with status ${response.status}`);
-        }
-        if (successMessage) {
-            showNotification(successMessage, 'success');
-        }
-        return responseData;
-    } catch (error) {
-        clearTimeout(timeoutId);
 
-        if (error.name === 'AbortError') {
-            console.error(`API call to ${endpoint} timed out`);
-            showNotification('Request timed out. Please try again.', 'error');
-        } else {
-            console.error(`API call to ${endpoint} failed:`, error);
-            showNotification(error.message, 'error');
-        }
+            // Cache successful GET responses
+            if (method === 'GET') {
+                _setCachedResponse(cacheKey, responseData);
+            }
 
-        throw error;
+            // Invalidate related caches on mutations
+            if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+                const basePath = endpoint.split('?')[0].split('/').slice(0, 2).join('/');
+                invalidateApiCache(basePath);
+            }
+
+            if (successMessage) {
+                showNotification(successMessage, 'success');
+            }
+            return responseData;
+        } catch (error) {
+            clearTimeout(timeoutId);
+
+            if (error.name === 'AbortError') {
+                console.error(`API call to ${endpoint} timed out`);
+                showNotification('Request timed out. Please try again.', 'error');
+            } else {
+                console.error(`API call to ${endpoint} failed:`, error);
+                showNotification(error.message, 'error');
+            }
+
+            throw error;
+        } finally {
+            _inflightRequests.delete(cacheKey);
+        }
+    })();
+
+    // Store in-flight request for deduplication
+    if (method === 'GET') {
+        _inflightRequests.set(cacheKey, requestPromise);
     }
+
+    return requestPromise;
 }
 
 
@@ -2014,16 +2109,37 @@ function checkForNewMeetingNotifications(notifications) {
 function startNotificationPolling() {
     if (notificationState.pollingInterval) clearInterval(notificationState.pollingInterval);
     fetchNotifications();
-    notificationState.pollingInterval = setInterval(() => {
-        if (appState.currentUser) fetchNotifications();
-        else stopNotificationPolling();
-    }, 20000);
-    console.log('🔔 Notification polling started');
+    // Poll every 30s when tab is visible, pause when hidden (saves server load with 100K+ users)
+    const POLL_INTERVAL_ACTIVE = 30000;  // 30s when tab is active
+    const POLL_INTERVAL_BACKGROUND = 120000; // 2 min when tab is in background
+    let currentInterval = POLL_INTERVAL_ACTIVE;
+
+    function schedulePoll() {
+        notificationState.pollingInterval = setTimeout(() => {
+            if (appState.currentUser) {
+                fetchNotifications();
+                schedulePoll();
+            } else {
+                stopNotificationPolling();
+            }
+        }, document.hidden ? POLL_INTERVAL_BACKGROUND : currentInterval);
+    }
+
+    // Adjust polling frequency based on tab visibility
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && appState.currentUser) {
+            // Tab became visible: fetch immediately and resume fast polling
+            fetchNotifications();
+        }
+    });
+
+    schedulePoll();
+    console.log('🔔 Notification polling started (adaptive)');
 }
 
 function stopNotificationPolling() {
     if (notificationState.pollingInterval) {
-        clearInterval(notificationState.pollingInterval);
+        clearTimeout(notificationState.pollingInterval);
         notificationState.pollingInterval = null;
         console.log('🔕 Notification polling stopped');
     }
@@ -2383,9 +2499,10 @@ function startMenuBadgePolling() {
     if (menuBadgeState.pollingInterval) clearInterval(menuBadgeState.pollingInterval);
     fetchMenuBadges();
     menuBadgeState.pollingInterval = setInterval(() => {
-        if (appState.currentUser) fetchMenuBadges();
-        else stopMenuBadgePolling();
-    }, 25000); // Poll every 25 seconds
+        // Skip polling when tab is hidden (saves server load with 100K+ users)
+        if (!appState.currentUser) { stopMenuBadgePolling(); return; }
+        if (!document.hidden) fetchMenuBadges();
+    }, 45000); // Poll every 45s (increased from 25s for scalability)
 }
 
 function stopMenuBadgePolling() {
@@ -4745,20 +4862,20 @@ function initializeSocketConnection() {
 
     try {
         voiceCallState.socket = io(socketUrl, {
-            transports: ['websocket', 'polling'],
+            transports: ['websocket', 'polling'], // Prefer WebSocket for lower overhead
             timeout: 30000,
             reconnection: true,
-            reconnectionAttempts: Infinity,
+            reconnectionAttempts: 50, // Cap reconnection attempts (was Infinity)
             reconnectionDelay: 1000,
-            reconnectionDelayMax: 15000,
+            reconnectionDelayMax: 30000, // Increased max delay for server relief during high load
             randomizationFactor: 0.5,
             forceNew: false,
             multiplex: true,
-            // Upgrade from polling to websocket quickly
             upgrade: true,
-            // Improved settings for India/UK high-latency connections
             pingTimeout: 35000,
-            pingInterval: 25000
+            pingInterval: 25000,
+            // Performance: disable per-message compression on client side
+            perMessageDeflate: false
         });
 
         voiceCallState.socket.on('connect', () => {
