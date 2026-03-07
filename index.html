@@ -3142,6 +3142,7 @@
         var TRACK_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
             ? 'http://localhost:10000/api' : 'https://steelconnect-backend.onrender.com/api';
         var SESSION_KEY = 'sc_visitor_sid';
+        var TIME_KEY = 'sc_visitor_time';
         var sessionId = sessionStorage.getItem(SESSION_KEY);
         if (!sessionId) {
             sessionId = 'v_' + Date.now() + '_' + Math.random().toString(36).substring(2, 10);
@@ -3149,11 +3150,18 @@
         }
 
         var startTime = Date.now();
+        // Persist cumulative time across page refreshes
+        var previousTime = parseInt(sessionStorage.getItem(TIME_KEY)) || 0;
         var currentPage = window.location.pathname + window.location.hash;
         var tracked = sessionStorage.getItem('sc_visitor_tracked');
 
-        function getElapsedSeconds() {
-            return Math.round((Date.now() - startTime) / 1000);
+        function getCumulativeSeconds() {
+            return previousTime + Math.round((Date.now() - startTime) / 1000);
+        }
+
+        // Save cumulative time to sessionStorage periodically
+        function persistTime() {
+            sessionStorage.setItem(TIME_KEY, getCumulativeSeconds());
         }
 
         // Get logged-in user info if available
@@ -3168,16 +3176,18 @@
             return {};
         }
 
+        // Use text/plain blob to avoid CORS preflight issues with sendBeacon
         function sendBeacon(url, data) {
             try {
-                var blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+                var payload = JSON.stringify(data);
                 if (navigator.sendBeacon) {
+                    var blob = new Blob([payload], { type: 'text/plain' });
                     navigator.sendBeacon(TRACK_URL + url, blob);
                 } else {
                     var xhr = new XMLHttpRequest();
                     xhr.open('POST', TRACK_URL + url, true);
                     xhr.setRequestHeader('Content-Type', 'application/json');
-                    xhr.send(JSON.stringify(data));
+                    xhr.send(payload);
                 }
             } catch(e) {}
         }
@@ -3207,17 +3217,19 @@
 
         // Heartbeat every 30 seconds to track time + page changes + user login
         setInterval(function() {
+            if (document.visibilityState === 'hidden') return; // Skip heartbeat when tab is hidden
             var nowPage = window.location.pathname + window.location.hash;
             var userInfo = getUserInfo();
             var data = {
                 sessionId: sessionId,
                 currentPage: nowPage,
-                timeSpentSeconds: getElapsedSeconds()
+                timeSpentSeconds: getCumulativeSeconds()
             };
             // Send user info on every heartbeat so mid-session login is captured
             if (userInfo.userEmail) data.userEmail = userInfo.userEmail;
             if (userInfo.userName) data.userName = userInfo.userName;
             sendBeacon('/visitors/heartbeat', data);
+            persistTime();
             currentPage = nowPage;
         }, 30000);
 
@@ -3231,29 +3243,39 @@
                 var data = {
                     sessionId: sessionId,
                     currentPage: window.location.pathname + newHash,
-                    timeSpentSeconds: getElapsedSeconds()
+                    timeSpentSeconds: getCumulativeSeconds()
                 };
                 if (userInfo.userEmail) data.userEmail = userInfo.userEmail;
                 if (userInfo.userName) data.userName = userInfo.userName;
                 sendBeacon('/visitors/heartbeat', data);
+                persistTime();
             }
         }, 2000);
 
-        // Send leave event when closing tab
+        // Send leave event only when actually closing the tab/window
         window.addEventListener('beforeunload', function() {
+            persistTime();
             sendBeacon('/visitors/leave', {
                 sessionId: sessionId,
-                timeSpentSeconds: getElapsedSeconds()
+                timeSpentSeconds: getCumulativeSeconds()
             });
         });
 
-        // Also track visibility changes (tab switch = inactive)
+        // Track visibility changes — pause/resume, don't send leave on tab switch
         document.addEventListener('visibilitychange', function() {
             if (document.visibilityState === 'hidden') {
-                sendBeacon('/visitors/leave', {
+                // Save time when tab goes hidden, but don't mark as left
+                persistTime();
+                sendBeacon('/visitors/heartbeat', {
                     sessionId: sessionId,
-                    timeSpentSeconds: getElapsedSeconds()
+                    currentPage: window.location.pathname + window.location.hash,
+                    timeSpentSeconds: getCumulativeSeconds(),
+                    isHidden: true
                 });
+            } else {
+                // Tab is visible again — reset startTime to continue accumulating
+                previousTime = parseInt(sessionStorage.getItem(TIME_KEY)) || 0;
+                startTime = Date.now();
             }
         });
     })();
