@@ -44,6 +44,7 @@ function initializeAnalyticsIntegration() {
     window.uploadNewData = uploadNewData;
     window.downloadHtmlAsPdf = downloadHtmlAsPdf;
     window.downloadServerPdf = downloadServerPdf;
+    window.downloadHtmlFile = downloadHtmlFile;
     addAnalyticsStyles();
 }
 
@@ -238,8 +239,7 @@ function getPortalHTML() {
                                     <i class="fas fa-arrow-right"></i>
                                 </div>
                                 ${db.reportType === 'pdf' ? `<button class="ad-sync-btn" onclick="event.stopPropagation(); downloadPdfReport('${db._id}')" title="Download PDF report" style="background:linear-gradient(135deg,#ef4444,#dc2626);border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-size:.8rem;color:white;font-weight:600;display:flex;align-items:center;gap:6px;transition:all .2s;box-shadow:0 2px 8px rgba(239,68,68,.25)"><i class="fas fa-download"></i> Download PDF</button>` : ''}
-                                ${db.reportType === 'html' ? `<button class="ad-sync-btn" onclick="event.stopPropagation(); downloadServerPdf('${db._id}')" title="Download report as PDF" style="background:linear-gradient(135deg,#ef4444,#dc2626);border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-size:.8rem;color:white;font-weight:600;display:flex;align-items:center;gap:6px;transition:all .2s;box-shadow:0 2px 8px rgba(239,68,68,.25)"><i class="fas fa-download"></i> Download PDF</button>
-                                <button class="ad-sync-btn" onclick="event.stopPropagation(); showDataUploadModal('${db._id}')" title="Upload new data to auto-update report" style="background:none;border:1px solid #f59e0b;border-radius:8px;padding:7px 14px;cursor:pointer;font-size:.78rem;color:#f59e0b;font-weight:600;display:flex;align-items:center;gap:5px;transition:all .2s"><i class="fas fa-upload"></i> Update Data</button>` : ''}
+                                ${db.reportType === 'html' ? `<button class="ad-sync-btn" onclick="event.stopPropagation(); showDataUploadModal('${db._id}')" title="Upload new data to auto-update report" style="background:none;border:1px solid #f59e0b;border-radius:8px;padding:7px 14px;cursor:pointer;font-size:.78rem;color:#f59e0b;font-weight:600;display:flex;align-items:center;gap:5px;transition:all .2s"><i class="fas fa-upload"></i> Update Data</button>` : ''}
                                 ${db.googleSheetUrl ? `<button class="ad-sync-btn" onclick="event.stopPropagation(); syncDashboard('${db._id}')" title="Refresh data from linked sheet" style="background:none;border:1px solid #e2e8f0;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:.78rem;color:#6366f1;display:flex;align-items:center;gap:5px;transition:all .2s"><i class="fas fa-sync-alt"></i> Sync</button>` : ''}
                             </div>
                         </div>
@@ -888,6 +888,7 @@ function getDashboardViewHTML() {
                     <div class="ad-hero-right">
                         <button class="ad-hero-btn" onclick="renderAnalyticsPortal()"><i class="fas fa-arrow-left"></i> Back to Portal</button>
                         <button class="ad-hero-btn" onclick="downloadServerPdf('${db._id}')" style="background:linear-gradient(135deg,#ef4444,#dc2626)"><i class="fas fa-file-pdf"></i> Download PDF</button>
+                        <button class="ad-hero-btn" onclick="downloadHtmlFile('${db._id}')" style="background:linear-gradient(135deg,#3b82f6,#2563eb)"><i class="fas fa-file-code"></i> Download HTML</button>
                         <button class="ad-hero-btn" onclick="showDataUploadModal('${db._id}')" style="background:linear-gradient(135deg,#f59e0b,#d97706)"><i class="fas fa-upload"></i> Upload New Data</button>
                     </div>
                 </div>
@@ -914,11 +915,12 @@ function getDashboardViewHTML() {
                         <div style="width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,#ef4444,#dc2626);display:flex;align-items:center;justify-content:center"><i class="fas fa-file-pdf" style="color:white;font-size:18px"></i></div>
                         <div>
                             <div style="font-size:.95rem;font-weight:700;color:#0f172a">Download Report</div>
-                            <div style="font-size:.78rem;color:#64748b">Save this report as a PDF file</div>
+                            <div style="font-size:.78rem;color:#64748b">Save this report as PDF or HTML</div>
                         </div>
                     </div>
                     <div style="display:flex;gap:10px;flex-wrap:wrap">
-                        <button onclick="downloadServerPdf('${db._id}')" style="background:linear-gradient(135deg,#ef4444,#dc2626);color:white;border:none;border-radius:10px;padding:12px 28px;cursor:pointer;font-size:.9rem;font-weight:700;display:inline-flex;align-items:center;gap:8px;box-shadow:0 4px 15px rgba(239,68,68,.3);transition:all .2s"><i class="fas fa-download"></i> Download PDF</button>
+                        <button onclick="downloadServerPdf('${db._id}')" style="background:linear-gradient(135deg,#ef4444,#dc2626);color:white;border:none;border-radius:10px;padding:12px 28px;cursor:pointer;font-size:.9rem;font-weight:700;display:inline-flex;align-items:center;gap:8px;box-shadow:0 4px 15px rgba(239,68,68,.3);transition:all .2s"><i class="fas fa-file-pdf"></i> Download PDF</button>
+                        <button onclick="downloadHtmlFile('${db._id}')" style="background:linear-gradient(135deg,#3b82f6,#2563eb);color:white;border:none;border-radius:10px;padding:12px 28px;cursor:pointer;font-size:.9rem;font-weight:700;display:inline-flex;align-items:center;gap:8px;box-shadow:0 4px 15px rgba(59,130,246,.3);transition:all .2s"><i class="fas fa-file-code"></i> Download HTML</button>
                         <button onclick="showDataUploadModal('${db._id}')" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:white;border:none;border-radius:10px;padding:12px 28px;cursor:pointer;font-size:.9rem;font-weight:700;display:inline-flex;align-items:center;gap:8px;box-shadow:0 4px 15px rgba(245,158,11,.2);transition:all .2s"><i class="fas fa-upload"></i> Upload New Data</button>
                     </div>
                 </div>
@@ -932,7 +934,8 @@ function getDashboardViewHTML() {
                     </div>
                 </div>
                 <div style="display:flex;justify-content:center;gap:12px;margin-top:16px;flex-wrap:wrap">
-                    <button onclick="downloadServerPdf('${db._id}')" style="background:linear-gradient(135deg,#ef4444,#dc2626);color:white;border:none;border-radius:10px;padding:14px 32px;cursor:pointer;font-size:.95rem;font-weight:700;display:inline-flex;align-items:center;gap:10px;box-shadow:0 4px 15px rgba(239,68,68,.3);transition:all .2s"><i class="fas fa-download"></i> Download PDF</button>
+                    <button onclick="downloadServerPdf('${db._id}')" style="background:linear-gradient(135deg,#ef4444,#dc2626);color:white;border:none;border-radius:10px;padding:14px 32px;cursor:pointer;font-size:.95rem;font-weight:700;display:inline-flex;align-items:center;gap:10px;box-shadow:0 4px 15px rgba(239,68,68,.3);transition:all .2s"><i class="fas fa-file-pdf"></i> Download PDF</button>
+                    <button onclick="downloadHtmlFile('${db._id}')" style="background:linear-gradient(135deg,#3b82f6,#2563eb);color:white;border:none;border-radius:10px;padding:14px 32px;cursor:pointer;font-size:.95rem;font-weight:700;display:inline-flex;align-items:center;gap:10px;box-shadow:0 4px 15px rgba(59,130,246,.3);transition:all .2s"><i class="fas fa-file-code"></i> Download HTML</button>
                     <button onclick="showDataUploadModal('${db._id}')" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:white;border:none;border-radius:10px;padding:14px 32px;cursor:pointer;font-size:.95rem;font-weight:700;display:inline-flex;align-items:center;gap:10px;box-shadow:0 4px 15px rgba(245,158,11,.2);transition:all .2s"><i class="fas fa-upload"></i> Upload New Data</button>
                 </div>
                 <div class="ad-footer-note"><i class="fas fa-shield-alt"></i> Report auto-updates when you upload new data. Template provided by admin.</div>
@@ -2722,94 +2725,79 @@ async function downloadHtmlAsPdf(dashboardId) {
 
 // Render HTML in a hidden iframe and capture with html2pdf
 async function _renderAndCapturePdf(htmlContent, filename) {
-    // Create hidden wrapper
+    // Create a hidden iframe WITHOUT sandbox — we need full DOM access
     const wrapper = document.createElement('div');
-    wrapper.id = 'pdf-render-wrapper';
-    wrapper.style.cssText = 'position:fixed;left:-9999px;top:0;width:1200px;height:auto;z-index:-1;background:white;overflow:visible;';
+    wrapper.style.cssText = 'position:fixed;left:-9999px;top:0;width:1200px;z-index:-1;';
     document.body.appendChild(wrapper);
 
-    // Create iframe WITHOUT sandbox for full DOM access
     const renderFrame = document.createElement('iframe');
     renderFrame.style.cssText = 'width:1200px;min-height:800px;border:none;';
     wrapper.appendChild(renderFrame);
 
     try {
-        const frameDoc = renderFrame.contentDocument || renderFrame.contentWindow.document;
+        const frameWin = renderFrame.contentWindow;
+        const frameDoc = frameWin.document;
         frameDoc.open();
         frameDoc.write(htmlContent);
         frameDoc.close();
 
-        // Wait for content to fully render (scripts, charts, images)
+        // Wait for content to fully render
         await new Promise((resolve) => {
-            let resolved = false;
-            const done = () => { if (!resolved) { resolved = true; resolve(); } };
-            renderFrame.onload = () => setTimeout(done, 3000);
-            setTimeout(done, 6000); // Max wait
+            let done = false;
+            const finish = () => { if (!done) { done = true; resolve(); } };
+            renderFrame.onload = () => setTimeout(finish, 3000);
+            setTimeout(finish, 6000);
         });
 
-        // Convert canvas elements to images
+        // Convert canvas charts to images before capture
         _convertCanvasToImages(frameDoc);
-        await new Promise(r => setTimeout(r, 500));
-
-        // Resize iframe to full content height
-        const contentHeight = Math.max(
-            frameDoc.documentElement.scrollHeight || 0,
-            frameDoc.body.scrollHeight || 0,
-            800
-        );
-        renderFrame.style.height = (contentHeight + 100) + 'px';
         await new Promise(r => setTimeout(r, 300));
 
-        // Use html2pdf on the iframe body
-        const targetBody = frameDoc.body;
-        if (!targetBody || targetBody.innerHTML.length < 50) {
-            throw new Error('Hidden iframe body is empty');
-        }
+        // Resize to full content
+        const h = Math.max(frameDoc.documentElement.scrollHeight, frameDoc.body.scrollHeight, 800);
+        renderFrame.style.height = (h + 50) + 'px';
+        await new Promise(r => setTimeout(r, 200));
 
-        console.log('[PDF] Capturing iframe content:', targetBody.innerHTML.length, 'chars, height:', contentHeight);
+        // Inject html2pdf into the iframe and run capture INSIDE the iframe context
+        // This is the key fix — html2canvas must run in the SAME document as the content
+        const html2pdfSrc = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js';
 
-        // Clone the body content into the main document for html2canvas compatibility
-        const captureDiv = document.createElement('div');
-        captureDiv.style.cssText = 'position:fixed;left:-9999px;top:0;width:1100px;z-index:-2;background:white;overflow:visible;';
-        document.body.appendChild(captureDiv);
-
-        // Copy all styles from iframe head
-        const iframeStyles = frameDoc.querySelectorAll('style, link[rel="stylesheet"]');
-        iframeStyles.forEach(s => {
-            captureDiv.appendChild(s.cloneNode(true));
+        await new Promise((resolve, reject) => {
+            const script = frameDoc.createElement('script');
+            script.src = html2pdfSrc;
+            script.onload = resolve;
+            script.onerror = () => reject(new Error('Failed to load html2pdf in iframe'));
+            frameDoc.head.appendChild(script);
         });
 
-        // Deep clone body content
-        captureDiv.appendChild(targetBody.cloneNode(true));
+        // Wait for script to initialize
+        await new Promise(r => setTimeout(r, 500));
 
-        // Wait for styles to apply to cloned content
-        await new Promise(r => setTimeout(r, 1000));
-
-        try {
-            const opt = {
-                margin: [8, 5, 8, 5],
-                filename: filename,
-                image: { type: 'jpeg', quality: 0.95 },
-                html2canvas: {
-                    scale: 2,
-                    useCORS: true,
-                    allowTaint: true,
-                    logging: false,
-                    scrollX: 0,
-                    scrollY: 0,
-                    width: 1100,
-                    windowWidth: 1100,
-                    backgroundColor: '#ffffff'
-                },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                pagebreak: { mode: ['css', 'legacy'] }
-            };
-
-            await html2pdf().set(opt).from(captureDiv).save();
-            console.log('[PDF] html2pdf capture succeeded');
-        } finally {
-            if (captureDiv.parentNode) captureDiv.parentNode.removeChild(captureDiv);
+        if (!frameWin.html2pdf) {
+            throw new Error('html2pdf not available in iframe context');
         }
+
+        console.log('[PDF] Running html2pdf inside iframe context, body length:', frameDoc.body.innerHTML.length);
+
+        // Generate PDF from within the iframe's own context
+        await frameWin.html2pdf().set({
+            margin: [8, 5, 8, 5],
+            filename: filename,
+            image: { type: 'jpeg', quality: 0.95 },
+            html2canvas: {
+                scale: 2,
+                useCORS: true,
+                allowTaint: true,
+                logging: false,
+                scrollX: 0,
+                scrollY: 0,
+                backgroundColor: '#ffffff'
+            },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+            pagebreak: { mode: ['css', 'legacy'] }
+        }).from(frameDoc.body).save();
+
+        console.log('[PDF] html2pdf capture succeeded');
     } finally {
         if (wrapper.parentNode) wrapper.parentNode.removeChild(wrapper);
     }
@@ -2960,6 +2948,72 @@ async function downloadServerPdf(dashboardId) {
         console.log('[PDF] Server PDF failed, using client-side:', error.message);
         // Fallback to client-side PDF generation
         await downloadHtmlAsPdf(dashboardId);
+    }
+}
+
+// ===== DOWNLOAD HTML FILE =====
+
+async function downloadHtmlFile(dashboardId) {
+    const db = analyticsState.approvedDashboards.find(d => d._id === dashboardId) ||
+               analyticsState.allDashboards.find(d => d._id === dashboardId);
+    const title = db ? db.title : 'Report';
+    const safeTitle = (title || 'Report').replace(/[^a-zA-Z0-9_\- ]/g, '').trim() || 'Report';
+    const filename = `${safeTitle}_${new Date().toISOString().slice(0, 10)}.html`;
+
+    try {
+        if (typeof showNotification === 'function') showNotification('Preparing HTML download...', 'info');
+
+        let htmlContent = '';
+
+        // Try reading from visible iframe first (includes rendered state)
+        const container = document.getElementById(`ad-html-report-${dashboardId}`);
+        const visibleIframe = container ? container.querySelector('iframe') : null;
+        if (visibleIframe) {
+            try {
+                const iframeDoc = visibleIframe.contentDocument || visibleIframe.contentWindow.document;
+                if (iframeDoc && iframeDoc.documentElement && iframeDoc.body.innerHTML.length > 50) {
+                    htmlContent = '<!DOCTYPE html>\n' + iframeDoc.documentElement.outerHTML;
+                }
+            } catch (e) {
+                console.warn('[HTML-DL] Could not read iframe:', e.message);
+            }
+        }
+
+        // Fallback: fetch from API
+        if (!htmlContent || htmlContent.length < 100) {
+            try {
+                if (typeof invalidateApiCache === 'function') {
+                    invalidateApiCache(`/analysis/dashboard/${dashboardId}/html-report`);
+                }
+                const response = await window.apiCall(`/analysis/dashboard/${dashboardId}/html-report`, 'GET');
+                if (response && response.htmlContent) {
+                    htmlContent = response.htmlContent;
+                }
+            } catch (fetchErr) {
+                console.warn('[HTML-DL] API fetch failed:', fetchErr.message);
+            }
+        }
+
+        if (!htmlContent || htmlContent.length < 50) {
+            if (typeof showNotification === 'function') showNotification('No report content available', 'error');
+            return;
+        }
+
+        // Download as .html file
+        const blob = new Blob([htmlContent], { type: 'text/html; charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+
+        if (typeof showNotification === 'function') showNotification('HTML file downloaded! Open it in any browser to view the report.', 'success');
+    } catch (error) {
+        console.error('[HTML-DL] Download failed:', error);
+        if (typeof showNotification === 'function') showNotification('Failed to download HTML: ' + (error.message || 'Unknown error'), 'error');
     }
 }
 
