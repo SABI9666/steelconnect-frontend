@@ -45,6 +45,7 @@ function initializeAnalyticsIntegration() {
     window.downloadHtmlAsPdf = downloadHtmlAsPdf;
     window.downloadServerPdf = downloadServerPdf;
     window.downloadHtmlFile = downloadHtmlFile;
+    window.downloadWordFile = downloadWordFile;
     addAnalyticsStyles();
 }
 
@@ -888,6 +889,7 @@ function getDashboardViewHTML() {
                     <div class="ad-hero-right">
                         <button class="ad-hero-btn" onclick="renderAnalyticsPortal()"><i class="fas fa-arrow-left"></i> Back to Portal</button>
                         <button class="ad-hero-btn" onclick="downloadServerPdf('${db._id}')" style="background:linear-gradient(135deg,#ef4444,#dc2626)"><i class="fas fa-file-pdf"></i> Download PDF</button>
+                        <button class="ad-hero-btn" onclick="downloadWordFile('${db._id}')" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed)"><i class="fas fa-file-word"></i> Download Word</button>
                         <button class="ad-hero-btn" onclick="downloadHtmlFile('${db._id}')" style="background:linear-gradient(135deg,#3b82f6,#2563eb)"><i class="fas fa-file-code"></i> Download HTML</button>
                         <button class="ad-hero-btn" onclick="showDataUploadModal('${db._id}')" style="background:linear-gradient(135deg,#f59e0b,#d97706)"><i class="fas fa-upload"></i> Upload New Data</button>
                     </div>
@@ -915,11 +917,12 @@ function getDashboardViewHTML() {
                         <div style="width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,#ef4444,#dc2626);display:flex;align-items:center;justify-content:center"><i class="fas fa-file-pdf" style="color:white;font-size:18px"></i></div>
                         <div>
                             <div style="font-size:.95rem;font-weight:700;color:#0f172a">Download Report</div>
-                            <div style="font-size:.78rem;color:#64748b">Save this report as PDF or HTML</div>
+                            <div style="font-size:.78rem;color:#64748b">Save this report as PDF, Word or HTML</div>
                         </div>
                     </div>
                     <div style="display:flex;gap:10px;flex-wrap:wrap">
                         <button onclick="downloadServerPdf('${db._id}')" style="background:linear-gradient(135deg,#ef4444,#dc2626);color:white;border:none;border-radius:10px;padding:12px 28px;cursor:pointer;font-size:.9rem;font-weight:700;display:inline-flex;align-items:center;gap:8px;box-shadow:0 4px 15px rgba(239,68,68,.3);transition:all .2s"><i class="fas fa-file-pdf"></i> Download PDF</button>
+                        <button onclick="downloadWordFile('${db._id}')" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);color:white;border:none;border-radius:10px;padding:12px 28px;cursor:pointer;font-size:.9rem;font-weight:700;display:inline-flex;align-items:center;gap:8px;box-shadow:0 4px 15px rgba(139,92,246,.3);transition:all .2s"><i class="fas fa-file-word"></i> Download Word</button>
                         <button onclick="downloadHtmlFile('${db._id}')" style="background:linear-gradient(135deg,#3b82f6,#2563eb);color:white;border:none;border-radius:10px;padding:12px 28px;cursor:pointer;font-size:.9rem;font-weight:700;display:inline-flex;align-items:center;gap:8px;box-shadow:0 4px 15px rgba(59,130,246,.3);transition:all .2s"><i class="fas fa-file-code"></i> Download HTML</button>
                         <button onclick="showDataUploadModal('${db._id}')" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:white;border:none;border-radius:10px;padding:12px 28px;cursor:pointer;font-size:.9rem;font-weight:700;display:inline-flex;align-items:center;gap:8px;box-shadow:0 4px 15px rgba(245,158,11,.2);transition:all .2s"><i class="fas fa-upload"></i> Upload New Data</button>
                     </div>
@@ -935,6 +938,7 @@ function getDashboardViewHTML() {
                 </div>
                 <div style="display:flex;justify-content:center;gap:12px;margin-top:16px;flex-wrap:wrap">
                     <button onclick="downloadServerPdf('${db._id}')" style="background:linear-gradient(135deg,#ef4444,#dc2626);color:white;border:none;border-radius:10px;padding:14px 32px;cursor:pointer;font-size:.95rem;font-weight:700;display:inline-flex;align-items:center;gap:10px;box-shadow:0 4px 15px rgba(239,68,68,.3);transition:all .2s"><i class="fas fa-file-pdf"></i> Download PDF</button>
+                    <button onclick="downloadWordFile('${db._id}')" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);color:white;border:none;border-radius:10px;padding:14px 32px;cursor:pointer;font-size:.95rem;font-weight:700;display:inline-flex;align-items:center;gap:10px;box-shadow:0 4px 15px rgba(139,92,246,.3);transition:all .2s"><i class="fas fa-file-word"></i> Download Word</button>
                     <button onclick="downloadHtmlFile('${db._id}')" style="background:linear-gradient(135deg,#3b82f6,#2563eb);color:white;border:none;border-radius:10px;padding:14px 32px;cursor:pointer;font-size:.95rem;font-weight:700;display:inline-flex;align-items:center;gap:10px;box-shadow:0 4px 15px rgba(59,130,246,.3);transition:all .2s"><i class="fas fa-file-code"></i> Download HTML</button>
                     <button onclick="showDataUploadModal('${db._id}')" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:white;border:none;border-radius:10px;padding:14px 32px;cursor:pointer;font-size:.95rem;font-weight:700;display:inline-flex;align-items:center;gap:10px;box-shadow:0 4px 15px rgba(245,158,11,.2);transition:all .2s"><i class="fas fa-upload"></i> Upload New Data</button>
                 </div>
@@ -3181,6 +3185,162 @@ async function downloadHtmlFile(dashboardId) {
     } catch (error) {
         console.error('[HTML-DL] Download failed:', error);
         if (typeof showNotification === 'function') showNotification('Failed to download HTML: ' + (error.message || 'Unknown error'), 'error');
+    }
+}
+
+// Download report as Word document (.doc)
+async function downloadWordFile(dashboardId) {
+    const db = analyticsState.approvedDashboards.find(d => d._id === dashboardId) ||
+               analyticsState.allDashboards.find(d => d._id === dashboardId);
+    const title = db ? db.title : 'Report';
+    const safeTitle = (title || 'Report').replace(/[^a-zA-Z0-9_\- ]/g, '').trim() || 'Report';
+    const filename = `${safeTitle}_${new Date().toISOString().slice(0, 10)}.doc`;
+
+    try {
+        if (typeof showNotification === 'function') showNotification('Preparing Word document...', 'info');
+
+        let htmlContent = '';
+
+        // Try reading from visible iframe first
+        const container = document.getElementById(`ad-html-report-${dashboardId}`);
+        const visibleIframe = container ? container.querySelector('iframe') : null;
+        if (visibleIframe) {
+            try {
+                const iframeDoc = visibleIframe.contentDocument || visibleIframe.contentWindow.document;
+                if (iframeDoc && iframeDoc.documentElement && iframeDoc.body.innerHTML.length > 50) {
+                    _convertCanvasToImages(iframeDoc);
+                    await new Promise(r => setTimeout(r, 200));
+                    htmlContent = iframeDoc.body.innerHTML;
+                }
+            } catch (e) {
+                console.warn('[WORD-DL] Could not read iframe:', e.message);
+            }
+        }
+
+        // Fallback: fetch from API
+        if (!htmlContent || htmlContent.length < 100) {
+            try {
+                if (typeof invalidateApiCache === 'function') {
+                    invalidateApiCache(`/analysis/dashboard/${dashboardId}/html-report`);
+                }
+                const response = await window.apiCall(`/analysis/dashboard/${dashboardId}/html-report`, 'GET');
+                if (response && response.htmlContent) {
+                    // Extract body content from full HTML
+                    const bodyMatch = response.htmlContent.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+                    htmlContent = bodyMatch ? bodyMatch[1] : response.htmlContent;
+                }
+            } catch (fetchErr) {
+                console.warn('[WORD-DL] API fetch failed:', fetchErr.message);
+            }
+        }
+
+        if (!htmlContent || htmlContent.length < 50) {
+            if (typeof showNotification === 'function') showNotification('No report content available', 'error');
+            return;
+        }
+
+        // Wrap in Word-compatible HTML with proper page setup and styling
+        const wordHtml = `
+<!DOCTYPE html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+      xmlns:w="urn:schemas-microsoft-com:office:word"
+      xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="utf-8">
+<title>${title}</title>
+<!--[if gte mso 9]>
+<xml>
+<w:WordDocument>
+<w:View>Print</w:View>
+<w:Zoom>100</w:Zoom>
+<w:DoNotOptimizeForBrowser/>
+</w:WordDocument>
+</xml>
+<![endif]-->
+<style>
+    @page {
+        size: A4;
+        margin: 2cm;
+    }
+    body {
+        font-family: Calibri, Arial, sans-serif;
+        font-size: 11pt;
+        line-height: 1.6;
+        color: #1a1a2e;
+        background: #ffffff;
+        max-width: 100%;
+        padding: 0;
+        margin: 0;
+    }
+    h1 { font-size: 20pt; color: #0f172a; margin: 16pt 0 8pt; font-weight: 700; }
+    h2 { font-size: 16pt; color: #1e293b; margin: 14pt 0 6pt; font-weight: 600; }
+    h3 { font-size: 13pt; color: #334155; margin: 12pt 0 4pt; font-weight: 600; }
+    p { margin: 4pt 0 8pt; }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 8pt 0 14pt;
+        font-size: 10pt;
+    }
+    th, td {
+        border: 1px solid #d1d5db;
+        padding: 6pt 8pt;
+        text-align: left;
+        vertical-align: top;
+    }
+    th {
+        background-color: #f1f5f9;
+        font-weight: 600;
+        color: #334155;
+    }
+    tr:nth-child(even) td {
+        background-color: #f8fafc;
+    }
+    img {
+        max-width: 100%;
+        height: auto;
+    }
+    .card, .metric-card, .kpi-card, .stat-card, .summary-card,
+    [class*="card"] {
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        padding: 10pt;
+        margin: 8pt 0;
+        background: #ffffff;
+    }
+    /* Hide interactive elements */
+    button, .btn, [class*="btn"], input, select, textarea,
+    nav, .navbar, .sidebar, .footer-actions, .no-print,
+    .download-btn, .upload-btn, .action-bar {
+        display: none !important;
+    }
+    /* Scrollable containers: show full content */
+    [style*="overflow"], [style*="max-height"] {
+        overflow: visible !important;
+        max-height: none !important;
+    }
+</style>
+</head>
+<body>
+${htmlContent}
+</body>
+</html>`;
+
+        // Download as .doc file (Word can open HTML-based .doc files natively)
+        const blob = new Blob(['\ufeff' + wordHtml], { type: 'application/msword' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+
+        if (typeof showNotification === 'function') showNotification('Word document downloaded! Open it in Microsoft Word or Google Docs.', 'success');
+    } catch (error) {
+        console.error('[WORD-DL] Download failed:', error);
+        if (typeof showNotification === 'function') showNotification('Failed to download Word document: ' + (error.message || 'Unknown error'), 'error');
     }
 }
 
