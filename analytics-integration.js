@@ -236,9 +236,9 @@ function getPortalHTML() {
                                     <span><i class="fas fa-eye"></i> View ${db.reportType === 'pdf' ? 'PDF Report' : db.reportType === 'html' ? 'HTML Report' : db.manualDashboardUrl ? 'Custom Dashboard' : 'Full Dashboard'}</span>
                                     <i class="fas fa-arrow-right"></i>
                                 </div>
-                                ${db.reportType === 'pdf' ? `<button class="ad-sync-btn" onclick="event.stopPropagation(); downloadPdfReport('${db._id}')" title="Download PDF report" style="background:none;border:1px solid #ef4444;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:.78rem;color:#ef4444;display:flex;align-items:center;gap:5px;transition:all .2s"><i class="fas fa-download"></i> Download PDF</button>` : ''}
-                                ${db.reportType === 'html' ? `<button class="ad-sync-btn" onclick="event.stopPropagation(); downloadHtmlAsPdf('${db._id}')" title="Download report as PDF" style="background:none;border:1px solid #ef4444;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:.78rem;color:#ef4444;display:flex;align-items:center;gap:5px;transition:all .2s"><i class="fas fa-file-pdf"></i> PDF</button>
-                                <button class="ad-sync-btn" onclick="event.stopPropagation(); showDataUploadModal('${db._id}')" title="Upload new data to auto-update report" style="background:none;border:1px solid #f59e0b;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:.78rem;color:#f59e0b;display:flex;align-items:center;gap:5px;transition:all .2s"><i class="fas fa-upload"></i> Update Data</button>` : ''}
+                                ${db.reportType === 'pdf' ? `<button class="ad-sync-btn" onclick="event.stopPropagation(); downloadPdfReport('${db._id}')" title="Download PDF report" style="background:linear-gradient(135deg,#ef4444,#dc2626);border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-size:.8rem;color:white;font-weight:600;display:flex;align-items:center;gap:6px;transition:all .2s;box-shadow:0 2px 8px rgba(239,68,68,.25)"><i class="fas fa-download"></i> Download PDF</button>` : ''}
+                                ${db.reportType === 'html' ? `<button class="ad-sync-btn" onclick="event.stopPropagation(); downloadHtmlAsPdf('${db._id}')" title="Download report as PDF" style="background:linear-gradient(135deg,#ef4444,#dc2626);border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-size:.8rem;color:white;font-weight:600;display:flex;align-items:center;gap:6px;transition:all .2s;box-shadow:0 2px 8px rgba(239,68,68,.25)"><i class="fas fa-download"></i> Download PDF</button>
+                                <button class="ad-sync-btn" onclick="event.stopPropagation(); showDataUploadModal('${db._id}')" title="Upload new data to auto-update report" style="background:none;border:1px solid #f59e0b;border-radius:8px;padding:7px 14px;cursor:pointer;font-size:.78rem;color:#f59e0b;font-weight:600;display:flex;align-items:center;gap:5px;transition:all .2s"><i class="fas fa-upload"></i> Update Data</button>` : ''}
                                 ${db.googleSheetUrl ? `<button class="ad-sync-btn" onclick="event.stopPropagation(); syncDashboard('${db._id}')" title="Refresh data from linked sheet" style="background:none;border:1px solid #e2e8f0;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:.78rem;color:#6366f1;display:flex;align-items:center;gap:5px;transition:all .2s"><i class="fas fa-sync-alt"></i> Sync</button>` : ''}
                             </div>
                         </div>
@@ -739,9 +739,11 @@ async function showApprovedDashboards(idOrIndex) {
     container.innerHTML = getDashboardViewHTML();
     initializeDashboardCharts();
 
-    // Load HTML report content if applicable
+    // Load report content based on type
     if (db.reportType === 'html') {
         loadHtmlReportContent(db._id);
+    } else if (db.reportType === 'pdf') {
+        viewPdfReport(db._id);
     }
 }
 
@@ -783,9 +785,11 @@ async function switchAnalyticsDashboard(index) {
     document.getElementById('app-container').innerHTML = getDashboardViewHTML();
     initializeDashboardCharts();
 
-    // Load HTML report content if applicable
+    // Load report content based on type
     if (db.reportType === 'html') {
         loadHtmlReportContent(db._id);
+    } else if (db.reportType === 'pdf') {
+        viewPdfReport(db._id);
     }
 }
 
@@ -848,13 +852,17 @@ function getDashboardViewHTML() {
                     </div>
                 </div>
                 <div class="ad-pdf-viewer" id="ad-pdf-viewer-${db._id}" style="min-height:600px;background:#f1f5f9;border-radius:16px;overflow:hidden;position:relative">
-                    <div style="text-align:center;padding:60px 20px">
-                        <div style="width:80px;height:80px;border-radius:20px;background:linear-gradient(135deg,rgba(239,68,68,.1),rgba(239,68,68,.05));display:flex;align-items:center;justify-content:center;margin:0 auto 20px"><i class="fas fa-file-pdf" style="color:#ef4444;font-size:32px"></i></div>
-                        <h3 style="margin:0 0 8px;color:#1e293b">PDF Report</h3>
-                        <p style="color:#64748b;margin:0 0 20px">${db.pdfReport?.originalName || 'Report.pdf'}</p>
-                        <button class="ad-hero-btn" onclick="viewPdfReport('${db._id}')" style="background:linear-gradient(135deg,#ef4444,#dc2626);margin:0 auto"><i class="fas fa-eye"></i> View PDF</button>
-                        <button class="ad-hero-btn" onclick="downloadPdfReport('${db._id}')" style="background:linear-gradient(135deg,#1e293b,#334155);margin:8px auto 0"><i class="fas fa-download"></i> Download PDF</button>
+                    <div style="text-align:center;padding:40px 20px">
+                        <div class="ad-loading-orb" style="width:60px;height:60px;margin:0 auto 16px">
+                            <div class="ad-orb-ring"></div><div class="ad-orb-ring"></div>
+                            <i class="fas fa-file-pdf ad-orb-icon" style="font-size:18px"></i>
+                        </div>
+                        <p style="color:#64748b">Loading PDF report...</p>
                     </div>
+                </div>
+                <div style="display:flex;justify-content:center;gap:12px;margin-top:16px;flex-wrap:wrap">
+                    <button onclick="downloadPdfReport('${db._id}')" style="background:linear-gradient(135deg,#ef4444,#dc2626);color:white;border:none;border-radius:10px;padding:14px 32px;cursor:pointer;font-size:.95rem;font-weight:700;display:inline-flex;align-items:center;gap:10px;box-shadow:0 4px 15px rgba(239,68,68,.3);transition:all .2s"><i class="fas fa-download"></i> Download PDF</button>
+                    <button onclick="viewPdfReport('${db._id}')" style="background:linear-gradient(135deg,#1e293b,#334155);color:white;border:none;border-radius:10px;padding:14px 32px;cursor:pointer;font-size:.95rem;font-weight:700;display:inline-flex;align-items:center;gap:10px;box-shadow:0 4px 15px rgba(30,41,59,.2);transition:all .2s"><i class="fas fa-external-link-alt"></i> Open in New Tab</button>
                 </div>
                 <div class="ad-footer-note"><i class="fas fa-shield-alt"></i> Report curated and approved by your admin team.</div>
             </div>
@@ -900,6 +908,19 @@ function getDashboardViewHTML() {
                         ${db.lastDataUploadAt ? `<div class="ad-meta-pill" style="color:#10b981"><i class="fas fa-database"></i> Data: ${new Date(db.lastDataUploadAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>` : ''}
                     </div>
                 </div>
+                <div style="background:linear-gradient(135deg,#f8fafc,#f1f5f9);border:1px solid #e2e8f0;border-radius:14px;padding:16px 24px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+                    <div style="display:flex;align-items:center;gap:12px">
+                        <div style="width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,#ef4444,#dc2626);display:flex;align-items:center;justify-content:center"><i class="fas fa-file-pdf" style="color:white;font-size:18px"></i></div>
+                        <div>
+                            <div style="font-size:.95rem;font-weight:700;color:#0f172a">Download Report</div>
+                            <div style="font-size:.78rem;color:#64748b">Save this report as a PDF file</div>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:10px;flex-wrap:wrap">
+                        <button onclick="downloadHtmlAsPdf('${db._id}')" style="background:linear-gradient(135deg,#ef4444,#dc2626);color:white;border:none;border-radius:10px;padding:12px 28px;cursor:pointer;font-size:.9rem;font-weight:700;display:inline-flex;align-items:center;gap:8px;box-shadow:0 4px 15px rgba(239,68,68,.3);transition:all .2s"><i class="fas fa-download"></i> Download PDF</button>
+                        <button onclick="showDataUploadModal('${db._id}')" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:white;border:none;border-radius:10px;padding:12px 28px;cursor:pointer;font-size:.9rem;font-weight:700;display:inline-flex;align-items:center;gap:8px;box-shadow:0 4px 15px rgba(245,158,11,.2);transition:all .2s"><i class="fas fa-upload"></i> Upload New Data</button>
+                    </div>
+                </div>
                 <div class="ad-html-report-container" id="ad-html-report-${db._id}" style="min-height:500px;background:white;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0">
                     <div style="text-align:center;padding:40px 20px">
                         <div class="ad-loading-orb" style="width:60px;height:60px;margin:0 auto 16px">
@@ -909,9 +930,9 @@ function getDashboardViewHTML() {
                         <p style="color:#64748b">Loading HTML report...</p>
                     </div>
                 </div>
-                <div style="text-align:center;margin-top:16px;display:flex;justify-content:center;gap:12px;flex-wrap:wrap">
-                    <button onclick="downloadHtmlAsPdf('${db._id}')" style="background:linear-gradient(135deg,#ef4444,#dc2626);color:white;border:none;border-radius:10px;padding:12px 28px;cursor:pointer;font-size:.9rem;font-weight:600;display:inline-flex;align-items:center;gap:8px;transition:all .2s;box-shadow:0 4px 15px rgba(239,68,68,.25)"><i class="fas fa-file-pdf"></i> Download as PDF</button>
-                    <button onclick="showDataUploadModal('${db._id}')" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:white;border:none;border-radius:10px;padding:12px 28px;cursor:pointer;font-size:.9rem;font-weight:600;display:inline-flex;align-items:center;gap:8px;transition:all .2s;box-shadow:0 4px 15px rgba(245,158,11,.25)"><i class="fas fa-upload"></i> Upload New Data to Auto-Update Report</button>
+                <div style="display:flex;justify-content:center;gap:12px;margin-top:16px;flex-wrap:wrap">
+                    <button onclick="downloadHtmlAsPdf('${db._id}')" style="background:linear-gradient(135deg,#ef4444,#dc2626);color:white;border:none;border-radius:10px;padding:14px 32px;cursor:pointer;font-size:.95rem;font-weight:700;display:inline-flex;align-items:center;gap:10px;box-shadow:0 4px 15px rgba(239,68,68,.3);transition:all .2s"><i class="fas fa-download"></i> Download PDF</button>
+                    <button onclick="showDataUploadModal('${db._id}')" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:white;border:none;border-radius:10px;padding:14px 32px;cursor:pointer;font-size:.95rem;font-weight:700;display:inline-flex;align-items:center;gap:10px;box-shadow:0 4px 15px rgba(245,158,11,.2);transition:all .2s"><i class="fas fa-upload"></i> Upload New Data</button>
                 </div>
                 <div class="ad-footer-note"><i class="fas fa-shield-alt"></i> Report auto-updates when you upload new data. Template provided by admin.</div>
             </div>
@@ -2482,23 +2503,31 @@ function _addAnalyticsStylesLegacy() {
 
 async function viewPdfReport(dashboardId) {
     try {
-        if (typeof showNotification === 'function') showNotification('Loading PDF report...', 'info');
         const response = await window.apiCall(`/analysis/dashboard/${dashboardId}/pdf-report`, 'GET');
         if (response.signedUrl) {
             const container = document.getElementById(`ad-pdf-viewer-${dashboardId}`);
             if (container) {
                 container.innerHTML = `
-                    <iframe src="${response.signedUrl}" style="width:100%;height:700px;border:none;border-radius:12px" allowfullscreen></iframe>
-                    <div style="text-align:center;padding:12px">
-                        <a href="${response.signedUrl}" target="_blank" rel="noopener" style="color:#6366f1;font-size:13px;text-decoration:none"><i class="fas fa-external-link-alt"></i> Open in New Tab</a>
+                    <iframe src="${response.signedUrl}#toolbar=1&navpanes=0" style="width:100%;height:700px;border:none;border-radius:12px" allowfullscreen></iframe>
+                    <div style="text-align:center;padding:12px;display:flex;justify-content:center;gap:16px">
+                        <a href="${response.signedUrl}" download="${response.originalName || 'report.pdf'}" style="color:#ef4444;font-size:13px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:6px"><i class="fas fa-download"></i> Direct Download</a>
+                        <a href="${response.signedUrl}" target="_blank" rel="noopener" style="color:#6366f1;font-size:13px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:6px"><i class="fas fa-external-link-alt"></i> Open in New Tab</a>
                     </div>`;
             } else {
                 window.open(response.signedUrl, '_blank');
             }
+        } else {
+            const container = document.getElementById(`ad-pdf-viewer-${dashboardId}`);
+            if (container) {
+                container.innerHTML = `<div style="text-align:center;padding:40px"><i class="fas fa-exclamation-circle" style="font-size:32px;color:#f59e0b;margin-bottom:12px"></i><h4 style="color:#1e293b;margin:0 0 8px">PDF Not Available</h4><p style="color:#64748b">The PDF report could not be loaded.</p></div>`;
+            }
         }
     } catch (error) {
         console.error('PDF view error:', error);
-        if (typeof showNotification === 'function') showNotification('Failed to load PDF report', 'error');
+        const container = document.getElementById(`ad-pdf-viewer-${dashboardId}`);
+        if (container) {
+            container.innerHTML = `<div style="text-align:center;padding:40px"><i class="fas fa-exclamation-triangle" style="font-size:32px;color:#ef4444;margin-bottom:12px"></i><h4 style="color:#1e293b;margin:0 0 8px">Failed to Load PDF</h4><p style="color:#64748b">${error.message || 'Please try again.'}</p></div>`;
+        }
     }
 }
 
