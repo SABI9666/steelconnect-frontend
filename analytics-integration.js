@@ -206,7 +206,7 @@ function getPortalHTML() {
             ${approved.length > 0 ? `
             <div class="ad-approved-grid">
                 ${approved.map((db, i) => `
-                    <div class="ad-approved-card" onclick="showApprovedDashboards('${db._id}')" style="cursor:pointer">
+                    <div class="ad-approved-card" data-dashboard-id="${db._id}" onclick="showApprovedDashboards('${db._id}')" style="cursor:pointer">
                         <div class="ad-approved-strip" ${db.reportType === 'pdf' ? 'style="background:linear-gradient(90deg,#ef4444,#dc2626)"' : db.reportType === 'html' ? 'style="background:linear-gradient(90deg,#f59e0b,#d97706)"' : db.manualDashboardUrl ? 'style="background:linear-gradient(90deg,#6366f1,#8b5cf6)"' : ''}></div>
                         <div class="ad-approved-body">
                             <div class="ad-approved-head">
