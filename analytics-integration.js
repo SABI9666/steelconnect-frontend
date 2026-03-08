@@ -230,7 +230,8 @@ function getPortalHTML() {
                                     <span><i class="fas fa-eye"></i> View ${db.reportType === 'pdf' ? 'PDF Report' : db.reportType === 'html' ? 'HTML Report' : db.manualDashboardUrl ? 'Custom Dashboard' : 'Full Dashboard'}</span>
                                     <i class="fas fa-arrow-right"></i>
                                 </div>
-                                ${db.reportType === 'html' ? `<button class="ad-sync-btn" onclick="event.stopPropagation(); showDataUploadModal('${db._id}')" title="Upload new data to auto-update report" style="background:none;border:1px solid #f59e0b;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:.78rem;color:#f59e0b;display:flex;align-items:center;gap:5px;transition:all .2s"><i class="fas fa-upload"></i> Update Data</button>` : ''}
+                                ${db.reportType === 'html' ? `<button class="ad-sync-btn" onclick="event.stopPropagation(); downloadHtmlAsPdf('${db._id}')" title="Download report as PDF" style="background:none;border:1px solid #ef4444;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:.78rem;color:#ef4444;display:flex;align-items:center;gap:5px;transition:all .2s"><i class="fas fa-file-pdf"></i> PDF</button>
+                                <button class="ad-sync-btn" onclick="event.stopPropagation(); showDataUploadModal('${db._id}')" title="Upload new data to auto-update report" style="background:none;border:1px solid #f59e0b;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:.78rem;color:#f59e0b;display:flex;align-items:center;gap:5px;transition:all .2s"><i class="fas fa-upload"></i> Update Data</button>` : ''}
                                 ${db.googleSheetUrl ? `<button class="ad-sync-btn" onclick="event.stopPropagation(); syncDashboard('${db._id}')" title="Refresh data from linked sheet" style="background:none;border:1px solid #e2e8f0;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:.78rem;color:#6366f1;display:flex;align-items:center;gap:5px;transition:all .2s"><i class="fas fa-sync-alt"></i> Sync</button>` : ''}
                             </div>
                         </div>
@@ -849,6 +850,7 @@ function getDashboardViewHTML() {
                     </div>
                     <div class="ad-hero-right">
                         <button class="ad-hero-btn" onclick="renderAnalyticsPortal()"><i class="fas fa-arrow-left"></i> Back to Portal</button>
+                        <button class="ad-hero-btn" onclick="downloadHtmlAsPdf('${db._id}')" style="background:linear-gradient(135deg,#ef4444,#dc2626)"><i class="fas fa-file-pdf"></i> Download PDF</button>
                         <button class="ad-hero-btn" onclick="showDataUploadModal('${db._id}')" style="background:linear-gradient(135deg,#f59e0b,#d97706)"><i class="fas fa-upload"></i> Upload New Data</button>
                     </div>
                 </div>
@@ -879,7 +881,8 @@ function getDashboardViewHTML() {
                         <p style="color:#64748b">Loading HTML report...</p>
                     </div>
                 </div>
-                <div style="text-align:center;margin-top:16px">
+                <div style="text-align:center;margin-top:16px;display:flex;justify-content:center;gap:12px;flex-wrap:wrap">
+                    <button onclick="downloadHtmlAsPdf('${db._id}')" style="background:linear-gradient(135deg,#ef4444,#dc2626);color:white;border:none;border-radius:10px;padding:12px 28px;cursor:pointer;font-size:.9rem;font-weight:600;display:inline-flex;align-items:center;gap:8px;transition:all .2s;box-shadow:0 4px 15px rgba(239,68,68,.25)"><i class="fas fa-file-pdf"></i> Download as PDF</button>
                     <button onclick="showDataUploadModal('${db._id}')" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:white;border:none;border-radius:10px;padding:12px 28px;cursor:pointer;font-size:.9rem;font-weight:600;display:inline-flex;align-items:center;gap:8px;transition:all .2s;box-shadow:0 4px 15px rgba(245,158,11,.25)"><i class="fas fa-upload"></i> Upload New Data to Auto-Update Report</button>
                 </div>
                 <div class="ad-footer-note"><i class="fas fa-shield-alt"></i> Report auto-updates when you upload new data. Template provided by admin.</div>
@@ -2541,6 +2544,82 @@ async function loadHtmlReportContent(dashboardId) {
                     <p style="color:#64748b">${error.message || 'Please try again later.'}</p>
                 </div>`;
         }
+    }
+}
+
+// ===== DOWNLOAD HTML REPORT AS PDF =====
+
+async function downloadHtmlAsPdf(dashboardId) {
+    const db = analyticsState.approvedDashboards.find(d => d._id === dashboardId) ||
+               analyticsState.allDashboards.find(d => d._id === dashboardId);
+    const title = db ? db.title : 'Report';
+
+    try {
+        if (typeof showNotification === 'function') showNotification('Generating PDF from report...', 'info');
+
+        // Try to get HTML content from the iframe already loaded on page
+        const container = document.getElementById(`ad-html-report-${dashboardId}`);
+        const iframe = container ? container.querySelector('iframe') : null;
+
+        if (iframe && iframe.contentDocument) {
+            // Use print-to-PDF via a new window
+            const printWindow = window.open('', '_blank', 'width=900,height=700');
+            if (printWindow) {
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                printWindow.document.open();
+                printWindow.document.write(`
+                    <!DOCTYPE html>
+                    <html><head>
+                        <title>${title} - PDF Export</title>
+                        <style>
+                            @media print {
+                                body { margin: 0; padding: 20px; }
+                                @page { margin: 1cm; }
+                            }
+                        </style>
+                    </head><body>${iframeDoc.documentElement.innerHTML}</body></html>
+                `);
+                printWindow.document.close();
+                setTimeout(() => {
+                    printWindow.print();
+                    if (typeof showNotification === 'function') showNotification('Use "Save as PDF" in the print dialog to download', 'success');
+                }, 500);
+                return;
+            }
+        }
+
+        // Fallback: fetch HTML content from API and open print dialog
+        const response = await window.apiCall(`/analysis/dashboard/${dashboardId}/html-report`, 'GET');
+        if (response.htmlContent) {
+            const printWindow = window.open('', '_blank', 'width=900,height=700');
+            if (printWindow) {
+                printWindow.document.open();
+                printWindow.document.write(`
+                    <!DOCTYPE html>
+                    <html><head>
+                        <title>${title} - PDF Export</title>
+                        <style>
+                            @media print {
+                                body { margin: 0; padding: 20px; }
+                                @page { margin: 1cm; }
+                            }
+                        </style>
+                    </head><body>${response.htmlContent}</body></html>
+                `);
+                printWindow.document.close();
+                setTimeout(() => {
+                    printWindow.print();
+                    if (typeof showNotification === 'function') showNotification('Use "Save as PDF" in the print dialog to download', 'success');
+                }, 500);
+            } else {
+                if (typeof showNotification === 'function') showNotification('Please allow popups to download PDF', 'error');
+            }
+        } else {
+            if (typeof showNotification === 'function') showNotification('No HTML report content available to convert', 'error');
+        }
+    } catch (error) {
+        console.error('HTML to PDF error:', error);
+        if (typeof showNotification === 'function') showNotification('Failed to generate PDF', 'error');
     }
 }
 
