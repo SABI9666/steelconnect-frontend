@@ -2664,7 +2664,7 @@ async function downloadHtmlAsPdf(dashboardId) {
         if (visibleIframe && typeof html2pdf !== 'undefined') {
             try {
                 const visibleDoc = visibleIframe.contentDocument || visibleIframe.contentWindow.document;
-                if (visibleDoc && visibleDoc.body) {
+                if (visibleDoc && visibleDoc.body && visibleDoc.body.innerHTML.length > 50) {
                     console.log('[PDF] Capturing from visible rendered iframe...');
 
                     // Convert all canvas elements (charts) to static images before capture
@@ -2675,23 +2675,26 @@ async function downloadHtmlAsPdf(dashboardId) {
                     tempDiv.style.cssText = 'position:fixed;left:-9999px;top:0;width:1100px;z-index:-1;background:white;';
                     document.body.appendChild(tempDiv);
 
+                    // Copy over any <style> and <link> tags from iframe head first
+                    const iframeStyles = visibleDoc.querySelectorAll('style, link[rel="stylesheet"]');
+                    iframeStyles.forEach(styleEl => {
+                        const cloned = styleEl.cloneNode(true);
+                        tempDiv.appendChild(cloned);
+                    });
+
                     // Clone with computed styles to preserve visual appearance
                     const clonedContent = _deepCloneWithStyles(visibleDoc.body, visibleDoc);
                     tempDiv.appendChild(clonedContent);
 
-                    // Also copy over any <style> and <link> tags from iframe head
-                    const iframeStyles = visibleDoc.querySelectorAll('style, link[rel="stylesheet"]');
-                    iframeStyles.forEach(styleEl => {
-                        const cloned = styleEl.cloneNode(true);
-                        tempDiv.insertBefore(cloned, tempDiv.firstChild);
-                    });
+                    // Wait for styles to apply
+                    await new Promise(r => setTimeout(r, 500));
 
                     const opt = {
                         margin: [10, 8, 10, 8],
                         filename: filename,
-                        image: { type: 'jpeg', quality: 0.98 },
+                        image: { type: 'jpeg', quality: 0.95 },
                         html2canvas: {
-                            scale: 2,
+                            scale: 1.5,
                             useCORS: true,
                             allowTaint: true,
                             logging: false,
@@ -2719,7 +2722,8 @@ async function downloadHtmlAsPdf(dashboardId) {
             }
         }
 
-        // Strategy 2: Fetch HTML from API and render in hidden iframe with extended wait
+        // Strategy 2: Fetch HTML from API and render in hidden iframe
+        console.log('[PDF] Trying Strategy 2: fetch HTML and render in hidden iframe...');
         let htmlContent = '';
 
         // Try reading from visible iframe first
@@ -2846,7 +2850,7 @@ async function _generatePdfWithHiddenIframe(htmlContent, safeTitle, filename) {
 
     const renderFrame = document.createElement('iframe');
     renderFrame.style.cssText = 'width:1100px;min-height:800px;border:none;';
-    renderFrame.setAttribute('sandbox', 'allow-scripts allow-same-origin');
+    // No sandbox on hidden render iframe — we control the content and need full DOM access for pdf capture
     wrapper.appendChild(renderFrame);
 
     const frameDoc = renderFrame.contentDocument || renderFrame.contentWindow.document;
@@ -2881,12 +2885,13 @@ async function _generatePdfWithHiddenIframe(htmlContent, safeTitle, filename) {
         }
 
         if (targetElement) {
+            console.log('[PDF] Hidden iframe content length:', targetElement.innerHTML.length, 'chars');
             const opt = {
                 margin: [10, 8, 10, 8],
                 filename: filename,
-                image: { type: 'jpeg', quality: 0.98 },
+                image: { type: 'jpeg', quality: 0.95 },
                 html2canvas: {
-                    scale: 2,
+                    scale: 1.5,
                     useCORS: true,
                     allowTaint: true,
                     logging: false,
