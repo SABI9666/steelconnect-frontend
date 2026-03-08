@@ -37,6 +37,11 @@ function initializeAnalyticsIntegration() {
     window.deletePendingDashboard = deletePendingDashboard;
     window.showDashboardStatus = showDashboardStatus;
     window.renderAnalyticsPortal = renderAnalyticsPortal;
+    window.viewPdfReport = viewPdfReport;
+    window.downloadPdfReport = downloadPdfReport;
+    window.loadHtmlReportContent = loadHtmlReportContent;
+    window.showDataUploadModal = showDataUploadModal;
+    window.uploadNewData = uploadNewData;
     addAnalyticsStyles();
 }
 
@@ -194,11 +199,11 @@ function getPortalHTML() {
             <div class="ad-approved-grid">
                 ${approved.map((db, i) => `
                     <div class="ad-approved-card" onclick="showApprovedDashboards(${i})" style="cursor:pointer">
-                        <div class="ad-approved-strip" ${db.manualDashboardUrl ? 'style="background:linear-gradient(90deg,#6366f1,#8b5cf6)"' : ''}></div>
+                        <div class="ad-approved-strip" ${db.reportType === 'pdf' ? 'style="background:linear-gradient(90deg,#ef4444,#dc2626)"' : db.reportType === 'html' ? 'style="background:linear-gradient(90deg,#f59e0b,#d97706)"' : db.manualDashboardUrl ? 'style="background:linear-gradient(90deg,#6366f1,#8b5cf6)"' : ''}></div>
                         <div class="ad-approved-body">
                             <div class="ad-approved-head">
-                                <div class="ad-approved-icon" ${db.manualDashboardUrl ? 'style="background:linear-gradient(135deg,rgba(99,102,241,.1),rgba(139,92,246,.08));color:#6366f1"' : ''}>
-                                    <i class="fas ${db.manualDashboardUrl ? 'fa-external-link-alt' : 'fa-chart-bar'}"></i>
+                                <div class="ad-approved-icon" ${db.reportType === 'pdf' ? 'style="background:linear-gradient(135deg,rgba(239,68,68,.1),rgba(239,68,68,.05));color:#ef4444"' : db.reportType === 'html' ? 'style="background:linear-gradient(135deg,rgba(245,158,11,.1),rgba(245,158,11,.05));color:#f59e0b"' : db.manualDashboardUrl ? 'style="background:linear-gradient(135deg,rgba(99,102,241,.1),rgba(139,92,246,.08));color:#6366f1"' : ''}>
+                                    <i class="fas ${db.reportType === 'pdf' ? 'fa-file-pdf' : db.reportType === 'html' ? 'fa-code' : db.manualDashboardUrl ? 'fa-external-link-alt' : 'fa-chart-bar'}"></i>
                                 </div>
                                 <div>
                                     <h4>${db.title}</h4>
@@ -206,20 +211,27 @@ function getPortalHTML() {
                                 </div>
                             </div>
                             <div class="ad-approved-meta">
-                                ${db.manualDashboardUrl
+                                ${db.reportType === 'pdf'
+                                    ? '<span style="color:#ef4444;font-weight:600"><i class="fas fa-file-pdf"></i> PDF Report</span>'
+                                    : db.reportType === 'html'
+                                    ? '<span style="color:#f59e0b;font-weight:600"><i class="fas fa-code"></i> HTML Report</span>'
+                                    : db.manualDashboardUrl
                                     ? '<span style="color:#6366f1;font-weight:600"><i class="fas fa-user-shield"></i> Admin Curated</span>'
                                     : `<span><i class="fas fa-chart-pie"></i> ${db.chartsCount || (db.charts ? db.charts.length : 0)} charts</span>`
                                 }
                                 <span><i class="fas fa-sync-alt"></i> ${(db.frequency || 'daily').charAt(0).toUpperCase() + (db.frequency || 'daily').slice(1)}</span>
                                 <span><i class="fas fa-calendar-check"></i> ${db.approvedAt ? new Date(db.approvedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A'}</span>
+                                ${db.reportType === 'html' && db.lastDataUploadAt ? `<span style="color:#10b981"><i class="fas fa-database"></i> Data: ${new Date(db.lastDataUploadAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>` : ''}
                                 ${db.googleSheetUrl ? `<span style="color:${db.linkType === 'sharepoint' ? '#0078d4' : '#34a853'}"><i class="fas ${db.linkType === 'sharepoint' ? 'fa-cloud' : 'fa-link'}"></i> ${db.linkType === 'sharepoint' ? 'SharePoint' : db.linkType === 'google' ? 'Google Sheet' : 'Linked'}</span>` : ''}
                                 ${db.syncInterval && db.syncInterval !== 'manual' ? `<span style="color:#6366f1"><i class="fas fa-sync"></i> Auto-sync: ${db.syncInterval}</span>` : ''}
                             </div>
                             <div class="ad-approved-actions" style="display:flex;align-items:center;justify-content:space-between">
                                 <div class="ad-approved-cta" style="flex:1">
-                                    <span><i class="fas fa-eye"></i> View ${db.manualDashboardUrl ? 'Custom Dashboard' : 'Full Dashboard'}</span>
+                                    <span><i class="fas fa-eye"></i> View ${db.reportType === 'pdf' ? 'PDF Report' : db.reportType === 'html' ? 'HTML Report' : db.manualDashboardUrl ? 'Custom Dashboard' : 'Full Dashboard'}</span>
                                     <i class="fas fa-arrow-right"></i>
                                 </div>
+                                ${db.reportType === 'html' ? `<button class="ad-sync-btn" onclick="event.stopPropagation(); downloadHtmlAsPdf('${db._id}')" title="Download report as PDF" style="background:none;border:1px solid #ef4444;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:.78rem;color:#ef4444;display:flex;align-items:center;gap:5px;transition:all .2s"><i class="fas fa-file-pdf"></i> PDF</button>
+                                <button class="ad-sync-btn" onclick="event.stopPropagation(); showDataUploadModal('${db._id}')" title="Upload new data to auto-update report" style="background:none;border:1px solid #f59e0b;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:.78rem;color:#f59e0b;display:flex;align-items:center;gap:5px;transition:all .2s"><i class="fas fa-upload"></i> Update Data</button>` : ''}
                                 ${db.googleSheetUrl ? `<button class="ad-sync-btn" onclick="event.stopPropagation(); syncDashboard('${db._id}')" title="Refresh data from linked sheet" style="background:none;border:1px solid #e2e8f0;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:.78rem;color:#6366f1;display:flex;align-items:center;gap:5px;transition:all .2s"><i class="fas fa-sync-alt"></i> Sync</button>` : ''}
                             </div>
                         </div>
@@ -703,6 +715,11 @@ async function showApprovedDashboards(index) {
 
     container.innerHTML = getDashboardViewHTML();
     initializeDashboardCharts();
+
+    // Load HTML report content if applicable
+    if (db.reportType === 'html') {
+        loadHtmlReportContent(db._id);
+    }
 }
 
 async function refreshAnalyticsDashboards() {
@@ -740,6 +757,11 @@ async function switchAnalyticsDashboard(index) {
     analyticsState.charts = {};
     document.getElementById('app-container').innerHTML = getDashboardViewHTML();
     initializeDashboardCharts();
+
+    // Load HTML report content if applicable
+    if (db.reportType === 'html') {
+        loadHtmlReportContent(db._id);
+    }
 }
 
 function getDashboardViewHTML() {
@@ -747,16 +769,125 @@ function getDashboardViewHTML() {
     if (!db) return '<div class="ad-portal"><p>No dashboard found.</p></div>';
 
     const hasManualUrl = db.manualDashboardUrl && db.manualDashboardUrl.trim();
+    const reportType = db.reportType || 'auto';
 
     // Dashboard selector tabs
     let selectorHTML = '';
     if (analyticsState.approvedDashboards.length > 1) {
         selectorHTML = `<div class="ad-db-selector">${analyticsState.approvedDashboards.map((d, i) =>
             `<button class="ad-db-tab ${d._id === db._id ? 'active' : ''}" onclick="switchAnalyticsDashboard(${i})">
-                <i class="fas fa-chart-pie"></i> ${d.title || 'Dashboard ' + (i+1)}
-                ${d.manualDashboardUrl ? '<span class="ad-db-tab-link-badge"><i class="fas fa-external-link-alt"></i></span>' : ''}
+                <i class="fas ${d.reportType === 'pdf' ? 'fa-file-pdf' : d.reportType === 'html' ? 'fa-code' : 'fa-chart-pie'}"></i> ${d.title || 'Dashboard ' + (i+1)}
+                ${d.reportType === 'pdf' ? '<span class="ad-db-tab-link-badge" style="background:#ef4444"><i class="fas fa-file-pdf"></i></span>' : d.reportType === 'html' ? '<span class="ad-db-tab-link-badge" style="background:#f59e0b"><i class="fas fa-code"></i></span>' : d.manualDashboardUrl ? '<span class="ad-db-tab-link-badge"><i class="fas fa-external-link-alt"></i></span>' : ''}
             </button>`
         ).join('')}</div>`;
+    }
+
+    // PDF Report view
+    if (reportType === 'pdf') {
+        return `
+        <div class="ad-portal">
+            <div class="ad-hero-header">
+                <div class="ad-hero-bg"><div class="ad-hero-gradient"></div><div class="ad-hero-pattern"></div>
+                    <div class="ad-hero-orb ad-hero-orb-1"></div><div class="ad-hero-orb ad-hero-orb-2"></div></div>
+                <div class="ad-hero-content">
+                    <div class="ad-hero-left">
+                        <div class="ad-hero-icon-box" style="background:linear-gradient(135deg,#ef4444,#dc2626)"><i class="fas fa-file-pdf"></i></div>
+                        <div class="ad-hero-text">
+                            <h1>${db.title || 'PDF Report'}</h1>
+                            <p>PDF report curated by your admin team</p>
+                        </div>
+                    </div>
+                    <div class="ad-hero-right">
+                        <button class="ad-hero-btn" onclick="renderAnalyticsPortal()"><i class="fas fa-arrow-left"></i> Back to Portal</button>
+                        <button class="ad-hero-btn" onclick="downloadPdfReport('${db._id}')" style="background:linear-gradient(135deg,#ef4444,#dc2626)"><i class="fas fa-download"></i> Download PDF</button>
+                    </div>
+                </div>
+            </div>
+            ${selectorHTML}
+            <div class="ad-content">
+                <div class="ad-dashboard-bar">
+                    <div class="ad-dashboard-info">
+                        <div class="ad-dashboard-icon" style="background:linear-gradient(135deg,#ef4444,#dc2626)"><i class="fas fa-file-pdf"></i></div>
+                        <div>
+                            <h2>${db.title || 'Report'}</h2>
+                            ${db.description ? `<p class="ad-dashboard-desc">${db.description}</p>` : ''}
+                        </div>
+                    </div>
+                    <div class="ad-dashboard-meta-pills">
+                        <div class="ad-meta-pill frequency"><i class="fas fa-sync-alt"></i> ${(db.frequency || 'daily').charAt(0).toUpperCase() + (db.frequency || 'daily').slice(1)}</div>
+                        <div class="ad-meta-pill date"><i class="fas fa-calendar-check"></i> ${new Date(db.approvedAt || db.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+                        <div class="ad-meta-pill charts" style="color:#ef4444"><i class="fas fa-file-pdf"></i> PDF Report</div>
+                    </div>
+                </div>
+                <div class="ad-pdf-viewer" id="ad-pdf-viewer-${db._id}" style="min-height:600px;background:#f1f5f9;border-radius:16px;overflow:hidden;position:relative">
+                    <div style="text-align:center;padding:60px 20px">
+                        <div style="width:80px;height:80px;border-radius:20px;background:linear-gradient(135deg,rgba(239,68,68,.1),rgba(239,68,68,.05));display:flex;align-items:center;justify-content:center;margin:0 auto 20px"><i class="fas fa-file-pdf" style="color:#ef4444;font-size:32px"></i></div>
+                        <h3 style="margin:0 0 8px;color:#1e293b">PDF Report</h3>
+                        <p style="color:#64748b;margin:0 0 20px">${db.pdfReport?.originalName || 'Report.pdf'}</p>
+                        <button class="ad-hero-btn" onclick="viewPdfReport('${db._id}')" style="background:linear-gradient(135deg,#ef4444,#dc2626);margin:0 auto"><i class="fas fa-eye"></i> View PDF</button>
+                        <button class="ad-hero-btn" onclick="downloadPdfReport('${db._id}')" style="background:linear-gradient(135deg,#1e293b,#334155);margin:8px auto 0"><i class="fas fa-download"></i> Download PDF</button>
+                    </div>
+                </div>
+                <div class="ad-footer-note"><i class="fas fa-shield-alt"></i> Report curated and approved by your admin team.</div>
+            </div>
+        </div>`;
+    }
+
+    // HTML Report view
+    if (reportType === 'html') {
+        return `
+        <div class="ad-portal">
+            <div class="ad-hero-header">
+                <div class="ad-hero-bg"><div class="ad-hero-gradient"></div><div class="ad-hero-pattern"></div>
+                    <div class="ad-hero-orb ad-hero-orb-1"></div><div class="ad-hero-orb ad-hero-orb-2"></div></div>
+                <div class="ad-hero-content">
+                    <div class="ad-hero-left">
+                        <div class="ad-hero-icon-box" style="background:linear-gradient(135deg,#f59e0b,#d97706)"><i class="fas fa-code"></i></div>
+                        <div class="ad-hero-text">
+                            <h1>${db.title || 'HTML Report'}</h1>
+                            <p>Interactive report &middot; Upload new data to auto-update</p>
+                        </div>
+                    </div>
+                    <div class="ad-hero-right">
+                        <button class="ad-hero-btn" onclick="renderAnalyticsPortal()"><i class="fas fa-arrow-left"></i> Back to Portal</button>
+                        <button class="ad-hero-btn" onclick="downloadHtmlAsPdf('${db._id}')" style="background:linear-gradient(135deg,#ef4444,#dc2626)"><i class="fas fa-file-pdf"></i> Download PDF</button>
+                        <button class="ad-hero-btn" onclick="showDataUploadModal('${db._id}')" style="background:linear-gradient(135deg,#f59e0b,#d97706)"><i class="fas fa-upload"></i> Upload New Data</button>
+                    </div>
+                </div>
+            </div>
+            ${selectorHTML}
+            <div class="ad-content">
+                <div class="ad-dashboard-bar">
+                    <div class="ad-dashboard-info">
+                        <div class="ad-dashboard-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706)"><i class="fas fa-code"></i></div>
+                        <div>
+                            <h2>${db.title || 'Report'}</h2>
+                            ${db.description ? `<p class="ad-dashboard-desc">${db.description}</p>` : ''}
+                        </div>
+                    </div>
+                    <div class="ad-dashboard-meta-pills">
+                        <div class="ad-meta-pill frequency"><i class="fas fa-sync-alt"></i> ${(db.frequency || 'daily').charAt(0).toUpperCase() + (db.frequency || 'daily').slice(1)}</div>
+                        <div class="ad-meta-pill date"><i class="fas fa-calendar-check"></i> ${new Date(db.approvedAt || db.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+                        <div class="ad-meta-pill charts" style="color:#f59e0b"><i class="fas fa-code"></i> HTML Report</div>
+                        ${db.lastDataUploadAt ? `<div class="ad-meta-pill" style="color:#10b981"><i class="fas fa-database"></i> Data: ${new Date(db.lastDataUploadAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>` : ''}
+                    </div>
+                </div>
+                <div class="ad-html-report-container" id="ad-html-report-${db._id}" style="min-height:500px;background:white;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0">
+                    <div style="text-align:center;padding:40px 20px">
+                        <div class="ad-loading-orb" style="width:60px;height:60px;margin:0 auto 16px">
+                            <div class="ad-orb-ring"></div><div class="ad-orb-ring"></div>
+                            <i class="fas fa-code ad-orb-icon" style="font-size:18px"></i>
+                        </div>
+                        <p style="color:#64748b">Loading HTML report...</p>
+                    </div>
+                </div>
+                <div style="text-align:center;margin-top:16px;display:flex;justify-content:center;gap:12px;flex-wrap:wrap">
+                    <button onclick="downloadHtmlAsPdf('${db._id}')" style="background:linear-gradient(135deg,#ef4444,#dc2626);color:white;border:none;border-radius:10px;padding:12px 28px;cursor:pointer;font-size:.9rem;font-weight:600;display:inline-flex;align-items:center;gap:8px;transition:all .2s;box-shadow:0 4px 15px rgba(239,68,68,.25)"><i class="fas fa-file-pdf"></i> Download as PDF</button>
+                    <button onclick="showDataUploadModal('${db._id}')" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:white;border:none;border-radius:10px;padding:12px 28px;cursor:pointer;font-size:.9rem;font-weight:600;display:inline-flex;align-items:center;gap:8px;transition:all .2s;box-shadow:0 4px 15px rgba(245,158,11,.25)"><i class="fas fa-upload"></i> Upload New Data to Auto-Update Report</button>
+                </div>
+                <div class="ad-footer-note"><i class="fas fa-shield-alt"></i> Report auto-updates when you upload new data. Template provided by admin.</div>
+            </div>
+        </div>`;
     }
 
     // If admin provided a manual dashboard URL, show that instead of auto-generated charts
@@ -2317,6 +2448,308 @@ function _addAnalyticsStylesLegacy() {
 }
 `;
     document.head.appendChild(style);
+}
+
+// ===== PDF REPORT FUNCTIONS =====
+
+async function viewPdfReport(dashboardId) {
+    try {
+        if (typeof showNotification === 'function') showNotification('Loading PDF report...', 'info');
+        const response = await window.apiCall(`/analysis/dashboard/${dashboardId}/pdf-report`, 'GET');
+        if (response.signedUrl) {
+            const container = document.getElementById(`ad-pdf-viewer-${dashboardId}`);
+            if (container) {
+                container.innerHTML = `
+                    <iframe src="${response.signedUrl}" style="width:100%;height:700px;border:none;border-radius:12px" allowfullscreen></iframe>
+                    <div style="text-align:center;padding:12px">
+                        <a href="${response.signedUrl}" target="_blank" rel="noopener" style="color:#6366f1;font-size:13px;text-decoration:none"><i class="fas fa-external-link-alt"></i> Open in New Tab</a>
+                    </div>`;
+            } else {
+                window.open(response.signedUrl, '_blank');
+            }
+        }
+    } catch (error) {
+        console.error('PDF view error:', error);
+        if (typeof showNotification === 'function') showNotification('Failed to load PDF report', 'error');
+    }
+}
+
+async function downloadPdfReport(dashboardId) {
+    try {
+        if (typeof showNotification === 'function') showNotification('Preparing download...', 'info');
+        const response = await window.apiCall(`/analysis/dashboard/${dashboardId}/pdf-report`, 'GET');
+        if (response.signedUrl) {
+            const a = document.createElement('a');
+            a.href = response.signedUrl;
+            a.download = response.originalName || 'report.pdf';
+            a.target = '_blank';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            if (typeof showNotification === 'function') showNotification('PDF download started', 'success');
+        }
+    } catch (error) {
+        console.error('PDF download error:', error);
+        if (typeof showNotification === 'function') showNotification('Failed to download PDF', 'error');
+    }
+}
+
+// ===== HTML REPORT FUNCTIONS =====
+
+async function loadHtmlReportContent(dashboardId) {
+    try {
+        const response = await window.apiCall(`/analysis/dashboard/${dashboardId}/html-report`, 'GET');
+        const container = document.getElementById(`ad-html-report-${dashboardId}`);
+        if (!container) return;
+
+        if (response.htmlContent) {
+            // Render HTML in a sandboxed iframe for security
+            const iframe = document.createElement('iframe');
+            iframe.style.cssText = 'width:100%;min-height:600px;border:none;border-radius:12px';
+            iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin');
+            container.innerHTML = '';
+            container.appendChild(iframe);
+
+            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+            iframeDoc.open();
+            iframeDoc.write(response.htmlContent);
+            iframeDoc.close();
+
+            // Auto-resize iframe to content height
+            const resizeIframe = () => {
+                try {
+                    const h = iframeDoc.documentElement.scrollHeight || iframeDoc.body.scrollHeight;
+                    if (h > 100) iframe.style.height = Math.min(h + 40, 3000) + 'px';
+                } catch (e) { /* cross-origin fallback */ }
+            };
+            iframe.onload = resizeIframe;
+            setTimeout(resizeIframe, 1000);
+            setTimeout(resizeIframe, 3000);
+        } else {
+            container.innerHTML = `
+                <div style="text-align:center;padding:40px 20px">
+                    <i class="fas fa-exclamation-circle" style="font-size:32px;color:#f59e0b;margin-bottom:12px"></i>
+                    <h4 style="color:#1e293b;margin:0 0 8px">No HTML Report Content</h4>
+                    <p style="color:#64748b">The HTML report is empty. Upload new data to generate a report.</p>
+                </div>`;
+        }
+    } catch (error) {
+        console.error('HTML report load error:', error);
+        const container = document.getElementById(`ad-html-report-${dashboardId}`);
+        if (container) {
+            container.innerHTML = `
+                <div style="text-align:center;padding:40px 20px">
+                    <i class="fas fa-exclamation-triangle" style="font-size:32px;color:#ef4444;margin-bottom:12px"></i>
+                    <h4 style="color:#1e293b;margin:0 0 8px">Failed to Load Report</h4>
+                    <p style="color:#64748b">${error.message || 'Please try again later.'}</p>
+                </div>`;
+        }
+    }
+}
+
+// ===== DOWNLOAD HTML REPORT AS PDF =====
+
+async function downloadHtmlAsPdf(dashboardId) {
+    const db = analyticsState.approvedDashboards.find(d => d._id === dashboardId) ||
+               analyticsState.allDashboards.find(d => d._id === dashboardId);
+    const title = db ? db.title : 'Report';
+
+    try {
+        if (typeof showNotification === 'function') showNotification('Generating PDF from report...', 'info');
+
+        // Try to get HTML content from the iframe already loaded on page
+        const container = document.getElementById(`ad-html-report-${dashboardId}`);
+        const iframe = container ? container.querySelector('iframe') : null;
+
+        if (iframe && iframe.contentDocument) {
+            // Use print-to-PDF via a new window
+            const printWindow = window.open('', '_blank', 'width=900,height=700');
+            if (printWindow) {
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                printWindow.document.open();
+                printWindow.document.write(`
+                    <!DOCTYPE html>
+                    <html><head>
+                        <title>${title} - PDF Export</title>
+                        <style>
+                            @media print {
+                                body { margin: 0; padding: 20px; }
+                                @page { margin: 1cm; }
+                            }
+                        </style>
+                    </head><body>${iframeDoc.documentElement.innerHTML}</body></html>
+                `);
+                printWindow.document.close();
+                setTimeout(() => {
+                    printWindow.print();
+                    if (typeof showNotification === 'function') showNotification('Use "Save as PDF" in the print dialog to download', 'success');
+                }, 500);
+                return;
+            }
+        }
+
+        // Fallback: fetch HTML content from API and open print dialog
+        const response = await window.apiCall(`/analysis/dashboard/${dashboardId}/html-report`, 'GET');
+        if (response.htmlContent) {
+            const printWindow = window.open('', '_blank', 'width=900,height=700');
+            if (printWindow) {
+                printWindow.document.open();
+                printWindow.document.write(`
+                    <!DOCTYPE html>
+                    <html><head>
+                        <title>${title} - PDF Export</title>
+                        <style>
+                            @media print {
+                                body { margin: 0; padding: 20px; }
+                                @page { margin: 1cm; }
+                            }
+                        </style>
+                    </head><body>${response.htmlContent}</body></html>
+                `);
+                printWindow.document.close();
+                setTimeout(() => {
+                    printWindow.print();
+                    if (typeof showNotification === 'function') showNotification('Use "Save as PDF" in the print dialog to download', 'success');
+                }, 500);
+            } else {
+                if (typeof showNotification === 'function') showNotification('Please allow popups to download PDF', 'error');
+            }
+        } else {
+            if (typeof showNotification === 'function') showNotification('No HTML report content available to convert', 'error');
+        }
+    } catch (error) {
+        console.error('HTML to PDF error:', error);
+        if (typeof showNotification === 'function') showNotification('Failed to generate PDF', 'error');
+    }
+}
+
+// ===== DATA UPLOAD MODAL (for HTML template auto-update) =====
+
+function showDataUploadModal(dashboardId) {
+    const db = analyticsState.approvedDashboards.find(d => d._id === dashboardId) ||
+               analyticsState.allDashboards.find(d => d._id === dashboardId);
+    const title = db ? db.title : 'Dashboard';
+
+    const modalContent = `
+    <div class="ad-upload-modal">
+        <div class="ad-upload-modal-header">
+            <div class="ad-upload-modal-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706)"><i class="fas fa-upload"></i></div>
+            <div>
+                <h3>Upload New Data</h3>
+                <p>Upload new data for <strong>"${title}"</strong>. The report will auto-update with your latest data.</p>
+            </div>
+        </div>
+        <div class="ad-upload-form">
+            <div class="ad-form-group">
+                <label class="ad-form-label"><i class="fas fa-file-excel"></i> Upload Spreadsheet</label>
+                <div class="ad-drop-zone" id="ad-data-drop-zone"
+                    ondragover="event.preventDefault();this.classList.add('active')"
+                    ondragleave="this.classList.remove('active')"
+                    ondrop="event.preventDefault();this.classList.remove('active');document.getElementById('ad-data-file-input').files=event.dataTransfer.files;updateDataFilePreview()">
+                    <input type="file" id="ad-data-file-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="updateDataFilePreview()">
+                    <div class="ad-drop-content" onclick="document.getElementById('ad-data-file-input').click()">
+                        <i class="fas fa-cloud-upload-alt" style="font-size:28px;color:#f59e0b"></i>
+                        <p><strong>Click to upload</strong> or drag and drop</p>
+                        <small>Excel (.xlsx, .xls) or CSV files</small>
+                    </div>
+                    <div id="ad-data-file-preview" style="display:none;padding:12px;text-align:center">
+                        <i class="fas fa-file-excel" style="color:#10b981;font-size:20px"></i>
+                        <span id="ad-data-file-name" style="margin-left:8px;font-weight:600"></span>
+                        <span id="ad-data-file-size" style="margin-left:8px;color:#64748b;font-size:12px"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="ad-form-divider"><span>OR</span></div>
+            <div class="ad-form-group">
+                <label class="ad-form-label"><i class="fab fa-google-drive"></i> Google Sheet Link</label>
+                <input type="url" id="ad-data-sheet-url" class="ad-form-input" placeholder="https://docs.google.com/spreadsheets/d/...">
+            </div>
+            <div class="ad-upload-submit">
+                <button class="ad-submit-btn" onclick="uploadNewData('${dashboardId}')" style="background:linear-gradient(135deg,#f59e0b,#d97706)">
+                    <i class="fas fa-sync-alt"></i> Upload & Auto-Update Report
+                </button>
+            </div>
+        </div>
+    </div>`;
+
+    if (typeof showModal === 'function') {
+        showModal(modalContent);
+    } else {
+        // Fallback modal for frontend
+        const overlay = document.createElement('div');
+        overlay.id = 'ad-data-upload-overlay';
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:10000;backdrop-filter:blur(4px)';
+        overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+        const modal = document.createElement('div');
+        modal.style.cssText = 'background:white;border-radius:20px;max-width:520px;width:95%;max-height:90vh;overflow-y:auto;box-shadow:0 25px 50px rgba(0,0,0,.25);position:relative';
+        modal.innerHTML = `<button onclick="document.getElementById('ad-data-upload-overlay').remove()" style="position:absolute;top:12px;right:12px;background:none;border:none;font-size:20px;cursor:pointer;color:#94a3b8;z-index:1">&times;</button>` + modalContent;
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+    }
+}
+
+function updateDataFilePreview() {
+    const input = document.getElementById('ad-data-file-input');
+    const preview = document.getElementById('ad-data-file-preview');
+    const dropContent = document.querySelector('#ad-data-drop-zone .ad-drop-content');
+    if (!input || !input.files || !input.files[0]) return;
+    const file = input.files[0];
+    document.getElementById('ad-data-file-name').textContent = file.name;
+    document.getElementById('ad-data-file-size').textContent = `(${(file.size / 1024).toFixed(1)} KB)`;
+    if (preview) preview.style.display = 'block';
+    if (dropContent) dropContent.style.display = 'none';
+}
+
+async function uploadNewData(dashboardId) {
+    const fileInput = document.getElementById('ad-data-file-input');
+    const sheetUrl = document.getElementById('ad-data-sheet-url');
+    const hasFile = fileInput && fileInput.files && fileInput.files[0];
+    const hasLink = sheetUrl && sheetUrl.value.trim();
+
+    if (!hasFile && !hasLink) {
+        if (typeof showNotification === 'function') showNotification('Please upload a file or provide a sheet link', 'error');
+        return;
+    }
+
+    try {
+        if (typeof showNotification === 'function') showNotification('Uploading data and updating report...', 'info');
+
+        const formData = new FormData();
+        if (hasFile) {
+            formData.append('spreadsheet', fileInput.files[0]);
+        }
+        if (hasLink) {
+            formData.append('googleSheetUrl', sheetUrl.value.trim());
+        }
+
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+        const resp = await fetch(`https://steelconnect-backend.onrender.com/api/analysis/dashboard/${dashboardId}/upload-data`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: formData
+        });
+        const result = await resp.json();
+
+        if (result.success) {
+            if (typeof showNotification === 'function') showNotification(result.message || 'Data uploaded! Report updated.', 'success');
+            // Close modal
+            const overlay = document.getElementById('ad-data-upload-overlay');
+            if (overlay) overlay.remove();
+            if (typeof closeModal === 'function') closeModal();
+            // Refresh the dashboard view
+            const idx = analyticsState.approvedDashboards.findIndex(d => d._id === dashboardId);
+            if (idx >= 0) {
+                await showApprovedDashboards(idx);
+            } else {
+                await renderAnalyticsPortal();
+            }
+        } else {
+            if (typeof showNotification === 'function') showNotification(result.message || 'Failed to upload data', 'error');
+        }
+    } catch (error) {
+        console.error('Data upload error:', error);
+        if (typeof showNotification === 'function') showNotification('Failed to upload data: ' + (error.message || 'Unknown error'), 'error');
+    }
 }
 
 // Also add the link tag to index.html as backup via JS
