@@ -1350,6 +1350,27 @@ function completeLogin(data) {
     showAppView();
     // Initialize socket immediately so voice calls work right away
     initializeSocketConnection();
+    // Immediately update visitor tracking session with logged-in user identity
+    try {
+        const visitorSid = sessionStorage.getItem('sc_visitor_sid');
+        if (visitorSid && data.user) {
+            const trackUrl = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+                ? 'http://localhost:10000/api' : 'https://steelconnect-backend.onrender.com/api';
+            const hbData = {
+                sessionId: visitorSid,
+                currentPage: window.location.pathname + window.location.hash,
+                timeSpentSeconds: Math.round((Date.now() - (parseInt(sessionStorage.getItem('sc_visitor_time')) || 0)) / 1000) || 0,
+                userEmail: data.user.email || '',
+                userName: data.user.name || '',
+                isHidden: false
+            };
+            if (navigator.sendBeacon) {
+                navigator.sendBeacon(trackUrl + '/visitors/heartbeat', new Blob([JSON.stringify(hbData)], { type: 'text/plain' }));
+            } else {
+                fetch(trackUrl + '/visitors/heartbeat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(hbData) }).catch(() => {});
+            }
+        }
+    } catch(e) { /* visitor tracking should never break login */ }
     // Show welcome notification quickly for faster perceived login
     setTimeout(() => {
         showNotification(`Welcome to SteelConnect, ${data.user.name}!`, 'success');
