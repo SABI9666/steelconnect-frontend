@@ -365,6 +365,22 @@ window.handleAnalyticsFileSelect = function(input) {
         const maxSize = 50 * 1024 * 1024; // 50MB
         const size = f.size > 1024 * 1024 ? (f.size / (1024 * 1024)).toFixed(1) + ' MB' : (f.size / 1024).toFixed(0) + ' KB';
 
+        // Validate file type
+        const validTypes = ['.xlsx', '.xls', '.csv'];
+        const ext = f.name.substring(f.name.lastIndexOf('.')).toLowerCase();
+        if (!validTypes.includes(ext)) {
+            content.innerHTML = `
+                <i class="fas fa-exclamation-triangle" style="color:#ef4444"></i>
+                <span style="font-weight:700;color:#ef4444">${f.name}</span>
+                <small style="color:#ef4444">Unsupported format. Please use .xlsx, .xls, or .csv</small>
+            `;
+            document.getElementById('ad-file-drop').classList.remove('has-file');
+            document.getElementById('ad-file-drop').classList.add('has-error');
+            input.value = '';
+            if (typeof showNotification === 'function') showNotification('Unsupported file format. Please upload an Excel (.xlsx, .xls) or CSV file.', 'error');
+            return;
+        }
+
         if (f.size > maxSize) {
             content.innerHTML = `
                 <i class="fas fa-exclamation-triangle" style="color:#ef4444"></i>
@@ -379,10 +395,15 @@ window.handleAnalyticsFileSelect = function(input) {
         }
 
         document.getElementById('ad-file-drop').classList.remove('has-error');
+        // Show a size warning for large files but still allow upload
+        const sizeWarning = f.size > 10 * 1024 * 1024
+            ? '<small style="color:#f59e0b">Large file — processing may take a moment</small>'
+            : '';
         content.innerHTML = `
             <i class="fas fa-file-excel" style="color:#10b981"></i>
             <span style="font-weight:700;color:#1e293b">${f.name}</span>
             <small style="color:#64748b">${size}</small>
+            ${sizeWarning}
         `;
         document.getElementById('ad-file-drop').classList.add('has-file');
     }
@@ -393,9 +414,27 @@ window.validateUploadInputs = function() {
     const fileInput = document.getElementById('ad-sheet-file');
     const wrap = linkInput ? linkInput.closest('.ad-gsheet-input-wrap') : null;
     if (wrap && linkInput && linkInput.value.trim()) {
+        const url = linkInput.value.trim().toLowerCase();
+        const isValid = url.startsWith('http://') || url.startsWith('https://');
+        const isSheet = url.includes('docs.google.com/spreadsheets') || url.includes('sharepoint.com') ||
+                        url.includes('onedrive.live.com') || url.includes('1drv.ms') ||
+                        url.includes('office.com') || url.includes('office365.com') ||
+                        url.endsWith('.xlsx') || url.endsWith('.xls') || url.endsWith('.csv');
         wrap.classList.add('has-link');
+        if (isValid && isSheet) {
+            wrap.classList.add('valid-link');
+            wrap.classList.remove('invalid-link');
+        } else if (isValid) {
+            wrap.classList.remove('valid-link');
+            wrap.classList.remove('invalid-link');
+        } else {
+            wrap.classList.remove('valid-link');
+            wrap.classList.add('invalid-link');
+        }
     } else if (wrap) {
         wrap.classList.remove('has-link');
+        wrap.classList.remove('valid-link');
+        wrap.classList.remove('invalid-link');
     }
 };
 
@@ -428,7 +467,22 @@ async function handleSheetUpload(event) {
     }
 
     btn.disabled = true;
-    btn.innerHTML = '<div class="ad-btn-spinner"></div> Processing your data...';
+    const originalBtnHtml = btn.innerHTML;
+
+    // Show phased progress for better UX
+    const progressPhases = hasFile
+        ? ['Uploading file...', 'Analyzing spreadsheet...', 'Generating charts...', 'Saving dashboard...']
+        : ['Connecting to sheet...', 'Validating data...', 'Generating charts...', 'Saving dashboard...'];
+    let phaseIndex = 0;
+
+    function updateProgress() {
+        if (phaseIndex < progressPhases.length) {
+            btn.innerHTML = `<div class="ad-btn-spinner"></div> ${progressPhases[phaseIndex]}`;
+            phaseIndex++;
+        }
+    }
+    updateProgress();
+    const progressInterval = setInterval(updateProgress, 3000);
 
     try {
         const formData = new FormData();
@@ -441,19 +495,33 @@ async function handleSheetUpload(event) {
         if (hasLink) formData.append('syncInterval', syncInterval);
 
         const response = await window.apiCall('/analysis/upload-sheet', 'POST', formData);
+        clearInterval(progressInterval);
 
         if (typeof closeModal === 'function') closeModal();
         if (typeof showNotification === 'function') {
-            showNotification(`Dashboard auto-generated with ${response.chartsGenerated || 0} charts! Sent to admin for approval.`, 'success');
+            const sheetsMsg = response.sheetsProcessed ? ` from ${response.sheetsProcessed} sheet(s)` : '';
+            showNotification(`Dashboard auto-generated with ${response.chartsGenerated || 0} charts${sheetsMsg}! Sent to admin for approval.`, 'success');
         }
 
         // Refresh portal
         await renderAnalyticsPortal();
     } catch (error) {
+        clearInterval(progressInterval);
         console.error('Upload error:', error);
-        if (typeof showNotification === 'function') showNotification(error.message || 'Failed to upload. Please try again.', 'error');
+        // Provide user-friendly error messages based on error type
+        let userMsg = error.message || 'Failed to upload. Please try again.';
+        if (userMsg.includes('too large') || userMsg.includes('too many')) {
+            userMsg = 'Your spreadsheet is too large. Try reducing the number of sheets or columns, or split into multiple files.';
+        } else if (userMsg.includes('timed out')) {
+            userMsg = 'Upload timed out. Try a smaller file or check your internet connection.';
+        } else if (userMsg.includes('not publicly shared') || userMsg.includes('requires authentication')) {
+            userMsg = 'Cannot access the sheet. Make sure it is shared as "Anyone with the link can view".';
+        } else if (userMsg.includes('rate limit')) {
+            userMsg = 'Please wait a moment before uploading again.';
+        }
+        if (typeof showNotification === 'function') showNotification(userMsg, 'error');
         btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-rocket"></i> Submit & Generate Dashboard';
+        btn.innerHTML = originalBtnHtml;
     }
 }
 
@@ -1990,6 +2058,7 @@ function _addAnalyticsStylesLegacy() {
 .ad-file-drop::before { content:''; position:absolute; inset:0; background:radial-gradient(ellipse at 50% 50%,rgba(99,102,241,.03),transparent 70%); pointer-events:none; }
 .ad-file-drop:hover, .ad-file-drop.dragover { border-color:#6366f1; background:linear-gradient(135deg,rgba(99,102,241,.04),rgba(139,92,246,.03)); }
 .ad-file-drop.has-file { border-color:#10b981; border-style:solid; background:linear-gradient(135deg,rgba(16,185,129,.04),rgba(6,182,212,.03)); }
+.ad-file-drop.has-error { border-color:#ef4444; border-style:solid; background:linear-gradient(135deg,rgba(239,68,68,.04),rgba(239,68,68,.02)); }
 .ad-file-drop-content { display:flex; flex-direction:column; align-items:center; gap:10px; position:relative; }
 .ad-file-drop-content i { font-size:2.2rem; color:#c4c9de; transition:color .3s; }
 .ad-file-drop:hover .ad-file-drop-content i { color:#6366f1; }
@@ -2005,6 +2074,10 @@ function _addAnalyticsStylesLegacy() {
 .ad-gsheet-input-wrap.has-link { border-color:#34a853; }
 .ad-gsheet-icon { display:flex; align-items:center; justify-content:center; padding:0 16px; color:#94a3b8; font-size:1.15rem; background:#f8fafc; border-right:1.5px solid #e2e8f0; min-height:44px; transition:all .3s; }
 .ad-gsheet-input-wrap.has-link .ad-gsheet-icon { color:#34a853; background:rgba(52,168,83,.04); }
+.ad-gsheet-input-wrap.valid-link { border-color:#10b981; }
+.ad-gsheet-input-wrap.valid-link .ad-gsheet-icon { color:#10b981; }
+.ad-gsheet-input-wrap.invalid-link { border-color:#f59e0b; }
+.ad-gsheet-input-wrap.invalid-link .ad-gsheet-icon { color:#f59e0b; }
 .ad-gsheet-field { border:none !important; border-radius:0 !important; box-shadow:none !important; flex:1; }
 .ad-gsheet-hint { display:flex; align-items:center; gap:5px; font-size:.73rem; color:#94a3b8; margin-top:5px; }
 .ad-gsheet-hint i { font-size:.68rem; color:#34a853; }
