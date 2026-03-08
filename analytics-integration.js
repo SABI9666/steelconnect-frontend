@@ -43,6 +43,7 @@ function initializeAnalyticsIntegration() {
     window.showDataUploadModal = showDataUploadModal;
     window.uploadNewData = uploadNewData;
     window.downloadHtmlAsPdf = downloadHtmlAsPdf;
+    window.downloadServerPdf = downloadServerPdf;
     addAnalyticsStyles();
 }
 
@@ -887,6 +888,7 @@ function getDashboardViewHTML() {
                     <div class="ad-hero-right">
                         <button class="ad-hero-btn" onclick="renderAnalyticsPortal()"><i class="fas fa-arrow-left"></i> Back to Portal</button>
                         <button class="ad-hero-btn" onclick="downloadHtmlAsPdf('${db._id}')" style="background:linear-gradient(135deg,#ef4444,#dc2626)"><i class="fas fa-file-pdf"></i> Download PDF</button>
+                        <button class="ad-hero-btn" onclick="downloadServerPdf('${db._id}')" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed)"><i class="fas fa-server"></i> Data PDF</button>
                         <button class="ad-hero-btn" onclick="showDataUploadModal('${db._id}')" style="background:linear-gradient(135deg,#f59e0b,#d97706)"><i class="fas fa-upload"></i> Upload New Data</button>
                     </div>
                 </div>
@@ -918,6 +920,7 @@ function getDashboardViewHTML() {
                     </div>
                     <div style="display:flex;gap:10px;flex-wrap:wrap">
                         <button onclick="downloadHtmlAsPdf('${db._id}')" style="background:linear-gradient(135deg,#ef4444,#dc2626);color:white;border:none;border-radius:10px;padding:12px 28px;cursor:pointer;font-size:.9rem;font-weight:700;display:inline-flex;align-items:center;gap:8px;box-shadow:0 4px 15px rgba(239,68,68,.3);transition:all .2s"><i class="fas fa-download"></i> Download PDF</button>
+                        <button onclick="downloadServerPdf('${db._id}')" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);color:white;border:none;border-radius:10px;padding:12px 28px;cursor:pointer;font-size:.9rem;font-weight:700;display:inline-flex;align-items:center;gap:8px;box-shadow:0 4px 15px rgba(139,92,246,.2);transition:all .2s"><i class="fas fa-server"></i> Data PDF</button>
                         <button onclick="showDataUploadModal('${db._id}')" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:white;border:none;border-radius:10px;padding:12px 28px;cursor:pointer;font-size:.9rem;font-weight:700;display:inline-flex;align-items:center;gap:8px;box-shadow:0 4px 15px rgba(245,158,11,.2);transition:all .2s"><i class="fas fa-upload"></i> Upload New Data</button>
                     </div>
                 </div>
@@ -931,7 +934,8 @@ function getDashboardViewHTML() {
                     </div>
                 </div>
                 <div style="display:flex;justify-content:center;gap:12px;margin-top:16px;flex-wrap:wrap">
-                    <button onclick="downloadHtmlAsPdf('${db._id}')" style="background:linear-gradient(135deg,#ef4444,#dc2626);color:white;border:none;border-radius:10px;padding:14px 32px;cursor:pointer;font-size:.95rem;font-weight:700;display:inline-flex;align-items:center;gap:10px;box-shadow:0 4px 15px rgba(239,68,68,.3);transition:all .2s"><i class="fas fa-download"></i> Download PDF</button>
+                    <button onclick="downloadHtmlAsPdf('${db._id}')" style="background:linear-gradient(135deg,#ef4444,#dc2626);color:white;border:none;border-radius:10px;padding:14px 32px;cursor:pointer;font-size:.95rem;font-weight:700;display:inline-flex;align-items:center;gap:10px;box-shadow:0 4px 15px rgba(239,68,68,.3);transition:all .2s"><i class="fas fa-download"></i> Download Visual PDF</button>
+                    <button onclick="downloadServerPdf('${db._id}')" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);color:white;border:none;border-radius:10px;padding:14px 32px;cursor:pointer;font-size:.95rem;font-weight:700;display:inline-flex;align-items:center;gap:10px;box-shadow:0 4px 15px rgba(139,92,246,.3);transition:all .2s"><i class="fas fa-server"></i> Download Data PDF</button>
                     <button onclick="showDataUploadModal('${db._id}')" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:white;border:none;border-radius:10px;padding:14px 32px;cursor:pointer;font-size:.95rem;font-weight:700;display:inline-flex;align-items:center;gap:10px;box-shadow:0 4px 15px rgba(245,158,11,.2);transition:all .2s"><i class="fas fa-upload"></i> Upload New Data</button>
                 </div>
                 <div class="ad-footer-note"><i class="fas fa-shield-alt"></i> Report auto-updates when you upload new data. Template provided by admin.</div>
@@ -2533,9 +2537,30 @@ async function viewPdfReport(dashboardId) {
 
 async function downloadPdfReport(dashboardId) {
     try {
-        if (typeof showNotification === 'function') showNotification('Preparing download...', 'info');
+        if (typeof showNotification === 'function') showNotification('Preparing PDF download...', 'info');
         const response = await window.apiCall(`/analysis/dashboard/${dashboardId}/pdf-report`, 'GET');
         if (response.signedUrl) {
+            // Use fetch + blob for reliable download (avoids cross-origin download attribute issues)
+            try {
+                const fetchResponse = await fetch(response.signedUrl, { mode: 'cors' });
+                if (fetchResponse.ok) {
+                    const blob = await fetchResponse.blob();
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = response.originalName || 'report.pdf';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    setTimeout(() => URL.revokeObjectURL(url), 5000);
+                    if (typeof showNotification === 'function') showNotification('PDF downloaded successfully!', 'success');
+                    return;
+                }
+            } catch (fetchErr) {
+                console.warn('[PDF] Blob fetch failed, using direct link:', fetchErr.message);
+            }
+
+            // Fallback: direct link download
             const a = document.createElement('a');
             a.href = response.signedUrl;
             a.download = response.originalName || 'report.pdf';
@@ -2544,10 +2569,12 @@ async function downloadPdfReport(dashboardId) {
             a.click();
             document.body.removeChild(a);
             if (typeof showNotification === 'function') showNotification('PDF download started', 'success');
+        } else {
+            if (typeof showNotification === 'function') showNotification('PDF report not available', 'error');
         }
     } catch (error) {
         console.error('PDF download error:', error);
-        if (typeof showNotification === 'function') showNotification('Failed to download PDF', 'error');
+        if (typeof showNotification === 'function') showNotification('Failed to download PDF: ' + (error.message || 'Unknown error'), 'error');
     }
 }
 
@@ -2615,11 +2642,12 @@ async function downloadHtmlAsPdf(dashboardId) {
     const db = analyticsState.approvedDashboards.find(d => d._id === dashboardId) ||
                analyticsState.allDashboards.find(d => d._id === dashboardId);
     const title = db ? db.title : 'Report';
+    const safeTitle = (title || 'Report').replace(/[^a-zA-Z0-9_\- ]/g, '').trim() || 'Report';
 
     try {
-        if (typeof showNotification === 'function') showNotification('Preparing PDF download... Please wait.', 'info');
+        if (typeof showNotification === 'function') showNotification('Generating PDF... This may take a few seconds.', 'info');
 
-        // Grab the already-rendered HTML from the iframe on the page
+        // Step 1: Get the rendered HTML content from the iframe or fetch from API
         const container = document.getElementById(`ad-html-report-${dashboardId}`);
         const iframe = container ? container.querySelector('iframe') : null;
         let htmlContent = '';
@@ -2628,7 +2656,6 @@ async function downloadHtmlAsPdf(dashboardId) {
             try {
                 const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
                 if (iframeDoc && iframeDoc.documentElement) {
-                    // Get the fully rendered HTML (after all JS has executed)
                     htmlContent = '<!DOCTYPE html>\n<html>' + iframeDoc.documentElement.innerHTML + '</html>';
                 }
             } catch (e) {
@@ -2649,65 +2676,225 @@ async function downloadHtmlAsPdf(dashboardId) {
             htmlContent = response.htmlContent;
         }
 
-        // Inject print-friendly styles
-        const printStyles = `
-            <style id="pdf-print-styles">
-                @media print {
-                    body { margin: 0 !important; padding: 15px !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
-                    @page { margin: 0.8cm; size: A4; }
-                    * { box-shadow: none !important; }
-                    canvas { max-width: 100% !important; }
-                }
-                @media screen {
-                    body { max-width: 1100px; margin: 0 auto; padding: 20px; }
-                }
-            </style>
-        `;
-
-        // Set title for PDF filename
-        if (htmlContent.includes('<title>')) {
-            htmlContent = htmlContent.replace(/<title>[^<]*<\/title>/, `<title>${title}</title>`);
-        } else if (htmlContent.includes('</head>')) {
-            htmlContent = htmlContent.replace('</head>', `<title>${title}</title></head>`);
-        }
-
-        // Insert print styles
-        if (htmlContent.includes('</head>')) {
-            htmlContent = htmlContent.replace('</head>', printStyles + '</head>');
-        } else if (htmlContent.includes('<body')) {
-            htmlContent = htmlContent.replace(/<body[^>]*>/, (match) => printStyles + match);
+        // Step 2: Check if html2pdf.js is available for high-quality PDF generation
+        if (typeof html2pdf !== 'undefined') {
+            await _generatePdfWithHtml2Pdf(htmlContent, safeTitle, dashboardId);
         } else {
-            htmlContent = printStyles + htmlContent;
+            // Fallback: try loading html2pdf dynamically
+            try {
+                await _loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js');
+                await _generatePdfWithHtml2Pdf(htmlContent, safeTitle, dashboardId);
+            } catch (loadErr) {
+                console.warn('[PDF] html2pdf.js not available, using jsPDF fallback:', loadErr.message);
+                await _generatePdfWithJsPdfFallback(htmlContent, safeTitle);
+            }
         }
-
-        // Use Blob URL for proper page load (scripts execute correctly unlike document.write on about:blank)
-        const blob = new Blob([htmlContent], { type: 'text/html; charset=utf-8' });
-        const blobUrl = URL.createObjectURL(blob);
-
-        const printWindow = window.open(blobUrl, '_blank');
-        if (!printWindow) {
-            URL.revokeObjectURL(blobUrl);
-            if (typeof showNotification === 'function') showNotification('Please allow popups to download PDF. Check your browser popup blocker.', 'error');
-            return;
-        }
-
-        // Wait for the page to fully load and scripts to render
-        await new Promise((resolve) => {
-            printWindow.onload = () => setTimeout(resolve, 2000);
-            // Safety timeout
-            setTimeout(resolve, 6000);
-        });
-
-        printWindow.print();
-        if (typeof showNotification === 'function') {
-            showNotification('Print dialog opened - select "Save as PDF" to download your report', 'success');
-        }
-
-        // Cleanup blob URL after a delay (window still needs it)
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
     } catch (error) {
         console.error('HTML to PDF error:', error);
         if (typeof showNotification === 'function') showNotification('Failed to generate PDF: ' + (error.message || 'Unknown error'), 'error');
+    }
+}
+
+// Load an external script dynamically
+function _loadScript(src) {
+    return new Promise((resolve, reject) => {
+        const existing = document.querySelector(`script[src="${src}"]`);
+        if (existing) { resolve(); return; }
+        const s = document.createElement('script');
+        s.src = src;
+        s.onload = resolve;
+        s.onerror = () => reject(new Error('Failed to load: ' + src));
+        document.head.appendChild(s);
+    });
+}
+
+// Primary method: html2pdf.js (html2canvas + jsPDF) - renders full report including charts
+async function _generatePdfWithHtml2Pdf(htmlContent, safeTitle, dashboardId) {
+    // Create a hidden container to render HTML for capture
+    const wrapper = document.createElement('div');
+    wrapper.id = 'pdf-render-wrapper';
+    wrapper.style.cssText = 'position:fixed;left:-9999px;top:0;width:1100px;z-index:-1;background:white;';
+    document.body.appendChild(wrapper);
+
+    // Create iframe for isolated rendering with scripts
+    const renderFrame = document.createElement('iframe');
+    renderFrame.style.cssText = 'width:1100px;min-height:800px;border:none;';
+    wrapper.appendChild(renderFrame);
+
+    const frameDoc = renderFrame.contentDocument || renderFrame.contentWindow.document;
+    frameDoc.open();
+    frameDoc.write(htmlContent);
+    frameDoc.close();
+
+    // Wait for content to render (including charts, images, scripts)
+    await new Promise(resolve => {
+        renderFrame.onload = () => setTimeout(resolve, 2500);
+        setTimeout(resolve, 5000);
+    });
+
+    // Auto-resize iframe to full content height
+    try {
+        const contentHeight = frameDoc.documentElement.scrollHeight || frameDoc.body.scrollHeight || 800;
+        renderFrame.style.height = contentHeight + 'px';
+    } catch (e) { renderFrame.style.height = '2000px'; }
+
+    // Wait a bit more after resize for any reflow
+    await new Promise(r => setTimeout(r, 500));
+
+    try {
+        // Capture the iframe body content
+        let targetElement = null;
+        try {
+            targetElement = frameDoc.body || frameDoc.documentElement;
+        } catch (e) {
+            console.warn('[PDF] Cross-origin iframe, falling back to container method');
+        }
+
+        if (targetElement) {
+            const opt = {
+                margin: [10, 8, 10, 8],
+                filename: `${safeTitle}_${new Date().toISOString().slice(0, 10)}.pdf`,
+                image: { type: 'jpeg', quality: 0.95 },
+                html2canvas: {
+                    scale: 2,
+                    useCORS: true,
+                    allowTaint: true,
+                    logging: false,
+                    scrollX: 0,
+                    scrollY: 0,
+                    width: 1100,
+                    windowWidth: 1100
+                },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+            };
+
+            await html2pdf().set(opt).from(targetElement).save();
+            if (typeof showNotification === 'function') showNotification('PDF downloaded successfully!', 'success');
+        } else {
+            // Cross-origin fallback: clone the visible iframe content
+            const container = document.getElementById(`ad-html-report-${dashboardId}`);
+            const visibleIframe = container ? container.querySelector('iframe') : null;
+            if (visibleIframe) {
+                try {
+                    const visibleDoc = visibleIframe.contentDocument || visibleIframe.contentWindow.document;
+                    const clonedBody = visibleDoc.body.cloneNode(true);
+                    const tempDiv = document.createElement('div');
+                    tempDiv.style.cssText = 'position:fixed;left:-9999px;top:0;width:1100px;z-index:-1;background:white;padding:20px;';
+                    tempDiv.appendChild(clonedBody);
+                    document.body.appendChild(tempDiv);
+
+                    const opt = {
+                        margin: [10, 8, 10, 8],
+                        filename: `${safeTitle}_${new Date().toISOString().slice(0, 10)}.pdf`,
+                        image: { type: 'jpeg', quality: 0.95 },
+                        html2canvas: { scale: 2, useCORS: true, allowTaint: true, logging: false, width: 1100 },
+                        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+                    };
+
+                    await html2pdf().set(opt).from(tempDiv).save();
+                    document.body.removeChild(tempDiv);
+                    if (typeof showNotification === 'function') showNotification('PDF downloaded successfully!', 'success');
+                } catch (cloneErr) {
+                    throw new Error('Could not capture report content');
+                }
+            } else {
+                throw new Error('No report content found to capture');
+            }
+        }
+    } finally {
+        // Cleanup hidden render wrapper
+        if (wrapper.parentNode) wrapper.parentNode.removeChild(wrapper);
+    }
+}
+
+// Fallback method: Use jsPDF directly with simple HTML text extraction
+async function _generatePdfWithJsPdfFallback(htmlContent, safeTitle) {
+    // Use window.print() as ultimate fallback
+    const pdfStyles = `
+        <style>
+            @media print {
+                body { margin: 0 !important; padding: 15px !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+                @page { margin: 0.8cm; size: A4; }
+                * { box-shadow: none !important; }
+                canvas { max-width: 100% !important; }
+            }
+            @media screen { body { max-width: 1100px; margin: 0 auto; padding: 20px; } }
+        </style>
+    `;
+
+    if (htmlContent.includes('<title>')) {
+        htmlContent = htmlContent.replace(/<title>[^<]*<\/title>/, `<title>${safeTitle}</title>`);
+    } else if (htmlContent.includes('</head>')) {
+        htmlContent = htmlContent.replace('</head>', `<title>${safeTitle}</title></head>`);
+    }
+
+    if (htmlContent.includes('</head>')) {
+        htmlContent = htmlContent.replace('</head>', pdfStyles + '</head>');
+    } else {
+        htmlContent = pdfStyles + htmlContent;
+    }
+
+    const blob = new Blob([htmlContent], { type: 'text/html; charset=utf-8' });
+    const blobUrl = URL.createObjectURL(blob);
+    const printWindow = window.open(blobUrl, '_blank');
+
+    if (!printWindow) {
+        URL.revokeObjectURL(blobUrl);
+        if (typeof showNotification === 'function') showNotification('Please allow popups to download PDF. Check your browser popup blocker.', 'error');
+        return;
+    }
+
+    await new Promise(resolve => {
+        printWindow.onload = () => setTimeout(resolve, 2500);
+        setTimeout(resolve, 6000);
+    });
+
+    printWindow.print();
+    if (typeof showNotification === 'function') {
+        showNotification('Print dialog opened - select "Save as PDF" to download your report', 'success');
+    }
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+}
+
+// ===== SERVER-SIDE PDF DOWNLOAD (uses backend PDFKit generation) =====
+
+async function downloadServerPdf(dashboardId) {
+    const db = analyticsState.approvedDashboards.find(d => d._id === dashboardId) ||
+               analyticsState.allDashboards.find(d => d._id === dashboardId);
+    const title = db ? db.title : 'Report';
+    const safeTitle = (title || 'Report').replace(/[^a-zA-Z0-9_\- ]/g, '').trim() || 'Report';
+
+    try {
+        if (typeof showNotification === 'function') showNotification('Generating PDF from server...', 'info');
+
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+        const baseUrl = window.API_BASE_URL || (typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : '');
+        const response = await fetch(`${baseUrl}/api/analysis/dashboard/${dashboardId}/download-pdf`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.message || 'Server PDF generation failed');
+        }
+
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${safeTitle}_${new Date().toISOString().slice(0, 10)}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        if (typeof showNotification === 'function') showNotification('PDF downloaded successfully!', 'success');
+    } catch (error) {
+        console.error('Server PDF download error:', error);
+        if (typeof showNotification === 'function') showNotification('Server PDF failed: ' + error.message + '. Trying client-side...', 'warning');
+        // Fallback to client-side PDF generation
+        await downloadHtmlAsPdf(dashboardId);
     }
 }
 
