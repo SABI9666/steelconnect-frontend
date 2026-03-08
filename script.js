@@ -593,6 +593,7 @@ function initializeApp() {
     const _pushCallId = _initUrlParams.get('callId');
     const _deepLinkSection = _initUrlParams.get('section');
     const _deepLinkEstimationId = _initUrlParams.get('estimationId');
+    const _deepLinkDashboardId = _initUrlParams.get('dashboardId');
     if (_pushCallId) {
         console.log('[PUSH] App opened with callId from push notification:', _pushCallId);
         // Store call data so it survives the login process
@@ -602,13 +603,16 @@ function initializeApp() {
         if (_pushCallerId) sessionStorage.setItem('pendingCallerId', _pushCallerId);
         if (_pushCallerName) sessionStorage.setItem('pendingCallerName', _pushCallerName);
     }
-    // Store deep link data for estimation results from email
+    // Store deep link data for estimation results or analysis reports from email
     if (_deepLinkSection) {
         sessionStorage.setItem('pendingDeepLinkSection', _deepLinkSection);
         if (_deepLinkEstimationId) {
             sessionStorage.setItem('pendingDeepLinkEstimationId', _deepLinkEstimationId);
         }
-        console.log(`[DEEP-LINK] Captured: section=${_deepLinkSection}, estimationId=${_deepLinkEstimationId || 'none'}`);
+        if (_deepLinkDashboardId) {
+            sessionStorage.setItem('pendingDeepLinkDashboardId', _deepLinkDashboardId);
+        }
+        console.log(`[DEEP-LINK] Captured: section=${_deepLinkSection}, estimationId=${_deepLinkEstimationId || 'none'}, dashboardId=${_deepLinkDashboardId || 'none'}`);
     }
     // Clean URL without reload
     if (_pushCallId || _deepLinkSection) {
@@ -628,19 +632,33 @@ function initializeApp() {
             initializeSocketConnection();
             console.log('Restored user session');
 
-            // Handle deep link navigation from email (e.g. ?section=my-estimations&estimationId=xxx)
+            // Handle deep link navigation from email (e.g. ?section=my-estimations&estimationId=xxx or ?section=ai-analytics&dashboardId=xxx)
             const pendingSection = sessionStorage.getItem('pendingDeepLinkSection');
             const pendingEstimationId = sessionStorage.getItem('pendingDeepLinkEstimationId');
+            const pendingDashboardId = sessionStorage.getItem('pendingDeepLinkDashboardId');
             if (pendingSection) {
                 sessionStorage.removeItem('pendingDeepLinkSection');
                 sessionStorage.removeItem('pendingDeepLinkEstimationId');
-                console.log(`[DEEP-LINK] Navigating to: ${pendingSection}, estimationId: ${pendingEstimationId || 'none'}`);
+                sessionStorage.removeItem('pendingDeepLinkDashboardId');
+                console.log(`[DEEP-LINK] Navigating to: ${pendingSection}, estimationId: ${pendingEstimationId || 'none'}, dashboardId: ${pendingDashboardId || 'none'}`);
                 // Small delay to let app initialize before navigation
                 setTimeout(() => {
                     if (pendingEstimationId && pendingSection === 'my-estimations') {
                         navigateToAIEstimationResult(pendingEstimationId);
                     } else {
                         renderAppSection(pendingSection);
+                        // If navigating to analytics with a specific dashboard, scroll to it after render
+                        if (pendingDashboardId && pendingSection === 'ai-analytics') {
+                            setTimeout(() => {
+                                const dashboardEl = document.querySelector(`[data-dashboard-id="${pendingDashboardId}"]`);
+                                if (dashboardEl) {
+                                    dashboardEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                    dashboardEl.style.outline = '2px solid #2563eb';
+                                    dashboardEl.style.outlineOffset = '4px';
+                                    setTimeout(() => { dashboardEl.style.outline = ''; dashboardEl.style.outlineOffset = ''; }, 3000);
+                                }
+                            }, 1000);
+                        }
                     }
                 }, 500);
             }
@@ -1376,18 +1394,32 @@ function completeLogin(data) {
         showNotification(`Welcome to SteelConnect, ${data.user.name}!`, 'success');
     }, 300);
 
-    // Handle deep link navigation after login (e.g. from email link ?section=my-estimations&estimationId=xxx)
+    // Handle deep link navigation after login (e.g. from email link ?section=my-estimations&estimationId=xxx or ?section=ai-analytics&dashboardId=xxx)
     const pendingSection = sessionStorage.getItem('pendingDeepLinkSection');
     const pendingEstimationId = sessionStorage.getItem('pendingDeepLinkEstimationId');
+    const pendingDashboardId = sessionStorage.getItem('pendingDeepLinkDashboardId');
     if (pendingSection) {
         sessionStorage.removeItem('pendingDeepLinkSection');
         sessionStorage.removeItem('pendingDeepLinkEstimationId');
-        console.log(`[DEEP-LINK] Post-login navigation to: ${pendingSection}, estimationId: ${pendingEstimationId || 'none'}`);
+        sessionStorage.removeItem('pendingDeepLinkDashboardId');
+        console.log(`[DEEP-LINK] Post-login navigation to: ${pendingSection}, estimationId: ${pendingEstimationId || 'none'}, dashboardId: ${pendingDashboardId || 'none'}`);
         setTimeout(() => {
             if (pendingEstimationId && pendingSection === 'my-estimations') {
                 navigateToAIEstimationResult(pendingEstimationId);
             } else {
                 renderAppSection(pendingSection);
+                // If navigating to analytics with a specific dashboard, scroll to it after render
+                if (pendingDashboardId && pendingSection === 'ai-analytics') {
+                    setTimeout(() => {
+                        const dashboardEl = document.querySelector(`[data-dashboard-id="${pendingDashboardId}"]`);
+                        if (dashboardEl) {
+                            dashboardEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            dashboardEl.style.outline = '2px solid #2563eb';
+                            dashboardEl.style.outlineOffset = '4px';
+                            setTimeout(() => { dashboardEl.style.outline = ''; dashboardEl.style.outlineOffset = ''; }, 3000);
+                        }
+                    }, 1000);
+                }
             }
         }, 800);
     }
