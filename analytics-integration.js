@@ -2753,6 +2753,10 @@ async function _renderAndCapturePdf(htmlContent, filename) {
         _convertCanvasToImages(frameDoc);
         await new Promise(r => setTimeout(r, 300));
 
+        // Inject professional print-optimized CSS for better PDF layout
+        _injectPrintCss(frameDoc);
+        await new Promise(r => setTimeout(r, 200));
+
         // Resize to full content
         const h = Math.max(frameDoc.documentElement.scrollHeight, frameDoc.body.scrollHeight, 800);
         renderFrame.style.height = (h + 50) + 'px';
@@ -2779,11 +2783,11 @@ async function _renderAndCapturePdf(htmlContent, filename) {
 
         console.log('[PDF] Running html2pdf inside iframe context, body length:', frameDoc.body.innerHTML.length);
 
-        // Generate PDF from within the iframe's own context
+        // Generate PDF from within the iframe's own context with professional settings
         await frameWin.html2pdf().set({
-            margin: [8, 5, 8, 5],
+            margin: [10, 8, 10, 8],
             filename: filename,
-            image: { type: 'jpeg', quality: 0.95 },
+            image: { type: 'jpeg', quality: 0.98 },
             html2canvas: {
                 scale: 2,
                 useCORS: true,
@@ -2791,15 +2795,178 @@ async function _renderAndCapturePdf(htmlContent, filename) {
                 logging: false,
                 scrollX: 0,
                 scrollY: 0,
-                backgroundColor: '#ffffff'
+                backgroundColor: '#ffffff',
+                windowWidth: 1200,
+                removeContainer: true
             },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-            pagebreak: { mode: ['css', 'legacy'] }
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
+            pagebreak: { mode: ['avoid-all', 'css', 'legacy'], before: '.pdf-page-break-before', after: '.pdf-page-break-after', avoid: ['tr', 'canvas', 'img', '.chart-container', '.card', '.metric-card', '.kpi-card', '.stat-card', '.summary-card', 'table', 'figure', '.chart-wrapper', '.graph-container'] }
         }).from(frameDoc.body).save();
 
         console.log('[PDF] html2pdf capture succeeded');
     } finally {
         if (wrapper.parentNode) wrapper.parentNode.removeChild(wrapper);
+    }
+}
+
+// Inject print-optimized CSS into the report iframe for professional PDF output
+function _injectPrintCss(frameDoc) {
+    try {
+        const style = frameDoc.createElement('style');
+        style.setAttribute('id', 'pdf-print-styles');
+        style.textContent = `
+            /* === PDF Print Optimization Styles === */
+
+            /* Base layout: ensure proper sizing for A4 capture */
+            html, body {
+                width: 100% !important;
+                max-width: 1200px !important;
+                margin: 0 auto !important;
+                padding: 10px 15px !important;
+                font-size: 14px !important;
+                line-height: 1.5 !important;
+                color: #1a1a2e !important;
+                background: #ffffff !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            /* Page break control — prevent splitting charts, cards, tables mid-way */
+            .chart-container, .card, .metric-card, .kpi-card, .stat-card,
+            .summary-card, .chart-wrapper, .graph-container, figure,
+            .report-section, .dashboard-card, .analytics-card,
+            [class*="chart"], [class*="graph"], [class*="metric"],
+            [class*="summary"], [class*="stat-card"] {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+
+            /* Add breathing room before major sections */
+            h1, h2, h3 {
+                page-break-after: avoid !important;
+                break-after: avoid !important;
+                margin-top: 18px !important;
+                margin-bottom: 8px !important;
+            }
+
+            /* Tables: keep header with first few rows */
+            table {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+                width: 100% !important;
+                border-collapse: collapse !important;
+                margin-bottom: 12px !important;
+                font-size: 12px !important;
+            }
+            thead {
+                display: table-header-group !important;
+            }
+            tr {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+            th, td {
+                padding: 6px 8px !important;
+                border: 1px solid #e2e8f0 !important;
+                text-align: left !important;
+            }
+            th {
+                background-color: #f1f5f9 !important;
+                font-weight: 600 !important;
+                color: #334155 !important;
+            }
+
+            /* Charts and images: proper sizing within page */
+            canvas, img, svg {
+                max-width: 100% !important;
+                height: auto !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+
+            /* Cards and metric boxes: consistent sizing */
+            .card, .metric-card, .kpi-card, .stat-card, .summary-card,
+            [class*="card"] {
+                border: 1px solid #e2e8f0 !important;
+                border-radius: 8px !important;
+                padding: 12px !important;
+                margin-bottom: 12px !important;
+                background: #ffffff !important;
+                box-shadow: none !important;
+            }
+
+            /* Grid layouts: ensure proper flow for PDF */
+            .grid, [class*="grid"], .row, .flex-wrap {
+                display: flex !important;
+                flex-wrap: wrap !important;
+                gap: 12px !important;
+            }
+
+            /* Remove interactive/non-printable elements */
+            button, .btn, [class*="btn"], input, select, textarea,
+            .no-print, .download-btn, .upload-btn, .action-bar,
+            nav, .navbar, .sidebar, .footer-actions,
+            [class*="tooltip"], .modal, .dropdown-menu {
+                display: none !important;
+            }
+
+            /* Headers/title sections: professional spacing */
+            .report-header, .dashboard-header, [class*="header"],
+            .hero, .hero-section, .title-section {
+                margin-bottom: 16px !important;
+                padding-bottom: 10px !important;
+                border-bottom: 2px solid #e2e8f0 !important;
+            }
+
+            /* Section spacing for clean breaks */
+            section, .section, [class*="section"] {
+                margin-bottom: 16px !important;
+                padding-top: 8px !important;
+            }
+
+            /* Scrollable containers: show full content */
+            [style*="overflow"], [style*="max-height"],
+            .overflow-auto, .overflow-hidden, .overflow-scroll,
+            [class*="scroll"] {
+                overflow: visible !important;
+                max-height: none !important;
+                height: auto !important;
+            }
+
+            /* Links: show as text in PDF */
+            a {
+                color: #3b82f6 !important;
+                text-decoration: none !important;
+            }
+
+            /* Ensure backgrounds print */
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            /* Fix common chart library container issues */
+            .chartjs-size-monitor, .chartjs-render-monitor {
+                display: none !important;
+            }
+
+            /* Responsive containers: force full width for PDF */
+            .container, .container-fluid, [class*="container"] {
+                max-width: 100% !important;
+                width: 100% !important;
+                padding-left: 0 !important;
+                padding-right: 0 !important;
+            }
+
+            /* Flex/grid children: ensure proper sizing */
+            .col, [class*="col-"] {
+                flex: 0 0 auto !important;
+            }
+        `;
+        frameDoc.head.appendChild(style);
+        console.log('[PDF] Print CSS injected successfully');
+    } catch (e) {
+        console.warn('[PDF] Failed to inject print CSS:', e.message);
     }
 }
 
