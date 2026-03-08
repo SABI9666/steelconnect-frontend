@@ -6818,11 +6818,25 @@ async function subscribeToWebPush(registration) {
     try {
         const backendUrl = IS_LOCAL ? 'http://localhost:10000' : 'https://steelconnect-backend.onrender.com';
 
-        // Get VAPID public key from backend
-        const keyResponse = await fetch(`${backendUrl}/api/push/vapid-key`);
-        const keyData = await keyResponse.json();
-        if (!keyData.success || !keyData.publicKey) {
-            console.warn('[PUSH] Could not get VAPID public key from backend');
+        // Get VAPID public key from backend (with retry for cold starts)
+        let keyData = null;
+        for (let attempt = 1; attempt <= 3; attempt++) {
+            try {
+                const keyResponse = await fetch(`${backendUrl}/api/push/vapid-key`);
+                if (!keyResponse.ok) {
+                    console.warn(`[PUSH] VAPID key fetch attempt ${attempt} returned ${keyResponse.status}`);
+                    if (attempt < 3) { await new Promise(r => setTimeout(r, attempt * 2000)); continue; }
+                    break;
+                }
+                keyData = await keyResponse.json();
+                break;
+            } catch (fetchErr) {
+                console.warn(`[PUSH] VAPID key fetch attempt ${attempt} failed:`, fetchErr.message);
+                if (attempt < 3) await new Promise(r => setTimeout(r, attempt * 2000));
+            }
+        }
+        if (!keyData || !keyData.success || !keyData.publicKey) {
+            console.warn('[PUSH] Could not get VAPID public key from backend after retries');
             return;
         }
 
