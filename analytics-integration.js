@@ -42,6 +42,7 @@ function initializeAnalyticsIntegration() {
     window.loadHtmlReportContent = loadHtmlReportContent;
     window.showDataUploadModal = showDataUploadModal;
     window.uploadNewData = uploadNewData;
+    window.downloadHtmlAsPdf = downloadHtmlAsPdf;
     addAnalyticsStyles();
 }
 
@@ -230,6 +231,7 @@ function getPortalHTML() {
                                     <span><i class="fas fa-eye"></i> View ${db.reportType === 'pdf' ? 'PDF Report' : db.reportType === 'html' ? 'HTML Report' : db.manualDashboardUrl ? 'Custom Dashboard' : 'Full Dashboard'}</span>
                                     <i class="fas fa-arrow-right"></i>
                                 </div>
+                                ${db.reportType === 'pdf' ? `<button class="ad-sync-btn" onclick="event.stopPropagation(); downloadPdfReport('${db._id}')" title="Download PDF report" style="background:none;border:1px solid #ef4444;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:.78rem;color:#ef4444;display:flex;align-items:center;gap:5px;transition:all .2s"><i class="fas fa-download"></i> Download PDF</button>` : ''}
                                 ${db.reportType === 'html' ? `<button class="ad-sync-btn" onclick="event.stopPropagation(); downloadHtmlAsPdf('${db._id}')" title="Download report as PDF" style="background:none;border:1px solid #ef4444;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:.78rem;color:#ef4444;display:flex;align-items:center;gap:5px;transition:all .2s"><i class="fas fa-file-pdf"></i> PDF</button>
                                 <button class="ad-sync-btn" onclick="event.stopPropagation(); showDataUploadModal('${db._id}')" title="Upload new data to auto-update report" style="background:none;border:1px solid #f59e0b;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:.78rem;color:#f59e0b;display:flex;align-items:center;gap:5px;transition:all .2s"><i class="fas fa-upload"></i> Update Data</button>` : ''}
                                 ${db.googleSheetUrl ? `<button class="ad-sync-btn" onclick="event.stopPropagation(); syncDashboard('${db._id}')" title="Refresh data from linked sheet" style="background:none;border:1px solid #e2e8f0;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:.78rem;color:#6366f1;display:flex;align-items:center;gap:5px;transition:all .2s"><i class="fas fa-sync-alt"></i> Sync</button>` : ''}
@@ -678,11 +680,12 @@ async function showApprovedDashboards(index) {
     analyticsState.activeDashboard = analyticsState.approvedDashboards[idx];
 
     // For dashboards with no/empty/stripped charts, fetch live data on-demand
-    // Works for both link-based dashboards (fetches from sheet URL) and file-based dashboards (regenerates from Firebase Storage)
+    // Skip live data fetch for PDF/HTML report dashboards - they show the uploaded report, not auto-generated charts
     const db = analyticsState.activeDashboard;
+    const isUploadedReport = db.reportType === 'pdf' || db.reportType === 'html';
     const chartsEmpty = !db.charts || db.charts.length === 0;
     const chartsStripped = !chartsEmpty && db.charts.every(c => (!c.labels || c.labels.length === 0) && (!c.datasets || c.datasets.length === 0 || c.datasets.every(ds => !ds.data || ds.data.length === 0)));
-    const needsLiveData = db && (chartsEmpty || chartsStripped) && (db.googleSheetUrl || db.dataSource === 'file');
+    const needsLiveData = db && !isUploadedReport && (chartsEmpty || chartsStripped) && (db.googleSheetUrl || db.dataSource === 'file');
     if (needsLiveData) {
         try {
             console.log('[ANALYTICS] Fetching live data for dashboard:', db._id, chartsStripped ? '(charts were stripped)' : '(no charts stored)');
@@ -696,8 +699,8 @@ async function showApprovedDashboards(index) {
             console.error('[ANALYTICS] Live data fetch failed:', liveErr.message);
         }
     }
-    // Also fetch predictive analysis on-demand if it was stripped during storage trimming
-    if (db && !db.predictiveAnalysis && (db.googleSheetUrl || db.dataSource === 'file') && db.charts && db.charts.length > 0) {
+    // Also fetch predictive analysis on-demand if it was stripped during storage trimming (skip for PDF/HTML reports)
+    if (db && !isUploadedReport && !db.predictiveAnalysis && (db.googleSheetUrl || db.dataSource === 'file') && db.charts && db.charts.length > 0) {
         try {
             console.log('[ANALYTICS] Fetching predictive analysis for dashboard:', db._id);
             const liveData = await window.apiCall(`/analysis/dashboard/${db._id}/live-data`, 'GET');
@@ -732,10 +735,12 @@ async function switchAnalyticsDashboard(index) {
     analyticsState.activeDashboard = analyticsState.approvedDashboards[index];
 
     // For dashboards with no/empty/stripped charts, fetch live data on-demand
+    // Skip for PDF/HTML report dashboards - they show uploaded report, not auto-generated charts
     const db = analyticsState.activeDashboard;
+    const isUploadedReport = db.reportType === 'pdf' || db.reportType === 'html';
     const chartsEmpty = !db.charts || db.charts.length === 0;
     const chartsStripped = !chartsEmpty && db.charts.every(c => (!c.labels || c.labels.length === 0) && (!c.datasets || c.datasets.length === 0 || c.datasets.every(ds => !ds.data || ds.data.length === 0)));
-    const needsLiveData = db && (chartsEmpty || chartsStripped) && (db.googleSheetUrl || db.dataSource === 'file');
+    const needsLiveData = db && !isUploadedReport && (chartsEmpty || chartsStripped) && (db.googleSheetUrl || db.dataSource === 'file');
     if (needsLiveData) {
         try {
             const liveData = await window.apiCall(`/analysis/dashboard/${db._id}/live-data`, 'GET');
@@ -745,8 +750,8 @@ async function switchAnalyticsDashboard(index) {
             }
         } catch (e) { console.error('[ANALYTICS] Live data fetch failed:', e.message); }
     }
-    // Fetch predictive analysis if stripped
-    if (db && !db.predictiveAnalysis && (db.googleSheetUrl || db.dataSource === 'file')) {
+    // Fetch predictive analysis if stripped (skip for PDF/HTML reports)
+    if (db && !isUploadedReport && !db.predictiveAnalysis && (db.googleSheetUrl || db.dataSource === 'file')) {
         try {
             const liveData = await window.apiCall(`/analysis/dashboard/${db._id}/live-data`, 'GET');
             if (liveData.predictiveAnalysis) db.predictiveAnalysis = liveData.predictiveAnalysis;
