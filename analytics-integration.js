@@ -2619,26 +2619,44 @@ async function downloadHtmlAsPdf(dashboardId) {
     try {
         if (typeof showNotification === 'function') showNotification('Preparing PDF download... Please wait.', 'info');
 
-        // Always fetch fresh HTML content from API (includes injected data)
-        if (typeof invalidateApiCache === 'function') {
-            invalidateApiCache(`/analysis/dashboard/${dashboardId}/html-report`);
+        // Grab the already-rendered HTML from the iframe on the page
+        const container = document.getElementById(`ad-html-report-${dashboardId}`);
+        const iframe = container ? container.querySelector('iframe') : null;
+        let htmlContent = '';
+
+        if (iframe) {
+            try {
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                if (iframeDoc && iframeDoc.documentElement) {
+                    // Get the fully rendered HTML (after all JS has executed)
+                    htmlContent = '<!DOCTYPE html>\n<html>' + iframeDoc.documentElement.innerHTML + '</html>';
+                }
+            } catch (e) {
+                console.warn('[PDF] Could not read iframe content:', e.message);
+            }
         }
-        const response = await window.apiCall(`/analysis/dashboard/${dashboardId}/html-report`, 'GET');
 
-        if (!response.htmlContent) {
-            if (typeof showNotification === 'function') showNotification('No HTML report content available', 'error');
-            return;
+        // Fallback: fetch from API if iframe content not accessible
+        if (!htmlContent || htmlContent.length < 100) {
+            if (typeof invalidateApiCache === 'function') {
+                invalidateApiCache(`/analysis/dashboard/${dashboardId}/html-report`);
+            }
+            const response = await window.apiCall(`/analysis/dashboard/${dashboardId}/html-report`, 'GET');
+            if (!response.htmlContent) {
+                if (typeof showNotification === 'function') showNotification('No HTML report content available', 'error');
+                return;
+            }
+            htmlContent = response.htmlContent;
         }
 
-        let htmlContent = response.htmlContent;
-
-        // Inject print-friendly styles into the HTML content
+        // Inject print-friendly styles
         const printStyles = `
             <style id="pdf-print-styles">
                 @media print {
-                    body { margin: 0 !important; padding: 15px !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                    body { margin: 0 !important; padding: 15px !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
                     @page { margin: 0.8cm; size: A4; }
                     * { box-shadow: none !important; }
+                    canvas { max-width: 100% !important; }
                 }
                 @media screen {
                     body { max-width: 1100px; margin: 0 auto; padding: 20px; }
@@ -2646,7 +2664,14 @@ async function downloadHtmlAsPdf(dashboardId) {
             </style>
         `;
 
-        // Insert print styles before </head> or at start
+        // Set title for PDF filename
+        if (htmlContent.includes('<title>')) {
+            htmlContent = htmlContent.replace(/<title>[^<]*<\/title>/, `<title>${title}</title>`);
+        } else if (htmlContent.includes('</head>')) {
+            htmlContent = htmlContent.replace('</head>', `<title>${title}</title></head>`);
+        }
+
+        // Insert print styles
         if (htmlContent.includes('</head>')) {
             htmlContent = htmlContent.replace('</head>', printStyles + '</head>');
         } else if (htmlContent.includes('<body')) {
@@ -2655,46 +2680,31 @@ async function downloadHtmlAsPdf(dashboardId) {
             htmlContent = printStyles + htmlContent;
         }
 
-        // Set the document title for the PDF filename
-        if (htmlContent.includes('<title>')) {
-            htmlContent = htmlContent.replace(/<title>[^<]*<\/title>/, `<title>${title}</title>`);
-        } else if (htmlContent.includes('</head>')) {
-            htmlContent = htmlContent.replace('</head>', `<title>${title}</title></head>`);
-        }
+        // Use Blob URL for proper page load (scripts execute correctly unlike document.write on about:blank)
+        const blob = new Blob([htmlContent], { type: 'text/html; charset=utf-8' });
+        const blobUrl = URL.createObjectURL(blob);
 
-        // Open print window with the full HTML content
-        const printWindow = window.open('', '_blank', 'width=1100,height=800');
+        const printWindow = window.open(blobUrl, '_blank');
         if (!printWindow) {
+            URL.revokeObjectURL(blobUrl);
             if (typeof showNotification === 'function') showNotification('Please allow popups to download PDF. Check your browser popup blocker.', 'error');
             return;
         }
 
-        printWindow.document.open();
-        printWindow.document.write(htmlContent);
-        printWindow.document.close();
+        // Wait for the page to fully load and scripts to render
+        await new Promise((resolve) => {
+            printWindow.onload = () => setTimeout(resolve, 2000);
+            // Safety timeout
+            setTimeout(resolve, 6000);
+        });
 
-        // Wait for all resources (images, fonts, scripts) to load before printing
-        const waitForLoad = () => {
-            return new Promise((resolve) => {
-                // Check if window already loaded
-                if (printWindow.document.readyState === 'complete') {
-                    // Extra delay for scripts/charts to render
-                    setTimeout(resolve, 1500);
-                    return;
-                }
-                printWindow.onload = () => setTimeout(resolve, 1500);
-                // Safety timeout - don't wait forever
-                setTimeout(resolve, 5000);
-            });
-        };
-
-        await waitForLoad();
-
-        // Trigger print dialog (user selects "Save as PDF")
         printWindow.print();
         if (typeof showNotification === 'function') {
             showNotification('Print dialog opened - select "Save as PDF" to download your report', 'success');
         }
+
+        // Cleanup blob URL after a delay (window still needs it)
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
     } catch (error) {
         console.error('HTML to PDF error:', error);
         if (typeof showNotification === 'function') showNotification('Failed to generate PDF: ' + (error.message || 'Unknown error'), 'error');
