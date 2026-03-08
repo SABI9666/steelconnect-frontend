@@ -74,6 +74,11 @@ async function renderAnalyticsPortal() {
     </div>`;
 
     try {
+        // Always invalidate cache to get fresh data (admin may have uploaded reports)
+        if (typeof invalidateApiCache === 'function') {
+            invalidateApiCache('/analysis/my-dashboards');
+            invalidateApiCache('/analysis/dashboards');
+        }
         const response = await window.apiCall('/analysis/my-dashboards', 'GET');
         analyticsState.allDashboards = response.dashboards || [];
         analyticsState.approvedDashboards = analyticsState.allDashboards.filter(d => d.status === 'approved');
@@ -624,7 +629,7 @@ function showDashboardStatus(dashboardId) {
         ${db.description ? `<div style="font-size:.85rem;color:#64748b;padding:0 4px;margin-bottom:12px"><strong>Description:</strong> ${db.description}</div>` : ''}
         ${db.googleSheetUrl ? `<div style="font-size:.82rem;color:#34a853;display:flex;align-items:center;gap:6px;margin-bottom:12px;padding:0 4px"><i class="fab fa-google-drive"></i> Google Sheet linked</div>` : ''}
         ${db.status === 'approved' ? `
-            <button class="ad-submit-btn" style="width:100%;margin-top:4px" onclick="closeModal();showApprovedDashboards(${analyticsState.approvedDashboards.findIndex(d => d._id === db._id)})">
+            <button class="ad-submit-btn" style="width:100%;margin-top:4px" onclick="closeModal();showApprovedDashboards('${db._id}')">
                 <i class="fas fa-eye"></i> View Dashboard
             </button>
         ` : db.status === 'pending' ? `
@@ -2521,6 +2526,11 @@ async function downloadPdfReport(dashboardId) {
 
 async function loadHtmlReportContent(dashboardId) {
     try {
+        // Invalidate cache to ensure we get the latest HTML report content
+        if (typeof invalidateApiCache === 'function') {
+            invalidateApiCache(`/analysis/dashboard/${dashboardId}/html-report`);
+        }
+        console.log('[ANALYTICS] Loading HTML report for dashboard:', dashboardId);
         const response = await window.apiCall(`/analysis/dashboard/${dashboardId}/html-report`, 'GET');
         const container = document.getElementById(`ad-html-report-${dashboardId}`);
         if (!container) return;
