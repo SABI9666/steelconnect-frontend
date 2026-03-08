@@ -1361,7 +1361,8 @@ function completeLogin(data) {
                 currentPage: window.location.pathname + window.location.hash,
                 timeSpentSeconds: Math.round((Date.now() - (parseInt(sessionStorage.getItem('sc_visitor_time')) || 0)) / 1000) || 0,
                 userEmail: data.user.email || '',
-                userName: data.user.name || ''
+                userName: data.user.name || '',
+                isHidden: false
             };
             if (navigator.sendBeacon) {
                 navigator.sendBeacon(trackUrl + '/visitors/heartbeat', new Blob([JSON.stringify(hbData)], { type: 'text/plain' }));

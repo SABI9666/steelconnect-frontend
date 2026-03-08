@@ -3193,6 +3193,7 @@
         }
 
         // Initial track (only once per session)
+        // Uses sendBeacon (text/plain) to avoid CORS preflight, then confirms via XHR
         if (!tracked) {
             try {
                 var userInfo = getUserInfo();
@@ -3207,30 +3208,67 @@
                 if (userInfo.userEmail) trackData.userEmail = userInfo.userEmail;
                 if (userInfo.userName) trackData.userName = userInfo.userName;
 
-                var xhr = new XMLHttpRequest();
-                xhr.open('POST', TRACK_URL + '/visitors/track', true);
-                xhr.setRequestHeader('Content-Type', 'application/json');
-                xhr.send(JSON.stringify(trackData));
-                sessionStorage.setItem('sc_visitor_tracked', '1');
+                // Primary: sendBeacon (avoids CORS preflight, reliable delivery)
+                var sent = false;
+                if (navigator.sendBeacon) {
+                    var blob = new Blob([JSON.stringify(trackData)], { type: 'text/plain' });
+                    sent = navigator.sendBeacon(TRACK_URL + '/visitors/track', blob);
+                }
+                if (sent) {
+                    // sendBeacon queued successfully — mark as tracked
+                    sessionStorage.setItem('sc_visitor_tracked', '1');
+                } else {
+                    // Fallback: XHR (only set flag on confirmed success)
+                    var xhr = new XMLHttpRequest();
+                    xhr.open('POST', TRACK_URL + '/visitors/track', true);
+                    xhr.setRequestHeader('Content-Type', 'application/json');
+                    xhr.onload = function() {
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            sessionStorage.setItem('sc_visitor_tracked', '1');
+                        }
+                    };
+                    xhr.onerror = function() {
+                        // Retry once after 3 seconds on network failure
+                        setTimeout(function() {
+                            try {
+                                var retry = new XMLHttpRequest();
+                                retry.open('POST', TRACK_URL + '/visitors/track', true);
+                                retry.setRequestHeader('Content-Type', 'application/json');
+                                retry.onload = function() {
+                                    if (retry.status >= 200 && retry.status < 300) {
+                                        sessionStorage.setItem('sc_visitor_tracked', '1');
+                                    }
+                                };
+                                retry.send(JSON.stringify(trackData));
+                            } catch(e2) {}
+                        }, 3000);
+                    };
+                    xhr.send(JSON.stringify(trackData));
+                }
             } catch(e) {}
         }
 
-        // Heartbeat every 30 seconds to track time + page changes + user login
-        setInterval(function() {
-            if (document.visibilityState === 'hidden') return; // Skip heartbeat when tab is hidden
+        // Build heartbeat data with explicit isHidden flag
+        function buildHeartbeat(isHidden) {
             var nowPage = window.location.pathname + window.location.hash;
             var userInfo = getUserInfo();
             var data = {
                 sessionId: sessionId,
                 currentPage: nowPage,
-                timeSpentSeconds: getCumulativeSeconds()
+                timeSpentSeconds: getCumulativeSeconds(),
+                isHidden: !!isHidden
             };
-            // Send user info on every heartbeat so mid-session login is captured
             if (userInfo.userEmail) data.userEmail = userInfo.userEmail;
             if (userInfo.userName) data.userName = userInfo.userName;
-            sendBeacon('/visitors/heartbeat', data);
-            persistTime();
-            currentPage = nowPage;
+            return data;
+        }
+
+        // Heartbeat every 30 seconds — sends even when hidden to keep lastActiveAt fresh
+        setInterval(function() {
+            var hidden = document.visibilityState === 'hidden';
+            sendBeacon('/visitors/heartbeat', buildHeartbeat(hidden));
+            if (!hidden) persistTime();
+            currentPage = window.location.pathname + window.location.hash;
         }, 30000);
 
         // Track page changes for SPA navigation
@@ -3239,15 +3277,7 @@
             var newHash = window.location.hash;
             if (newHash !== lastHash) {
                 lastHash = newHash;
-                var userInfo = getUserInfo();
-                var data = {
-                    sessionId: sessionId,
-                    currentPage: window.location.pathname + newHash,
-                    timeSpentSeconds: getCumulativeSeconds()
-                };
-                if (userInfo.userEmail) data.userEmail = userInfo.userEmail;
-                if (userInfo.userName) data.userName = userInfo.userName;
-                sendBeacon('/visitors/heartbeat', data);
+                sendBeacon('/visitors/heartbeat', buildHeartbeat(false));
                 persistTime();
             }
         }, 2000);
@@ -3266,16 +3296,12 @@
             if (document.visibilityState === 'hidden') {
                 // Save time when tab goes hidden, but don't mark as left
                 persistTime();
-                sendBeacon('/visitors/heartbeat', {
-                    sessionId: sessionId,
-                    currentPage: window.location.pathname + window.location.hash,
-                    timeSpentSeconds: getCumulativeSeconds(),
-                    isHidden: true
-                });
+                sendBeacon('/visitors/heartbeat', buildHeartbeat(true));
             } else {
-                // Tab is visible again — reset startTime to continue accumulating
+                // Tab is visible again — reset startTime and immediately signal active
                 previousTime = parseInt(sessionStorage.getItem(TIME_KEY)) || 0;
                 startTime = Date.now();
+                sendBeacon('/visitors/heartbeat', buildHeartbeat(false));
             }
         });
     })();
