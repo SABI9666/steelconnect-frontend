@@ -199,7 +199,7 @@ function getPortalHTML() {
             ${approved.length > 0 ? `
             <div class="ad-approved-grid">
                 ${approved.map((db, i) => `
-                    <div class="ad-approved-card" onclick="showApprovedDashboards(${i})" style="cursor:pointer">
+                    <div class="ad-approved-card" onclick="showApprovedDashboards('${db._id}')" style="cursor:pointer">
                         <div class="ad-approved-strip" ${db.reportType === 'pdf' ? 'style="background:linear-gradient(90deg,#ef4444,#dc2626)"' : db.reportType === 'html' ? 'style="background:linear-gradient(90deg,#f59e0b,#d97706)"' : db.manualDashboardUrl ? 'style="background:linear-gradient(90deg,#6366f1,#8b5cf6)"' : ''}></div>
                         <div class="ad-approved-body">
                             <div class="ad-approved-head">
@@ -647,8 +647,8 @@ function showDashboardStatus(dashboardId) {
 }
 
 // ===== APPROVED DASHBOARD VIEWER =====
-async function showApprovedDashboards(index) {
-    // Fetch full approved dashboards with chart data
+async function showApprovedDashboards(idOrIndex) {
+    // Accepts dashboard ID (string) or index (number) for backwards compatibility
     const container = document.getElementById('app-container');
     container.innerHTML = `
     <div class="ad-portal">
@@ -664,6 +664,11 @@ async function showApprovedDashboards(index) {
     </div>`;
 
     try {
+        // Invalidate cache to get fresh data (admin may have just uploaded a report)
+        if (typeof invalidateApiCache === 'function') {
+            invalidateApiCache('/analysis/dashboards');
+            invalidateApiCache('/analysis/my-dashboards');
+        }
         const response = await window.apiCall('/analysis/dashboards', 'GET');
         analyticsState.approvedDashboards = response.dashboards || [];
     } catch (error) {
@@ -676,8 +681,18 @@ async function showApprovedDashboards(index) {
         return;
     }
 
-    const idx = Math.min(index || 0, analyticsState.approvedDashboards.length - 1);
-    analyticsState.activeDashboard = analyticsState.approvedDashboards[idx];
+    // Find dashboard by ID (preferred) or fall back to index
+    let targetDashboard = null;
+    if (typeof idOrIndex === 'string' && idOrIndex.length > 5) {
+        // It's a dashboard ID
+        targetDashboard = analyticsState.approvedDashboards.find(d => d._id === idOrIndex);
+    }
+    if (!targetDashboard) {
+        // Fall back to index
+        const idx = Math.min(parseInt(idOrIndex) || 0, analyticsState.approvedDashboards.length - 1);
+        targetDashboard = analyticsState.approvedDashboards[idx];
+    }
+    analyticsState.activeDashboard = targetDashboard;
 
     // For dashboards with no/empty/stripped charts, fetch live data on-demand
     // Skip live data fetch for PDF/HTML report dashboards - they show the uploaded report, not auto-generated charts
@@ -775,6 +790,9 @@ function getDashboardViewHTML() {
 
     const hasManualUrl = db.manualDashboardUrl && db.manualDashboardUrl.trim();
     const reportType = db.reportType || 'auto';
+
+    // Debug: log what type of dashboard we're rendering
+    console.log('[ANALYTICS] Rendering dashboard:', db._id, '| reportType:', reportType, '| title:', db.title, '| charts:', (db.charts || []).length);
 
     // Dashboard selector tabs
     let selectorHTML = '';
