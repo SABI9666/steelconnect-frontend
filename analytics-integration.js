@@ -2976,10 +2976,19 @@ async function downloadServerPdf(dashboardId) {
 
         if (!response.ok) {
             const err = await response.json().catch(() => ({}));
-            throw new Error(err.message || 'Server PDF generation failed');
+            throw new Error(err.message || err.error || 'Server PDF generation failed');
+        }
+
+        // Handle redirect responses (e.g., for stored PDF reports)
+        const contentType = response.headers.get('content-type') || '';
+        if (!contentType.includes('application/pdf') && !contentType.includes('octet-stream')) {
+            throw new Error('Unexpected response type from server');
         }
 
         const blob = await response.blob();
+        if (blob.size < 100) {
+            throw new Error('Generated PDF is empty');
+        }
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -2991,7 +3000,7 @@ async function downloadServerPdf(dashboardId) {
         if (typeof showNotification === 'function') showNotification('PDF downloaded successfully!', 'success');
     } catch (error) {
         console.error('Server PDF download error:', error);
-        if (typeof showNotification === 'function') showNotification('Server PDF failed: ' + error.message + '. Trying client-side...', 'warning');
+        if (typeof showNotification === 'function') showNotification('Generating PDF client-side...', 'info');
         // Fallback to client-side PDF generation
         await downloadHtmlAsPdf(dashboardId);
     }
