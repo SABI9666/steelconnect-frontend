@@ -20075,6 +20075,32 @@ body { overflow-x: hidden; }
     opacity: 1;
 }
 
+.sc-plan-best-for {
+    font-size: 12px;
+    font-weight: 600;
+    color: #6b7280;
+    margin: 8px 0;
+    padding: 6px 10px;
+    background: #f9fafb;
+    border-radius: 6px;
+    border: 1px solid #e5e7eb;
+    text-align: center;
+}
+
+.sc-estimation-plans-grid,
+.sc-analysis-plans-grid {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+
+@media (min-width: 1200px) {
+    .sc-estimation-plans-grid {
+        grid-template-columns: repeat(5, 1fr);
+    }
+    .sc-analysis-plans-grid {
+        grid-template-columns: repeat(5, 1fr);
+    }
+}
+
 /* Contractor Pro Card */
 .sc-contractor-pro {
     background: white;
