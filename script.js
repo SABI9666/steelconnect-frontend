@@ -14292,9 +14292,6 @@ function renderSubscriptionContent(plans, currentSub, invoices = []) {
         { id: 'designer_30', ...plans.designer_30 },
     ];
 
-    // Contractor plan
-    const contractorPlan = plans.contractor_pro;
-
     const planColors = [
         { gradient: 'linear-gradient(135deg, #16a34a, #22c55e)', check: '#16a34a' },
         { gradient: 'linear-gradient(135deg, #2563eb, #3b82f6)', check: '#2563eb' },
@@ -14345,102 +14342,21 @@ function renderSubscriptionContent(plans, currentSub, invoices = []) {
         ` : ''}
 
         ${isContractor ? `
+        <!-- AI Estimation (Drawing Based) Plans -->
         <div class="sc-plans-section">
-            <h3 class="sc-plans-title"><i class="fas fa-hard-hat"></i> Contractor Pro Plan</h3>
-            <div class="sc-contractor-pro">
-                <div class="sc-contractor-pro-header">
-                    <div class="sc-contractor-pro-price">
-                        <span class="sc-price-amount">$49</span>
-                        <span class="sc-price-period">/month</span>
-                    </div>
-                    <h4>Contractor Pro</h4>
-                    <p>Priority processing, bulk estimation support & dedicated account management</p>
-                </div>
-                <div class="sc-contractor-pro-body">
-                    <ul class="sc-plan-features">
-                        ${(contractorPlan?.features || []).map(f => `<li><i class="fas fa-check" style="color:#ea580c;"></i> ${f}</li>`).join('')}
-                    </ul>
-                    ${currentSub && currentSub.plan === 'contractor_pro' ? `
-                        <button class="btn sc-plan-btn sc-plan-btn-current" disabled>
-                            <i class="fas fa-check-circle"></i> Current Plan
-                        </button>
-                    ` : `
-                        <button class="btn sc-plan-btn" onclick="handleSubscribe('contractor_pro')" style="background:linear-gradient(135deg, #ea580c, #f97316); color:white;">
-                            <i class="fas fa-rocket"></i> Subscribe to Pro
-                        </button>
-                    `}
-                </div>
+            <h3 class="sc-plans-title"><i class="fas fa-drafting-compass"></i> AI Estimation — Drawing Based</h3>
+            <p style="color:#6b7280; margin:-8px 0 20px; font-size:14px;">Upload construction drawings and get instant AI-powered cost estimates</p>
+            <div class="sc-plans-grid sc-estimation-plans-grid">
+                ${renderEstimationPlans(plans, currentSub)}
             </div>
         </div>
 
-        <!-- Contractor AI Pay-Per-Use Options (Separate) -->
+        <!-- AI Data Analysis (Fabrication / Production Data) Plans -->
         <div class="sc-plans-section">
-            <h3 class="sc-plans-title"><i class="fas fa-microchip"></i> AI Pay-Per-Use</h3>
-            <p style="color:#6b7280; margin:-8px 0 20px; font-size:14px;">Use AI estimation and analysis independently — pay only for what you use</p>
-            <div class="sc-plans-grid" style="grid-template-columns: repeat(2, 1fr); max-width:700px;">
-                ${(() => {
-                    const estPlan = plans.contractor_ai_estimation;
-                    const anaPlan = plans.contractor_ai_analysis;
-                    const isEstCurrent = currentSub && currentSub.plan === 'contractor_ai_estimation';
-                    const isAnaCurrent = currentSub && currentSub.plan === 'contractor_ai_analysis';
-                    return `
-                        <div class="sc-plan-card ${isEstCurrent ? 'sc-plan-current' : ''}">
-                            <div class="sc-plan-header" style="background:linear-gradient(135deg, #0d9488, #14b8a6);">
-                                <div style="font-size:20px; margin-bottom:4px;"><i class="fas fa-calculator"></i></div>
-                                <div class="sc-plan-price">$0.40<span style="font-size:14px; font-weight:400;">/MB</span></div>
-                                <div class="sc-plan-label">AI Estimation</div>
-                            </div>
-                            <div class="sc-plan-body">
-                                <p class="sc-plan-desc">Pay per MB — Upload PDF drawings and get instant AI cost estimates</p>
-                                <ul class="sc-plan-features">
-                                    ${(estPlan?.features || []).map(f => `<li><i class="fas fa-check" style="color:#0d9488;"></i> ${f}</li>`).join('')}
-                                </ul>
-                                ${isEstCurrent ? `
-                                    <button class="btn sc-plan-btn sc-plan-btn-current" disabled>
-                                        <i class="fas fa-check-circle"></i> Active
-                                    </button>
-                                ` : `
-                                    <button class="btn sc-plan-btn" onclick="handleSubscribe('contractor_ai_estimation')" style="background:linear-gradient(135deg, #0d9488, #14b8a6); color:white;">
-                                        <i class="fas fa-bolt"></i> Activate
-                                    </button>
-                                `}
-                            </div>
-                        </div>
-                        <div class="sc-plan-card ${isAnaCurrent ? 'sc-plan-current' : ''}">
-                            <div class="sc-plan-header" style="background:linear-gradient(135deg, #7c3aed, #a855f7);">
-                                <div style="font-size:20px; margin-bottom:4px;"><i class="fas fa-chart-line"></i></div>
-                                <div class="sc-plan-price">$0.08<span style="font-size:14px; font-weight:400;">/MB</span></div>
-                                <div class="sc-plan-label">AI Analysis</div>
-                            </div>
-                            <div class="sc-plan-body">
-                                <p class="sc-plan-desc">Pay per MB — Spreadsheet analysis with predictive insights</p>
-                                <ul class="sc-plan-features">
-                                    ${(anaPlan?.features || []).map(f => `<li><i class="fas fa-check" style="color:#7c3aed;"></i> ${f}</li>`).join('')}
-                                </ul>
-                                ${isAnaCurrent ? `
-                                    <button class="btn sc-plan-btn sc-plan-btn-current" disabled>
-                                        <i class="fas fa-check-circle"></i> Active
-                                    </button>
-                                ` : `
-                                    <button class="btn sc-plan-btn" onclick="handleSubscribe('contractor_ai_analysis')" style="background:linear-gradient(135deg, #7c3aed, #a855f7); color:white;">
-                                        <i class="fas fa-bolt"></i> Activate
-                                    </button>
-                                `}
-                            </div>
-                        </div>
-                    `;
-                })()}
-            </div>
-        </div>
-        ` : ''}
-
-        ${isContractor ? `
-        <!-- AI Analysis Pricing Tiers (Contractors Only) -->
-        <div class="sc-plans-section">
-            <h3 class="sc-plans-title"><i class="fas fa-brain"></i> AI Analysis Plans</h3>
-            <p style="color:#6b7280; margin:-8px 0 20px; font-size:14px;">Unlock powerful AI-driven analytics, predictive insights, and estimation capacity</p>
-            <div class="sc-plans-grid sc-ai-plans-grid">
-                ${renderAiAnalysisPlans(plans, currentSub)}
+            <h3 class="sc-plans-title"><i class="fas fa-chart-bar"></i> AI Data Analysis — Fabrication / Production Data</h3>
+            <p style="color:#6b7280; margin:-8px 0 20px; font-size:14px;">Analyze Excel/CSV workshop data: production, operator productivity, scrap analysis, machine performance & more</p>
+            <div class="sc-plans-grid sc-analysis-plans-grid">
+                ${renderDataAnalysisPlans(plans, currentSub)}
             </div>
         </div>
         ` : ''}
@@ -14480,29 +14396,79 @@ function renderSubscriptionContent(plans, currentSub, invoices = []) {
     `;
 }
 
-function renderAiAnalysisPlans(plans, currentSub) {
-    const aiPlans = [
-        { id: 'ai_analysis_daily_weekly', color: { gradient: 'linear-gradient(135deg, #0891b2, #06b6d4)', check: '#0891b2' }, icon: 'fa-chart-bar' },
-        { id: 'ai_analysis_monthly', color: { gradient: 'linear-gradient(135deg, #2563eb, #3b82f6)', check: '#2563eb' }, icon: 'fa-calendar-alt' },
-        { id: 'ai_analysis_premium', color: { gradient: 'linear-gradient(135deg, #7c3aed, #a855f7)', check: '#7c3aed' }, icon: 'fa-crown', popular: true },
-        { id: 'ai_analysis_pro', color: { gradient: 'linear-gradient(135deg, #dc2626, #f43f5e)', check: '#dc2626' }, icon: 'fa-rocket' },
+function renderEstimationPlans(plans, currentSub) {
+    const estPlans = [
+        { id: 'estimation_free', color: { gradient: 'linear-gradient(135deg, #6b7280, #9ca3af)', check: '#6b7280' }, icon: 'fa-gift' },
+        { id: 'estimation_starter', color: { gradient: 'linear-gradient(135deg, #2563eb, #3b82f6)', check: '#2563eb' }, icon: 'fa-rocket' },
+        { id: 'estimation_professional', color: { gradient: 'linear-gradient(135deg, #7c3aed, #a855f7)', check: '#7c3aed' }, icon: 'fa-star', popular: true },
+        { id: 'estimation_business', color: { gradient: 'linear-gradient(135deg, #ea580c, #f97316)', check: '#ea580c' }, icon: 'fa-building' },
+        { id: 'estimation_payperuse', color: { gradient: 'linear-gradient(135deg, #0d9488, #14b8a6)', check: '#0d9488' }, icon: 'fa-receipt' },
     ];
 
-    return aiPlans.map(({ id, color, icon, popular }) => {
+    return estPlans.map(({ id, color, icon, popular }) => {
         const plan = plans[id];
         if (!plan) return '';
         const isCurrent = currentSub && currentSub.plan === id;
-        const priceDisplay = `$${plan.price}<span style="font-size:14px; font-weight:400;">/${plan.billingCycle === 'weekly' ? 'wk' : 'mo'}</span>`;
-
-        const storageInfo = plan.storageAllowedMB
-            ? `<div class="sc-ai-plan-highlight"><i class="fas fa-database"></i> ${(plan.storageAllowedMB / 1024).toFixed(0)} GB max AI estimation</div>`
-            : '';
-        const quotaInfo = plan.aiAnalysisQuota
-            ? `<div class="sc-ai-plan-highlight"><i class="fas fa-brain"></i> ${plan.aiAnalysisQuota} free analysis${plan.aiAnalysisQuota > 1 ? 'es' : ''} per period</div>`
-            : '';
+        const isPayPerUse = plan.isPayPerUse;
+        const priceDisplay = plan.price === 0
+            ? 'Free'
+            : isPayPerUse
+                ? `$${plan.price}<span style="font-size:14px; font-weight:400;"> / estimate</span>`
+                : `$${plan.price}<span style="font-size:14px; font-weight:400;"> / month</span>`;
+        const bestFor = plan.bestFor ? `<div class="sc-plan-best-for"><i class="fas fa-star" style="color:${color.check};"></i> ${plan.bestFor}</div>` : '';
 
         return `
             <div class="sc-plan-card ${isCurrent ? 'sc-plan-current' : ''}" ${popular ? 'style="border-color:#7c3aed; box-shadow:0 0 0 2px rgba(124,58,237,0.2);"' : ''}>
+                ${popular ? '<div class="sc-plan-popular">Most Popular</div>' : ''}
+                <div class="sc-plan-header" style="background:${color.gradient};">
+                    <div style="font-size:20px; margin-bottom:4px;"><i class="fas ${icon}"></i></div>
+                    <div class="sc-plan-price">${priceDisplay}</div>
+                    <div class="sc-plan-label">${plan.label}</div>
+                </div>
+                <div class="sc-plan-body">
+                    <ul class="sc-plan-features">
+                        ${(plan.features || []).map(f => `<li><i class="fas fa-check" style="color:${color.check};"></i> ${f}</li>`).join('')}
+                    </ul>
+                    ${bestFor}
+                    ${isCurrent ? `
+                        <button class="btn sc-plan-btn sc-plan-btn-current" disabled>
+                            <i class="fas fa-check-circle"></i> Current Plan
+                        </button>
+                    ` : `
+                        <button class="btn sc-plan-btn" onclick="handleSubscribe('${id}')" style="background:${color.gradient}; color:white;">
+                            ${plan.price === 0 ? '<i class="fas fa-play-circle"></i> Get Started Free' : isPayPerUse ? '<i class="fas fa-shopping-cart"></i> Buy Estimate' : '<i class="fas fa-bolt"></i> Subscribe Now'}
+                        </button>
+                    `}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderDataAnalysisPlans(plans, currentSub) {
+    const analysisPlans = [
+        { id: 'analysis_free', color: { gradient: 'linear-gradient(135deg, #6b7280, #9ca3af)', check: '#6b7280' }, icon: 'fa-flask' },
+        { id: 'analysis_basic', color: { gradient: 'linear-gradient(135deg, #2563eb, #3b82f6)', check: '#2563eb' }, icon: 'fa-chart-pie' },
+        { id: 'analysis_advanced', color: { gradient: 'linear-gradient(135deg, #7c3aed, #a855f7)', check: '#7c3aed' }, icon: 'fa-chart-line' },
+        { id: 'analysis_pro', color: { gradient: 'linear-gradient(135deg, #ea580c, #f97316)', check: '#ea580c' }, icon: 'fa-crown', popular: true },
+        { id: 'analysis_business', color: { gradient: 'linear-gradient(135deg, #dc2626, #f43f5e)', check: '#dc2626' }, icon: 'fa-industry' },
+    ];
+
+    return analysisPlans.map(({ id, color, icon, popular }) => {
+        const plan = plans[id];
+        if (!plan) return '';
+        const isCurrent = currentSub && currentSub.plan === id;
+        const isPayPerUse = plan.isPayPerUse;
+        const isMonthly = plan.billingCycle === 'monthly';
+        const priceDisplay = plan.price === 0
+            ? 'Free'
+            : isMonthly
+                ? `$${plan.price}<span style="font-size:14px; font-weight:400;"> / month</span>`
+                : `$${plan.price}`;
+        const bestFor = plan.bestFor ? `<div class="sc-plan-best-for"><i class="fas fa-info-circle" style="color:${color.check};"></i> ${plan.bestFor}</div>` : '';
+
+        return `
+            <div class="sc-plan-card ${isCurrent ? 'sc-plan-current' : ''}" ${popular ? 'style="border-color:#ea580c; box-shadow:0 0 0 2px rgba(234,88,12,0.2);"' : ''}>
                 ${popular ? '<div class="sc-plan-popular">Best Value</div>' : ''}
                 <div class="sc-plan-header" style="background:${color.gradient};">
                     <div style="font-size:20px; margin-bottom:4px;"><i class="fas ${icon}"></i></div>
@@ -14510,19 +14476,17 @@ function renderAiAnalysisPlans(plans, currentSub) {
                     <div class="sc-plan-label">${plan.label}</div>
                 </div>
                 <div class="sc-plan-body">
-                    <p class="sc-plan-desc">${plan.description}</p>
-                    ${storageInfo}
-                    ${quotaInfo}
                     <ul class="sc-plan-features">
                         ${(plan.features || []).map(f => `<li><i class="fas fa-check" style="color:${color.check};"></i> ${f}</li>`).join('')}
                     </ul>
+                    ${bestFor}
                     ${isCurrent ? `
                         <button class="btn sc-plan-btn sc-plan-btn-current" disabled>
                             <i class="fas fa-check-circle"></i> Current Plan
                         </button>
                     ` : `
                         <button class="btn sc-plan-btn" onclick="handleSubscribe('${id}')" style="background:${color.gradient}; color:white;">
-                            <i class="fas fa-bolt"></i> Subscribe
+                            ${plan.price === 0 ? '<i class="fas fa-play-circle"></i> Try Free' : isPayPerUse ? '<i class="fas fa-shopping-cart"></i> Buy Now' : '<i class="fas fa-bolt"></i> Subscribe'}
                         </button>
                     `}
                 </div>
@@ -14572,7 +14536,7 @@ async function handleSubscribe(planId) {
         },
         pricing: {
             keywords: ['pricing', 'price', 'cost', 'plan', 'free', 'subscription', 'how much', 'payment', 'fee', 'charge'],
-            response: `<strong>SteelConnect Pricing:</strong>\n\n<ul><li><strong>Free Tier</strong> — Sign up free! Get basic AI estimates, browse the marketplace, and connect with professionals</li><li><strong>Professional</strong> — Unlimited AI estimates, PDF drawing analysis, priority matching, advanced analytics</li><li><strong>Enterprise</strong> — Custom solutions for large firms: dedicated support, API access, team management, NDA tools</li></ul>\n<strong>No credit card required to start.</strong> All tiers include real-time messaging and project management.\n\nWant a personalized quote? Share your email and our team will send you a custom pricing breakdown!`
+            response: `<strong>SteelConnect Pricing:</strong>\n\n<strong>AI Estimation (Drawing Based):</strong>\n<ul><li><strong>Free Plan</strong> — $0/mo — 1 AI estimation, preview estimate, watermarked report</li><li><strong>Starter</strong> — $29/mo — 5 estimations, full reports, Excel download</li><li><strong>Professional</strong> — $79/mo — 20 estimations, Excel + PDF, faster processing, priority support</li><li><strong>Business</strong> — $149/mo — 60 estimations, team access (up to 3 users)</li><li><strong>Pay-Per-Estimate</strong> — $9/estimate — No subscription needed</li></ul>\n\n<strong>AI Data Analysis:</strong>\n<ul><li><strong>Free Analysis</strong> — 1 free analysis, basic AI insights</li><li><strong>Basic</strong> — $10 — 3 analyses, AI summary insights</li><li><strong>Advanced</strong> — $20 — 8 analyses, charts + AI recommendations</li><li><strong>Pro</strong> — $49/mo — 30 analyses/month, charts + insights</li><li><strong>Business</strong> — $99/mo — 80 analyses/month, advanced insights, priority processing</li></ul>\n\n<strong>No credit card required to start.</strong> All plans include secure access and real-time messaging.\n\nWant a personalized quote? Share your email and our team will send you a custom pricing breakdown!`
         },
         gettingStarted: {
             keywords: ['get started', 'how to start', 'sign up', 'register', 'join', 'create account', 'new user', 'onboard', 'how do i begin', 'first step'],
