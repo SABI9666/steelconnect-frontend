@@ -565,6 +565,7 @@
             </button>
             <nav id="main-nav-menu" class="nav-menu">
                 <a href="#ai-estimation" class="nav-link">AI Estimation</a>
+                <a href="#free-estimation" class="nav-link">Free Estimation</a>
                 <a href="#business-analytics" class="nav-link">AI Analytics</a>
                 <a href="#how-it-works" class="nav-link">How It Works</a>
                 <a href="#why-steelconnect" class="nav-link">Why Choose Us</a>
@@ -639,8 +640,8 @@
                             <a href="#ai-estimation" class="btn btn-ai">
                                 Try AI Estimation <i class="fas fa-brain"></i>
                             </a>
-                            <a href="#business-analytics" class="btn btn-analytics-hero">
-                                AI Analytics <i class="fas fa-chart-line"></i>
+                            <a href="#free-estimation" class="btn btn-analytics-hero" style="background:linear-gradient(135deg,#059669,#10b981);">
+                                Free Estimation <i class="fas fa-file-upload"></i>
                             </a>
                         </div>
                         <div class="hero-stats">
@@ -1056,6 +1057,144 @@
                                 <p style="font-size: 12px; color: var(--text-gray); margin-top: 16px; text-align: center;">
                                     *This is a preview. <a href="#" id="signup-link" style="color: #8b5cf6; font-weight: 600;">Sign up</a> for the full tool with PDF uploads.
                                 </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Free File-Based Estimation (Landing Page Upload) -->
+            <section id="free-estimation" class="free-estimation-section">
+                <div class="free-est-bg-orb free-est-orb-1"></div>
+                <div class="free-est-bg-orb free-est-orb-2"></div>
+                <div class="free-est-container">
+                    <div class="free-est-header reveal">
+                        <span class="free-est-badge"><i class="fas fa-gift"></i> 100% Free</span>
+                        <h2 class="free-est-title">Get a Free Professional Estimation</h2>
+                        <p class="free-est-subtitle">Upload your project drawings and receive a detailed, expert-reviewed cost estimation report — completely free. No account required to submit.</p>
+                    </div>
+
+                    <div class="free-est-layout">
+                        <!-- Left: Benefits -->
+                        <div class="free-est-benefits reveal reveal-delay-1">
+                            <div class="free-est-benefit-card">
+                                <div class="free-est-benefit-icon" style="background:#eff6ff;color:#2563eb;"><i class="fas fa-file-upload"></i></div>
+                                <div>
+                                    <h4>Upload Your Drawings</h4>
+                                    <p>Submit PDF blueprints, CAD files, or project documents for expert analysis</p>
+                                </div>
+                            </div>
+                            <div class="free-est-benefit-card">
+                                <div class="free-est-benefit-icon" style="background:#f0fdf4;color:#16a34a;"><i class="fas fa-user-tie"></i></div>
+                                <div>
+                                    <h4>Expert Review</h4>
+                                    <p>Our team reviews your files and prepares a detailed cost estimation report</p>
+                                </div>
+                            </div>
+                            <div class="free-est-benefit-card">
+                                <div class="free-est-benefit-icon" style="background:#fef3c7;color:#d97706;"><i class="fas fa-envelope"></i></div>
+                                <div>
+                                    <h4>Get Notified</h4>
+                                    <p>Receive an email when your estimation result is ready to view</p>
+                                </div>
+                            </div>
+                            <div class="free-est-benefit-card">
+                                <div class="free-est-benefit-icon" style="background:#f5f3ff;color:#7c3aed;"><i class="fas fa-chart-bar"></i></div>
+                                <div>
+                                    <h4>View Detailed Report</h4>
+                                    <p>Access your interactive HTML estimation report through the SteelConnect portal</p>
+                                </div>
+                            </div>
+                            <div class="free-est-trust">
+                                <div class="free-est-trust-item"><i class="fas fa-shield-alt" style="color:#10b981;"></i> No credit card required</div>
+                                <div class="free-est-trust-item"><i class="fas fa-lock" style="color:#3b82f6;"></i> Files are kept confidential</div>
+                                <div class="free-est-trust-item"><i class="fas fa-clock" style="color:#f59e0b;"></i> Results within 24-48 hours</div>
+                            </div>
+                        </div>
+
+                        <!-- Right: Upload Form -->
+                        <div class="free-est-form-card reveal reveal-delay-2">
+                            <div class="free-est-form-header">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                                <div>
+                                    <h3>Submit Your Project</h3>
+                                    <p>Upload files and enter your details below</p>
+                                </div>
+                            </div>
+                            <form id="free-estimation-form" onsubmit="return submitFreeEstimation(event)">
+                                <div class="free-est-field">
+                                    <label><i class="fas fa-user"></i> Your Name</label>
+                                    <input type="text" id="freeEstName" placeholder="John Smith" required>
+                                </div>
+                                <div class="free-est-field">
+                                    <label><i class="fas fa-envelope"></i> Email Address <span style="color:#ef4444;">*</span></label>
+                                    <input type="email" id="freeEstEmail" placeholder="john@company.com" required>
+                                </div>
+                                <div class="free-est-field">
+                                    <label><i class="fas fa-heading"></i> Project Title <span style="color:#ef4444;">*</span></label>
+                                    <input type="text" id="freeEstTitle" placeholder="e.g. Commercial Office Building" required>
+                                </div>
+                                <div class="free-est-field">
+                                    <label><i class="fas fa-file-alt"></i> Project Description</label>
+                                    <textarea id="freeEstDescription" rows="3" placeholder="Brief description of your project (optional)"></textarea>
+                                </div>
+                                <div class="free-est-row">
+                                    <div class="free-est-field">
+                                        <label><i class="fas fa-building"></i> Project Type</label>
+                                        <select id="freeEstProjectType">
+                                            <option value="">Select type...</option>
+                                            <option value="Industrial / Warehouse">Industrial / Warehouse</option>
+                                            <option value="Commercial Office">Commercial Office</option>
+                                            <option value="Residential">Residential</option>
+                                            <option value="Retail / Shopping">Retail / Shopping</option>
+                                            <option value="Pre-Engineered Building">Pre-Engineered Building</option>
+                                            <option value="Healthcare">Healthcare</option>
+                                            <option value="Educational">Educational</option>
+                                            <option value="Mixed-Use">Mixed-Use</option>
+                                        </select>
+                                    </div>
+                                    <div class="free-est-field">
+                                        <label><i class="fas fa-map-marker-alt"></i> Region</label>
+                                        <select id="freeEstRegion">
+                                            <option value="">Select region...</option>
+                                            <option value="India">India</option>
+                                            <option value="USA">United States</option>
+                                            <option value="UAE">UAE / Gulf</option>
+                                            <option value="UK">United Kingdom</option>
+                                            <option value="Southeast Asia">Southeast Asia</option>
+                                            <option value="Africa">Africa</option>
+                                            <option value="Other">Other</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="free-est-field">
+                                    <label><i class="fas fa-cloud-upload-alt"></i> Upload Project Files <span style="color:#ef4444;">*</span></label>
+                                    <div class="free-est-upload-area" id="freeEstUploadArea">
+                                        <input type="file" id="freeEstFileInput" accept=".pdf,.dwg,.dxf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.zip" multiple onchange="handleFreeEstFiles(this.files)" style="display:none;">
+                                        <div class="free-est-upload-content" onclick="document.getElementById('freeEstFileInput').click()">
+                                            <i class="fas fa-cloud-upload-alt" style="font-size:32px;color:#6366f1;margin-bottom:8px;"></i>
+                                            <p style="font-weight:600;color:#1e293b;">Drag & drop files here</p>
+                                            <p style="font-size:13px;color:#94a3b8;">or click to browse (PDF, DWG, DOC, XLS, JPG, ZIP)</p>
+                                            <p style="font-size:12px;color:#cbd5e1;margin-top:4px;">Max 50MB per file, up to 20 files</p>
+                                        </div>
+                                    </div>
+                                    <div id="freeEstFileList" class="free-est-file-list"></div>
+                                </div>
+                                <button type="submit" class="free-est-submit-btn" id="freeEstSubmitBtn">
+                                    <span class="free-est-submit-text"><i class="fas fa-paper-plane"></i> Submit for Free Estimation</span>
+                                    <span class="free-est-submit-loading" style="display:none;"><i class="fas fa-spinner fa-spin"></i> Submitting...</span>
+                                </button>
+                            </form>
+                            <!-- Success state -->
+                            <div id="freeEstSuccess" class="free-est-success" style="display:none;">
+                                <div class="free-est-success-icon"><i class="fas fa-check-circle"></i></div>
+                                <h3>Submission Received!</h3>
+                                <p>We've received your project files. You'll get an email at <strong id="freeEstSuccessEmail"></strong> when your estimation result is ready.</p>
+                                <div class="free-est-success-info">
+                                    <p><i class="fas fa-clock"></i> Expected turnaround: 24-48 hours</p>
+                                    <p><i class="fas fa-envelope"></i> Check your inbox for a confirmation email</p>
+                                </div>
+                                <button class="free-est-another-btn" onclick="resetFreeEstimationForm()"><i class="fas fa-plus"></i> Submit Another Project</button>
                             </div>
                         </div>
                     </div>
@@ -1920,6 +2059,7 @@
                     <div class="footer-column">
                         <h4>Platform</h4>
                         <a href="#ai-estimation">AI Estimation</a>
+                        <a href="#free-estimation">Free Estimation</a>
                         <a href="#business-analytics">Analytics</a>
                         <a href="#how-it-works">How It Works</a>
                         <a href="#showcase">Showcase</a>
