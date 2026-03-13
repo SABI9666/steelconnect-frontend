@@ -7636,7 +7636,7 @@ function showLandingPageView() {
     document.body.style.overflow = '';
     const navMenu = document.getElementById('main-nav-menu');
     if (navMenu) navMenu.innerHTML = `
-        <a href="#ai-estimation" class="nav-link">AI Estimation</a><a href="#free-estimation" class="nav-link">Free Estimation</a><a href="#how-it-works" class="nav-link">How It Works</a>
+        <a href="#ai-estimation" class="nav-link">AI Estimation</a><a href="#how-it-works" class="nav-link">How It Works</a>
         <a href="#why-steelconnect" class="nav-link">Why Choose Us</a><a href="#showcase" class="nav-link">Showcase</a>`;
     // Show hero auth strip for unauthenticated users
     const heroAuthCard = document.getElementById('hero-auth-card');
