@@ -565,7 +565,6 @@
             </button>
             <nav id="main-nav-menu" class="nav-menu">
                 <a href="#ai-estimation" class="nav-link">AI Estimation</a>
-                <a href="#free-estimation" class="nav-link">Free Estimation</a>
                 <a href="#business-analytics" class="nav-link">AI Analytics</a>
                 <a href="#how-it-works" class="nav-link">How It Works</a>
                 <a href="#why-steelconnect" class="nav-link">Why Choose Us</a>
@@ -638,10 +637,7 @@
                                 Start Building Today <i class="fas fa-rocket"></i>
                             </button>
                             <a href="#ai-estimation" class="btn btn-ai">
-                                Try AI Estimation <i class="fas fa-brain"></i>
-                            </a>
-                            <a href="#free-estimation" class="btn btn-analytics-hero" style="background:linear-gradient(135deg,#059669,#10b981);">
-                                Free Estimation <i class="fas fa-file-upload"></i>
+                                Free AI Estimation <i class="fas fa-file-upload"></i>
                             </a>
                         </div>
                         <div class="hero-stats">
@@ -947,124 +943,9 @@
 
             </section>
 
-            <section id="ai-estimation" class="ai-estimation">
-                <div class="ai-est-orb ai-est-orb-1"></div>
-                <div class="ai-est-orb ai-est-orb-2"></div>
-                <div class="ai-est-orb ai-est-orb-3"></div>
-                <div class="ai-est-grid-bg"></div>
-                <div class="ai-section-container">
-                    <div class="ai-est-header reveal">
-                        <span class="ai-est-badge"><i class="fas fa-sparkles"></i> AI-Powered Technology</span>
-                        <h2 class="ai-section-title">AI-Powered Estimation</h2>
-                        <p class="ai-section-subtitle">Get instant, accurate cost estimates for your construction projects by providing a few key details. Our AI analyzes the data to give you a preliminary budget and timeline.</p>
-                    </div>
-
-                    <div class="ai-content">
-                        <div class="ai-features-left">
-                            <div class="ai-feature-card reveal reveal-delay-1">
-                                <div class="ai-feature-icon-wrap">
-                                    <div class="ai-feature-icon"><i class="fas fa-bolt"></i></div>
-                                    <div class="ai-feature-icon-glow"></div>
-                                </div>
-                                <div class="ai-feature-info">
-                                    <h3>Instant Analysis</h3>
-                                    <p>Our AI provides preliminary cost and timeline estimates in seconds, helping you make quicker decisions.</p>
-                                </div>
-                            </div>
-                            <div class="ai-feature-card reveal reveal-delay-2">
-                                <div class="ai-feature-icon-wrap">
-                                    <div class="ai-feature-icon ai-feature-icon-cyan"><i class="fas fa-file-upload"></i></div>
-                                    <div class="ai-feature-icon-glow ai-feature-glow-cyan"></div>
-                                </div>
-                                <div class="ai-feature-info">
-                                    <h3>PDF Uploads for Pros</h3>
-                                    <p>Registered users can upload structural drawings directly for a more detailed and accurate AI-powered cost breakdown.</p>
-                                </div>
-                            </div>
-                            <div class="ai-feature-card reveal reveal-delay-3">
-                                <div class="ai-feature-icon-wrap">
-                                    <div class="ai-feature-icon ai-feature-icon-emerald"><i class="fas fa-chart-bar"></i></div>
-                                    <div class="ai-feature-icon-glow ai-feature-glow-emerald"></div>
-                                </div>
-                                <div class="ai-feature-info">
-                                    <h3>Smart Breakdown</h3>
-                                    <p>Get detailed material, labor, and timeline breakdowns powered by machine learning models trained on thousands of projects.</p>
-                                </div>
-                            </div>
-                            <div class="ai-est-trust-strip">
-                                <div class="ai-est-trust-item">
-                                    <span class="ai-est-trust-number">95%+</span>
-                                    <span class="ai-est-trust-label">Accuracy</span>
-                                </div>
-                                <div class="ai-est-trust-divider"></div>
-                                <div class="ai-est-trust-item">
-                                    <span class="ai-est-trust-number">12K+</span>
-                                    <span class="ai-est-trust-label">Estimates</span>
-                                </div>
-                                <div class="ai-est-trust-divider"></div>
-                                <div class="ai-est-trust-item">
-                                    <span class="ai-est-trust-number">&lt;3s</span>
-                                    <span class="ai-est-trust-label">Results</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="ai-demo reveal reveal-delay-2">
-                            <div class="ai-demo-header">
-                                <div class="ai-demo-icon"><i class="fas fa-calculator"></i></div>
-                                <div>
-                                    <div class="ai-demo-title">Quick Project Estimator</div>
-                                    <div class="ai-demo-subtitle">Powered by AI</div>
-                                </div>
-                                <div class="ai-demo-live-badge"><span class="ai-demo-live-dot"></span> Live</div>
-                            </div>
-
-                            <div class="ai-input-group">
-                                <label><i class="fas fa-building"></i> Project Type</label>
-                                <select id="preview-project-type" class="ai-input">
-                                    <option value="">Select project type</option>
-                                    <option value="residential">Residential Building</option>
-                                    <option value="commercial">Commercial Complex</option>
-                                    <option value="industrial">Industrial Facility</option>
-                                </select>
-                            </div>
-
-                            <div class="ai-input-group">
-                                <label><i class="fas fa-weight-hanging"></i> Estimated Material Tonnage (tons)</label>
-                                <input type="number" id="preview-steel-tonnage" class="ai-input" placeholder="e.g., 150" min="1">
-                            </div>
-
-                            <button class="ai-estimate-btn" id="preview-generate-btn">
-                                <span class="ai-estimate-btn-content"><i class="fas fa-brain"></i> Generate AI Preview</span>
-                                <span class="ai-estimate-btn-shine"></span>
-                            </button>
-
-                            <div id="preview-ai-result" class="ai-result">
-                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
-                                    <i class="fas fa-check-circle" style="color: #8b5cf6;"></i>
-                                    <h4 style="color: #1e293b; font-weight: 700;">AI Analysis Complete</h4>
-                                </div>
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                                    <div class="ai-result-stat">
-                                        <span id="preview-estimated-cost" class="ai-result-number">$0</span>
-                                        <span class="ai-result-label">Estimated Cost</span>
-                                    </div>
-                                    <div class="ai-result-stat">
-                                        <span id="preview-timeline-estimate" class="ai-result-number">0 weeks</span>
-                                        <span class="ai-result-label">Timeline</span>
-                                    </div>
-                                </div>
-                                <p style="font-size: 12px; color: var(--text-gray); margin-top: 16px; text-align: center;">
-                                    *This is a preview. <a href="#" id="signup-link" style="color: #8b5cf6; font-weight: 600;">Sign up</a> for the full tool with PDF uploads.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Free File-Based Estimation (Landing Page Upload) -->
-            <section id="free-estimation" class="free-estimation-section">
+            <!-- AI Estimation: Free File Upload Section -->
+            <span id="free-estimation"></span>
+            <section id="ai-estimation" class="free-estimation-section">
                 <div class="free-est-bg-orb free-est-orb-1"></div>
                 <div class="free-est-bg-orb free-est-orb-2"></div>
                 <div class="free-est-container">
@@ -1832,7 +1713,7 @@
                     <p class="cta-subtitle">Join thousands of professionals who trust SteelConnect to find projects, collaborate with experts, and grow their business.</p>
                     <div class="cta-buttons">
                         <button class="cta-btn-primary" onclick="document.getElementById('join-btn')?.click()"><i class="fas fa-rocket"></i> Get Started Free</button>
-                        <button class="cta-btn-secondary" onclick="document.querySelector('#ai-estimation')?.scrollIntoView({behavior:'smooth'})"><i class="fas fa-brain"></i> Try AI Estimation</button>
+                        <button class="cta-btn-secondary" onclick="document.querySelector('#ai-estimation')?.scrollIntoView({behavior:'smooth'})"><i class="fas fa-file-upload"></i> Get Free Estimation</button>
                     </div>
                 </div>
             </section>
@@ -2059,7 +1940,6 @@
                     <div class="footer-column">
                         <h4>Platform</h4>
                         <a href="#ai-estimation">AI Estimation</a>
-                        <a href="#free-estimation">Free Estimation</a>
                         <a href="#business-analytics">Analytics</a>
                         <a href="#how-it-works">How It Works</a>
                         <a href="#showcase">Showcase</a>
