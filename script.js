@@ -679,7 +679,10 @@ function initializeApp() {
             if (urlParams.get('action') === 'register') {
                 showAuthModal('register');
             } else {
-                showAuthGateway();
+                // Let users browse for 15 seconds before showing login gateway
+                window._authGatewayTimer = setTimeout(() => {
+                    showAuthGateway();
+                }, 15000);
             }
         }
     }
@@ -7262,6 +7265,11 @@ function unlockBodyScroll() {
 // Shows Register, Login, Google Login as 3 separate options over the website
 // ========================================
 function showAuthGateway() {
+    // Clear the delayed timer since gateway is now showing
+    if (window._authGatewayTimer) {
+        clearTimeout(window._authGatewayTimer);
+        window._authGatewayTimer = null;
+    }
     const overlay = document.getElementById('auth-gateway-overlay');
     if (!overlay) return;
     overlay.style.display = 'flex';
@@ -7370,6 +7378,11 @@ function showIncomingCallLoginOverlay(callerName) {
 }
 
 function showAuthModal(view) {
+    // Clear the delayed auth gateway timer if user is already interacting with auth
+    if (window._authGatewayTimer) {
+        clearTimeout(window._authGatewayTimer);
+        window._authGatewayTimer = null;
+    }
     const modal = document.getElementById('modal-container');
     if (modal) {
         lockBodyScroll();
