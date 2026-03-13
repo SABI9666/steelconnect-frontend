@@ -603,6 +603,13 @@ function initializeApp() {
         if (_pushCallerId) sessionStorage.setItem('pendingCallerId', _pushCallerId);
         if (_pushCallerName) sessionStorage.setItem('pendingCallerName', _pushCallerName);
     }
+    // Check for website estimation result deep link (special handling - stores for profile gate)
+    if (_deepLinkSection === 'website-estimation-result' && _deepLinkEstimationId) {
+        const _deepLinkEmail = _initUrlParams.get('email');
+        sessionStorage.setItem('pendingWebsiteEstimationId', _deepLinkEstimationId);
+        if (_deepLinkEmail) sessionStorage.setItem('pendingWebsiteEstimationEmail', _deepLinkEmail);
+        console.log(`[DEEP-LINK] Website estimation result: id=${_deepLinkEstimationId}, email=${_deepLinkEmail || 'none'}`);
+    }
     // Store deep link data for estimation results or analysis reports from email
     if (_deepLinkSection) {
         sessionStorage.setItem('pendingDeepLinkSection', _deepLinkSection);
@@ -7629,7 +7636,7 @@ function showLandingPageView() {
     document.body.style.overflow = '';
     const navMenu = document.getElementById('main-nav-menu');
     if (navMenu) navMenu.innerHTML = `
-        <a href="#ai-estimation" class="nav-link">AI Estimation</a><a href="#how-it-works" class="nav-link">How It Works</a>
+        <a href="#ai-estimation" class="nav-link">AI Estimation</a><a href="#free-estimation" class="nav-link">Free Estimation</a><a href="#how-it-works" class="nav-link">How It Works</a>
         <a href="#why-steelconnect" class="nav-link">Why Choose Us</a><a href="#showcase" class="nav-link">Showcase</a>`;
     // Show hero auth strip for unauthenticated users
     const heroAuthCard = document.getElementById('hero-auth-card');
@@ -7655,13 +7662,26 @@ async function checkProfileAndRoute() {
         document.getElementById('sidebarUserAvatar').textContent = (appState.currentUser.name || "A").charAt(0).toUpperCase();
         buildSidebarNav();
         startMenuBadgePolling(); // Start sidebar badge polling
+        // Check for pending website estimation result (from email deep link)
+        if (handlePendingWebsiteEstimation()) {
+            // Handled - will redirect to result viewer or profile completion
+        }
         // If this is a new Google user, go directly to profile completion
-        if (appState.isNewGoogleUser && profileStatus === 'incomplete') {
+        else if (appState.isNewGoogleUser && profileStatus === 'incomplete') {
             appState.isNewGoogleUser = false;
             renderAppSection('profile-completion');
             showNotification('Please complete your profile to get started.', 'info', 8000);
         } else {
-            renderAppSection('dashboard');
+            // Check for after-approval estimation redirect
+            const afterApprovalEstId = sessionStorage.getItem('afterApprovalEstimationId');
+            if (afterApprovalEstId && profileStatus === 'approved') {
+                const afterApprovalEmail = sessionStorage.getItem('afterApprovalEstimationEmail') || '';
+                sessionStorage.removeItem('afterApprovalEstimationId');
+                sessionStorage.removeItem('afterApprovalEstimationEmail');
+                renderWebsiteEstimationResult(afterApprovalEstId, afterApprovalEmail);
+            } else {
+                renderAppSection('dashboard');
+            }
             if (profileStatus === 'incomplete') showNotification('Complete your profile to unlock all features.', 'info', 8000);
             else if (profileStatus === 'pending') showNotification('Your profile is under review.', 'info', 8000);
             else if (profileStatus === 'rejected') showNotification('Please update your profile.', 'warning', 10000);
@@ -7685,7 +7705,7 @@ function renderAppSection(sectionId) {
     if (!appState.currentUser) return;
     const profileStatus = appState.currentUser.profileStatus;
     const isApproved = profileStatus === 'approved';
-    const restrictedSections = ['post-job', 'jobs', 'my-quotes', 'approved-jobs', 'estimation-tool', 'my-estimations', 'messages', 'ai-analytics', 'project-tracking', 'community-feed', 'quote-analysis'];
+    const restrictedSections = ['post-job', 'jobs', 'my-quotes', 'approved-jobs', 'estimation-tool', 'my-estimations', 'messages', 'ai-analytics', 'project-tracking', 'community-feed', 'quote-analysis', 'website-estimation-result'];
     if (restrictedSections.includes(sectionId) && !isApproved) {
         container.innerHTML = getRestrictedAccessTemplate(sectionId, profileStatus);
         return;
@@ -7757,10 +7777,24 @@ function renderAppSection(sectionId) {
     else if (sectionId === 'quote-analysis') {
         renderQuoteAnalysisSection();
     }
+    else if (sectionId === 'website-estimation-result') {
+        // Handle website estimation result viewing with profile gate
+        const estId = sessionStorage.getItem('afterApprovalEstimationId') || sessionStorage.getItem('pendingWebsiteEstimationId') || '';
+        const estEmail = sessionStorage.getItem('afterApprovalEstimationEmail') || sessionStorage.getItem('pendingWebsiteEstimationEmail') || '';
+        if (estId) {
+            if (isApproved) {
+                renderWebsiteEstimationResult(estId, estEmail);
+            } else {
+                container.innerHTML = getRestrictedAccessTemplate(sectionId, profileStatus);
+            }
+        } else {
+            container.innerHTML = `<div class="restricted-access-container"><div class="restricted-icon" style="color:#f59e0b;"><i class="fas fa-search"></i></div><h2>No Estimation Found</h2><p>No website estimation result to display. Check your email for the result link.</p><button class="btn btn-primary" onclick="renderAppSection('dashboard')">Go to Dashboard</button></div>`;
+        }
+    }
 }
 
 function getRestrictedAccessTemplate(sectionId, profileStatus) {
-    const sectionNames = { 'post-job': 'Post Projects', 'jobs': 'Browse Projects', 'my-quotes': 'My Quotes', 'approved-jobs': 'Approved Projects', 'estimation-tool': 'AI Estimation', 'my-estimations': 'My Estimations', 'messages': 'Messages', 'ai-analytics': 'Analytics Dashboard', 'project-tracking': 'Project Tracking', 'community-feed': 'Community Feed', 'quote-analysis': 'Quote Analysis' };
+    const sectionNames = { 'post-job': 'Post Projects', 'jobs': 'Browse Projects', 'my-quotes': 'My Quotes', 'approved-jobs': 'Approved Projects', 'estimation-tool': 'AI Estimation', 'my-estimations': 'My Estimations', 'messages': 'Messages', 'ai-analytics': 'Analytics Dashboard', 'project-tracking': 'Project Tracking', 'community-feed': 'Community Feed', 'quote-analysis': 'Quote Analysis', 'website-estimation-result': 'Free Estimation Result' };
     const sectionName = sectionNames[sectionId] || 'This Feature';
     let msg = '', btn = '', icon = 'fa-lock', color = '#f59e0b';
     if (profileStatus === 'incomplete') {
@@ -14526,6 +14560,216 @@ async function handleSubscribe(planId) {
         }
     } catch (error) {
         showNotification('Error: ' + error.message, 'error');
+    }
+}
+
+// ================================================================
+// FREE ESTIMATION - Landing Page File Upload & Submission
+// ================================================================
+let _freeEstFiles = [];
+
+function handleFreeEstFiles(fileList) {
+    const maxFiles = 20;
+    const maxSize = 50 * 1024 * 1024; // 50MB
+    for (let i = 0; i < fileList.length; i++) {
+        if (_freeEstFiles.length >= maxFiles) {
+            showNotification(`Maximum ${maxFiles} files allowed.`, 'warning');
+            break;
+        }
+        if (fileList[i].size > maxSize) {
+            showNotification(`"${fileList[i].name}" exceeds 50MB limit.`, 'error');
+            continue;
+        }
+        _freeEstFiles.push(fileList[i]);
+    }
+    renderFreeEstFileList();
+}
+
+function renderFreeEstFileList() {
+    const container = document.getElementById('freeEstFileList');
+    if (!container) return;
+    if (_freeEstFiles.length === 0) { container.innerHTML = ''; return; }
+    container.innerHTML = _freeEstFiles.map((file, i) => {
+        const sizeMB = (file.size / 1024 / 1024).toFixed(2);
+        return `<div class="free-est-file-item">
+            <div style="display:flex;align-items:center;overflow:hidden;">
+                <i class="fas fa-file-pdf" style="color:#ef4444;margin-right:8px;flex-shrink:0;"></i>
+                <span class="file-name">${file.name}</span>
+                <span class="file-size">(${sizeMB} MB)</span>
+            </div>
+            <button class="file-remove" onclick="removeFreeEstFile(${i})" title="Remove file"><i class="fas fa-times"></i></button>
+        </div>`;
+    }).join('');
+}
+
+function removeFreeEstFile(index) {
+    _freeEstFiles.splice(index, 1);
+    renderFreeEstFileList();
+}
+
+// Drag & drop support for free estimation upload area
+document.addEventListener('DOMContentLoaded', function() {
+    const dropArea = document.getElementById('freeEstUploadArea');
+    if (!dropArea) return;
+    ['dragenter', 'dragover'].forEach(evt => dropArea.addEventListener(evt, function(e) { e.preventDefault(); dropArea.classList.add('drag-over'); }));
+    ['dragleave', 'drop'].forEach(evt => dropArea.addEventListener(evt, function(e) { e.preventDefault(); dropArea.classList.remove('drag-over'); }));
+    dropArea.addEventListener('drop', function(e) {
+        if (e.dataTransfer.files.length > 0) handleFreeEstFiles(e.dataTransfer.files);
+    });
+});
+
+async function submitFreeEstimation(event) {
+    event.preventDefault();
+    const email = document.getElementById('freeEstEmail').value.trim();
+    const name = document.getElementById('freeEstName').value.trim();
+    const projectTitle = document.getElementById('freeEstTitle').value.trim();
+    const description = document.getElementById('freeEstDescription').value.trim();
+    const projectType = document.getElementById('freeEstProjectType').value;
+    const region = document.getElementById('freeEstRegion').value;
+
+    if (!email || !projectTitle) {
+        showNotification('Email and project title are required.', 'error');
+        return false;
+    }
+    if (_freeEstFiles.length === 0) {
+        showNotification('Please upload at least one project file.', 'error');
+        return false;
+    }
+
+    const submitBtn = document.getElementById('freeEstSubmitBtn');
+    const submitText = submitBtn.querySelector('.free-est-submit-text');
+    const submitLoading = submitBtn.querySelector('.free-est-submit-loading');
+    submitBtn.disabled = true;
+    submitText.style.display = 'none';
+    submitLoading.style.display = 'inline-flex';
+
+    try {
+        const formData = new FormData();
+        formData.append('email', email);
+        formData.append('name', name);
+        formData.append('projectTitle', projectTitle);
+        formData.append('description', description);
+        formData.append('projectType', projectType);
+        formData.append('region', region);
+        _freeEstFiles.forEach(file => formData.append('files', file));
+
+        const response = await fetch(BACKEND_URL + '/estimation/website-submit', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            // Show success state
+            document.getElementById('free-estimation-form').style.display = 'none';
+            document.getElementById('freeEstSuccess').style.display = 'block';
+            document.getElementById('freeEstSuccessEmail').textContent = email;
+            showNotification('Your estimation request has been submitted!', 'success');
+            _freeEstFiles = [];
+        } else {
+            showNotification(data.message || 'Submission failed. Please try again.', 'error');
+        }
+    } catch (error) {
+        console.error('Free estimation submission error:', error);
+        showNotification('Something went wrong. Please try again.', 'error');
+    } finally {
+        submitBtn.disabled = false;
+        submitText.style.display = 'inline-flex';
+        submitLoading.style.display = 'none';
+    }
+    return false;
+}
+
+function resetFreeEstimationForm() {
+    _freeEstFiles = [];
+    document.getElementById('free-estimation-form').style.display = 'flex';
+    document.getElementById('freeEstSuccess').style.display = 'none';
+    document.getElementById('free-estimation-form').reset();
+    renderFreeEstFileList();
+}
+
+// ================================================================
+// WEBSITE ESTIMATION RESULT VIEWER (Profile-gated access)
+// ================================================================
+
+// Handle deep link for website estimation results: ?section=website-estimation-result&estimationId=xxx&email=xxx
+function checkWebsiteEstimationDeepLink() {
+    const params = new URLSearchParams(window.location.search);
+    const section = params.get('section');
+    const estimationId = params.get('estimationId');
+    const email = params.get('email');
+    if (section === 'website-estimation-result' && estimationId) {
+        // Store for after login/register
+        sessionStorage.setItem('pendingWebsiteEstimationId', estimationId);
+        if (email) sessionStorage.setItem('pendingWebsiteEstimationEmail', email);
+        // Clean URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+        return true;
+    }
+    return false;
+}
+
+// Called after login to check if user should be redirected to website estimation result
+function handlePendingWebsiteEstimation() {
+    const estimationId = sessionStorage.getItem('pendingWebsiteEstimationId');
+    const email = sessionStorage.getItem('pendingWebsiteEstimationEmail');
+    if (!estimationId) return false;
+    sessionStorage.removeItem('pendingWebsiteEstimationId');
+    sessionStorage.removeItem('pendingWebsiteEstimationEmail');
+    // Check if profile is approved - if not, redirect to profile completion with message
+    if (appState.currentUser && appState.currentUser.profileStatus === 'approved') {
+        renderWebsiteEstimationResult(estimationId, email);
+    } else {
+        // Store the estimation ID so we can redirect after profile approval
+        sessionStorage.setItem('afterApprovalEstimationId', estimationId);
+        sessionStorage.setItem('afterApprovalEstimationEmail', email || '');
+        showNotification('Please complete your profile first. Once approved, you can view your free estimation result.', 'info', 10000);
+        renderAppSection('profile-completion');
+    }
+    return true;
+}
+
+async function renderWebsiteEstimationResult(estimationId, email) {
+    const container = document.getElementById('app-container');
+    container.innerHTML = `<div class="loading-spinner"><div class="spinner"></div><p>Loading your estimation result...</p></div>`;
+    try {
+        const emailParam = email || (appState.currentUser ? appState.currentUser.email : '');
+        const response = await fetch(BACKEND_URL + `/estimation/website-estimations/${estimationId}/result?email=${encodeURIComponent(emailParam)}`);
+        const data = await response.json();
+        if (data.success && data.htmlContent) {
+            container.innerHTML = `
+                <div class="portal-breadcrumb-nav">
+                    <a href="#" onclick="renderAppSection('dashboard'); return false;"><i class="fas fa-home"></i> Dashboard</a>
+                    <span class="breadcrumb-sep"><i class="fas fa-chevron-right"></i></span>
+                    <span class="breadcrumb-current">Free Estimation Result</span>
+                </div>
+                <div class="section-header modern-header">
+                    <div class="header-content">
+                        <h2><i class="fas fa-file-invoice-dollar"></i> Free Estimation Result</h2>
+                        <p class="header-subtitle">Project: ${data.estimation ? data.estimation.projectTitle : 'Your Project'}</p>
+                    </div>
+                </div>
+                <div class="website-est-result-container" style="background:#fff;border-radius:16px;border:1px solid #e2e8f0;padding:24px;margin-top:16px;box-shadow:0 4px 16px rgba(0,0,0,0.04);">
+                    <iframe id="websiteEstResultFrame" srcdoc="${data.htmlContent.replace(/"/g, '&quot;')}" style="width:100%;min-height:800px;border:none;border-radius:8px;" onload="this.style.height = this.contentWindow.document.documentElement.scrollHeight + 'px';"></iframe>
+                </div>`;
+        } else {
+            container.innerHTML = `
+                <div class="restricted-access-container">
+                    <div class="restricted-icon" style="color:#f59e0b;"><i class="fas fa-clock"></i></div>
+                    <h2>Result Not Available</h2>
+                    <p>${data.message || 'Your estimation result is not ready yet or the email does not match. Please check your email for updates.'}</p>
+                    <button class="btn btn-primary" onclick="renderAppSection('dashboard')"><i class="fas fa-home"></i> Go to Dashboard</button>
+                </div>`;
+        }
+    } catch (error) {
+        console.error('Error loading website estimation result:', error);
+        container.innerHTML = `
+            <div class="restricted-access-container">
+                <div class="restricted-icon" style="color:#ef4444;"><i class="fas fa-exclamation-triangle"></i></div>
+                <h2>Error Loading Result</h2>
+                <p>Something went wrong while loading your estimation result. Please try again later.</p>
+                <button class="btn btn-primary" onclick="renderAppSection('dashboard')"><i class="fas fa-home"></i> Go to Dashboard</button>
+            </div>`;
     }
 }
 
