@@ -995,31 +995,94 @@
 
                         <!-- Right: Upload Form -->
                         <div class="free-est-form-card reveal reveal-delay-2">
-                            <!-- Estimation Disabled State -->
-                            <div id="freeEstDisabledState" style="display:none;text-align:center;padding:40px 24px;">
-                                <div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#fef3c7,#fde68a);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
-                                    <i class="fas fa-lock" style="font-size:32px;color:#d97706;"></i>
+                            <!-- Estimation Disabled State — Professional Subscription Portal -->
+                            <div id="freeEstDisabledState" style="display:none;">
+                                <!-- Header -->
+                                <div style="text-align:center;padding:28px 24px 20px;border-bottom:1px solid #f1f5f9;">
+                                    <div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#fef3c7,#fde68a);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;">
+                                        <i class="fas fa-crown" style="font-size:24px;color:#d97706;"></i>
+                                    </div>
+                                    <h3 style="font-size:20px;font-weight:700;color:#1e293b;margin:0 0 6px;">Upgrade to Continue</h3>
+                                    <p style="font-size:13px;color:#64748b;margin:0;line-height:1.5;">Your free estimation has been completed.<br>Unlock unlimited access with a subscription plan.</p>
                                 </div>
-                                <h3 style="font-size:22px;font-weight:700;color:#1e293b;margin-bottom:10px;">Free Estimation Already Used</h3>
-                                <p style="font-size:15px;color:#64748b;margin-bottom:24px;line-height:1.6;">Your free estimation has been completed. Subscribe to SteelConnect to get unlimited AI-powered cost estimations and more.</p>
-                                <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:24px;">
-                                    <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:#f0fdf4;border-radius:8px;text-align:left;">
-                                        <i class="fas fa-check-circle" style="color:#22c55e;"></i>
-                                        <span style="font-size:14px;color:#334155;">Unlimited AI cost estimations</span>
+
+                                <!-- Mini Plan Cards -->
+                                <div style="padding:20px 20px 8px;">
+                                    <!-- Starter Plan -->
+                                    <div style="border:2px solid #e5e7eb;border-radius:12px;overflow:hidden;margin-bottom:12px;transition:all 0.2s;" onmouseover="this.style.borderColor='#3b82f6';this.style.boxShadow='0 4px 16px rgba(59,130,246,0.12)'" onmouseout="this.style.borderColor='#e5e7eb';this.style.boxShadow='none'">
+                                        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;">
+                                            <div style="display:flex;align-items:center;gap:12px;">
+                                                <div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#2563eb,#3b82f6);display:flex;align-items:center;justify-content:center;">
+                                                    <i class="fas fa-bolt" style="color:#fff;font-size:16px;"></i>
+                                                </div>
+                                                <div>
+                                                    <div style="font-size:14px;font-weight:700;color:#1e293b;">Starter</div>
+                                                    <div style="font-size:12px;color:#64748b;">5 AI estimations/month</div>
+                                                </div>
+                                            </div>
+                                            <div style="text-align:right;">
+                                                <div style="font-size:20px;font-weight:800;color:#1e293b;">$29<span style="font-size:12px;font-weight:400;color:#94a3b8;">/mo</span></div>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:#eff6ff;border-radius:8px;text-align:left;">
-                                        <i class="fas fa-check-circle" style="color:#3b82f6;"></i>
-                                        <span style="font-size:14px;color:#334155;">Advanced PDF drawing analysis</span>
+
+                                    <!-- Professional Plan (Recommended) -->
+                                    <div style="border:2px solid #7c3aed;border-radius:12px;overflow:hidden;margin-bottom:12px;box-shadow:0 4px 16px rgba(124,58,237,0.12);position:relative;">
+                                        <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#7c3aed,#a855f7);"></div>
+                                        <div style="background:linear-gradient(135deg,#faf5ff,#f5f3ff);display:flex;align-items:center;justify-content:space-between;padding:14px 16px;">
+                                            <div style="display:flex;align-items:center;gap:12px;">
+                                                <div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#7c3aed,#8b5cf6);display:flex;align-items:center;justify-content:center;">
+                                                    <i class="fas fa-star" style="color:#fff;font-size:16px;"></i>
+                                                </div>
+                                                <div>
+                                                    <div style="font-size:14px;font-weight:700;color:#1e293b;">Professional <span style="background:#7c3aed;color:#fff;font-size:9px;padding:2px 6px;border-radius:4px;margin-left:4px;font-weight:600;letter-spacing:0.5px;">POPULAR</span></div>
+                                                    <div style="font-size:12px;color:#64748b;">20 AI estimations/month</div>
+                                                </div>
+                                            </div>
+                                            <div style="text-align:right;">
+                                                <div style="font-size:20px;font-weight:800;color:#1e293b;">$79<span style="font-size:12px;font-weight:400;color:#94a3b8;">/mo</span></div>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:#f5f3ff;border-radius:8px;text-align:left;">
-                                        <i class="fas fa-check-circle" style="color:#8b5cf6;"></i>
-                                        <span style="font-size:14px;color:#334155;">AI analytics dashboards</span>
+
+                                    <!-- Business Plan -->
+                                    <div style="border:2px solid #e5e7eb;border-radius:12px;overflow:hidden;margin-bottom:16px;transition:all 0.2s;" onmouseover="this.style.borderColor='#dc2626';this.style.boxShadow='0 4px 16px rgba(220,38,38,0.12)'" onmouseout="this.style.borderColor='#e5e7eb';this.style.boxShadow='none'">
+                                        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;">
+                                            <div style="display:flex;align-items:center;gap:12px;">
+                                                <div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#dc2626,#f43f5e);display:flex;align-items:center;justify-content:center;">
+                                                    <i class="fas fa-building" style="color:#fff;font-size:16px;"></i>
+                                                </div>
+                                                <div>
+                                                    <div style="font-size:14px;font-weight:700;color:#1e293b;">Business</div>
+                                                    <div style="font-size:12px;color:#64748b;">60 AI estimations/month</div>
+                                                </div>
+                                            </div>
+                                            <div style="text-align:right;">
+                                                <div style="font-size:20px;font-weight:800;color:#1e293b;">$199<span style="font-size:12px;font-weight:400;color:#94a3b8;">/mo</span></div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                                <button onclick="window.location.href='#';showAuthModal('register');" style="width:100%;padding:14px 24px;background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;transition:all 0.3s ease;">
-                                    <i class="fas fa-rocket"></i> Sign Up &amp; Subscribe
-                                </button>
-                                <p style="margin-top:12px;font-size:13px;color:#94a3b8;">Already have an account? <a href="#" onclick="showAuthModal('login');return false;" style="color:#2563eb;text-decoration:underline;">Sign in</a></p>
+
+                                <!-- CTA Buttons -->
+                                <div style="padding:0 20px 24px;">
+                                    <button onclick="showAuthModal('register');" style="width:100%;padding:13px 24px;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.3s ease;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 14px rgba(124,58,237,0.3);" onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 6px 20px rgba(124,58,237,0.4)'" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 4px 14px rgba(124,58,237,0.3)'">
+                                        <i class="fas fa-user-plus"></i> Create Account &amp; Subscribe
+                                    </button>
+                                    <div style="display:flex;align-items:center;gap:8px;margin:14px 0 0;justify-content:center;">
+                                        <span style="height:1px;flex:1;background:#e5e7eb;"></span>
+                                        <span style="font-size:12px;color:#94a3b8;">or</span>
+                                        <span style="height:1px;flex:1;background:#e5e7eb;"></span>
+                                    </div>
+                                    <button onclick="showAuthModal('login');" style="width:100%;margin-top:14px;padding:12px 24px;background:#fff;color:#374151;border:2px solid #e5e7eb;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.2s ease;display:flex;align-items:center;justify-content:center;gap:8px;" onmouseover="this.style.borderColor='#6366f1';this.style.color='#6366f1'" onmouseout="this.style.borderColor='#e5e7eb';this.style.color='#374151'">
+                                        <i class="fas fa-sign-in-alt"></i> Sign In to Existing Account
+                                    </button>
+                                    <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-top:16px;padding-top:16px;border-top:1px solid #f1f5f9;">
+                                        <span style="font-size:11px;color:#94a3b8;display:flex;align-items:center;gap:4px;"><i class="fas fa-lock" style="font-size:10px;"></i> Secure payment</span>
+                                        <span style="font-size:11px;color:#94a3b8;display:flex;align-items:center;gap:4px;"><i class="fas fa-shield-alt" style="font-size:10px;"></i> Cancel anytime</span>
+                                        <span style="font-size:11px;color:#94a3b8;display:flex;align-items:center;gap:4px;"><i class="fab fa-stripe" style="font-size:12px;"></i> Stripe</span>
+                                    </div>
+                                </div>
                             </div>
                             <div id="freeEstFormWrapper">
                             <div class="free-est-form-header">
