@@ -7706,8 +7706,12 @@ async function checkProfileAndRoute() {
         document.getElementById('sidebarUserAvatar').textContent = (appState.currentUser.name || "A").charAt(0).toUpperCase();
         buildSidebarNav();
         startMenuBadgePolling(); // Start sidebar badge polling
+        // If we're already viewing a website estimation result, don't overwrite with dashboard
+        if (appState.viewingWebsiteEstimation) {
+            console.log('[WEBSITE-EST] Already viewing estimation result, skipping routing');
+        }
         // Check for pending website estimation result (from email deep link)
-        if (handlePendingWebsiteEstimation()) {
+        else if (handlePendingWebsiteEstimation()) {
             // Handled - will redirect to result viewer or profile completion
         }
         // If this is a new Google user, go directly to profile completion
@@ -14801,17 +14805,47 @@ function handlePendingWebsiteEstimation() {
     return true;
 }
 
+// Guard to prevent duplicate/concurrent calls
+let _websiteEstRenderInProgress = false;
+
 async function renderWebsiteEstimationResult(estimationId, email) {
+    // Prevent duplicate calls (race condition: checkProfileAndRoute can be called twice)
+    if (_websiteEstRenderInProgress) {
+        console.log('[WEBSITE-EST] renderWebsiteEstimationResult already in progress, skipping duplicate call');
+        return;
+    }
+    _websiteEstRenderInProgress = true;
+
+    // Set flag so dashboard doesn't overwrite this view
+    appState.viewingWebsiteEstimation = true;
+
     const container = document.getElementById('app-container');
     container.innerHTML = `<div class="loading-spinner"><div class="spinner"></div><p>Loading your estimation result...</p></div>`;
     try {
         const emailParam = email || (appState.currentUser ? appState.currentUser.email : '');
-        const response = await fetch(BACKEND_URL + `/estimation/website-estimations/${estimationId}/result?email=${encodeURIComponent(emailParam)}`);
+        const url = BACKEND_URL + `/estimation/website-estimations/${estimationId}/result?email=${encodeURIComponent(emailParam)}`;
+
+        // Fetch with retry for 429 rate limit errors
+        let response;
+        let retries = 0;
+        const maxRetries = 3;
+        while (retries <= maxRetries) {
+            response = await fetch(url);
+            if (response.status === 429 && retries < maxRetries) {
+                retries++;
+                const delay = retries * 2000; // 2s, 4s, 6s
+                console.log(`[WEBSITE-EST] Got 429, retrying in ${delay}ms (attempt ${retries}/${maxRetries})`);
+                await new Promise(r => setTimeout(r, delay));
+                continue;
+            }
+            break;
+        }
+
         const data = await response.json();
         if (data.success && data.htmlContent) {
             container.innerHTML = `
                 <div class="portal-breadcrumb-nav">
-                    <a href="#" onclick="renderAppSection('dashboard'); return false;"><i class="fas fa-home"></i> Dashboard</a>
+                    <a href="#" onclick="appState.viewingWebsiteEstimation = false; renderAppSection('dashboard'); return false;"><i class="fas fa-home"></i> Dashboard</a>
                     <span class="breadcrumb-sep"><i class="fas fa-chevron-right"></i></span>
                     <span class="breadcrumb-current">Free Estimation Result</span>
                 </div>
@@ -14825,6 +14859,7 @@ async function renderWebsiteEstimationResult(estimationId, email) {
                     <iframe id="websiteEstResultFrame" srcdoc="${data.htmlContent.replace(/"/g, '&quot;')}" style="width:100%;min-height:800px;border:none;border-radius:8px;" onload="this.style.height = this.contentWindow.document.documentElement.scrollHeight + 'px';"></iframe>
                 </div>`;
         } else {
+            appState.viewingWebsiteEstimation = false;
             container.innerHTML = `
                 <div class="restricted-access-container">
                     <div class="restricted-icon" style="color:#f59e0b;"><i class="fas fa-clock"></i></div>
@@ -14835,6 +14870,7 @@ async function renderWebsiteEstimationResult(estimationId, email) {
         }
     } catch (error) {
         console.error('Error loading website estimation result:', error);
+        appState.viewingWebsiteEstimation = false;
         container.innerHTML = `
             <div class="restricted-access-container">
                 <div class="restricted-icon" style="color:#ef4444;"><i class="fas fa-exclamation-triangle"></i></div>
@@ -14842,6 +14878,8 @@ async function renderWebsiteEstimationResult(estimationId, email) {
                 <p>Something went wrong while loading your estimation result. Please try again later.</p>
                 <button class="btn btn-primary" onclick="renderAppSection('dashboard')"><i class="fas fa-home"></i> Go to Dashboard</button>
             </div>`;
+    } finally {
+        _websiteEstRenderInProgress = false;
     }
 }
 
