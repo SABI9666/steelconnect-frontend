@@ -14622,6 +14622,39 @@ async function handleSubscribe(planId) {
 // ================================================================
 // FREE ESTIMATION - Landing Page File Upload & Submission
 // ================================================================
+
+// Check if a specific email is blocked from free estimation (per-user control)
+async function checkFreeEstimationForEmail(email) {
+    try {
+        const response = await fetch(BACKEND_URL + '/estimation/website-estimation-check?email=' + encodeURIComponent(email));
+        const data = await response.json();
+        return data.success && data.blocked;
+    } catch (error) {
+        console.error('Error checking free estimation availability:', error);
+        return false; // Default to not blocked on error
+    }
+}
+
+// Show the blocked state UI
+function showEstimationBlockedState() {
+    const formWrapper = document.getElementById('freeEstFormWrapper');
+    const disabledState = document.getElementById('freeEstDisabledState');
+    if (formWrapper && disabledState) {
+        formWrapper.style.display = 'none';
+        disabledState.style.display = 'block';
+    }
+}
+
+// Show the form again
+function showEstimationForm() {
+    const formWrapper = document.getElementById('freeEstFormWrapper');
+    const disabledState = document.getElementById('freeEstDisabledState');
+    if (formWrapper && disabledState) {
+        formWrapper.style.display = '';
+        disabledState.style.display = 'none';
+    }
+}
+
 let _freeEstFiles = [];
 
 function handleFreeEstFiles(fileList) {
@@ -14677,6 +14710,16 @@ document.addEventListener('DOMContentLoaded', function() {
 async function submitFreeEstimation(event) {
     event.preventDefault();
     const email = document.getElementById('freeEstEmail').value.trim();
+
+    // Check if this specific email is blocked from free estimation
+    if (email) {
+        const isBlocked = await checkFreeEstimationForEmail(email);
+        if (isBlocked) {
+            showNotification('Your free estimation access has been used. Please subscribe for more estimations.', 'warning', 8000);
+            showEstimationBlockedState();
+            return false;
+        }
+    }
     const name = document.getElementById('freeEstName').value.trim();
     const projectTitle = document.getElementById('freeEstTitle').value.trim();
     const description = document.getElementById('freeEstDescription').value.trim();
