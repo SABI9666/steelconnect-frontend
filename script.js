@@ -608,6 +608,8 @@ function initializeApp() {
         const _deepLinkEmail = _initUrlParams.get('email');
         sessionStorage.setItem('pendingWebsiteEstimationId', _deepLinkEstimationId);
         if (_deepLinkEmail) sessionStorage.setItem('pendingWebsiteEstimationEmail', _deepLinkEmail);
+        // Flag so registration forms auto-select contractor role
+        sessionStorage.setItem('forceContractorRole', 'true');
         console.log(`[DEEP-LINK] Website estimation result: id=${_deepLinkEstimationId}, email=${_deepLinkEmail || 'none'}`);
     }
     // Store deep link data for estimation results or analysis reports from email
@@ -1369,6 +1371,8 @@ function completeLogin(data) {
     if (data.isNewUser) {
         appState.isNewGoogleUser = true;
     }
+    // Clear the force-contractor flag after login completes
+    sessionStorage.removeItem('forceContractorRole');
     localStorage.setItem('currentUser', JSON.stringify(data.user));
     localStorage.setItem('jwtToken', data.token);
     closeModal();
@@ -7414,6 +7418,11 @@ function renderAuthForm(view) {
     } else if (view === 'register') {
         container.innerHTML = getRegisterTemplate();
         document.getElementById('register-form').addEventListener('submit', handleRegister);
+        // Auto-select contractor if coming from estimation deep link
+        if (sessionStorage.getItem('forceContractorRole')) {
+            const roleSelect = document.querySelector('[name="regRole"]');
+            if (roleSelect) { roleSelect.value = 'contractor'; roleSelect.disabled = true; }
+        }
     } else if (view === 'forgot-password') {
         container.innerHTML = getForgotPasswordTemplate();
         document.getElementById('forgot-password-form').addEventListener('submit', handleForgotPassword);
@@ -7429,6 +7438,11 @@ function renderAuthForm(view) {
     } else if (view === 'google-role-select') {
         container.innerHTML = getGoogleRoleSelectTemplate();
         document.getElementById('google-role-form').addEventListener('submit', handleGoogleRoleSubmit);
+        // Auto-select contractor if coming from estimation deep link
+        if (sessionStorage.getItem('forceContractorRole')) {
+            const contractorRadio = document.querySelector('input[name="googleRole"][value="contractor"]');
+            if (contractorRadio) { contractorRadio.checked = true; contractorRadio.closest('.google-role-card').classList.add('selected'); }
+        }
     }
 }
 
@@ -7778,6 +7792,11 @@ function renderAppSection(sectionId) {
         renderQuoteAnalysisSection();
     }
     else if (sectionId === 'website-estimation-result') {
+        // Only contractors can view free estimation results
+        if (appState.currentUser && appState.currentUser.type === 'designer') {
+            container.innerHTML = `<div class="restricted-access-container"><div class="restricted-icon" style="color:#f59e0b;"><i class="fas fa-hard-hat"></i></div><h2>Contractor Access Only</h2><p>Free estimation results are only available for contractor accounts.</p><button class="btn btn-primary" onclick="renderAppSection('dashboard')">Go to Dashboard</button></div>`;
+            return;
+        }
         // Handle website estimation result viewing with profile gate
         const estId = sessionStorage.getItem('afterApprovalEstimationId') || sessionStorage.getItem('pendingWebsiteEstimationId') || '';
         const estEmail = sessionStorage.getItem('afterApprovalEstimationEmail') || sessionStorage.getItem('pendingWebsiteEstimationEmail') || '';
@@ -14702,6 +14721,8 @@ function checkWebsiteEstimationDeepLink() {
         // Store for after login/register
         sessionStorage.setItem('pendingWebsiteEstimationId', estimationId);
         if (email) sessionStorage.setItem('pendingWebsiteEstimationEmail', email);
+        // Flag so registration forms auto-select contractor role
+        sessionStorage.setItem('forceContractorRole', 'true');
         // Clean URL
         window.history.replaceState({}, document.title, window.location.pathname);
         return true;
@@ -14716,6 +14737,11 @@ function handlePendingWebsiteEstimation() {
     if (!estimationId) return false;
     sessionStorage.removeItem('pendingWebsiteEstimationId');
     sessionStorage.removeItem('pendingWebsiteEstimationEmail');
+    // Only contractors can view free estimation results
+    if (appState.currentUser && appState.currentUser.type === 'designer') {
+        showNotification('Free estimation results are only available for contractor accounts.', 'warning', 8000);
+        return false;
+    }
     // Check if profile is approved - if not, redirect to profile completion with message
     if (appState.currentUser && appState.currentUser.profileStatus === 'approved') {
         renderWebsiteEstimationResult(estimationId, email);
