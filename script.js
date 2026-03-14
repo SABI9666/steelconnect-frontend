@@ -606,11 +606,14 @@ function initializeApp() {
     // Check for website estimation result deep link (special handling - stores for profile gate)
     if (_deepLinkSection === 'website-estimation-result' && _deepLinkEstimationId) {
         const _deepLinkEmail = _initUrlParams.get('email');
+        // Use BOTH localStorage and sessionStorage so data survives across login/redirects
+        localStorage.setItem('pendingWebsiteEstimationId', _deepLinkEstimationId);
+        if (_deepLinkEmail) localStorage.setItem('pendingWebsiteEstimationEmail', _deepLinkEmail);
         sessionStorage.setItem('pendingWebsiteEstimationId', _deepLinkEstimationId);
         if (_deepLinkEmail) sessionStorage.setItem('pendingWebsiteEstimationEmail', _deepLinkEmail);
         // Flag so registration forms auto-select contractor role
         sessionStorage.setItem('forceContractorRole', 'true');
-        console.log(`[DEEP-LINK] Website estimation result: id=${_deepLinkEstimationId}, email=${_deepLinkEmail || 'none'}`);
+        console.log(`[DEEP-LINK] Website estimation result stored: id=${_deepLinkEstimationId}, email=${_deepLinkEmail || 'none'}`);
     }
     // Store deep link data for estimation results or analysis reports from email
     if (_deepLinkSection) {
@@ -653,7 +656,9 @@ function initializeApp() {
                 // website-estimation-result is handled by checkProfileAndRoute -> handlePendingWebsiteEstimation
                 if (pendingSection === 'website-estimation-result') {
                     // Don't navigate here — let checkProfileAndRoute() pick it up after profile status loads
-                    console.log('[DEEP-LINK] Website estimation result will be handled by checkProfileAndRoute');
+                    // Ensure data is still in storage (deep link cleanup above only removes pendingDeepLink* keys)
+                    const estId = sessionStorage.getItem('pendingWebsiteEstimationId') || localStorage.getItem('pendingWebsiteEstimationId');
+                    console.log('[DEEP-LINK] Website estimation result will be handled by checkProfileAndRoute, estId=' + (estId || 'MISSING'));
                 } else {
                 // Small delay to let app initialize before navigation
                 setTimeout(() => {
@@ -686,7 +691,7 @@ function initializeApp() {
         // If opened from a push notification call while logged out, show urgent login
         const _pendingCall = sessionStorage.getItem('pendingCallId');
         const _pendingCallerName = sessionStorage.getItem('pendingCallerName');
-        const _hasPendingEstimation = sessionStorage.getItem('pendingWebsiteEstimationId');
+        const _hasPendingEstimation = sessionStorage.getItem('pendingWebsiteEstimationId') || localStorage.getItem('pendingWebsiteEstimationId');
         if (_pendingCall && _pendingCallerName) {
             showIncomingCallLoginOverlay(_pendingCallerName);
         } else if (_hasPendingEstimation) {
@@ -7711,12 +7716,15 @@ async function checkProfileAndRoute() {
             renderAppSection('profile-completion');
             showNotification('Please complete your profile to get started.', 'info', 8000);
         } else {
-            // Check for after-approval estimation redirect
-            const afterApprovalEstId = sessionStorage.getItem('afterApprovalEstimationId');
+            // Check for after-approval estimation redirect (check both storages)
+            const afterApprovalEstId = sessionStorage.getItem('afterApprovalEstimationId') || localStorage.getItem('afterApprovalEstimationId');
             if (afterApprovalEstId && profileStatus === 'approved') {
-                const afterApprovalEmail = sessionStorage.getItem('afterApprovalEstimationEmail') || '';
+                const afterApprovalEmail = sessionStorage.getItem('afterApprovalEstimationEmail') || localStorage.getItem('afterApprovalEstimationEmail') || '';
                 sessionStorage.removeItem('afterApprovalEstimationId');
                 sessionStorage.removeItem('afterApprovalEstimationEmail');
+                localStorage.removeItem('afterApprovalEstimationId');
+                localStorage.removeItem('afterApprovalEstimationEmail');
+                console.log('[WEBSITE-EST] After-approval redirect: id=' + afterApprovalEstId);
                 renderWebsiteEstimationResult(afterApprovalEstId, afterApprovalEmail);
             } else {
                 renderAppSection('dashboard');
@@ -7823,8 +7831,8 @@ function renderAppSection(sectionId) {
             return;
         }
         // Handle website estimation result viewing with profile gate
-        const estId = sessionStorage.getItem('afterApprovalEstimationId') || sessionStorage.getItem('pendingWebsiteEstimationId') || '';
-        const estEmail = sessionStorage.getItem('afterApprovalEstimationEmail') || sessionStorage.getItem('pendingWebsiteEstimationEmail') || '';
+        const estId = sessionStorage.getItem('afterApprovalEstimationId') || localStorage.getItem('afterApprovalEstimationId') || sessionStorage.getItem('pendingWebsiteEstimationId') || localStorage.getItem('pendingWebsiteEstimationId') || '';
+        const estEmail = sessionStorage.getItem('afterApprovalEstimationEmail') || localStorage.getItem('afterApprovalEstimationEmail') || sessionStorage.getItem('pendingWebsiteEstimationEmail') || localStorage.getItem('pendingWebsiteEstimationEmail') || '';
         if (estId) {
             if (isApproved) {
                 renderWebsiteEstimationResult(estId, estEmail);
@@ -14743,9 +14751,13 @@ function checkWebsiteEstimationDeepLink() {
     const estimationId = params.get('estimationId');
     const email = params.get('email');
     if (section === 'website-estimation-result' && estimationId) {
-        // Store for after login/register
+        // Store in BOTH storages for after login/register
         sessionStorage.setItem('pendingWebsiteEstimationId', estimationId);
-        if (email) sessionStorage.setItem('pendingWebsiteEstimationEmail', email);
+        localStorage.setItem('pendingWebsiteEstimationId', estimationId);
+        if (email) {
+            sessionStorage.setItem('pendingWebsiteEstimationEmail', email);
+            localStorage.setItem('pendingWebsiteEstimationEmail', email);
+        }
         // Flag so registration forms auto-select contractor role
         sessionStorage.setItem('forceContractorRole', 'true');
         // Clean URL
@@ -14757,11 +14769,16 @@ function checkWebsiteEstimationDeepLink() {
 
 // Called after login to check if user should be redirected to website estimation result
 function handlePendingWebsiteEstimation() {
-    const estimationId = sessionStorage.getItem('pendingWebsiteEstimationId');
-    const email = sessionStorage.getItem('pendingWebsiteEstimationEmail');
+    // Check both sessionStorage and localStorage (belt + suspenders)
+    const estimationId = sessionStorage.getItem('pendingWebsiteEstimationId') || localStorage.getItem('pendingWebsiteEstimationId');
+    const email = sessionStorage.getItem('pendingWebsiteEstimationEmail') || localStorage.getItem('pendingWebsiteEstimationEmail');
     if (!estimationId) return false;
+    console.log('[WEBSITE-EST] handlePendingWebsiteEstimation: id=' + estimationId + ', email=' + (email || 'none') + ', userType=' + (appState.currentUser?.type || 'unknown') + ', profileStatus=' + (appState.currentUser?.profileStatus || 'unknown'));
+    // Clear from both storages
     sessionStorage.removeItem('pendingWebsiteEstimationId');
     sessionStorage.removeItem('pendingWebsiteEstimationEmail');
+    localStorage.removeItem('pendingWebsiteEstimationId');
+    localStorage.removeItem('pendingWebsiteEstimationEmail');
     // Only contractors can view free estimation results
     if (appState.currentUser && appState.currentUser.type === 'designer') {
         showNotification('Free estimation results are only available for contractor accounts.', 'warning', 8000);
@@ -14769,9 +14786,13 @@ function handlePendingWebsiteEstimation() {
     }
     // Check if profile is approved - if not, redirect to profile completion with message
     if (appState.currentUser && appState.currentUser.profileStatus === 'approved') {
+        console.log('[WEBSITE-EST] Profile approved, rendering estimation result');
         renderWebsiteEstimationResult(estimationId, email);
     } else {
         // Store the estimation ID so we can redirect after profile approval
+        console.log('[WEBSITE-EST] Profile not approved (' + appState.currentUser?.profileStatus + '), redirecting to profile completion');
+        localStorage.setItem('afterApprovalEstimationId', estimationId);
+        localStorage.setItem('afterApprovalEstimationEmail', email || '');
         sessionStorage.setItem('afterApprovalEstimationId', estimationId);
         sessionStorage.setItem('afterApprovalEstimationEmail', email || '');
         showNotification('Please complete your profile first. Once approved, you can view your free estimation result.', 'info', 10000);
