@@ -7428,6 +7428,18 @@ function renderAuthForm(view) {
     if (view === 'login') {
         container.innerHTML = getLoginTemplate();
         document.getElementById('login-form').addEventListener('submit', handleLogin);
+        // Render Google Sign-In button in login modal
+        const googleLoginTarget = document.getElementById('modal-google-login-btn');
+        if (googleLoginTarget && ensureGoogleInitialized()) {
+            try {
+                google.accounts.id.renderButton(googleLoginTarget, {
+                    type: 'standard', theme: 'outline', size: 'large',
+                    text: 'signin_with', shape: 'rectangular',
+                    width: Math.min(googleLoginTarget.parentElement?.offsetWidth || 320, 400),
+                    click_listener: () => { _googleSignInContext = 'login'; }
+                });
+            } catch (e) { console.warn('Google button render failed:', e); }
+        }
     } else if (view === 'register') {
         container.innerHTML = getRegisterTemplate();
         document.getElementById('register-form').addEventListener('submit', handleRegister);
@@ -9550,7 +9562,7 @@ function showRestrictedFeature(featureName) {
 
 // --- TEMPLATE GETTERS ---
 function getLoginTemplate() {
-    return `<div class="auth-header premium-auth-header"><div class="auth-logo"><i class="fas fa-drafting-compass"></i></div><h2>Welcome Back</h2><p>Sign in to your account</p></div><div id="auth-error-container"></div><form id="login-form" class="premium-form"><div class="form-group"><label class="form-label"><i class="fas fa-envelope"></i> Email</label><input type="email" class="form-input" name="loginEmail" required></div><div class="form-group"><label class="form-label"><i class="fas fa-lock"></i> Password</label><input type="password" class="form-input" name="loginPassword" required></div><button type="submit" class="btn btn-primary btn-full"><i class="fas fa-sign-in-alt"></i> Sign In</button></form><div class="auth-forgot-password"><a onclick="renderAuthForm('forgot-password')"><i class="fas fa-key"></i> Forgot Password?</a></div><div class="auth-switch">Don't have an account? <a onclick="renderAuthForm('register')">Create one</a></div>`;
+    return `<div class="auth-header premium-auth-header"><div class="auth-logo"><i class="fas fa-drafting-compass"></i></div><h2>Welcome Back</h2><p>Sign in to your account</p></div><div id="auth-error-container"></div><div style="display:flex;justify-content:center;margin-bottom:16px;"><div id="modal-google-login-btn"></div></div><div class="auth-divider" style="display:flex;align-items:center;gap:12px;margin-bottom:16px;"><hr style="flex:1;border:none;border-top:1px solid #e2e8f0;"><span style="color:#94a3b8;font-size:13px;white-space:nowrap;">or sign in with email</span><hr style="flex:1;border:none;border-top:1px solid #e2e8f0;"></div><form id="login-form" class="premium-form"><div class="form-group"><label class="form-label"><i class="fas fa-envelope"></i> Email</label><input type="email" class="form-input" name="loginEmail" required></div><div class="form-group"><label class="form-label"><i class="fas fa-lock"></i> Password</label><input type="password" class="form-input" name="loginPassword" required></div><button type="submit" class="btn btn-primary btn-full"><i class="fas fa-sign-in-alt"></i> Sign In</button></form><div class="auth-forgot-password"><a onclick="renderAuthForm('forgot-password')"><i class="fas fa-key"></i> Forgot Password?</a></div><div class="auth-switch">Don't have an account? <a onclick="renderAuthForm('register')">Create one</a></div>`;
 }
 
 function showTermsConditionsModal(tab = 'terms') {
