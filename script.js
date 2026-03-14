@@ -14843,20 +14843,51 @@ async function renderWebsiteEstimationResult(estimationId, email) {
 
         const data = await response.json();
         if (data.success && data.htmlContent) {
+            const projectTitle = data.estimation ? data.estimation.projectTitle : 'Your Project';
+            const createdDate = data.estimation && data.estimation.createdAt
+                ? new Date(data.estimation.createdAt._seconds ? data.estimation.createdAt._seconds * 1000 : data.estimation.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+                : '';
+
             container.innerHTML = `
-                <div class="portal-breadcrumb-nav">
-                    <a href="#" onclick="appState.viewingWebsiteEstimation = false; renderAppSection('dashboard'); return false;"><i class="fas fa-home"></i> Dashboard</a>
-                    <span class="breadcrumb-sep"><i class="fas fa-chevron-right"></i></span>
-                    <span class="breadcrumb-current">Free Estimation Result</span>
-                </div>
-                <div class="section-header modern-header">
-                    <div class="header-content">
-                        <h2><i class="fas fa-file-invoice-dollar"></i> Free Estimation Result</h2>
-                        <p class="header-subtitle">Project: ${data.estimation ? data.estimation.projectTitle : 'Your Project'}</p>
+                <div class="west-result-page">
+                    <div class="west-result-topbar">
+                        <a href="#" class="west-back-link" onclick="appState.viewingWebsiteEstimation = false; renderAppSection('dashboard'); return false;">
+                            <i class="fas fa-arrow-left"></i><span>Dashboard</span>
+                        </a>
+                        <div class="west-topbar-actions">
+                            <button class="west-action-btn" onclick="window.print()" title="Print / Save PDF">
+                                <i class="fas fa-print"></i><span>Print</span>
+                            </button>
+                            <button class="west-action-btn" onclick="document.getElementById('westResultFrame').requestFullscreen ? document.getElementById('westResultFrame').requestFullscreen() : null" title="Fullscreen">
+                                <i class="fas fa-expand"></i><span>Fullscreen</span>
+                            </button>
+                        </div>
                     </div>
-                </div>
-                <div class="website-est-result-container" style="background:#fff;border-radius:16px;border:1px solid #e2e8f0;padding:24px;margin-top:16px;box-shadow:0 4px 16px rgba(0,0,0,0.04);">
-                    <iframe id="websiteEstResultFrame" srcdoc="${data.htmlContent.replace(/"/g, '&quot;')}" style="width:100%;min-height:800px;border:none;border-radius:8px;" onload="this.style.height = this.contentWindow.document.documentElement.scrollHeight + 'px';"></iframe>
+                    <div class="west-result-hero">
+                        <div class="west-hero-icon"><i class="fas fa-file-invoice-dollar"></i></div>
+                        <div class="west-hero-text">
+                            <h1 class="west-hero-title">${projectTitle}</h1>
+                            <div class="west-hero-meta">
+                                <span class="west-meta-badge west-badge-ready"><i class="fas fa-check-circle"></i> Result Ready</span>
+                                ${createdDate ? `<span class="west-meta-date"><i class="fas fa-calendar-alt"></i> ${createdDate}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="west-result-frame-wrap">
+                        <iframe id="westResultFrame"
+                            srcdoc="${data.htmlContent.replace(/"/g, '&quot;')}"
+                            class="west-result-iframe"
+                            onload="(function(f){try{var d=f.contentDocument||f.contentWindow.document;var meta=d.createElement('meta');meta.name='viewport';meta.content='width=device-width,initial-scale=1';d.head.appendChild(meta);var s=d.createElement('style');s.textContent='html,body{overflow-x:hidden;max-width:100vw;word-wrap:break-word;overflow-wrap:break-word;}img,table,pre,iframe{max-width:100%!important;height:auto!important;}';d.head.appendChild(s);f.style.height=d.documentElement.scrollHeight+'px';new ResizeObserver(function(){f.style.height=d.documentElement.scrollHeight+'px';}).observe(d.body);}catch(e){f.style.height='80vh';}})(this)"></iframe>
+                    </div>
+                    <div class="west-result-footer">
+                        <div class="west-footer-brand">
+                            <i class="fas fa-shield-alt"></i>
+                            <span>Prepared by <strong>SteelConnect</strong></span>
+                        </div>
+                        <button class="west-footer-cta" onclick="appState.viewingWebsiteEstimation = false; renderAppSection('dashboard');">
+                            <i class="fas fa-th-large"></i> Go to Dashboard
+                        </button>
+                    </div>
                 </div>`;
         } else {
             appState.viewingWebsiteEstimation = false;
