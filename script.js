@@ -14696,10 +14696,10 @@ async function loadEstimationSubscriptionPlans() {
         </div>`;
 
     try {
-        const response = await fetch(BACKEND_URL + '/subscriptions/plans');
+        const response = await fetch(BACKEND_URL + '/subscriptions/public-plans');
         const data = await response.json();
         const plans = data.plans || {};
-        renderEstimationBlockedPlans(plans);
+        renderEstimationBlockedPlans(plans, container);
     } catch (error) {
         console.error('Error loading plans:', error);
         renderEstimationBlockedPlans(null);
@@ -14781,32 +14781,61 @@ function renderEstimationBlockedPlans(plans) {
             ${plansHtml || '<p style="text-align:center;color:#94a3b8;padding:20px;">Unable to load plans. Please try again later.</p>'}
         </div>
 
-        <!-- Sign In Link & Trust -->
+        <!-- Sign In Options -->
         <div style="padding:0 20px 20px;">
-            <div style="display:flex;align-items:center;gap:8px;justify-content:center;">
+            <div style="display:flex;align-items:center;gap:8px;justify-content:center;margin-bottom:14px;">
                 <span style="height:1px;flex:1;background:#e5e7eb;"></span>
-                <span style="font-size:12px;color:#94a3b8;">already have an account?</span>
+                <span style="font-size:12px;color:#94a3b8;white-space:nowrap;">sign in to subscribe</span>
                 <span style="height:1px;flex:1;background:#e5e7eb;"></span>
             </div>
-            <button onclick="selectEstimationPlan(null)" style="width:100%;margin-top:10px;padding:11px;background:#fff;color:#374151;border:2px solid #e5e7eb;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:8px;" onmouseover="this.style.borderColor='#6366f1';this.style.color='#6366f1'" onmouseout="this.style.borderColor='#e5e7eb';this.style.color='#374151'">
-                <i class="fas fa-sign-in-alt"></i> Sign In &amp; Subscribe
+
+            <!-- Google Sign-In Button -->
+            <div id="estimation-google-signin" style="display:flex;justify-content:center;margin-bottom:10px;"></div>
+
+            <!-- Email Sign In -->
+            <button onclick="selectEstimationPlan(null, 'login')" style="width:100%;padding:11px;background:#fff;color:#374151;border:2px solid #e5e7eb;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:8px;" onmouseover="this.style.borderColor='#6366f1';this.style.color='#6366f1'" onmouseout="this.style.borderColor='#e5e7eb';this.style.color='#374151'">
+                <i class="fas fa-envelope"></i> Sign In with Email
             </button>
+
+            <!-- Create Account -->
+            <button onclick="selectEstimationPlan(null, 'register')" style="width:100%;margin-top:8px;padding:11px;background:#fff;color:#374151;border:2px solid #e5e7eb;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:8px;" onmouseover="this.style.borderColor='#22c55e';this.style.color='#16a34a'" onmouseout="this.style.borderColor='#e5e7eb';this.style.color='#374151'">
+                <i class="fas fa-user-plus"></i> Create New Account
+            </button>
+
             <div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-top:14px;padding-top:14px;border-top:1px solid #f1f5f9;">
                 <span style="font-size:11px;color:#94a3b8;display:flex;align-items:center;gap:4px;"><i class="fas fa-lock" style="font-size:9px;"></i> Secure</span>
                 <span style="font-size:11px;color:#94a3b8;display:flex;align-items:center;gap:4px;"><i class="fas fa-shield-alt" style="font-size:9px;"></i> Cancel anytime</span>
                 <span style="font-size:11px;color:#94a3b8;display:flex;align-items:center;gap:4px;"><i class="fab fa-stripe" style="font-size:11px;"></i> Stripe</span>
             </div>
         </div>`;
+
+    // Render Google Sign-In button after DOM is ready
+    setTimeout(() => {
+        const googleTarget = document.getElementById('estimation-google-signin');
+        if (googleTarget && typeof google !== 'undefined' && google.accounts && ensureGoogleInitialized()) {
+            try {
+                _googleSignInContext = 'login';
+                sessionStorage.setItem('postLoginRedirect', 'estimation-subscribe');
+                sessionStorage.setItem('forceContractorRole', 'true');
+                google.accounts.id.renderButton(googleTarget, {
+                    type: 'standard', theme: 'outline', size: 'large',
+                    text: 'signin_with', shape: 'rectangular',
+                    width: Math.min(googleTarget.parentElement?.offsetWidth || 320, 400),
+                    click_listener: () => { _googleSignInContext = 'login'; }
+                });
+            } catch (e) { console.warn('Google Sign-In render failed:', e); }
+        }
+    }, 100);
 }
 
-// When user clicks a plan: store it and open login
-function selectEstimationPlan(planId) {
+// When user clicks a plan: store it and open login/register
+function selectEstimationPlan(planId, authView) {
     if (planId) {
         sessionStorage.setItem('pendingEstimationPlan', planId);
     }
     sessionStorage.setItem('postLoginRedirect', 'estimation-subscribe');
     sessionStorage.setItem('forceContractorRole', 'true');
-    showAuthModal('register');
+    showAuthModal(authView || 'register');
 }
 
 let _freeEstFiles = [];
