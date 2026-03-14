@@ -14622,6 +14622,34 @@ async function handleSubscribe(planId) {
 // ================================================================
 // FREE ESTIMATION - Landing Page File Upload & Submission
 // ================================================================
+
+// Check if free estimation is enabled (admin toggle)
+async function checkFreeEstimationAvailability() {
+    try {
+        const response = await fetch(BACKEND_URL + '/estimation/website-estimation-check');
+        const data = await response.json();
+        const formWrapper = document.getElementById('freeEstFormWrapper');
+        const disabledState = document.getElementById('freeEstDisabledState');
+        if (formWrapper && disabledState) {
+            if (data.success && data.enabled === false) {
+                formWrapper.style.display = 'none';
+                disabledState.style.display = 'block';
+            } else {
+                formWrapper.style.display = '';
+                disabledState.style.display = 'none';
+            }
+        }
+    } catch (error) {
+        console.error('Error checking free estimation availability:', error);
+        // Default to showing the form on error
+    }
+}
+
+// Check availability on page load
+document.addEventListener('DOMContentLoaded', function() {
+    checkFreeEstimationAvailability();
+});
+
 let _freeEstFiles = [];
 
 function handleFreeEstFiles(fileList) {
@@ -14676,6 +14704,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
 async function submitFreeEstimation(event) {
     event.preventDefault();
+
+    // Double-check estimation is still enabled before submitting
+    try {
+        const checkResp = await fetch(BACKEND_URL + '/estimation/website-estimation-check');
+        const checkData = await checkResp.json();
+        if (checkData.success && checkData.enabled === false) {
+            showNotification('Free estimation is currently unavailable. Please subscribe for full access.', 'warning');
+            checkFreeEstimationAvailability();
+            return false;
+        }
+    } catch (e) { /* proceed on error */ }
+
     const email = document.getElementById('freeEstEmail').value.trim();
     const name = document.getElementById('freeEstName').value.trim();
     const projectTitle = document.getElementById('freeEstTitle').value.trim();
