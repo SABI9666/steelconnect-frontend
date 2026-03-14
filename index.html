@@ -1343,158 +1343,330 @@
                 <div class="section-container">
                     <span class="hiw-badge reveal"><i class="fas fa-layer-group"></i> Platform Overview</span>
                     <h2 class="section-title reveal">How SteelConnect Works</h2>
-                    <p class="section-subtitle reveal reveal-delay-1">From project creation to final delivery — post projects, get quotes, collaborate through messaging and calls, track progress with AI analytics, and manage everything from one powerful platform.</p>
+                    <p class="section-subtitle reveal reveal-delay-1">Two powerful journeys — one unified platform. See how SteelConnect empowers both Contractors and Designers.</p>
 
-                    <!-- Step Timeline -->
-                    <div class="hiw-timeline">
-                        <div class="hiw-timeline-line"></div>
+                    <!-- Role Toggle Tabs -->
+                    <div class="hiw-role-toggle reveal">
+                        <button class="hiw-role-tab active" onclick="switchHiwRole('contractor')" id="hiwTabContractor">
+                            <i class="fas fa-hard-hat"></i> Contractor
+                        </button>
+                        <button class="hiw-role-tab" onclick="switchHiwRole('designer')" id="hiwTabDesigner">
+                            <i class="fas fa-drafting-compass"></i> Designer
+                        </button>
+                    </div>
 
-                        <div class="hiw-step reveal reveal-delay-1">
-                            <div class="hiw-step-marker">
-                                <div class="hiw-step-num">1</div>
-                                <div class="hiw-step-pulse"></div>
+                    <!-- ====== CONTRACTOR JOURNEY ====== -->
+                    <div class="hiw-journey" id="hiwJourneyContractor">
+                        <div class="hiw-journey-header">
+                            <div class="hiw-journey-icon" style="background:linear-gradient(135deg,#2563eb,#1d4ed8);">
+                                <i class="fas fa-hard-hat"></i>
                             </div>
-                            <div class="hiw-step-card">
-                                <div class="hiw-step-icon" style="background: linear-gradient(135deg, #4338ca, #7c3aed);"><i class="fas fa-pencil-ruler"></i></div>
-                                <div class="hiw-step-content">
-                                    <h3>Post Your Project</h3>
-                                    <p class="hiw-step-desc">Define your construction requirements with our intelligent project builder. Our AI assists in categorizing scope and estimating preliminary budgets.</p>
-                                    <div class="hiw-features">
-                                        <div class="hiw-feature"><i class="fas fa-check-circle"></i> Upload blueprints, CAD files & structural drawings</div>
-                                        <div class="hiw-feature"><i class="fas fa-check-circle"></i> AI-powered scope analysis & budget suggestions</div>
-                                        <div class="hiw-feature"><i class="fas fa-check-circle"></i> Set timelines, milestones & deliverables</div>
-                                        <div class="hiw-feature"><i class="fas fa-check-circle"></i> Choose from 15+ project categories</div>
-                                    </div>
-                                </div>
+                            <div>
+                                <h3 class="hiw-journey-title">Contractor Journey</h3>
+                                <p class="hiw-journey-sub">Post projects, get AI estimates, hire professionals, and manage everything end-to-end.</p>
                             </div>
                         </div>
 
-                        <div class="hiw-step reveal reveal-delay-2">
-                            <div class="hiw-step-marker">
-                                <div class="hiw-step-num">2</div>
-                                <div class="hiw-step-pulse"></div>
-                            </div>
-                            <div class="hiw-step-card">
-                                <div class="hiw-step-icon" style="background: linear-gradient(135deg, #06b6d4, #0891b2);"><i class="fas fa-users-cog"></i></div>
-                                <div class="hiw-step-content">
-                                    <h3>AI Matches & Expert Quotes</h3>
-                                    <p class="hiw-step-desc">Our AI engine matches your project with the most qualified professionals globally. Receive competitive, detailed proposals within hours — not weeks.</p>
-                                    <div class="hiw-features">
-                                        <div class="hiw-feature"><i class="fas fa-check-circle"></i> Smart matching with verified professionals</div>
-                                        <div class="hiw-feature"><i class="fas fa-check-circle"></i> Detailed proposals with cost & timeline breakdowns</div>
-                                        <div class="hiw-feature"><i class="fas fa-check-circle"></i> Verified portfolios, ratings & certifications</div>
-                                        <div class="hiw-feature"><i class="fas fa-check-circle"></i> Compare quotes side-by-side with AI insights</div>
+                        <div class="hiw-tree">
+                            <div class="hiw-tree-line"></div>
+
+                            <!-- Step 1 -->
+                            <div class="hiw-tree-node reveal">
+                                <div class="hiw-tree-dot" style="background:#7c3aed;"></div>
+                                <div class="hiw-tree-card">
+                                    <div class="hiw-tree-step-num" style="background:linear-gradient(135deg,#7c3aed,#6d28d9);">1</div>
+                                    <div class="hiw-tree-body">
+                                        <h4><i class="fas fa-user-plus" style="color:#7c3aed;"></i> Sign Up & Complete Profile</h4>
+                                        <p>Create your account, verify your business details, upload certifications, and get approved to access all platform features.</p>
+                                        <div class="hiw-tree-tags">
+                                            <span class="hiw-tag"><i class="fas fa-check"></i> Business verification</span>
+                                            <span class="hiw-tag"><i class="fas fa-check"></i> License & insurance upload</span>
+                                            <span class="hiw-tag"><i class="fas fa-check"></i> Portfolio showcase</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <div class="hiw-step reveal reveal-delay-3">
-                            <div class="hiw-step-marker">
-                                <div class="hiw-step-num">3</div>
-                                <div class="hiw-step-pulse"></div>
-                            </div>
-                            <div class="hiw-step-card">
-                                <div class="hiw-step-icon" style="background: linear-gradient(135deg, #f59e0b, #d97706);"><i class="fas fa-project-diagram"></i></div>
-                                <div class="hiw-step-content">
-                                    <h3>Collaborate in Real-Time</h3>
-                                    <p class="hiw-step-desc">Work together seamlessly with built-in messaging, voice & video calls, file sharing, and milestone tracking — all within a single secure workspace.</p>
-                                    <div class="hiw-features">
-                                        <div class="hiw-feature"><i class="fas fa-check-circle"></i> Real-time messaging & secure file sharing</div>
-                                        <div class="hiw-feature"><i class="fas fa-check-circle"></i> Voice & video calls for live project discussions</div>
-                                        <div class="hiw-feature"><i class="fas fa-check-circle"></i> Schedule meetings with calendar invitations</div>
-                                        <div class="hiw-feature"><i class="fas fa-check-circle"></i> Milestone tracking & payment escrow</div>
+                            <!-- Step 2 -->
+                            <div class="hiw-tree-node reveal">
+                                <div class="hiw-tree-dot" style="background:#2563eb;"></div>
+                                <div class="hiw-tree-card">
+                                    <div class="hiw-tree-step-num" style="background:linear-gradient(135deg,#2563eb,#1d4ed8);">2</div>
+                                    <div class="hiw-tree-body">
+                                        <h4><i class="fas fa-plus-circle" style="color:#2563eb;"></i> Post Your Project</h4>
+                                        <p>Create detailed project listings with scope, budget, timelines, and upload blueprints or CAD files. Choose from 15+ project categories.</p>
+                                        <div class="hiw-tree-tags">
+                                            <span class="hiw-tag"><i class="fas fa-check"></i> Upload drawings & blueprints</span>
+                                            <span class="hiw-tag"><i class="fas fa-check"></i> Set budget & timeline</span>
+                                            <span class="hiw-tag"><i class="fas fa-check"></i> Define milestones & deliverables</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <div class="hiw-step reveal reveal-delay-3">
-                            <div class="hiw-step-marker">
-                                <div class="hiw-step-num">4</div>
-                                <div class="hiw-step-pulse"></div>
+                            <!-- Step 3 -->
+                            <div class="hiw-tree-node reveal">
+                                <div class="hiw-tree-dot" style="background:#8b5cf6;"></div>
+                                <div class="hiw-tree-card">
+                                    <div class="hiw-tree-step-num" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);">3</div>
+                                    <div class="hiw-tree-body">
+                                        <h4><i class="fas fa-calculator" style="color:#8b5cf6;"></i> AI Cost Estimation</h4>
+                                        <p>Upload PDF drawings or enter project details to get instant, accurate cost estimates powered by AI trained on 12,000+ real construction projects.</p>
+                                        <div class="hiw-tree-tags">
+                                            <span class="hiw-tag"><i class="fas fa-check"></i> PDF drawing analysis</span>
+                                            <span class="hiw-tag"><i class="fas fa-check"></i> Material bill of quantities</span>
+                                            <span class="hiw-tag"><i class="fas fa-check"></i> Manpower & timeline estimates</span>
+                                            <span class="hiw-tag"><i class="fas fa-check"></i> Excel export & full reports</span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="hiw-step-card">
-                                <div class="hiw-step-icon" style="background: linear-gradient(135deg, #10b981, #059669);"><i class="fas fa-chart-line"></i></div>
-                                <div class="hiw-step-content">
-                                    <h3>Deliver & Analyze</h3>
-                                    <p class="hiw-step-desc">Complete your project with confidence. Access AI-powered analytics dashboards, generate detailed reports, and build long-term professional relationships.</p>
-                                    <div class="hiw-features">
-                                        <div class="hiw-feature"><i class="fas fa-check-circle"></i> AI analytics dashboard with ROI tracking</div>
-                                        <div class="hiw-feature"><i class="fas fa-check-circle"></i> Automated report generation & export</div>
-                                        <div class="hiw-feature"><i class="fas fa-check-circle"></i> Quality review & professional ratings</div>
-                                        <div class="hiw-feature"><i class="fas fa-check-circle"></i> Save favorites & build your trusted network</div>
+
+                            <!-- Step 4 -->
+                            <div class="hiw-tree-node reveal">
+                                <div class="hiw-tree-dot" style="background:#06b6d4;"></div>
+                                <div class="hiw-tree-card">
+                                    <div class="hiw-tree-step-num" style="background:linear-gradient(135deg,#06b6d4,#0891b2);">4</div>
+                                    <div class="hiw-tree-body">
+                                        <h4><i class="fas fa-file-invoice-dollar" style="color:#06b6d4;"></i> Receive & Compare Quotes</h4>
+                                        <p>Get competitive proposals from verified designers worldwide. Compare quotes side-by-side with AI-powered insights, review portfolios and ratings.</p>
+                                        <div class="hiw-tree-tags">
+                                            <span class="hiw-tag"><i class="fas fa-check"></i> Side-by-side comparison</span>
+                                            <span class="hiw-tag"><i class="fas fa-check"></i> AI quote analysis</span>
+                                            <span class="hiw-tag"><i class="fas fa-check"></i> Verified professional profiles</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 5 -->
+                            <div class="hiw-tree-node reveal">
+                                <div class="hiw-tree-dot" style="background:#f59e0b;"></div>
+                                <div class="hiw-tree-card">
+                                    <div class="hiw-tree-step-num" style="background:linear-gradient(135deg,#f59e0b,#d97706);">5</div>
+                                    <div class="hiw-tree-body">
+                                        <h4><i class="fas fa-comments" style="color:#f59e0b;"></i> Collaborate in Real-Time</h4>
+                                        <p>Approve a designer and start working together with built-in messaging, voice & video calls, file sharing, and scheduled meetings.</p>
+                                        <div class="hiw-tree-tags">
+                                            <span class="hiw-tag"><i class="fas fa-check"></i> Real-time messaging</span>
+                                            <span class="hiw-tag"><i class="fas fa-check"></i> Voice & video calls</span>
+                                            <span class="hiw-tag"><i class="fas fa-check"></i> File sharing & versioning</span>
+                                            <span class="hiw-tag"><i class="fas fa-check"></i> Calendar & meeting scheduler</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 6 -->
+                            <div class="hiw-tree-node reveal">
+                                <div class="hiw-tree-dot" style="background:#10b981;"></div>
+                                <div class="hiw-tree-card">
+                                    <div class="hiw-tree-step-num" style="background:linear-gradient(135deg,#10b981,#059669);">6</div>
+                                    <div class="hiw-tree-body">
+                                        <h4><i class="fas fa-project-diagram" style="color:#10b981;"></i> Project Hub & Tracking</h4>
+                                        <p>Track project progress with milestones, deliverables, and status updates. Manage multiple projects from a single command center.</p>
+                                        <div class="hiw-tree-tags">
+                                            <span class="hiw-tag"><i class="fas fa-check"></i> Milestone tracking</span>
+                                            <span class="hiw-tag"><i class="fas fa-check"></i> Progress dashboard</span>
+                                            <span class="hiw-tag"><i class="fas fa-check"></i> Meeting management</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 7 -->
+                            <div class="hiw-tree-node reveal">
+                                <div class="hiw-tree-dot" style="background:#ef4444;"></div>
+                                <div class="hiw-tree-card">
+                                    <div class="hiw-tree-step-num" style="background:linear-gradient(135deg,#ef4444,#dc2626);">7</div>
+                                    <div class="hiw-tree-body">
+                                        <h4><i class="fas fa-chart-bar" style="color:#ef4444;"></i> Analytics & Reports</h4>
+                                        <p>Access AI-powered analytics dashboards, revenue forecasting, quote analysis, and performance metrics. Export detailed reports for stakeholders.</p>
+                                        <div class="hiw-tree-tags">
+                                            <span class="hiw-tag"><i class="fas fa-check"></i> AI business analytics</span>
+                                            <span class="hiw-tag"><i class="fas fa-check"></i> Quote analysis tool</span>
+                                            <span class="hiw-tag"><i class="fas fa-check"></i> Revenue & performance metrics</span>
+                                            <span class="hiw-tag"><i class="fas fa-check"></i> Report export</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 8 -->
+                            <div class="hiw-tree-node reveal">
+                                <div class="hiw-tree-dot" style="background:#f97316;"></div>
+                                <div class="hiw-tree-card hiw-tree-card-last">
+                                    <div class="hiw-tree-step-num" style="background:linear-gradient(135deg,#f97316,#ea580c);">8</div>
+                                    <div class="hiw-tree-body">
+                                        <h4><i class="fas fa-users" style="color:#f97316;"></i> Community & Networking</h4>
+                                        <p>Share project updates, showcase completed work, and connect with the SteelConnect community. Build your trusted professional network.</p>
+                                        <div class="hiw-tree-tags">
+                                            <span class="hiw-tag"><i class="fas fa-check"></i> Community feed</span>
+                                            <span class="hiw-tag"><i class="fas fa-check"></i> Professional networking</span>
+                                            <span class="hiw-tag"><i class="fas fa-check"></i> Industry updates</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Portal Features Grid -->
-                    <div class="hiw-portal-header reveal">
-                        <h3 class="hiw-portal-title">Everything You Need — One Powerful Portal</h3>
-                        <p class="hiw-portal-subtitle">Every tool, every insight, every connection — unified in a single enterprise-grade platform.</p>
+                    <!-- ====== DESIGNER JOURNEY ====== -->
+                    <div class="hiw-journey" id="hiwJourneyDesigner" style="display:none;">
+                        <div class="hiw-journey-header">
+                            <div class="hiw-journey-icon" style="background:linear-gradient(135deg,#7c3aed,#6d28d9);">
+                                <i class="fas fa-drafting-compass"></i>
+                            </div>
+                            <div>
+                                <h3 class="hiw-journey-title">Designer Journey</h3>
+                                <p class="hiw-journey-sub">Discover projects, submit proposals, collaborate with contractors, and grow your business.</p>
+                            </div>
+                        </div>
+
+                        <div class="hiw-tree">
+                            <div class="hiw-tree-line"></div>
+
+                            <!-- Step 1 -->
+                            <div class="hiw-tree-node reveal">
+                                <div class="hiw-tree-dot" style="background:#7c3aed;"></div>
+                                <div class="hiw-tree-card">
+                                    <div class="hiw-tree-step-num" style="background:linear-gradient(135deg,#7c3aed,#6d28d9);">1</div>
+                                    <div class="hiw-tree-body">
+                                        <h4><i class="fas fa-user-plus" style="color:#7c3aed;"></i> Sign Up & Build Your Profile</h4>
+                                        <p>Create your professional profile, upload your portfolio, certifications, and past project showcases. Get verified to start receiving project invitations.</p>
+                                        <div class="hiw-tree-tags">
+                                            <span class="hiw-tag"><i class="fas fa-check"></i> Portfolio & expertise showcase</span>
+                                            <span class="hiw-tag"><i class="fas fa-check"></i> Certification upload</span>
+                                            <span class="hiw-tag"><i class="fas fa-check"></i> Professional verification</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 2 -->
+                            <div class="hiw-tree-node reveal">
+                                <div class="hiw-tree-dot" style="background:#2563eb;"></div>
+                                <div class="hiw-tree-card">
+                                    <div class="hiw-tree-step-num" style="background:linear-gradient(135deg,#2563eb,#1d4ed8);">2</div>
+                                    <div class="hiw-tree-body">
+                                        <h4><i class="fas fa-search" style="color:#2563eb;"></i> Discover Projects</h4>
+                                        <p>Browse available projects posted by contractors worldwide. Filter by project type, budget, location, and expertise required to find the perfect match.</p>
+                                        <div class="hiw-tree-tags">
+                                            <span class="hiw-tag"><i class="fas fa-check"></i> Browse & filter projects</span>
+                                            <span class="hiw-tag"><i class="fas fa-check"></i> View project details & drawings</span>
+                                            <span class="hiw-tag"><i class="fas fa-check"></i> AI-matched recommendations</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 3 -->
+                            <div class="hiw-tree-node reveal">
+                                <div class="hiw-tree-dot" style="background:#06b6d4;"></div>
+                                <div class="hiw-tree-card">
+                                    <div class="hiw-tree-step-num" style="background:linear-gradient(135deg,#06b6d4,#0891b2);">3</div>
+                                    <div class="hiw-tree-body">
+                                        <h4><i class="fas fa-file-invoice-dollar" style="color:#06b6d4;"></i> Submit Proposals & Quotes</h4>
+                                        <p>Send detailed proposals with cost breakdowns, timelines, and approach. Track all your submitted quotes and their status from one dashboard.</p>
+                                        <div class="hiw-tree-tags">
+                                            <span class="hiw-tag"><i class="fas fa-check"></i> Detailed cost proposals</span>
+                                            <span class="hiw-tag"><i class="fas fa-check"></i> Timeline & scope breakdown</span>
+                                            <span class="hiw-tag"><i class="fas fa-check"></i> Quote tracking dashboard</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 4 -->
+                            <div class="hiw-tree-node reveal">
+                                <div class="hiw-tree-dot" style="background:#f59e0b;"></div>
+                                <div class="hiw-tree-card">
+                                    <div class="hiw-tree-step-num" style="background:linear-gradient(135deg,#f59e0b,#d97706);">4</div>
+                                    <div class="hiw-tree-body">
+                                        <h4><i class="fas fa-comments" style="color:#f59e0b;"></i> Collaborate with Contractors</h4>
+                                        <p>Once your quote is approved, start collaborating through secure messaging, voice & video calls, and file sharing — all within the platform.</p>
+                                        <div class="hiw-tree-tags">
+                                            <span class="hiw-tag"><i class="fas fa-check"></i> Real-time messaging</span>
+                                            <span class="hiw-tag"><i class="fas fa-check"></i> Voice & video calls</span>
+                                            <span class="hiw-tag"><i class="fas fa-check"></i> Secure file sharing</span>
+                                            <span class="hiw-tag"><i class="fas fa-check"></i> Meeting scheduler</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 5 -->
+                            <div class="hiw-tree-node reveal">
+                                <div class="hiw-tree-dot" style="background:#10b981;"></div>
+                                <div class="hiw-tree-card">
+                                    <div class="hiw-tree-step-num" style="background:linear-gradient(135deg,#10b981,#059669);">5</div>
+                                    <div class="hiw-tree-body">
+                                        <h4><i class="fas fa-project-diagram" style="color:#10b981;"></i> Project Hub & Delivery</h4>
+                                        <p>Track your active projects, update milestones, manage deliverables, and coordinate meetings — all from the Project Hub.</p>
+                                        <div class="hiw-tree-tags">
+                                            <span class="hiw-tag"><i class="fas fa-check"></i> Milestone & progress tracking</span>
+                                            <span class="hiw-tag"><i class="fas fa-check"></i> Deliverable management</span>
+                                            <span class="hiw-tag"><i class="fas fa-check"></i> Meeting coordination</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 6 -->
+                            <div class="hiw-tree-node reveal">
+                                <div class="hiw-tree-dot" style="background:#f97316;"></div>
+                                <div class="hiw-tree-card hiw-tree-card-last">
+                                    <div class="hiw-tree-step-num" style="background:linear-gradient(135deg,#f97316,#ea580c);">6</div>
+                                    <div class="hiw-tree-body">
+                                        <h4><i class="fas fa-users" style="color:#f97316;"></i> Community & Growth</h4>
+                                        <p>Showcase your completed projects, share updates, earn ratings and reviews, and build your professional reputation on the platform.</p>
+                                        <div class="hiw-tree-tags">
+                                            <span class="hiw-tag"><i class="fas fa-check"></i> Community feed & posts</span>
+                                            <span class="hiw-tag"><i class="fas fa-check"></i> Ratings & reviews</span>
+                                            <span class="hiw-tag"><i class="fas fa-check"></i> Build trusted network</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="hiw-portal-grid">
-                        <div class="hiw-portal-card reveal reveal-delay-1">
-                            <div class="hiw-portal-icon" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed);"><i class="fas fa-brain"></i></div>
-                            <h4>AI Cost Estimation</h4>
-                            <p>Upload drawings or enter project details. Get instant, accurate cost and timeline estimates powered by machine learning trained on 12,000+ real projects.</p>
-                        </div>
-                        <div class="hiw-portal-card reveal reveal-delay-1">
-                            <div class="hiw-portal-icon" style="background: linear-gradient(135deg, #4338ca, #7c3aed);"><i class="fas fa-tachometer-alt"></i></div>
-                            <h4>Smart Dashboard</h4>
-                            <p>Real-time analytics, project tracking, financial overview, and team performance metrics — all in a single, beautiful command center.</p>
-                        </div>
-                        <div class="hiw-portal-card reveal reveal-delay-1">
-                            <div class="hiw-portal-icon" style="background: linear-gradient(135deg, #06b6d4, #0891b2);"><i class="fas fa-search"></i></div>
-                            <h4>Expert Discovery</h4>
-                            <p>Browse verified structural professionals worldwide. Filter by expertise, ratings, certifications, and availability.</p>
-                        </div>
-                        <div class="hiw-portal-card reveal reveal-delay-2">
-                            <div class="hiw-portal-icon" style="background: linear-gradient(135deg, #f59e0b, #d97706);"><i class="fas fa-file-contract"></i></div>
-                            <h4>Project Management</h4>
-                            <p>Create, assign, and track projects end-to-end. Built-in milestones, file versioning, escrow payments, and automated notifications.</p>
-                        </div>
-                        <div class="hiw-portal-card reveal reveal-delay-2">
-                            <div class="hiw-portal-icon" style="background: linear-gradient(135deg, #ef4444, #dc2626);"><i class="fas fa-file-invoice-dollar"></i></div>
-                            <h4>Quotes & Proposals</h4>
-                            <p>Submit and receive competitive quotes with detailed cost breakdowns. Compare proposals side-by-side, approve or negotiate — all within the platform.</p>
-                        </div>
-                        <div class="hiw-portal-card reveal reveal-delay-2">
-                            <div class="hiw-portal-icon" style="background: linear-gradient(135deg, #ec4899, #db2777);"><i class="fas fa-comments"></i></div>
-                            <h4>Secure Messaging</h4>
-                            <p>Real-time chat and file sharing within every project workspace. End-to-end encrypted for enterprise-grade security.</p>
-                        </div>
-                        <div class="hiw-portal-card reveal reveal-delay-3">
-                            <div class="hiw-portal-icon" style="background: linear-gradient(135deg, #6366f1, #4f46e5);"><i class="fas fa-phone-alt"></i></div>
-                            <h4>Voice & Video Calls</h4>
-                            <p>Schedule and join voice calls and video meetings directly from the platform. Discuss project details, review drawings, and collaborate face-to-face.</p>
-                        </div>
-                        <div class="hiw-portal-card reveal reveal-delay-3">
-                            <div class="hiw-portal-icon" style="background: linear-gradient(135deg, #14b8a6, #0d9488);"><i class="fas fa-chart-bar"></i></div>
-                            <h4>AI Business Analytics</h4>
-                            <p>Upload business data and get AI-driven insights. Revenue forecasting, performance metrics, and predictive analytics to guide smarter decisions.</p>
-                        </div>
-                        <div class="hiw-portal-card reveal reveal-delay-3">
-                            <div class="hiw-portal-icon" style="background: linear-gradient(135deg, #f97316, #ea580c);"><i class="fas fa-users"></i></div>
-                            <h4>Community Feed</h4>
-                            <p>Share updates, showcase completed work, and engage with the SteelConnect community. Stay connected with industry news and announcements.</p>
-                        </div>
-                        <div class="hiw-portal-card reveal reveal-delay-3">
-                            <div class="hiw-portal-icon" style="background: linear-gradient(135deg, #a855f7, #9333ea);"><i class="fas fa-bell"></i></div>
-                            <h4>Notifications & Alerts</h4>
-                            <p>Stay informed with real-time notifications for new quotes, messages, project updates, meeting reminders, and more — never miss an important action.</p>
-                        </div>
-                        <div class="hiw-portal-card reveal reveal-delay-3">
-                            <div class="hiw-portal-icon" style="background: linear-gradient(135deg, #10b981, #059669);"><i class="fas fa-shield-alt"></i></div>
-                            <h4>Trust & Compliance</h4>
-                            <p>Verified credentials, license checks, insurance validation, and NDA management. Built for enterprise compliance and peace of mind.</p>
-                        </div>
-                        <div class="hiw-portal-card reveal reveal-delay-3">
-                            <div class="hiw-portal-icon" style="background: linear-gradient(135deg, #0ea5e9, #0284c7);"><i class="fas fa-headset"></i></div>
-                            <h4>Support & Help Center</h4>
-                            <p>Submit support tickets, track resolution progress, and get dedicated assistance from the SteelConnect team whenever you need help.</p>
+
+                    <!-- Shared Platform Features -->
+                    <div class="hiw-shared-features reveal">
+                        <h3 class="hiw-shared-title"><i class="fas fa-th-large"></i> Available to All Users</h3>
+                        <div class="hiw-shared-grid">
+                            <div class="hiw-shared-item">
+                                <div class="hiw-shared-icon" style="background:linear-gradient(135deg,#4338ca,#6366f1);"><i class="fas fa-tachometer-alt"></i></div>
+                                <span>Smart Dashboard</span>
+                            </div>
+                            <div class="hiw-shared-item">
+                                <div class="hiw-shared-icon" style="background:linear-gradient(135deg,#ec4899,#db2777);"><i class="fas fa-comments"></i></div>
+                                <span>Secure Messaging</span>
+                            </div>
+                            <div class="hiw-shared-item">
+                                <div class="hiw-shared-icon" style="background:linear-gradient(135deg,#6366f1,#4f46e5);"><i class="fas fa-phone-alt"></i></div>
+                                <span>Voice & Video Calls</span>
+                            </div>
+                            <div class="hiw-shared-item">
+                                <div class="hiw-shared-icon" style="background:linear-gradient(135deg,#a855f7,#9333ea);"><i class="fas fa-bell"></i></div>
+                                <span>Smart Notifications</span>
+                            </div>
+                            <div class="hiw-shared-item">
+                                <div class="hiw-shared-icon" style="background:linear-gradient(135deg,#10b981,#059669);"><i class="fas fa-shield-alt"></i></div>
+                                <span>Trust & Compliance</span>
+                            </div>
+                            <div class="hiw-shared-item">
+                                <div class="hiw-shared-icon" style="background:linear-gradient(135deg,#0ea5e9,#0284c7);"><i class="fas fa-headset"></i></div>
+                                <span>Support Center</span>
+                            </div>
+                            <div class="hiw-shared-item">
+                                <div class="hiw-shared-icon" style="background:linear-gradient(135deg,#14b8a6,#0d9488);"><i class="fas fa-credit-card"></i></div>
+                                <span>Subscription Plans</span>
+                            </div>
+                            <div class="hiw-shared-item">
+                                <div class="hiw-shared-icon" style="background:linear-gradient(135deg,#f97316,#ea580c);"><i class="fas fa-mobile-alt"></i></div>
+                                <span>Mobile-Friendly App</span>
+                            </div>
                         </div>
                     </div>
 

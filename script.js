@@ -7684,6 +7684,27 @@ function logout() {
     setTimeout(() => showAuthGateway(), 600);
 }
 
+// Toggle between Contractor and Designer journeys in How It Works section
+function switchHiwRole(role) {
+    const contractorJourney = document.getElementById('hiwJourneyContractor');
+    const designerJourney = document.getElementById('hiwJourneyDesigner');
+    const tabContractor = document.getElementById('hiwTabContractor');
+    const tabDesigner = document.getElementById('hiwTabDesigner');
+    if (!contractorJourney || !designerJourney) return;
+
+    if (role === 'designer') {
+        contractorJourney.style.display = 'none';
+        designerJourney.style.display = 'block';
+        tabContractor.classList.remove('active');
+        tabDesigner.classList.add('active');
+    } else {
+        contractorJourney.style.display = 'block';
+        designerJourney.style.display = 'none';
+        tabContractor.classList.add('active');
+        tabDesigner.classList.remove('active');
+    }
+}
+
 function showLandingPageView() {
     const appContent = document.getElementById('app-content');
     appContent.classList.remove('app-ready');
