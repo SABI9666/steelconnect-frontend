@@ -1426,6 +1426,24 @@ function completeLogin(data) {
         showNotification(`Welcome to SteelConnect, ${data.user.name}!`, 'success');
     }, 300);
 
+    // Handle estimation subscription redirect after login
+    const postLoginRedirect = sessionStorage.getItem('postLoginRedirect');
+    if (postLoginRedirect === 'estimation-subscribe') {
+        sessionStorage.removeItem('postLoginRedirect');
+        const pendingPlan = sessionStorage.getItem('pendingEstimationPlan');
+        sessionStorage.removeItem('pendingEstimationPlan');
+        setTimeout(() => {
+            if (pendingPlan) {
+                // Go directly to subscription checkout for the selected plan
+                handleSubscribe(pendingPlan);
+            } else {
+                // No specific plan selected — go to subscription page
+                renderAppSection('subscription');
+            }
+        }, 800);
+        return;
+    }
+
     // Handle deep link navigation after login (e.g. from email link ?section=my-estimations&estimationId=xxx or ?section=ai-analytics&dashboardId=xxx)
     const pendingSection = sessionStorage.getItem('pendingDeepLinkSection');
     const pendingEstimationId = sessionStorage.getItem('pendingDeepLinkEstimationId');
@@ -14608,11 +14626,20 @@ async function handleSubscribe(planId) {
             // Redirect to Stripe checkout
             window.location.href = response.checkoutUrl;
         } else if (response.subscription && response.subscription.status === 'active') {
-            showNotification('Plan activated successfully!', 'success');
-            renderSubscriptionPage();
+            showNotification('Plan activated successfully! Redirecting to AI Estimation...', 'success');
+            // If estimation plan, redirect to estimation tool
+            if (planId && planId.startsWith('estimation_')) {
+                setTimeout(() => renderAppSection('estimation-tool'), 1000);
+            } else {
+                renderSubscriptionPage();
+            }
         } else {
             showNotification(response.message || 'Subscription created. Payment will be processed when Stripe is configured.', 'info');
-            renderSubscriptionPage();
+            if (planId && planId.startsWith('estimation_')) {
+                setTimeout(() => renderAppSection('estimation-tool'), 1000);
+            } else {
+                renderSubscriptionPage();
+            }
         }
     } catch (error) {
         showNotification('Error: ' + error.message, 'error');
@@ -14631,17 +14658,18 @@ async function checkFreeEstimationForEmail(email) {
         return data.success && data.blocked;
     } catch (error) {
         console.error('Error checking free estimation availability:', error);
-        return false; // Default to not blocked on error
+        return false;
     }
 }
 
-// Show the blocked state UI
+// Show the blocked state with dynamic subscription plans
 function showEstimationBlockedState() {
     const formWrapper = document.getElementById('freeEstFormWrapper');
     const disabledState = document.getElementById('freeEstDisabledState');
     if (formWrapper && disabledState) {
         formWrapper.style.display = 'none';
         disabledState.style.display = 'block';
+        loadEstimationSubscriptionPlans();
     }
 }
 
@@ -14653,6 +14681,132 @@ function showEstimationForm() {
         formWrapper.style.display = '';
         disabledState.style.display = 'none';
     }
+}
+
+// Fetch all estimation plans from API and render in blocked state
+async function loadEstimationSubscriptionPlans() {
+    const container = document.getElementById('freeEstDisabledState');
+    if (!container) return;
+
+    // Show loading state
+    container.innerHTML = `
+        <div style="text-align:center;padding:60px 24px;">
+            <i class="fas fa-spinner fa-spin" style="font-size:28px;color:#7c3aed;"></i>
+            <p style="color:#64748b;margin-top:12px;font-size:14px;">Loading subscription plans...</p>
+        </div>`;
+
+    try {
+        const response = await fetch(BACKEND_URL + '/subscriptions/plans');
+        const data = await response.json();
+        const plans = data.plans || {};
+        renderEstimationBlockedPlans(plans);
+    } catch (error) {
+        console.error('Error loading plans:', error);
+        renderEstimationBlockedPlans(null);
+    }
+}
+
+function renderEstimationBlockedPlans(plans) {
+    const container = document.getElementById('freeEstDisabledState');
+    if (!container) return;
+
+    // Plan display config matching the app subscription page
+    const estPlanConfigs = [
+        { id: 'estimation_free', gradient: 'linear-gradient(135deg, #6b7280, #9ca3af)', icon: 'fa-gift', accent: '#6b7280' },
+        { id: 'estimation_starter', gradient: 'linear-gradient(135deg, #2563eb, #3b82f6)', icon: 'fa-rocket', accent: '#2563eb' },
+        { id: 'estimation_professional', gradient: 'linear-gradient(135deg, #7c3aed, #a855f7)', icon: 'fa-star', accent: '#7c3aed', popular: true },
+        { id: 'estimation_business', gradient: 'linear-gradient(135deg, #ea580c, #f97316)', icon: 'fa-building', accent: '#ea580c' },
+        { id: 'estimation_payperuse', gradient: 'linear-gradient(135deg, #0d9488, #14b8a6)', icon: 'fa-receipt', accent: '#0d9488' },
+    ];
+
+    let plansHtml = '';
+
+    if (plans) {
+        plansHtml = estPlanConfigs.map(cfg => {
+            const plan = plans[cfg.id];
+            if (!plan) return '';
+            const isPopular = cfg.popular;
+            const priceDisplay = plan.price === 0
+                ? '<span style="font-size:22px;font-weight:800;color:#1e293b;">Free</span>'
+                : plan.isPayPerUse
+                    ? `<span style="font-size:22px;font-weight:800;color:#1e293b;">$${plan.price}</span><span style="font-size:12px;font-weight:400;color:#94a3b8;">/estimate</span>`
+                    : `<span style="font-size:22px;font-weight:800;color:#1e293b;">$${plan.price}</span><span style="font-size:12px;font-weight:400;color:#94a3b8;">/mo</span>`;
+
+            const features = (plan.features || []).map(f =>
+                `<div style="display:flex;align-items:flex-start;gap:8px;padding:3px 0;"><i class="fas fa-check" style="color:${cfg.accent};font-size:11px;margin-top:3px;flex-shrink:0;"></i><span style="font-size:12px;color:#475569;line-height:1.4;">${f}</span></div>`
+            ).join('');
+
+            const bestFor = plan.bestFor ? `<div style="font-size:11px;color:${cfg.accent};font-weight:600;margin-top:6px;"><i class="fas fa-star" style="font-size:9px;"></i> ${plan.bestFor}</div>` : '';
+
+            const btnLabel = plan.price === 0 ? 'Start Free' : plan.isPayPerUse ? 'Buy Estimate' : 'Subscribe';
+
+            return `
+                <div style="border:2px solid ${isPopular ? cfg.accent : '#e5e7eb'};border-radius:14px;overflow:hidden;${isPopular ? 'box-shadow:0 4px 20px rgba(124,58,237,0.15);' : ''}position:relative;transition:all 0.2s;cursor:pointer;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,0.1)'" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='${isPopular ? '0 4px 20px rgba(124,58,237,0.15)' : 'none'}'">
+                    ${isPopular ? '<div style="position:absolute;top:0;left:0;right:0;height:3px;background:' + cfg.gradient + ';"></div>' : ''}
+                    <!-- Plan Header -->
+                    <div style="background:${cfg.gradient};padding:16px 18px;display:flex;align-items:center;gap:12px;">
+                        <div style="width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;">
+                            <i class="fas ${cfg.icon}" style="color:#fff;font-size:15px;"></i>
+                        </div>
+                        <div>
+                            <div style="font-size:15px;font-weight:700;color:#fff;">${plan.label}${isPopular ? ' <span style="background:rgba(255,255,255,0.25);font-size:9px;padding:2px 6px;border-radius:4px;margin-left:4px;font-weight:600;letter-spacing:0.5px;">POPULAR</span>' : ''}</div>
+                            <div style="font-size:12px;color:rgba(255,255,255,0.8);">${plan.aiEstimationsAllowed || (plan.isPayPerUse ? '1' : '')} AI estimation${(plan.aiEstimationsAllowed || 0) !== 1 ? 's' : ''}${plan.billingCycle === 'monthly' ? ' / month' : plan.isPayPerUse ? '' : ''}</div>
+                        </div>
+                        <div style="margin-left:auto;">${priceDisplay}</div>
+                    </div>
+                    <!-- Plan Features -->
+                    <div style="padding:14px 18px;">
+                        ${features}
+                        ${bestFor}
+                        <button onclick="selectEstimationPlan('${cfg.id}')" style="width:100%;margin-top:12px;padding:10px;background:${cfg.gradient};color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:6px;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+                            <i class="fas fa-bolt"></i> ${btnLabel}
+                        </button>
+                    </div>
+                </div>`;
+        }).join('');
+    }
+
+    container.innerHTML = `
+        <!-- Header -->
+        <div style="text-align:center;padding:24px 24px 16px;">
+            <div style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#fef3c7,#fde68a);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;">
+                <i class="fas fa-crown" style="font-size:22px;color:#d97706;"></i>
+            </div>
+            <h3 style="font-size:19px;font-weight:700;color:#1e293b;margin:0 0 4px;">Upgrade to Continue</h3>
+            <p style="font-size:13px;color:#64748b;margin:0;line-height:1.5;">Your free estimation has been completed. Choose a plan below.</p>
+        </div>
+
+        <!-- Plans Grid -->
+        <div style="padding:8px 16px 16px;display:flex;flex-direction:column;gap:12px;">
+            ${plansHtml || '<p style="text-align:center;color:#94a3b8;padding:20px;">Unable to load plans. Please try again later.</p>'}
+        </div>
+
+        <!-- Sign In Link & Trust -->
+        <div style="padding:0 20px 20px;">
+            <div style="display:flex;align-items:center;gap:8px;justify-content:center;">
+                <span style="height:1px;flex:1;background:#e5e7eb;"></span>
+                <span style="font-size:12px;color:#94a3b8;">already have an account?</span>
+                <span style="height:1px;flex:1;background:#e5e7eb;"></span>
+            </div>
+            <button onclick="selectEstimationPlan(null)" style="width:100%;margin-top:10px;padding:11px;background:#fff;color:#374151;border:2px solid #e5e7eb;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:8px;" onmouseover="this.style.borderColor='#6366f1';this.style.color='#6366f1'" onmouseout="this.style.borderColor='#e5e7eb';this.style.color='#374151'">
+                <i class="fas fa-sign-in-alt"></i> Sign In &amp; Subscribe
+            </button>
+            <div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-top:14px;padding-top:14px;border-top:1px solid #f1f5f9;">
+                <span style="font-size:11px;color:#94a3b8;display:flex;align-items:center;gap:4px;"><i class="fas fa-lock" style="font-size:9px;"></i> Secure</span>
+                <span style="font-size:11px;color:#94a3b8;display:flex;align-items:center;gap:4px;"><i class="fas fa-shield-alt" style="font-size:9px;"></i> Cancel anytime</span>
+                <span style="font-size:11px;color:#94a3b8;display:flex;align-items:center;gap:4px;"><i class="fab fa-stripe" style="font-size:11px;"></i> Stripe</span>
+            </div>
+        </div>`;
+}
+
+// When user clicks a plan: store it and open login
+function selectEstimationPlan(planId) {
+    if (planId) {
+        sessionStorage.setItem('pendingEstimationPlan', planId);
+    }
+    sessionStorage.setItem('postLoginRedirect', 'estimation-subscribe');
+    sessionStorage.setItem('forceContractorRole', 'true');
+    showAuthModal('register');
 }
 
 let _freeEstFiles = [];
