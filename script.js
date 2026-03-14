@@ -707,9 +707,14 @@ function initializeApp() {
                 showAuthModal('register');
             } else {
                 // Let users browse for 15 seconds before showing login gateway
-                window._authGatewayTimer = setTimeout(() => {
-                    showAuthGateway();
-                }, 15000);
+                // But skip on AI estimation landing page — let them complete the form first
+                const hash = window.location.hash;
+                const isEstimationPage = hash === '#free-estimation' || hash === '#ai-estimation';
+                if (!isEstimationPage) {
+                    window._authGatewayTimer = setTimeout(() => {
+                        showAuthGateway();
+                    }, 15000);
+                }
             }
         }
     }
