@@ -650,6 +650,11 @@ function initializeApp() {
                 sessionStorage.removeItem('pendingDeepLinkEstimationId');
                 sessionStorage.removeItem('pendingDeepLinkDashboardId');
                 console.log(`[DEEP-LINK] Navigating to: ${pendingSection}, estimationId: ${pendingEstimationId || 'none'}, dashboardId: ${pendingDashboardId || 'none'}`);
+                // website-estimation-result is handled by checkProfileAndRoute -> handlePendingWebsiteEstimation
+                if (pendingSection === 'website-estimation-result') {
+                    // Don't navigate here — let checkProfileAndRoute() pick it up after profile status loads
+                    console.log('[DEEP-LINK] Website estimation result will be handled by checkProfileAndRoute');
+                } else {
                 // Small delay to let app initialize before navigation
                 setTimeout(() => {
                     if (pendingEstimationId && pendingSection === 'my-estimations') {
@@ -670,6 +675,7 @@ function initializeApp() {
                         }
                     }
                 }, 500);
+                }
             }
         } catch (error) {
             console.error("Error parsing user data from localStorage:", error);
@@ -680,8 +686,15 @@ function initializeApp() {
         // If opened from a push notification call while logged out, show urgent login
         const _pendingCall = sessionStorage.getItem('pendingCallId');
         const _pendingCallerName = sessionStorage.getItem('pendingCallerName');
+        const _hasPendingEstimation = sessionStorage.getItem('pendingWebsiteEstimationId');
         if (_pendingCall && _pendingCallerName) {
             showIncomingCallLoginOverlay(_pendingCallerName);
+        } else if (_hasPendingEstimation) {
+            // Coming from estimation result email — prompt login/register immediately
+            setTimeout(() => {
+                showAuthModal('login');
+                showNotification('Please sign in or create an account to view your free estimation result.', 'info', 10000);
+            }, 500);
         } else {
             // Auto-open register modal if URL has ?action=register (from invite email)
             const urlParams = new URLSearchParams(window.location.search);
