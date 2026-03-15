@@ -3196,6 +3196,13 @@
                 var popupShown = false;
                 function showProspectPopup() {
                     if (popupShown) return;
+                    // Don't interrupt users filling the free estimation form
+                    var estSection = document.getElementById('ai-estimation');
+                    if (estSection) {
+                        var rect = estSection.getBoundingClientRect();
+                        if (rect.top < window.innerHeight && rect.bottom > 0) return;
+                    }
+                    if (typeof _freeEstSubmitting !== 'undefined' && _freeEstSubmitting) return;
                     var popup = document.getElementById('prospectPopup');
                     var landing = document.getElementById('landing-page-content');
                     if (popup && landing && landing.style.display !== 'none') {

@@ -706,15 +706,17 @@ function initializeApp() {
             if (urlParams.get('action') === 'register') {
                 showAuthModal('register');
             } else {
-                // Let users browse for 15 seconds before showing login gateway
-                // But skip on AI estimation landing page — let them complete the form first
-                const hash = window.location.hash;
-                const isEstimationPage = hash === '#free-estimation' || hash === '#ai-estimation';
-                if (!isEstimationPage) {
-                    window._authGatewayTimer = setTimeout(() => {
+                // Let users browse for 20 seconds before showing login gateway
+                // Skip if user is on or has scrolled to the AI estimation section
+                window._authGatewayTimer = setTimeout(() => {
+                    const hash = window.location.hash;
+                    const isEstimationPage = hash === '#free-estimation' || hash === '#ai-estimation';
+                    const estimationSection = document.getElementById('ai-estimation');
+                    const isInEstimationView = estimationSection && estimationSection.getBoundingClientRect().top < window.innerHeight && estimationSection.getBoundingClientRect().bottom > 0;
+                    if (!isEstimationPage && !isInEstimationView && !_freeEstSubmitting) {
                         showAuthGateway();
-                    }, 15000);
-                }
+                    }
+                }, 20000);
             }
         }
     }
@@ -7322,6 +7324,13 @@ function showAuthGateway() {
         clearTimeout(window._authGatewayTimer);
         window._authGatewayTimer = null;
     }
+    // Never interrupt users in the free estimation section
+    const estimationSection = document.getElementById('ai-estimation');
+    if (estimationSection) {
+        const rect = estimationSection.getBoundingClientRect();
+        if (rect.top < window.innerHeight && rect.bottom > 0) return;
+    }
+    if (typeof _freeEstSubmitting !== 'undefined' && _freeEstSubmitting) return;
     const overlay = document.getElementById('auth-gateway-overlay');
     if (!overlay) return;
     overlay.style.display = 'flex';
