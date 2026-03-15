@@ -14975,7 +14975,7 @@ async function submitFreeEstimation(event) {
         return false;
     }
     if (!description) {
-        showNotification('Scope of estimation is required. Please describe your requirements from the uploaded PDF.', 'error');
+        showNotification('Scope of estimation is required. Please specify what you need estimated from your drawings.', 'error');
         return false;
     }
     if (!region) {
