@@ -15124,6 +15124,14 @@ async function submitFreeEstimation(event) {
             method: 'POST',
             body: formData
         });
+
+        if (response.status === 429) {
+            const retryData = await response.json().catch(() => ({}));
+            const waitTime = retryData.retryAfter || 60;
+            showNotification(`You have already submitted a request. Please wait ${waitTime} seconds before trying again.`, 'warning', 10000);
+            return false;
+        }
+
         const data = await response.json();
 
         if (data.success) {
