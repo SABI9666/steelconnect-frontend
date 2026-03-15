@@ -14987,25 +14987,21 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
+let _freeEstSubmitting = false;
 async function submitFreeEstimation(event) {
     event.preventDefault();
-    const email = document.getElementById('freeEstEmail').value.trim();
 
-    // Check if this specific email is blocked from free estimation
-    if (email) {
-        const isBlocked = await checkFreeEstimationForEmail(email);
-        if (isBlocked) {
-            showNotification('Your free estimation access has been used. Please subscribe for more estimations.', 'warning', 8000);
-            showEstimationBlockedState();
-            return false;
-        }
-    }
+    // Prevent duplicate submissions
+    if (_freeEstSubmitting) return false;
+
+    const email = document.getElementById('freeEstEmail').value.trim();
     const name = document.getElementById('freeEstName').value.trim();
     const projectTitle = document.getElementById('freeEstTitle').value.trim();
     const description = document.getElementById('freeEstDescription').value.trim();
     const projectType = document.getElementById('freeEstProjectType').value;
     const region = document.getElementById('freeEstRegion').value;
 
+    // Validate all fields first (synchronous, before any async work)
     if (!email || !projectTitle) {
         showNotification('Email and project title are required.', 'error');
         return false;
@@ -15023,6 +15019,8 @@ async function submitFreeEstimation(event) {
         return false;
     }
 
+    // Disable button and lock submissions IMMEDIATELY, before any async work
+    _freeEstSubmitting = true;
     const submitBtn = document.getElementById('freeEstSubmitBtn');
     const submitText = submitBtn.querySelector('.free-est-submit-text');
     const submitLoading = submitBtn.querySelector('.free-est-submit-loading');
@@ -15031,6 +15029,16 @@ async function submitFreeEstimation(event) {
     submitLoading.style.display = 'inline-flex';
 
     try {
+        // Check if this specific email is blocked from free estimation
+        if (email) {
+            const isBlocked = await checkFreeEstimationForEmail(email);
+            if (isBlocked) {
+                showNotification('Your free estimation access has been used. Please subscribe for more estimations.', 'warning', 8000);
+                showEstimationBlockedState();
+                return false;
+            }
+        }
+
         const formData = new FormData();
         formData.append('email', email);
         formData.append('name', name);
@@ -15060,6 +15068,7 @@ async function submitFreeEstimation(event) {
         console.error('Free estimation submission error:', error);
         showNotification('Something went wrong. Please try again.', 'error');
     } finally {
+        _freeEstSubmitting = false;
         submitBtn.disabled = false;
         submitText.style.display = 'inline-flex';
         submitLoading.style.display = 'none';
