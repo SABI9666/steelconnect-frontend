@@ -23748,17 +23748,6 @@ body { overflow-x: hidden; }
     box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
     background: #fff;
 }
-.free-est-scope-tag {
-    display: inline-block;
-    font-size: 11px;
-    font-weight: 500;
-    color: #6366f1;
-    background: rgba(99,102,241,0.08);
-    border: 1px solid rgba(99,102,241,0.18);
-    padding: 3px 10px;
-    border-radius: 20px;
-    white-space: nowrap;
-}
 .free-est-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .free-est-upload-area {
     border: 2px dashed #d1d5db;
