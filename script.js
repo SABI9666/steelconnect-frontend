@@ -14717,10 +14717,10 @@ async function checkFreeEstimationForEmail(email) {
     try {
         const response = await fetch(BACKEND_URL + '/estimation/website-estimation-check?email=' + encodeURIComponent(email));
         const data = await response.json();
-        return data.success && data.blocked;
+        return data;
     } catch (error) {
         console.error('Error checking free estimation availability:', error);
-        return false;
+        return { success: true, blocked: false };
     }
 }
 
@@ -14936,21 +14936,67 @@ function selectEstimationPlan(planId, authView) {
 }
 
 let _freeEstFiles = [];
+let _freeEstDesignerBlocked = false;
 
-function isDesignerBlockedFromEstimation() {
-    if (appState.currentUser && appState.currentUser.type === 'designer') {
-        showDesignerEstimationWarning();
-        return true;
-    }
-    return false;
+// Check email on blur — block designer emails from using free estimation
+function initFreeEstEmailCheck() {
+    const emailInput = document.getElementById('freeEstEmail');
+    if (!emailInput) return;
+    emailInput.addEventListener('blur', async function() {
+        const email = emailInput.value.trim();
+        if (!email) {
+            clearDesignerBlock();
+            return;
+        }
+        const result = await checkFreeEstimationForEmail(email);
+        if (result.success && result.blocked && result.isDesigner) {
+            applyDesignerBlock();
+        } else {
+            clearDesignerBlock();
+        }
+    });
 }
 
-function showDesignerEstimationWarning() {
+function applyDesignerBlock() {
+    _freeEstDesignerBlocked = true;
+    const formWrapper = document.getElementById('freeEstFormWrapper');
+    // Remove existing designer warning if any
+    const existing = document.getElementById('freeEstDesignerWarning');
+    if (existing) existing.remove();
+
+    const warning = document.createElement('div');
+    warning.id = 'freeEstDesignerWarning';
+    warning.innerHTML = `
+        <div style="background:linear-gradient(135deg,#fef3c7,#fde68a);border:2px solid #f59e0b;border-radius:16px;padding:32px 24px;text-align:center;margin-top:16px;">
+            <div style="width:64px;height:64px;background:#f59e0b;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+                <i class="fas fa-hard-hat" style="font-size:28px;color:#fff;"></i>
+            </div>
+            <h3 style="color:#92400e;margin:0 0 8px;font-size:20px;">Contractor Access Only</h3>
+            <p style="color:#78350f;margin:0 0 16px;font-size:15px;">AI Estimation is only available for <strong>Contractor</strong> accounts.<br>Please login with a Contractor account to get precise AI estimation results.</p>
+            <button onclick="clearDesignerBlock()" style="background:#f59e0b;color:#fff;border:none;padding:10px 24px;border-radius:8px;font-weight:600;cursor:pointer;font-size:14px;">
+                <i class="fas fa-arrow-left"></i> Try Another Email
+            </button>
+        </div>
+    `;
+
+    // Hide the form fields and show the warning
+    const form = document.getElementById('free-estimation-form');
+    if (form) form.style.display = 'none';
+    if (formWrapper) formWrapper.appendChild(warning);
+
     showNotification('AI Estimation is only available for Contractor accounts. Please login with a Contractor account to get precise AI estimation results.', 'warning', 10000);
 }
 
+function clearDesignerBlock() {
+    _freeEstDesignerBlocked = false;
+    const warning = document.getElementById('freeEstDesignerWarning');
+    if (warning) warning.remove();
+    const form = document.getElementById('free-estimation-form');
+    if (form) form.style.display = 'flex';
+}
+
 function handleFreeEstFiles(fileList) {
-    if (isDesignerBlockedFromEstimation()) return;
+    if (_freeEstDesignerBlocked) return;
     const maxFiles = 20;
     const maxSize = 50 * 1024 * 1024; // 50MB
     for (let i = 0; i < fileList.length; i++) {
@@ -14989,16 +15035,18 @@ function removeFreeEstFile(index) {
     renderFreeEstFileList();
 }
 
-// Drag & drop support for free estimation upload area
+// Drag & drop support and email check for free estimation
 document.addEventListener('DOMContentLoaded', function() {
     const dropArea = document.getElementById('freeEstUploadArea');
     if (!dropArea) return;
     ['dragenter', 'dragover'].forEach(evt => dropArea.addEventListener(evt, function(e) { e.preventDefault(); dropArea.classList.add('drag-over'); }));
     ['dragleave', 'drop'].forEach(evt => dropArea.addEventListener(evt, function(e) { e.preventDefault(); dropArea.classList.remove('drag-over'); }));
     dropArea.addEventListener('drop', function(e) {
-        if (isDesignerBlockedFromEstimation()) return;
+        if (_freeEstDesignerBlocked) return;
         if (e.dataTransfer.files.length > 0) handleFreeEstFiles(e.dataTransfer.files);
     });
+    // Initialize email-based designer check
+    initFreeEstEmailCheck();
 });
 
 let _freeEstSubmitting = false;
@@ -15009,7 +15057,10 @@ async function submitFreeEstimation(event) {
     if (_freeEstSubmitting) return false;
 
     // Block designer users from submitting estimation
-    if (isDesignerBlockedFromEstimation()) return false;
+    if (_freeEstDesignerBlocked) {
+        showNotification('AI Estimation is only available for Contractor accounts. Please login with a Contractor account.', 'warning', 8000);
+        return false;
+    }
 
     const email = document.getElementById('freeEstEmail').value.trim();
     const name = document.getElementById('freeEstName').value.trim();
@@ -15048,10 +15099,14 @@ async function submitFreeEstimation(event) {
     try {
         // Check if this specific email is blocked from free estimation
         if (email) {
-            const isBlocked = await checkFreeEstimationForEmail(email);
-            if (isBlocked) {
-                showNotification('Your free estimation access has been used. Please subscribe for more estimations.', 'warning', 8000);
-                showEstimationBlockedState();
+            const checkResult = await checkFreeEstimationForEmail(email);
+            if (checkResult.success && checkResult.blocked) {
+                if (checkResult.isDesigner) {
+                    applyDesignerBlock();
+                } else {
+                    showNotification('Your free estimation access has been used. Please subscribe for more estimations.', 'warning', 8000);
+                    showEstimationBlockedState();
+                }
                 return false;
             }
         }
