@@ -9096,11 +9096,14 @@ function renderAIEstimateResult(estimate, projectInfo) {
                         <i class="fas fa-chevron-down air-trade-chevron"></i>
                     </div>
                 </div>
-                <div class="air-trade-body" style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
-                    <table class="air-line-table" style="min-width:400px;">
-                        <thead><tr><th>Description</th><th>Quantity</th><th>Unit Rate</th><th>Total</th></tr></thead>
-                        <tbody>${lineItemsHTML}</tbody>
-                    </table>
+                <div class="air-trade-body">
+                    <div class="air-swipe-hint"><i class="fas fa-hand-point-right"></i> Swipe to see full table <span style="margin-left:2px;">&rarr;</span></div>
+                    <div class="air-table-scroll-wrap"><div class="air-scroll-inner">
+                        <table class="air-line-table" style="min-width:420px;">
+                            <thead><tr><th>Description</th><th>Quantity</th><th>Unit Rate</th><th>Total</th></tr></thead>
+                            <tbody>${lineItemsHTML}</tbody>
+                        </table>
+                    </div></div>
                 </div>
             </div>`;
     });
@@ -9137,14 +9140,14 @@ function renderAIEstimateResult(estimate, projectInfo) {
         let totalLabHrs = items.reduce((s, i) => s + (Number(i.laborHours) || 0), 0);
         let totalCost = items.reduce((s, i) => s + (Number(i.totalCost) || 0), 0);
         const hasLabor = totalLabHrs > 0 || totalLabCost > 0;
-        return `<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;"><table class="air-line-table" style="font-size:0.82rem;width:100%;min-width:500px;">
+        return `<div class="air-table-scroll-wrap"><div class="air-scroll-inner"><table class="air-line-table" style="font-size:0.82rem;width:100%;min-width:500px;">
             <thead><tr>${columns.map(c => `<th style="${c.align ? 'text-align:'+c.align : ''}">${c.label}</th>`).join('')}<th style="text-align:right;">Material</th>${hasLabor ? '<th style="text-align:right;">Labor Hrs</th><th style="text-align:right;">Labor Cost</th>' : ''}<th style="text-align:right;">Total Cost</th></tr></thead>
             <tbody>${items.map(item => `<tr>${columns.map(c => `<td style="${c.style || ''}">${c.render ? c.render(item) : (item[c.key] || '-')}</td>`).join('')}
                 <td style="text-align:right;">${curr}${fmtNum(item.materialCost || item.unitRate || 0)}</td>
                 ${hasLabor ? `<td style="text-align:right;color:#6b7280;">${fmtNum(item.laborHours || 0)}</td><td style="text-align:right;">${curr}${fmtNum(item.laborCost || 0)}</td>` : ''}
                 <td style="text-align:right;font-weight:600;">${curr}${fmtNum(item.totalCost || 0)}</td></tr>`).join('')}</tbody>
             ${totalCost > 0 ? `<tfoot><tr style="background:${colorAccent}10;font-weight:700;"><td colspan="${columns.length}">Subtotal</td><td style="text-align:right;">${curr}${fmtNum(totalMatCost)}</td>${hasLabor ? `<td style="text-align:right;">${fmtNum(totalLabHrs)}</td><td style="text-align:right;">${curr}${fmtNum(totalLabCost)}</td>` : ''}<td style="text-align:right;color:${colorAccent};">${curr}${fmtNum(totalCost)}</td></tr></tfoot>` : ''}
-        </table></div>`;
+        </table></div></div>`;
     }
 
     let materialScheduleHTML = '';
@@ -9157,7 +9160,7 @@ function renderAIEstimateResult(estimate, projectInfo) {
             const steelColSpan = steelHasLabor ? 12 : 9;
             steelTableHTML = `<div style="margin-bottom:16px;">
                 <h4 style="margin-bottom:8px;color:#1e40af;display:flex;flex-wrap:wrap;align-items:center;gap:4px;justify-content:space-between;"><span><i class="fas fa-i-cursor"></i> Structural Steel ${steelSum.totalSteelTons ? `<span style="font-size:0.8rem;font-weight:400;color:#6b7280;"> - ${fmtNum(steelSum.totalSteelTons)} tons</span>` : ''}</span> ${steelCost ? `<span style="font-size:0.8rem;font-weight:600;color:#1e40af;">${curr}${fmtNum(steelCost)}</span>` : ''}</h4>
-                <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;"><table class="air-line-table" style="font-size:0.82rem;width:100%;min-width:500px;">
+                <div class="air-table-scroll-wrap"><div class="air-scroll-inner"><table class="air-line-table" style="font-size:0.82rem;width:100%;min-width:600px;">
                     <thead><tr><th>Mark</th><th>Section</th><th>Grade</th><th>Count</th><th>Length</th><th>Wt/ft</th><th style="text-align:right;">Weight (tons)</th><th style="text-align:right;">Material</th>${steelHasLabor ? '<th style="text-align:right;">Labor Hrs</th><th style="text-align:right;">Labor Cost</th><th style="text-align:right;">Equip</th>' : ''}<th style="text-align:right;">Total Cost</th></tr></thead>
                     <tbody>${steelMembers.map(m => `<tr>
                         <td><strong>${m.mark || '-'}</strong> <span style="color:#94a3b8;font-size:0.75rem;">${m.type || ''}</span></td>
@@ -9178,7 +9181,7 @@ function renderAIEstimateResult(estimate, projectInfo) {
                         ${steelHasLabor ? `<td></td><td style="text-align:right;">${steelSum.totalLaborCost ? curr + fmtNum(steelSum.totalLaborCost) : ''}</td><td></td>` : ''}
                         <td style="text-align:right;color:#1e40af;">${curr}${fmtNum(steelCost)}</td>
                     </tr>${steelSum.steelPSF ? `<tr style="background:#f0f9ff;"><td colspan="${steelColSpan}" style="font-size:0.78rem;color:#3b82f6;">Steel intensity: ${fmtNum(steelSum.steelPSF)} PSF</td></tr>` : ''}</tfoot>` : ''}
-                </table></div></div>`;
+                </table></div></div></div>`;
         }
 
         // Concrete
@@ -9189,7 +9192,7 @@ function renderAIEstimateResult(estimate, projectInfo) {
             const concColSpan = concHasLabor ? 12 : 9;
             concreteTableHTML = `<div style="margin-bottom:16px;">
                 <h4 style="margin-bottom:8px;color:#166534;display:flex;flex-wrap:wrap;align-items:center;gap:4px;justify-content:space-between;"><span><i class="fas fa-cube"></i> Concrete & Rebar ${concreteSum.totalConcreteCY ? `<span style="font-size:0.8rem;font-weight:400;color:#6b7280;"> - ${fmtNum(concreteSum.totalConcreteCY)} CY</span>` : ''}</span> ${concCost ? `<span style="font-size:0.8rem;font-weight:600;color:#166534;">${curr}${fmtNum(concCost)}</span>` : ''}</h4>
-                <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;"><table class="air-line-table" style="font-size:0.82rem;width:100%;min-width:500px;">
+                <div class="air-table-scroll-wrap"><div class="air-scroll-inner"><table class="air-line-table" style="font-size:0.82rem;width:100%;min-width:600px;">
                     <thead><tr><th>Element</th><th>Dimensions</th><th>Count</th><th style="text-align:right;">Vol/ea</th><th style="text-align:right;">Total CY</th><th>Grade</th><th style="text-align:right;">Rebar lbs</th><th style="text-align:right;">Material</th>${concHasLabor ? '<th style="text-align:right;">Labor Hrs</th><th style="text-align:right;">Labor Cost</th><th style="text-align:right;">Equip</th>' : ''}<th style="text-align:right;">Total Cost</th></tr></thead>
                     <tbody>${concreteItems.map(c => `<tr>
                         <td><strong>${c.element || '-'}</strong> <span style="color:#94a3b8;font-size:0.75rem;">${c.type || ''}</span></td>
@@ -9210,7 +9213,7 @@ function renderAIEstimateResult(estimate, projectInfo) {
                         ${concHasLabor ? `<td></td><td style="text-align:right;">${concreteSum.totalLaborCost ? curr + fmtNum(concreteSum.totalLaborCost) : ''}</td><td></td>` : ''}
                         <td style="text-align:right;color:#166534;">${curr}${fmtNum(concCost)}</td>
                     </tr></tfoot>` : ''}
-                </table></div></div>`;
+                </table></div></div></div>`;
         }
 
         // MEP Items
@@ -9311,7 +9314,7 @@ function renderAIEstimateResult(estimate, projectInfo) {
                     </div>
                 </div>
                 ${manpower.estimatedProjectDuration ? `<div style="font-size:0.85rem;color:#475569;margin-bottom:10px;"><i class="fas fa-calendar-alt"></i> Est. Duration: <strong>${manpower.estimatedProjectDuration}</strong></div>` : ''}
-                ${crewBreakdown.length > 0 ? `<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;"><table class="air-line-table" style="font-size:0.82rem;width:100%;min-width:500px;">
+                ${crewBreakdown.length > 0 ? `<div class="air-table-scroll-wrap"><div class="air-scroll-inner"><table class="air-line-table" style="font-size:0.82rem;width:100%;min-width:480px;">
                     <thead><tr><th>Trade</th><th>Crew</th><th style="text-align:center;">Headcount</th><th style="text-align:center;">Weeks</th><th style="text-align:right;">Labor Hours</th><th style="text-align:right;">Labor Cost</th></tr></thead>
                     <tbody>${crewBreakdown.map(c => `<tr>
                         <td style="font-weight:600;">${c.trade || '-'}</td>
@@ -9322,7 +9325,7 @@ function renderAIEstimateResult(estimate, projectInfo) {
                         <td style="text-align:right;font-weight:600;">${curr}${fmtNum(c.laborCost || 0)}</td>
                     </tr>`).join('')}</tbody>
                     <tfoot><tr style="background:#f5f3ff;font-weight:700;"><td colspan="4">Total</td><td style="text-align:right;">${fmtNum(manpower.totalLaborHours || 0)}</td><td style="text-align:right;color:#7c3aed;">${curr}${fmtNum(manpower.totalLaborCost || 0)}</td></tr></tfoot>
-                </table></div>` : ''}
+                </table></div></div>` : ''}
             </div>`;
         }
 
@@ -9562,6 +9565,39 @@ function renderAIEstimateResult(estimate, projectInfo) {
                 </div>
             </div>
         </div>`;
+
+    // Initialize scroll fade indicators for tables on mobile
+    requestAnimationFrame(function() { initAirTableScrollHints(); });
+}
+
+// Attach scroll listeners to .air-table-scroll-wrap containers
+// Hides right-edge fade when user scrolls to end, shows swipe hint auto-dismiss
+function initAirTableScrollHints() {
+    document.querySelectorAll('.air-table-scroll-wrap').forEach(function(wrap) {
+        var inner = wrap.querySelector('.air-scroll-inner');
+        if (!inner) return;
+        function checkScroll() {
+            var atEnd = inner.scrollLeft + inner.clientWidth >= inner.scrollWidth - 8;
+            if (atEnd) {
+                wrap.classList.add('scrolled-end');
+            } else {
+                wrap.classList.remove('scrolled-end');
+            }
+        }
+        inner.addEventListener('scroll', checkScroll, { passive: true });
+        checkScroll();
+    });
+    // Auto-dismiss swipe hints after first interaction
+    document.querySelectorAll('.air-swipe-hint').forEach(function(hint) {
+        var parent = hint.closest('.air-trade-body') || hint.closest('.air-section');
+        if (parent) {
+            parent.addEventListener('scroll', function() { hint.style.display = 'none'; }, { passive: true, once: true });
+            parent.addEventListener('touchmove', function() { hint.style.display = 'none'; }, { passive: true, once: true });
+        }
+        // Also auto-hide after 6 seconds
+        setTimeout(function() { if (hint) hint.style.opacity = '0'; }, 6000);
+        setTimeout(function() { if (hint) hint.style.display = 'none'; }, 6500);
+    });
 }
 
 function fmtNum(n) {
@@ -15168,11 +15204,16 @@ async function renderWebsiteEstimationResult(estimationId, email) {
                             </div>
                         </div>
                     </div>
+                    <div class="west-scroll-hint">
+                        <i class="fas fa-hand-point-right"></i>
+                        <span>Swipe left/right to view full report</span>
+                        <span class="west-hint-arrows">&rarr;</span>
+                    </div>
                     <div class="west-result-frame-wrap">
                         <iframe id="westResultFrame"
                             srcdoc="${data.htmlContent.replace(/"/g, '&quot;')}"
                             class="west-result-iframe"
-                            onload="(function(f){try{var d=f.contentDocument||f.contentWindow.document;var meta=d.createElement('meta');meta.name='viewport';meta.content='width=device-width,initial-scale=1,maximum-scale=5';d.head.appendChild(meta);var s=d.createElement('style');s.textContent='html,body{overflow-x:hidden;max-width:100vw;word-wrap:break-word;overflow-wrap:break-word;-webkit-text-size-adjust:100%;box-sizing:border-box;}*,*::before,*::after{box-sizing:inherit;}img,svg,video,canvas{max-width:100%!important;height:auto!important;}table{max-width:100%!important;display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;font-size:inherit;}pre,code{max-width:100%!important;overflow-x:auto;white-space:pre-wrap;word-wrap:break-word;}iframe{max-width:100%!important;}@media(max-width:768px){body{padding:8px!important;font-size:14px;}h1{font-size:1.4rem!important;}h2{font-size:1.2rem!important;}h3{font-size:1.05rem!important;}table{font-size:0.82rem!important;}td,th{padding:6px 4px!important;}img{height:auto!important;}}@media(max-width:480px){body{padding:4px!important;font-size:13px;}h1{font-size:1.2rem!important;}h2{font-size:1.05rem!important;}table{font-size:0.75rem!important;}td,th{padding:4px 3px!important;}}';d.head.appendChild(s);f.style.height=d.documentElement.scrollHeight+'px';new ResizeObserver(function(){f.style.height=d.documentElement.scrollHeight+'px';}).observe(d.body);}catch(e){f.style.height='80vh';}})(this)"></iframe>
+                            onload="(function(f){try{var d=f.contentDocument||f.contentWindow.document;var meta=d.createElement('meta');meta.name='viewport';meta.content='width=device-width,initial-scale=1,maximum-scale=5';d.head.appendChild(meta);var s=d.createElement('style');s.textContent='html,body{max-width:100%;word-wrap:break-word;overflow-wrap:break-word;-webkit-text-size-adjust:100%;box-sizing:border-box;}*,*::before,*::after{box-sizing:inherit;}img,svg,video,canvas{max-width:100%!important;height:auto!important;}table{border-collapse:collapse;font-size:inherit;}thead,tbody,tfoot{display:table-header-group;}tbody{display:table-row-group;}tfoot{display:table-footer-group;}pre,code{max-width:100%!important;overflow-x:auto;white-space:pre-wrap;word-wrap:break-word;}iframe{max-width:100%!important;}@media(max-width:768px){body{padding:8px!important;font-size:14px;}h1{font-size:1.4rem!important;}h2{font-size:1.2rem!important;}h3{font-size:1.05rem!important;}table{display:block!important;overflow-x:auto!important;-webkit-overflow-scrolling:touch;max-width:100%!important;scrollbar-width:thin;scrollbar-color:#94a3b8 transparent;font-size:0.82rem!important;}table::-webkit-scrollbar{height:5px;}table::-webkit-scrollbar-track{background:#f1f5f9;border-radius:3px;}table::-webkit-scrollbar-thumb{background:#94a3b8;border-radius:3px;}thead,tbody,tfoot{min-width:500px;display:table;width:100%;}td,th{padding:6px 4px!important;white-space:nowrap;}td:first-child,th:first-child{white-space:normal;min-width:80px;}img{height:auto!important;}}@media(max-width:480px){body{padding:4px!important;font-size:13px;}h1{font-size:1.2rem!important;}h2{font-size:1.05rem!important;}table{font-size:0.75rem!important;}td,th{padding:4px 3px!important;}}';d.head.appendChild(s);f.style.height=d.documentElement.scrollHeight+'px';new ResizeObserver(function(){f.style.height=d.documentElement.scrollHeight+'px';}).observe(d.body);var hint=document.querySelector('.west-scroll-hint');if(hint){setTimeout(function(){hint.style.opacity='0';hint.style.transition='opacity 0.5s';},6000);setTimeout(function(){hint.style.display='none';},6500);}}catch(e){f.style.height='80vh';}})(this)"></iframe>
                     </div>
                     <div class="west-result-footer">
                         <div class="west-footer-brand">
