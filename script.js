@@ -14974,6 +14974,14 @@ async function submitFreeEstimation(event) {
         showNotification('Email and project title are required.', 'error');
         return false;
     }
+    if (!description) {
+        showNotification('Scope of estimation is required. Please describe your requirements from the uploaded PDF.', 'error');
+        return false;
+    }
+    if (!region) {
+        showNotification('Please select your region.', 'error');
+        return false;
+    }
     if (_freeEstFiles.length === 0) {
         showNotification('Please upload at least one project file.', 'error');
         return false;

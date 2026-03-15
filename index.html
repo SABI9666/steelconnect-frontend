@@ -1021,8 +1021,8 @@
                                     <input type="text" id="freeEstTitle" placeholder="e.g. Commercial Office Building" required>
                                 </div>
                                 <div class="free-est-field">
-                                    <label><i class="fas fa-file-alt"></i> Project Description</label>
-                                    <textarea id="freeEstDescription" rows="3" placeholder="Brief description of your project (optional)"></textarea>
+                                    <label><i class="fas fa-clipboard-list"></i> Scope of Estimation <span style="color:#ef4444;">*</span></label>
+                                    <textarea id="freeEstDescription" rows="3" placeholder="Describe your exact requirements from the uploaded PDF (e.g., structural steel estimation, connection design, foundation design, bill of quantities)" required></textarea>
                                 </div>
                                 <div class="free-est-row">
                                     <div class="free-est-field">
@@ -1040,16 +1040,54 @@
                                         </select>
                                     </div>
                                     <div class="free-est-field">
-                                        <label><i class="fas fa-map-marker-alt"></i> Region</label>
-                                        <select id="freeEstRegion">
+                                        <label><i class="fas fa-globe"></i> Region <span style="color:#ef4444;">*</span></label>
+                                        <select id="freeEstRegion" required>
                                             <option value="">Select region...</option>
-                                            <option value="India">India</option>
-                                            <option value="USA">United States</option>
-                                            <option value="UAE">UAE / Gulf</option>
-                                            <option value="UK">United Kingdom</option>
-                                            <option value="Southeast Asia">Southeast Asia</option>
-                                            <option value="Africa">Africa</option>
-                                            <option value="Other">Other</option>
+                                            <optgroup label="Asia">
+                                                <option value="India">India</option>
+                                                <option value="China">China</option>
+                                                <option value="Japan">Japan</option>
+                                                <option value="South Korea">South Korea</option>
+                                                <option value="Southeast Asia">Southeast Asia</option>
+                                                <option value="Central Asia">Central Asia</option>
+                                            </optgroup>
+                                            <optgroup label="Middle East">
+                                                <option value="UAE">UAE</option>
+                                                <option value="Saudi Arabia">Saudi Arabia</option>
+                                                <option value="Qatar">Qatar</option>
+                                                <option value="Kuwait">Kuwait</option>
+                                                <option value="Oman">Oman</option>
+                                                <option value="Bahrain">Bahrain</option>
+                                                <option value="Middle East - Other">Middle East - Other</option>
+                                            </optgroup>
+                                            <optgroup label="Europe">
+                                                <option value="UK">United Kingdom</option>
+                                                <option value="Germany">Germany</option>
+                                                <option value="France">France</option>
+                                                <option value="Netherlands">Netherlands</option>
+                                                <option value="Scandinavia">Scandinavia</option>
+                                                <option value="Eastern Europe">Eastern Europe</option>
+                                                <option value="Europe - Other">Europe - Other</option>
+                                            </optgroup>
+                                            <optgroup label="Americas">
+                                                <option value="USA">United States</option>
+                                                <option value="Canada">Canada</option>
+                                                <option value="Mexico">Mexico</option>
+                                                <option value="Brazil">Brazil</option>
+                                                <option value="Latin America - Other">Latin America - Other</option>
+                                            </optgroup>
+                                            <optgroup label="Africa">
+                                                <option value="South Africa">South Africa</option>
+                                                <option value="Nigeria">Nigeria</option>
+                                                <option value="Kenya">Kenya</option>
+                                                <option value="Egypt">Egypt</option>
+                                                <option value="North Africa">North Africa</option>
+                                                <option value="Africa - Other">Africa - Other</option>
+                                            </optgroup>
+                                            <optgroup label="Oceania">
+                                                <option value="Australia">Australia</option>
+                                                <option value="New Zealand">New Zealand</option>
+                                            </optgroup>
                                         </select>
                                     </div>
                                 </div>
