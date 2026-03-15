@@ -14937,7 +14937,20 @@ function selectEstimationPlan(planId, authView) {
 
 let _freeEstFiles = [];
 
+function isDesignerBlockedFromEstimation() {
+    if (appState.currentUser && appState.currentUser.type === 'designer') {
+        showDesignerEstimationWarning();
+        return true;
+    }
+    return false;
+}
+
+function showDesignerEstimationWarning() {
+    showNotification('AI Estimation is only available for Contractor accounts. Please login with a Contractor account to get precise AI estimation results.', 'warning', 10000);
+}
+
 function handleFreeEstFiles(fileList) {
+    if (isDesignerBlockedFromEstimation()) return;
     const maxFiles = 20;
     const maxSize = 50 * 1024 * 1024; // 50MB
     for (let i = 0; i < fileList.length; i++) {
@@ -14983,6 +14996,7 @@ document.addEventListener('DOMContentLoaded', function() {
     ['dragenter', 'dragover'].forEach(evt => dropArea.addEventListener(evt, function(e) { e.preventDefault(); dropArea.classList.add('drag-over'); }));
     ['dragleave', 'drop'].forEach(evt => dropArea.addEventListener(evt, function(e) { e.preventDefault(); dropArea.classList.remove('drag-over'); }));
     dropArea.addEventListener('drop', function(e) {
+        if (isDesignerBlockedFromEstimation()) return;
         if (e.dataTransfer.files.length > 0) handleFreeEstFiles(e.dataTransfer.files);
     });
 });
@@ -14993,6 +15007,9 @@ async function submitFreeEstimation(event) {
 
     // Prevent duplicate submissions
     if (_freeEstSubmitting) return false;
+
+    // Block designer users from submitting estimation
+    if (isDesignerBlockedFromEstimation()) return false;
 
     const email = document.getElementById('freeEstEmail').value.trim();
     const name = document.getElementById('freeEstName').value.trim();
