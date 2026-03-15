@@ -15097,20 +15097,6 @@ async function submitFreeEstimation(event) {
     submitLoading.style.display = 'inline-flex';
 
     try {
-        // Check if this specific email is blocked from free estimation
-        if (email) {
-            const checkResult = await checkFreeEstimationForEmail(email);
-            if (checkResult.success && checkResult.blocked) {
-                if (checkResult.isDesigner) {
-                    applyDesignerBlock();
-                } else {
-                    showNotification('Your free estimation access has been used. Please subscribe for more estimations.', 'warning', 8000);
-                    showEstimationBlockedState();
-                }
-                return false;
-            }
-        }
-
         const formData = new FormData();
         formData.append('email', email);
         formData.append('name', name);
@@ -15132,10 +15118,16 @@ async function submitFreeEstimation(event) {
             return false;
         }
 
+        if (response.status === 403) {
+            const errData = await response.json().catch(() => ({}));
+            applyDesignerBlock();
+            return false;
+        }
+
         const data = await response.json();
 
         if (data.success) {
-            // Show success state
+            // Show success state immediately
             document.getElementById('free-estimation-form').style.display = 'none';
             document.getElementById('freeEstSuccess').style.display = 'block';
             document.getElementById('freeEstSuccessEmail').textContent = email;
