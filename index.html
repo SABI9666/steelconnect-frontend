@@ -1095,7 +1095,7 @@
                                     <label><i class="fas fa-cloud-upload-alt"></i> Upload Project Files <span style="color:#ef4444;">*</span></label>
                                     <div class="free-est-upload-area" id="freeEstUploadArea">
                                         <input type="file" id="freeEstFileInput" accept=".pdf,.dwg,.dxf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.zip" multiple onchange="handleFreeEstFiles(this.files)" style="display:none;">
-                                        <div class="free-est-upload-content" onclick="document.getElementById('freeEstFileInput').click()">
+                                        <div class="free-est-upload-content" onclick="if(isDesignerBlockedFromEstimation()) return; document.getElementById('freeEstFileInput').click()">
                                             <i class="fas fa-cloud-upload-alt" style="font-size:32px;color:#6366f1;margin-bottom:8px;"></i>
                                             <p style="font-weight:600;color:#1e293b;">Drag & drop files here</p>
                                             <p style="font-size:13px;color:#94a3b8;">or click to browse (PDF, DWG, DOC, XLS, JPG, ZIP)</p>
