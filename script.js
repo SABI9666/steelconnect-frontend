@@ -14966,7 +14966,9 @@ async function submitFreeEstimation(event) {
     }
     const name = document.getElementById('freeEstName').value.trim();
     const projectTitle = document.getElementById('freeEstTitle').value.trim();
-    const description = document.getElementById('freeEstDescription').value.trim();
+    const selectedScopes = Array.from(document.querySelectorAll('#freeEstScopeOptions input[name="scope"]:checked')).map(cb => cb.value);
+    const additionalNotes = document.getElementById('freeEstDescription').value.trim();
+    const description = selectedScopes.length > 0 ? selectedScopes.join(', ') + (additionalNotes ? ' | Notes: ' + additionalNotes : '') : additionalNotes;
     const projectType = document.getElementById('freeEstProjectType').value;
     const region = document.getElementById('freeEstRegion').value;
 
@@ -14974,8 +14976,8 @@ async function submitFreeEstimation(event) {
         showNotification('Email and project title are required.', 'error');
         return false;
     }
-    if (!description) {
-        showNotification('Scope of estimation is required. Please describe your requirements from the uploaded PDF.', 'error');
+    if (selectedScopes.length === 0 && !additionalNotes) {
+        showNotification('Please select at least one scope of estimation or add specific requirements.', 'error');
         return false;
     }
     if (!region) {

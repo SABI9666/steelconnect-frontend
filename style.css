@@ -23589,6 +23589,32 @@ body { overflow-x: hidden; }
     box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
     background: #fff;
 }
+.free-est-scope-check {
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    color: #475569 !important;
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 8px;
+    margin-bottom: 0 !important;
+    transition: background 0.15s, color 0.15s;
+}
+.free-est-scope-check:hover { background: rgba(99,102,241,0.06); color: #4338ca !important; }
+.free-est-scope-check input[type="checkbox"] {
+    width: 16px !important;
+    height: 16px;
+    min-width: 16px;
+    accent-color: #6366f1;
+    cursor: pointer;
+    padding: 0 !important;
+    border-radius: 4px !important;
+}
+@media (max-width: 600px) {
+    #freeEstScopeOptions { grid-template-columns: 1fr !important; }
+}
 .free-est-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .free-est-upload-area {
     border: 2px dashed #d1d5db;
