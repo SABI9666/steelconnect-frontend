@@ -9042,13 +9042,13 @@ function renderAIEstimateResult(estimate, projectInfo) {
             <div style="display:grid;gap:8px;">
                 ${confidenceFactors.map(f => {
                     const fColor = f.score >= 70 ? '#10b981' : f.score >= 40 ? '#f59e0b' : '#ef4444';
-                    return `<div style="display:flex;align-items:center;gap:12px;">
-                        <span style="width:140px;font-size:0.85rem;color:#475569;">${f.name}</span>
-                        <div style="flex:1;height:8px;background:#e5e7eb;border-radius:4px;overflow:hidden;">
+                    return `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                        <span style="min-width:90px;max-width:140px;flex-shrink:0;font-size:0.82rem;color:#475569;">${f.name}</span>
+                        <div style="flex:1;min-width:60px;height:8px;background:#e5e7eb;border-radius:4px;overflow:hidden;">
                             <div style="height:100%;width:${f.score}%;background:${fColor};border-radius:4px;transition:width 0.5s;"></div>
                         </div>
-                        <span style="width:40px;text-align:right;font-size:0.85rem;font-weight:700;color:${fColor};">${f.score}%</span>
-                        <span style="width:20px;font-size:0.7rem;color:#94a3b8;">w:${f.weight}</span>
+                        <span style="min-width:32px;text-align:right;font-size:0.82rem;font-weight:700;color:${fColor};">${f.score}%</span>
+                        <span style="font-size:0.68rem;color:#94a3b8;">w:${f.weight}</span>
                     </div>`;
                 }).join('')}
             </div>
@@ -9056,7 +9056,7 @@ function renderAIEstimateResult(estimate, projectInfo) {
 
     // Multi-pass metadata bar
     const multiPassBarHTML = (passesCompleted > 0 || multiPassMeta.engineVersion) ? `
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 16px;font-size:0.78rem;">
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 16px;font-size:0.75rem;">
             ${passesCompleted > 0 ? `<span style="background:#eff6ff;color:#1e40af;padding:4px 12px;border-radius:16px;"><i class="fas fa-layer-group"></i> ${passesCompleted}/5 Passes Completed</span>` : ''}
             ${multiPassMeta.totalDurationSeconds ? `<span style="background:#f0fdf4;color:#166534;padding:4px 12px;border-radius:16px;"><i class="fas fa-clock"></i> ${multiPassMeta.totalDurationSeconds}s analysis</span>` : ''}
             ${multiPassMeta.engineVersion ? `<span style="background:#f8fafc;color:#64748b;padding:4px 12px;border-radius:16px;">${multiPassMeta.engineVersion}</span>` : ''}
@@ -9096,8 +9096,8 @@ function renderAIEstimateResult(estimate, projectInfo) {
                         <i class="fas fa-chevron-down air-trade-chevron"></i>
                     </div>
                 </div>
-                <div class="air-trade-body">
-                    <table class="air-line-table">
+                <div class="air-trade-body" style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+                    <table class="air-line-table" style="min-width:400px;">
                         <thead><tr><th>Description</th><th>Quantity</th><th>Unit Rate</th><th>Total</th></tr></thead>
                         <tbody>${lineItemsHTML}</tbody>
                     </table>
@@ -9137,7 +9137,7 @@ function renderAIEstimateResult(estimate, projectInfo) {
         let totalLabHrs = items.reduce((s, i) => s + (Number(i.laborHours) || 0), 0);
         let totalCost = items.reduce((s, i) => s + (Number(i.totalCost) || 0), 0);
         const hasLabor = totalLabHrs > 0 || totalLabCost > 0;
-        return `<div style="overflow-x:auto;"><table class="air-line-table" style="font-size:0.82rem;width:100%;">
+        return `<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;"><table class="air-line-table" style="font-size:0.82rem;width:100%;min-width:500px;">
             <thead><tr>${columns.map(c => `<th style="${c.align ? 'text-align:'+c.align : ''}">${c.label}</th>`).join('')}<th style="text-align:right;">Material</th>${hasLabor ? '<th style="text-align:right;">Labor Hrs</th><th style="text-align:right;">Labor Cost</th>' : ''}<th style="text-align:right;">Total Cost</th></tr></thead>
             <tbody>${items.map(item => `<tr>${columns.map(c => `<td style="${c.style || ''}">${c.render ? c.render(item) : (item[c.key] || '-')}</td>`).join('')}
                 <td style="text-align:right;">${curr}${fmtNum(item.materialCost || item.unitRate || 0)}</td>
@@ -9156,8 +9156,8 @@ function renderAIEstimateResult(estimate, projectInfo) {
             const steelHasLabor = steelMembers.some(m => m.laborHours > 0 || m.laborCost > 0);
             const steelColSpan = steelHasLabor ? 12 : 9;
             steelTableHTML = `<div style="margin-bottom:16px;">
-                <h4 style="margin-bottom:8px;color:#1e40af;"><i class="fas fa-i-cursor"></i> Structural Steel ${steelSum.totalSteelTons ? `<span style="font-size:0.8rem;font-weight:400;color:#6b7280;"> - ${fmtNum(steelSum.totalSteelTons)} tons</span>` : ''} ${steelCost ? `<span style="font-size:0.8rem;font-weight:600;color:#1e40af;float:right;">${curr}${fmtNum(steelCost)}</span>` : ''}</h4>
-                <div style="overflow-x:auto;"><table class="air-line-table" style="font-size:0.82rem;width:100%;">
+                <h4 style="margin-bottom:8px;color:#1e40af;display:flex;flex-wrap:wrap;align-items:center;gap:4px;justify-content:space-between;"><span><i class="fas fa-i-cursor"></i> Structural Steel ${steelSum.totalSteelTons ? `<span style="font-size:0.8rem;font-weight:400;color:#6b7280;"> - ${fmtNum(steelSum.totalSteelTons)} tons</span>` : ''}</span> ${steelCost ? `<span style="font-size:0.8rem;font-weight:600;color:#1e40af;">${curr}${fmtNum(steelCost)}</span>` : ''}</h4>
+                <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;"><table class="air-line-table" style="font-size:0.82rem;width:100%;min-width:500px;">
                     <thead><tr><th>Mark</th><th>Section</th><th>Grade</th><th>Count</th><th>Length</th><th>Wt/ft</th><th style="text-align:right;">Weight (tons)</th><th style="text-align:right;">Material</th>${steelHasLabor ? '<th style="text-align:right;">Labor Hrs</th><th style="text-align:right;">Labor Cost</th><th style="text-align:right;">Equip</th>' : ''}<th style="text-align:right;">Total Cost</th></tr></thead>
                     <tbody>${steelMembers.map(m => `<tr>
                         <td><strong>${m.mark || '-'}</strong> <span style="color:#94a3b8;font-size:0.75rem;">${m.type || ''}</span></td>
@@ -9188,8 +9188,8 @@ function renderAIEstimateResult(estimate, projectInfo) {
             const concHasLabor = concreteItems.some(c => c.laborHours > 0 || c.laborCost > 0);
             const concColSpan = concHasLabor ? 12 : 9;
             concreteTableHTML = `<div style="margin-bottom:16px;">
-                <h4 style="margin-bottom:8px;color:#166534;"><i class="fas fa-cube"></i> Concrete & Rebar ${concreteSum.totalConcreteCY ? `<span style="font-size:0.8rem;font-weight:400;color:#6b7280;"> - ${fmtNum(concreteSum.totalConcreteCY)} CY</span>` : ''} ${concCost ? `<span style="font-size:0.8rem;font-weight:600;color:#166534;float:right;">${curr}${fmtNum(concCost)}</span>` : ''}</h4>
-                <div style="overflow-x:auto;"><table class="air-line-table" style="font-size:0.82rem;width:100%;">
+                <h4 style="margin-bottom:8px;color:#166534;display:flex;flex-wrap:wrap;align-items:center;gap:4px;justify-content:space-between;"><span><i class="fas fa-cube"></i> Concrete & Rebar ${concreteSum.totalConcreteCY ? `<span style="font-size:0.8rem;font-weight:400;color:#6b7280;"> - ${fmtNum(concreteSum.totalConcreteCY)} CY</span>` : ''}</span> ${concCost ? `<span style="font-size:0.8rem;font-weight:600;color:#166534;">${curr}${fmtNum(concCost)}</span>` : ''}</h4>
+                <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;"><table class="air-line-table" style="font-size:0.82rem;width:100%;min-width:500px;">
                     <thead><tr><th>Element</th><th>Dimensions</th><th>Count</th><th style="text-align:right;">Vol/ea</th><th style="text-align:right;">Total CY</th><th>Grade</th><th style="text-align:right;">Rebar lbs</th><th style="text-align:right;">Material</th>${concHasLabor ? '<th style="text-align:right;">Labor Hrs</th><th style="text-align:right;">Labor Cost</th><th style="text-align:right;">Equip</th>' : ''}<th style="text-align:right;">Total Cost</th></tr></thead>
                     <tbody>${concreteItems.map(c => `<tr>
                         <td><strong>${c.element || '-'}</strong> <span style="color:#94a3b8;font-size:0.75rem;">${c.type || ''}</span></td>
@@ -9218,7 +9218,7 @@ function renderAIEstimateResult(estimate, projectInfo) {
         if (mepItems.length > 0) {
             const mepCost = mepSum.totalMEPCost || mepItems.reduce((s, i) => s + (Number(i.totalCost) || 0), 0);
             mepTableHTML = `<div style="margin-bottom:16px;">
-                <h4 style="margin-bottom:8px;color:#7c3aed;"><i class="fas fa-plug"></i> MEP (Mechanical / Electrical / Plumbing) <span style="font-size:0.8rem;font-weight:600;color:#7c3aed;float:right;">${curr}${fmtNum(mepCost)}</span></h4>
+                <h4 style="margin-bottom:8px;color:#7c3aed;display:flex;flex-wrap:wrap;align-items:center;gap:4px;justify-content:space-between;"><span><i class="fas fa-plug"></i> MEP (Mechanical / Electrical / Plumbing)</span> <span style="font-size:0.8rem;font-weight:600;color:#7c3aed;">${curr}${fmtNum(mepCost)}</span></h4>
                 ${buildMatTable(mepItems, [
                     {label:'Category', key:'category', style:'font-weight:600;color:#7c3aed;'},
                     {label:'Item', key:'item', style:'font-weight:600;'},
@@ -9233,7 +9233,7 @@ function renderAIEstimateResult(estimate, projectInfo) {
         if (archItems.length > 0) {
             const archCost = archSum.totalArchitecturalCost || archItems.reduce((s, i) => s + (Number(i.totalCost) || 0), 0);
             archTableHTML = `<div style="margin-bottom:16px;">
-                <h4 style="margin-bottom:8px;color:#b45309;"><i class="fas fa-paint-roller"></i> Architectural Finishes <span style="font-size:0.8rem;font-weight:600;color:#b45309;float:right;">${curr}${fmtNum(archCost)}</span></h4>
+                <h4 style="margin-bottom:8px;color:#b45309;display:flex;flex-wrap:wrap;align-items:center;gap:4px;justify-content:space-between;"><span><i class="fas fa-paint-roller"></i> Architectural Finishes</span> <span style="font-size:0.8rem;font-weight:600;color:#b45309;">${curr}${fmtNum(archCost)}</span></h4>
                 ${buildMatTable(archItems, [
                     {label:'Category', key:'category', style:'font-weight:600;color:#b45309;'},
                     {label:'Item', key:'item', style:'font-weight:600;'},
@@ -9290,9 +9290,9 @@ function renderAIEstimateResult(estimate, projectInfo) {
         const crewBreakdown = manpower.crewBreakdown || [];
         let manpowerHTML = '';
         if (manpower.totalLaborHours > 0 || crewBreakdown.length > 0) {
-            manpowerHTML = `<div style="margin-top:20px;padding:16px;background:#faf5ff;border:1px solid #e9d5ff;border-radius:10px;">
+            manpowerHTML = `<div style="margin-top:20px;padding:16px;background:#faf5ff;border:1px solid #e9d5ff;border-radius:10px;overflow-x:hidden;">
                 <h4 style="margin-bottom:12px;color:#7c3aed;"><i class="fas fa-hard-hat"></i> Manpower / Labor Summary</h4>
-                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:12px;">
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:12px;">
                     <div style="background:#fff;padding:10px;border-radius:8px;text-align:center;border:1px solid #e9d5ff;">
                         <div style="font-size:0.72rem;color:#6b7280;">Total Labor Hours</div>
                         <div style="font-size:1.1rem;font-weight:700;color:#7c3aed;">${fmtNum(manpower.totalLaborHours || 0)}</div>
@@ -9311,7 +9311,7 @@ function renderAIEstimateResult(estimate, projectInfo) {
                     </div>
                 </div>
                 ${manpower.estimatedProjectDuration ? `<div style="font-size:0.85rem;color:#475569;margin-bottom:10px;"><i class="fas fa-calendar-alt"></i> Est. Duration: <strong>${manpower.estimatedProjectDuration}</strong></div>` : ''}
-                ${crewBreakdown.length > 0 ? `<div style="overflow-x:auto;"><table class="air-line-table" style="font-size:0.82rem;width:100%;">
+                ${crewBreakdown.length > 0 ? `<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;"><table class="air-line-table" style="font-size:0.82rem;width:100%;min-width:500px;">
                     <thead><tr><th>Trade</th><th>Crew</th><th style="text-align:center;">Headcount</th><th style="text-align:center;">Weeks</th><th style="text-align:right;">Labor Hours</th><th style="text-align:right;">Labor Cost</th></tr></thead>
                     <tbody>${crewBreakdown.map(c => `<tr>
                         <td style="font-weight:600;">${c.trade || '-'}</td>
@@ -9337,10 +9337,10 @@ function renderAIEstimateResult(estimate, projectInfo) {
                 {label:'Contingency', pct:markups.contingencyPercent, amt:markups.contingency},
                 {label:'Escalation', pct:markups.escalationPercent, amt:markups.escalation},
             ];
-            markupsHTML = `<div style="margin-top:20px;padding:16px;background:#fefce8;border:1px solid #fde68a;border-radius:10px;">
-                <h4 style="margin-bottom:12px;color:#92400e;"><i class="fas fa-percentage"></i> BOQ Markups & Final Total</h4>
+            markupsHTML = `<div style="margin-top:20px;padding:12px;background:#fefce8;border:1px solid #fde68a;border-radius:10px;overflow-x:hidden;">
+                <h4 style="margin-bottom:12px;color:#92400e;font-size:0.9rem;"><i class="fas fa-percentage"></i> BOQ Markups & Final Total</h4>
                 <div style="display:flex;flex-direction:column;gap:6px;">
-                    <div style="display:flex;justify-content:space-between;padding:8px 12px;background:#fff;border-radius:6px;font-weight:600;">
+                    <div style="display:flex;justify-content:space-between;padding:8px 10px;background:#fff;border-radius:6px;font-weight:600;font-size:0.88rem;gap:8px;flex-wrap:wrap;">
                         <span>Subtotal (Direct Costs)</span><span style="color:#1e40af;">${curr}${fmtNum(markups.subtotalDirectCost || 0)}</span>
                     </div>
                     ${mkItems.filter(m => m.amt > 0 || m.pct > 0).map(m => `<div style="display:flex;justify-content:space-between;padding:6px 12px;font-size:0.88rem;">
@@ -9349,7 +9349,7 @@ function renderAIEstimateResult(estimate, projectInfo) {
                     <div style="display:flex;justify-content:space-between;padding:6px 12px;font-size:0.88rem;border-top:1px solid #fde68a;">
                         <span style="font-weight:600;">Total Markups</span><span style="font-weight:600;">${curr}${fmtNum(markups.totalMarkups || 0)}</span>
                     </div>
-                    <div style="display:flex;justify-content:space-between;padding:10px 12px;background:#92400e;color:#fff;border-radius:6px;font-weight:700;font-size:1.05rem;">
+                    <div style="display:flex;justify-content:space-between;padding:10px 12px;background:#92400e;color:#fff;border-radius:6px;font-weight:700;font-size:0.95rem;gap:8px;flex-wrap:wrap;">
                         <span>Grand Total (with Markups)</span><span>${curr}${fmtNum(markups.grandTotalWithMarkups || 0)}</span>
                     </div>
                 </div>
@@ -15172,7 +15172,7 @@ async function renderWebsiteEstimationResult(estimationId, email) {
                         <iframe id="westResultFrame"
                             srcdoc="${data.htmlContent.replace(/"/g, '&quot;')}"
                             class="west-result-iframe"
-                            onload="(function(f){try{var d=f.contentDocument||f.contentWindow.document;var meta=d.createElement('meta');meta.name='viewport';meta.content='width=device-width,initial-scale=1';d.head.appendChild(meta);var s=d.createElement('style');s.textContent='html,body{overflow-x:hidden;max-width:100vw;word-wrap:break-word;overflow-wrap:break-word;}img,table,pre,iframe{max-width:100%!important;height:auto!important;}';d.head.appendChild(s);f.style.height=d.documentElement.scrollHeight+'px';new ResizeObserver(function(){f.style.height=d.documentElement.scrollHeight+'px';}).observe(d.body);}catch(e){f.style.height='80vh';}})(this)"></iframe>
+                            onload="(function(f){try{var d=f.contentDocument||f.contentWindow.document;var meta=d.createElement('meta');meta.name='viewport';meta.content='width=device-width,initial-scale=1,maximum-scale=5';d.head.appendChild(meta);var s=d.createElement('style');s.textContent='html,body{overflow-x:hidden;max-width:100vw;word-wrap:break-word;overflow-wrap:break-word;-webkit-text-size-adjust:100%;box-sizing:border-box;}*,*::before,*::after{box-sizing:inherit;}img,svg,video,canvas{max-width:100%!important;height:auto!important;}table{max-width:100%!important;display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;font-size:inherit;}pre,code{max-width:100%!important;overflow-x:auto;white-space:pre-wrap;word-wrap:break-word;}iframe{max-width:100%!important;}@media(max-width:768px){body{padding:8px!important;font-size:14px;}h1{font-size:1.4rem!important;}h2{font-size:1.2rem!important;}h3{font-size:1.05rem!important;}table{font-size:0.82rem!important;}td,th{padding:6px 4px!important;}img{height:auto!important;}}@media(max-width:480px){body{padding:4px!important;font-size:13px;}h1{font-size:1.2rem!important;}h2{font-size:1.05rem!important;}table{font-size:0.75rem!important;}td,th{padding:4px 3px!important;}}';d.head.appendChild(s);f.style.height=d.documentElement.scrollHeight+'px';new ResizeObserver(function(){f.style.height=d.documentElement.scrollHeight+'px';}).observe(d.body);}catch(e){f.style.height='80vh';}})(this)"></iframe>
                     </div>
                     <div class="west-result-footer">
                         <div class="west-footer-brand">
