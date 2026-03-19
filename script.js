@@ -1401,6 +1401,11 @@ function completeLogin(data) {
     localStorage.setItem('currentUser', JSON.stringify(data.user));
     localStorage.setItem('jwtToken', data.token);
     closeModal();
+    // Clear the 20s auth gateway timer so it never fires after login
+    if (window._authGatewayTimer) {
+        clearTimeout(window._authGatewayTimer);
+        window._authGatewayTimer = null;
+    }
     // Hide auth gateway if still visible
     const gatewayOverlay = document.getElementById('auth-gateway-overlay');
     if (gatewayOverlay) gatewayOverlay.style.display = 'none';
@@ -7324,6 +7329,8 @@ function showAuthGateway() {
         clearTimeout(window._authGatewayTimer);
         window._authGatewayTimer = null;
     }
+    // Never show auth gateway if user is already logged in
+    if (appState.jwtToken && appState.currentUser) return;
     // Never interrupt users in the free estimation section
     const estimationSection = document.getElementById('ai-estimation');
     if (estimationSection) {
