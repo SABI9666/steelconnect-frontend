@@ -2776,7 +2776,8 @@ function renderEstimatesGrid(filteredEstimates = null) {
         const createdDate = formatEstimationDate(est.createdAt);
         const hasFiles = est.uploadedFiles && est.uploadedFiles.length > 0;
         const isCompleted = est.status === 'completed';
-        const hasManualResult = est.resultFile;
+        const hasManualResult = est.resultFile || (est.resultFiles && est.resultFiles.length > 0);
+        const resultFileCount = est.resultFiles ? est.resultFiles.length : (est.resultFile ? 1 : 0);
         const hasAIReport = est.aiEstimate || est.hasAIEstimate;
         const progress = getEstimationProgress(est.status);
         const canEdit = est.status === 'pending';
@@ -2796,10 +2797,21 @@ function renderEstimatesGrid(filteredEstimates = null) {
                 <div class="estimation-progress-bar"><div class="progress-bar-fill ${est.status}" style="width: ${progress}%"></div></div>
                 <div class="estimation-description"><p>${est.description.length > 150 ? est.description.substring(0, 150) + '...' : est.description}</p></div>
                 ${est.estimatedAmount ? `<div class="estimation-amount-section"><span class="amount-label">Estimated Cost</span><span class="amount-value">$${Number(est.estimatedAmount).toLocaleString()}</span></div>` : ''}
+                ${isCompleted && hasManualResult ? `
+                <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:10px 14px;margin:8px 0;">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                        <i class="fas fa-check-circle" style="color:#16a34a;font-size:16px;"></i>
+                        <span style="font-weight:700;color:#166534;font-size:0.88rem;">Estimation Result Ready</span>
+                        <span style="margin-left:auto;font-size:0.78rem;color:#16a34a;font-weight:600;">${resultFileCount} file${resultFileCount !== 1 ? 's' : ''}</span>
+                    </div>
+                    <div style="display:flex;gap:8px;">
+                        <button class="btn btn-success btn-sm" onclick="viewEstimationResult('${est._id}')"><i class="fas fa-eye"></i> View Result${resultFileCount > 1 ? 's' : ''}</button>
+                        <button class="btn btn-outline btn-sm" onclick="downloadEstimationResult('${est._id}')"><i class="fas fa-download"></i> Download${resultFileCount > 1 ? ' All' : ''}</button>
+                    </div>
+                </div>` : ''}
                 <div class="estimation-actions">
                     ${hasFiles ? `<button class="btn btn-outline btn-sm" onclick="viewEstimationFiles('${est._id}')"><i class="fas fa-folder-open"></i> View Files</button>` : ''}
                     ${hasAIReport ? `<button class="btn btn-success btn-sm" onclick="viewMyAIReport('${est._id}')"><i class="fas fa-robot"></i> View AI Report</button>` : ''}
-                    ${isCompleted && hasManualResult ? `<button class="btn btn-success btn-sm" onclick="viewEstimationResult('${est._id}')"><i class="fas fa-eye"></i> View Result</button><button class="btn btn-outline btn-sm" onclick="downloadEstimationResult('${est._id}')"><i class="fas fa-download"></i> Download Result</button>` : ''}
                     <button class="btn btn-outline btn-sm" onclick="viewEstimationDetails('${est._id}')"><i class="fas fa-eye"></i> Details</button>
                     ${canEdit ? `<button class="btn btn-outline btn-sm" onclick="editEstimation('${est._id}')"><i class="fas fa-edit"></i> Edit</button>` : ''}
                     <button class="btn btn-danger btn-sm" onclick="deleteEstimation('${est._id}')"><i class="fas fa-trash"></i> Delete</button>
@@ -2888,19 +2900,50 @@ function viewEstimationDetails(estimationId) {
     const statusConfig = getEstimationStatusConfig(estimation.status);
     const hasAIReport = estimation.aiEstimate || estimation.hasAIEstimate;
     const fileCount = estimation.fileCount || (estimation.uploadedFiles ? estimation.uploadedFiles.length : 0);
+    const isCompleted = estimation.status === 'completed';
+    const hasManualResult = estimation.resultFile || (estimation.resultFiles && estimation.resultFiles.length > 0);
+    const resultFileCount = estimation.resultFiles ? estimation.resultFiles.length : (estimation.resultFile ? 1 : 0);
+
+    // Build result files preview from local data (names/sizes)
+    var resultFilesHTML = '';
+    if (hasManualResult) {
+        var rFiles = estimation.resultFiles || (estimation.resultFile ? [estimation.resultFile] : []);
+        resultFilesHTML = '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 14px;margin:12px 0;">' +
+            '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><i class="fas fa-check-circle" style="color:#16a34a;font-size:16px;"></i><span style="font-weight:700;color:#166534;font-size:0.9rem;">Estimation Result Files (' + resultFileCount + ')</span></div>';
+        rFiles.forEach(function(rf) {
+            var fname = rf.originalname || rf.name || 'Result file';
+            if (fname.includes('/')) fname = fname.split('/').pop();
+            var fsize = rf.size ? (rf.size / (1024*1024)).toFixed(1) + ' MB' : '';
+            var icon = /\.pdf$/i.test(fname) ? 'fa-file-pdf' : /\.xlsx?$/i.test(fname) ? 'fa-file-excel' : /\.docx?$/i.test(fname) ? 'fa-file-word' : 'fa-file';
+            var color = /\.pdf$/i.test(fname) ? '#dc2626' : /\.xlsx?$/i.test(fname) ? '#16a34a' : /\.docx?$/i.test(fname) ? '#2563eb' : '#6366f1';
+            resultFilesHTML += '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;"><i class="fas ' + icon + '" style="color:' + color + ';font-size:15px;"></i><span style="font-weight:600;font-size:0.88rem;">' + fname + '</span><small style="color:#94a3b8;margin-left:auto;">' + fsize + '</small></div>';
+        });
+        resultFilesHTML += '<div style="display:flex;gap:8px;margin-top:8px;">' +
+            '<button class="btn btn-success btn-sm" onclick="closeModal(); viewEstimationResult(\'' + estimation._id + '\')"><i class="fas fa-eye"></i> View Result' + (resultFileCount > 1 ? 's' : '') + '</button>' +
+            '<button class="btn btn-outline btn-sm" onclick="closeModal(); downloadEstimationResult(\'' + estimation._id + '\')"><i class="fas fa-download"></i> Download' + (resultFileCount > 1 ? ' All' : '') + '</button>' +
+            '</div></div>';
+    }
+
     const content = `
         <div class="modal-header estimation-modal-header"><h3>${estimation.projectTitle}</h3><p class="modal-subtitle">Estimation Request Details</p></div>
-        <div class="estimation-details-content">
-            ${estimation.projectType ? `<p><strong>Project Type:</strong> <span style="color:#6d28d9;font-weight:600;">${estimation.projectType}</span></p>` : ''}
-            ${estimation.region ? `<p><strong>Location:</strong> <span style="color:#4338ca;font-weight:600;"><i class="fas fa-map-marker-alt" style="font-size:12px;"></i> ${estimation.region}</span></p>` : ''}
-            <p><strong>Status:</strong> <span class="status-${estimation.status}">${statusConfig.label}</span></p>
-            <p><strong>Description:</strong> ${estimation.description}</p>
-            ${estimation.estimatedAmount ? `<p><strong>Estimated Cost:</strong> $${Number(estimation.estimatedAmount).toLocaleString()}</p>` : ''}
-            <p><strong>Files Uploaded:</strong> ${fileCount} file${fileCount !== 1 ? 's' : ''}</p>
-            <p><strong>AI Report:</strong> ${hasAIReport ? '<span style="color:#16a34a"><i class="fas fa-check-circle"></i> Available</span>' : '<span style="color:#9ca3af"><i class="fas fa-clock"></i> Pending</span>'}</p>
-            ${estimation.createdAt ? `<p><strong>Submitted:</strong> ${formatEstimationDate(estimation.createdAt)}</p>` : ''}
-            ${estimation.completedAt ? `<p><strong>Completed:</strong> ${formatEstimationDate(estimation.completedAt)}</p>` : ''}
-            <div class="modal-actions">
+        <div class="estimation-details-content" style="padding:16px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+                <div>
+                    ${estimation.projectType ? `<div style="margin-bottom:8px;"><div style="font-size:0.75rem;color:#94a3b8;font-weight:600;">Project Type</div><span style="color:#6d28d9;font-weight:600;">${estimation.projectType}</span></div>` : ''}
+                    ${estimation.region ? `<div style="margin-bottom:8px;"><div style="font-size:0.75rem;color:#94a3b8;font-weight:600;">Location</div><span style="color:#4338ca;font-weight:600;"><i class="fas fa-map-marker-alt" style="font-size:11px;"></i> ${estimation.region}</span></div>` : ''}
+                    <div style="margin-bottom:8px;"><div style="font-size:0.75rem;color:#94a3b8;font-weight:600;">Status</div><span class="estimation-status-badge ${estimation.status}" style="font-size:12px;padding:2px 10px;"><i class="fas ${statusConfig.icon}" style="font-size:10px;"></i> ${statusConfig.label}</span></div>
+                </div>
+                <div>
+                    ${estimation.estimatedAmount ? `<div style="margin-bottom:8px;"><div style="font-size:0.75rem;color:#94a3b8;font-weight:600;">Estimated Cost</div><span style="font-size:1.1rem;font-weight:700;color:#16a34a;">$${Number(estimation.estimatedAmount).toLocaleString()}</span></div>` : ''}
+                    <div style="margin-bottom:8px;"><div style="font-size:0.75rem;color:#94a3b8;font-weight:600;">Files Uploaded</div><span style="font-weight:600;">${fileCount} file${fileCount !== 1 ? 's' : ''}</span></div>
+                    ${estimation.createdAt ? `<div style="margin-bottom:8px;"><div style="font-size:0.75rem;color:#94a3b8;font-weight:600;">Submitted</div><span>${formatEstimationDate(estimation.createdAt)}</span></div>` : ''}
+                    ${estimation.completedAt ? `<div style="margin-bottom:8px;"><div style="font-size:0.75rem;color:#94a3b8;font-weight:600;">Completed</div><span>${formatEstimationDate(estimation.completedAt)}</span></div>` : ''}
+                </div>
+            </div>
+            <div style="margin-bottom:12px;"><div style="font-size:0.75rem;color:#94a3b8;font-weight:600;margin-bottom:4px;">Scope of Work</div><div style="font-size:0.9rem;color:#334155;line-height:1.5;background:#f8fafc;padding:10px 12px;border-radius:8px;border:1px solid #e2e8f0;">${estimation.description}</div></div>
+            <div style="margin-bottom:8px;"><div style="font-size:0.75rem;color:#94a3b8;font-weight:600;">AI Report</div>${hasAIReport ? '<span style="color:#16a34a;font-weight:600;"><i class="fas fa-check-circle"></i> Available</span>' : '<span style="color:#9ca3af"><i class="fas fa-clock"></i> Pending</span>'}</div>
+            ${resultFilesHTML}
+            <div class="modal-actions" style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;padding-top:12px;border-top:1px solid #e2e8f0;">
                 ${hasAIReport ? `<button class="btn btn-success" onclick="closeModal(); viewMyAIReport('${estimation._id}')"><i class="fas fa-robot"></i> View AI Report</button>` : ''}
                 ${fileCount > 0 ? `<button class="btn btn-outline" onclick="closeModal(); viewEstimationFiles('${estimation._id}')"><i class="fas fa-folder-open"></i> View Files</button>` : ''}
                 <button class="btn btn-secondary" onclick="closeModal()">Close</button>
@@ -3122,27 +3165,36 @@ async function viewEstimationResult(estimationId) {
         );
 
         const resultFiles = response.resultFiles || [];
-        if (resultFiles.length > 1) {
-            // Multiple files - show a modal with links
+        if (resultFiles.length >= 1) {
+            // Show modal with all result files (single or multiple)
             const fileListHTML = resultFiles.map((rf, i) => {
                 let url = rf.downloadUrl;
                 if (url && !url.startsWith('http')) url = `${BACKEND_URL}${url.startsWith('/') ? '' : '/'}${url}`;
-                const icon = rf.mimetype && rf.mimetype.includes('pdf') ? 'fa-file-pdf' : rf.mimetype && rf.mimetype.includes('sheet') ? 'fa-file-excel' : 'fa-file';
-                const color = rf.mimetype && rf.mimetype.includes('pdf') ? '#dc2626' : rf.mimetype && rf.mimetype.includes('sheet') ? '#16a34a' : '#6366f1';
-                return `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#f8fafc;border-radius:8px;margin-bottom:6px;border:1px solid #e2e8f0;">
-                    <i class="fas ${icon}" style="color:${color};font-size:20px;"></i>
-                    <div style="flex:1;">
-                        <div style="font-weight:600;font-size:0.9rem;">${rf.filename}</div>
+                const fname = rf.filename || rf.name || 'Result file';
+                const icon = rf.mimetype && rf.mimetype.includes('pdf') ? 'fa-file-pdf' : rf.mimetype && (rf.mimetype.includes('sheet') || rf.mimetype.includes('excel')) ? 'fa-file-excel' : rf.mimetype && rf.mimetype.includes('word') ? 'fa-file-word' : 'fa-file';
+                const color = rf.mimetype && rf.mimetype.includes('pdf') ? '#dc2626' : rf.mimetype && (rf.mimetype.includes('sheet') || rf.mimetype.includes('excel')) ? '#16a34a' : rf.mimetype && rf.mimetype.includes('word') ? '#2563eb' : '#6366f1';
+                const safeUrl = url ? url.replace(/'/g, "\\'") : '';
+                const safeName = fname.replace(/'/g, "\\'");
+                return `<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:#f8fafc;border-radius:10px;margin-bottom:6px;border:1px solid #e2e8f0;">
+                    <i class="fas ${icon}" style="color:${color};font-size:22px;"></i>
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-weight:700;font-size:0.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${fname}</div>
                         <small style="color:#94a3b8;">${rf.fileSizeMB ? rf.fileSizeMB + ' MB' : ''}</small>
                     </div>
-                    <a href="${url}" target="_blank" class="btn btn-sm btn-outline" style="text-decoration:none;"><i class="fas fa-eye"></i> View</a>
-                    <button class="btn btn-sm btn-success" onclick="downloadFileDirect('${url}', '${rf.filename}')"><i class="fas fa-download"></i></button>
+                    <a href="${url}" target="_blank" class="btn btn-sm btn-outline" style="text-decoration:none;white-space:nowrap;"><i class="fas fa-eye"></i> View</a>
+                    <button class="btn btn-sm btn-success" onclick="downloadFileDirect('${safeUrl}', '${safeName}')" style="white-space:nowrap;"><i class="fas fa-download"></i> Save</button>
                 </div>`;
             }).join('');
             showGenericModal(`
-                <div class="modal-header"><h3><i class="fas fa-file-alt"></i> Estimation Result Files</h3></div>
-                <div style="padding:16px;">${fileListHTML}</div>
-                <div style="padding:0 16px 16px;text-align:right;"><button class="btn btn-secondary" onclick="closeModal()">Close</button></div>
+                <div class="modal-header" style="padding:16px 20px;border-bottom:1px solid #e2e8f0;">
+                    <h3 style="margin:0;"><i class="fas fa-check-circle" style="color:#16a34a;"></i> Estimation Result Files</h3>
+                    <p style="margin:4px 0 0;color:#64748b;font-size:0.85rem;">${resultFiles.length} file${resultFiles.length !== 1 ? 's' : ''} available</p>
+                </div>
+                <div style="padding:16px 20px;">${fileListHTML}</div>
+                <div style="padding:0 20px 16px;display:flex;gap:8px;justify-content:flex-end;">
+                    ${resultFiles.length > 1 ? `<button class="btn btn-outline btn-sm" onclick="closeModal(); downloadEstimationResult('${estimationId}')"><i class="fas fa-download"></i> Download All</button>` : ''}
+                    <button class="btn btn-secondary btn-sm" onclick="closeModal()">Close</button>
+                </div>
             `, 'max-width:600px;');
         } else if (response.downloadUrl) {
             let downloadUrl = response.downloadUrl;
@@ -10253,7 +10305,8 @@ async function loadAndRenderRecentEstimations() {
             const createdDate = formatEstimationDate(est.createdAt);
             const hasFiles = est.uploadedFiles && est.uploadedFiles.length > 0;
             const hasAIReport = est.aiEstimate || est.hasAIEstimate;
-            const hasManualResult = est.resultFile;
+            const hasManualResult = est.resultFile || (est.resultFiles && est.resultFiles.length > 0);
+            const resultFileCount = est.resultFiles ? est.resultFiles.length : (est.resultFile ? 1 : 0);
             const isCompleted = est.status === 'completed';
             const progress = getEstimationProgress(est.status);
             return `
@@ -10261,6 +10314,10 @@ async function loadAndRenderRecentEstimations() {
                     <div class="estimation-card-header">
                         <div class="estimation-title-section">
                             <h3 class="estimation-title">${est.projectTitle}</h3>
+                            <div style="display:flex;flex-wrap:wrap;gap:6px;margin:4px 0;">
+                                ${est.projectType ? `<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:10px;background:#f5f3ff;color:#6d28d9;font-size:11px;font-weight:600;"><i class="fas fa-building" style="font-size:9px;"></i> ${est.projectType}</span>` : ''}
+                                ${est.region ? `<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:10px;background:#eef2ff;color:#4338ca;font-size:11px;font-weight:600;"><i class="fas fa-map-marker-alt" style="font-size:9px;"></i> ${est.region}</span>` : ''}
+                            </div>
                             <p class="estimation-meta">Submitted: ${createdDate}</p>
                         </div>
                         <span class="estimation-status-badge ${est.status}"><i class="fas ${statusConfig.icon}"></i> ${statusConfig.label}</span>
@@ -10268,10 +10325,21 @@ async function loadAndRenderRecentEstimations() {
                     <div class="estimation-progress-bar"><div class="progress-bar-fill ${est.status}" style="width: ${progress}%"></div></div>
                     ${est.description ? `<div class="estimation-description"><p>${est.description.length > 120 ? est.description.substring(0, 120) + '...' : est.description}</p></div>` : ''}
                     ${est.estimatedAmount ? `<div class="estimation-amount-section"><span class="amount-label">Estimated Cost</span><span class="amount-value">$${Number(est.estimatedAmount).toLocaleString()}</span></div>` : ''}
+                    ${isCompleted && hasManualResult ? `
+                    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:10px 14px;margin:8px 0;">
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                            <i class="fas fa-check-circle" style="color:#16a34a;font-size:16px;"></i>
+                            <span style="font-weight:700;color:#166534;font-size:0.88rem;">Estimation Result Ready</span>
+                            <span style="margin-left:auto;font-size:0.78rem;color:#16a34a;font-weight:600;">${resultFileCount} file${resultFileCount !== 1 ? 's' : ''}</span>
+                        </div>
+                        <div style="display:flex;gap:8px;">
+                            <button class="btn btn-success btn-sm" onclick="viewEstimationResult('${est._id}')"><i class="fas fa-eye"></i> View Result${resultFileCount > 1 ? 's' : ''}</button>
+                            <button class="btn btn-outline btn-sm" onclick="downloadEstimationResult('${est._id}')"><i class="fas fa-download"></i> Download${resultFileCount > 1 ? ' All' : ''}</button>
+                        </div>
+                    </div>` : ''}
                     <div class="estimation-actions">
                         ${hasFiles ? `<button class="btn btn-outline btn-sm" onclick="viewEstimationFiles('${est._id}')"><i class="fas fa-folder-open"></i> View Files</button>` : ''}
                         ${hasAIReport ? `<button class="btn btn-success btn-sm" onclick="viewMyAIReport('${est._id}')"><i class="fas fa-robot"></i> View AI Report</button>` : ''}
-                        ${isCompleted && hasManualResult ? `<button class="btn btn-success btn-sm" onclick="viewEstimationResult('${est._id}')"><i class="fas fa-eye"></i> View Result</button><button class="btn btn-outline btn-sm" onclick="downloadEstimationResult('${est._id}')"><i class="fas fa-download"></i> Download Result</button>` : ''}
                         <button class="btn btn-outline btn-sm" onclick="viewEstimationDetails('${est._id}')"><i class="fas fa-eye"></i> Details</button>
                     </div>
                 </div>`;
