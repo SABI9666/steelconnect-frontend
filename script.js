@@ -8575,12 +8575,31 @@ async function handleEstimationSubmit() {
         renderAppSection('my-estimations');
     } catch (error) {
         console.error('[EST-SUBMIT] Error:', error);
-        showNotification('Upload failed: ' + (error.message || 'Please check your connection and try again.'), 'error');
+        const isRateLimit = error.message && error.message.toLowerCase().includes('rate limit');
+        if (isRateLimit) {
+            showNotification('Too many requests. Please wait 60 seconds and try again.', 'warning');
+            // Auto-retry countdown
+            let countdown = 60;
+            submitBtn.disabled = true;
+            const countdownInterval = setInterval(() => {
+                countdown--;
+                submitBtn.innerHTML = '<i class="fas fa-clock"></i> Please wait ' + countdown + 's...';
+                if (countdown <= 0) {
+                    clearInterval(countdownInterval);
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Estimation Request';
+                }
+            }, 1000);
+        } else {
+            showNotification('Upload failed: ' + (error.message || 'Please check your connection and try again.'), 'error');
+        }
         addLocalNotification('Error', 'Failed to submit estimation: ' + (error.message || 'Unknown error'), 'error');
         updateEstimationStep(2);
     } finally {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Estimation Request';
+        if (!submitBtn.innerHTML.includes('wait')) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Estimation Request';
+        }
     }
 }
 
