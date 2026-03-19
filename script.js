@@ -8539,11 +8539,14 @@ async function handleEstimationSubmit() {
     }
     const projectTitle = form.projectTitle.value.trim();
     const description = form.description.value.trim();
-    const designStandard = form.designStandard ? form.designStandard.value : '';
     const projectType = form.projectType ? form.projectType.value : '';
-    const region = form.region ? form.region.value.trim() : '';
+    const region = form.region ? form.region.value : '';
     if (!projectTitle || !description) {
-        showNotification('Please fill in Project Title and Description', 'warning');
+        showNotification('Please fill in Project Title and Scope of Estimation', 'warning');
+        return;
+    }
+    if (!region) {
+        showNotification('Please select a Project Location', 'warning');
         return;
     }
     if (submitBtn.disabled) return;
@@ -8554,7 +8557,6 @@ async function handleEstimationSubmit() {
         const formData = new FormData();
         formData.append('projectTitle', projectTitle);
         formData.append('description', description);
-        formData.append('designStandard', designStandard);
         formData.append('projectType', projectType);
         formData.append('region', region);
         formData.append('contractorName', appState.currentUser.name || '');
@@ -8606,15 +8608,14 @@ async function handleAIEstimate() {
     }
     const projectTitle = form.projectTitle.value.trim();
     const description = form.description.value.trim();
-    const designStandard = form.designStandard ? form.designStandard.value : '';
     const projectType = form.projectType ? form.projectType.value : '';
-    const region = form.region ? form.region.value.trim() : '';
+    const region = form.region ? form.region.value : '';
     if (!projectTitle || !description) {
-        showNotification('Please fill in Project Title and Description', 'warning');
+        showNotification('Please fill in Project Title and Scope of Estimation', 'warning');
         return;
     }
-    if (!designStandard) {
-        showNotification('Please select a Design Standard', 'warning');
+    if (!region) {
+        showNotification('Please select a Project Location', 'warning');
         return;
     }
     const fileNames = filesArray.map(f => f.name);
@@ -8624,14 +8625,13 @@ async function handleAIEstimate() {
         const resp = await apiCall('/estimation/ai/questions', 'POST', {
             projectTitle,
             description,
-            designStandard,
             projectType,
             region,
             fileCount: appState.uploadedFile.length,
             fileNames
         });
         if (resp.success && resp.data) {
-            renderAIQuestionnaire(resp.data, { projectTitle, description, designStandard, projectType, region, fileNames });
+            renderAIQuestionnaire(resp.data, { projectTitle, description, projectType, region, fileNames });
         } else {
             showNotification('Failed to generate questionnaire. Please try again.', 'error');
         }
@@ -8838,7 +8838,6 @@ async function submitAIQuestionnaire() {
         const formData = new FormData();
         formData.append('projectTitle', projectInfo.projectTitle || '');
         formData.append('description', projectInfo.description || '');
-        formData.append('designStandard', projectInfo.designStandard || '');
         formData.append('projectType', projectInfo.projectType || '');
         formData.append('region', projectInfo.region || '');
         formData.append('totalArea', answers.totalArea || projectInfo.totalArea || '');
@@ -9958,52 +9957,98 @@ function getEstimationToolTemplate() {
                             <small class="est-field-hint">Give your project a clear, descriptive name</small>
                         </div>
                         <div class="form-group">
-                            <label class="form-label est-label">Project Description <span class="est-req-star">*</span></label>
-                            <textarea class="form-textarea premium-textarea" name="description" required rows="5" placeholder="Describe the scope, materials, dimensions, and any special requirements for your project..."></textarea>
-                            <small class="est-field-hint">The more detail you provide, the more accurate your estimate will be</small>
+                            <label class="form-label est-label">Scope of Estimation <span class="est-req-star">*</span></label>
+                            <textarea class="form-textarea premium-textarea" name="description" required rows="5" placeholder="Specify what you need from the drawings, e.g.:&#10;- Steel Structure BOQ (Bill of Quantities)&#10;- Rebar / Reinforcement BOQ&#10;- Concrete BOQ for foundations &amp; slabs&#10;- Cost estimation for structural steel&#10;- Material takeoff from GA drawings&#10;- Fabrication drawing estimation&#10;- Any special requirements or notes..."></textarea>
+                            <small class="est-field-hint">Clearly describe what deliverables you require — BOQ, cost estimation, material takeoff, etc.</small>
                         </div>
                         <div class="est-form-row">
                             <div class="form-group">
-                                <label class="form-label est-label">Design Standard <span class="est-req-star">*</span></label>
-                                <select class="form-input premium-input est-select" name="designStandard" required>
-                                    <option value="">-- Select Design Standard --</option>
-                                    <optgroup label="North America">
-                                        <option value="AISC 360">AISC 360 - Steel Construction (USA)</option>
-                                        <option value="AISC 341">AISC 341 - Seismic Steel (USA)</option>
-                                        <option value="ACI 318">ACI 318 - Concrete Design (USA)</option>
-                                        <option value="ASCE 7">ASCE 7 - Loads & Structural (USA)</option>
-                                        <option value="CSA S16">CSA S16 - Steel Structures (Canada)</option>
-                                        <option value="CSA A23.3">CSA A23.3 - Concrete (Canada)</option>
-                                        <option value="IBC">IBC - International Building Code</option>
+                                <label class="form-label est-label">Project Location <span class="est-req-star">*</span></label>
+                                <select class="form-input premium-input est-select" name="region" required>
+                                    <option value="">-- Select Location --</option>
+                                    <optgroup label="Asia">
+                                        <option value="India">India</option>
+                                        <option value="China">China</option>
+                                        <option value="Japan">Japan</option>
+                                        <option value="South Korea">South Korea</option>
+                                        <option value="Singapore">Singapore</option>
+                                        <option value="Malaysia">Malaysia</option>
+                                        <option value="Thailand">Thailand</option>
+                                        <option value="Vietnam">Vietnam</option>
+                                        <option value="Philippines">Philippines</option>
+                                        <option value="Indonesia">Indonesia</option>
+                                        <option value="Bangladesh">Bangladesh</option>
+                                        <option value="Sri Lanka">Sri Lanka</option>
+                                        <option value="Pakistan">Pakistan</option>
+                                        <option value="Southeast Asia - Other">Southeast Asia - Other</option>
+                                        <option value="Central Asia">Central Asia</option>
+                                    </optgroup>
+                                    <optgroup label="Middle East">
+                                        <option value="UAE">UAE</option>
+                                        <option value="Saudi Arabia">Saudi Arabia</option>
+                                        <option value="Qatar">Qatar</option>
+                                        <option value="Kuwait">Kuwait</option>
+                                        <option value="Oman">Oman</option>
+                                        <option value="Bahrain">Bahrain</option>
+                                        <option value="Iraq">Iraq</option>
+                                        <option value="Jordan">Jordan</option>
+                                        <option value="Lebanon">Lebanon</option>
+                                        <option value="Middle East - Other">Middle East - Other</option>
                                     </optgroup>
                                     <optgroup label="Europe">
-                                        <option value="Eurocode 3">Eurocode 3 (EN 1993) - Steel</option>
-                                        <option value="Eurocode 2">Eurocode 2 (EN 1992) - Concrete</option>
-                                        <option value="Eurocode 1">Eurocode 1 (EN 1991) - Actions/Loads</option>
-                                        <option value="Eurocode 8">Eurocode 8 (EN 1998) - Seismic</option>
-                                        <option value="BS 5950">BS 5950 - British Steel (Legacy)</option>
+                                        <option value="United Kingdom">United Kingdom</option>
+                                        <option value="Germany">Germany</option>
+                                        <option value="France">France</option>
+                                        <option value="Netherlands">Netherlands</option>
+                                        <option value="Italy">Italy</option>
+                                        <option value="Spain">Spain</option>
+                                        <option value="Poland">Poland</option>
+                                        <option value="Sweden">Sweden</option>
+                                        <option value="Norway">Norway</option>
+                                        <option value="Denmark">Denmark</option>
+                                        <option value="Finland">Finland</option>
+                                        <option value="Belgium">Belgium</option>
+                                        <option value="Switzerland">Switzerland</option>
+                                        <option value="Austria">Austria</option>
+                                        <option value="Ireland">Ireland</option>
+                                        <option value="Czech Republic">Czech Republic</option>
+                                        <option value="Romania">Romania</option>
+                                        <option value="Turkey">Turkey</option>
+                                        <option value="Russia">Russia</option>
+                                        <option value="Eastern Europe - Other">Eastern Europe - Other</option>
+                                        <option value="Europe - Other">Europe - Other</option>
                                     </optgroup>
-                                    <optgroup label="India & Asia">
-                                        <option value="IS 800">IS 800 - Steel Structures (India)</option>
-                                        <option value="IS 456">IS 456 - Concrete Design (India)</option>
-                                        <option value="IS 1893">IS 1893 - Seismic Design (India)</option>
-                                        <option value="JIS">JIS - Japanese Industrial Standard</option>
-                                        <option value="GB 50017">GB 50017 - Steel Structures (China)</option>
-                                        <option value="KBC">KBC - Korean Building Code</option>
+                                    <optgroup label="Americas">
+                                        <option value="United States">United States</option>
+                                        <option value="Canada">Canada</option>
+                                        <option value="Mexico">Mexico</option>
+                                        <option value="Brazil">Brazil</option>
+                                        <option value="Argentina">Argentina</option>
+                                        <option value="Chile">Chile</option>
+                                        <option value="Colombia">Colombia</option>
+                                        <option value="Peru">Peru</option>
+                                        <option value="Latin America - Other">Latin America - Other</option>
                                     </optgroup>
-                                    <optgroup label="Oceania & Middle East">
-                                        <option value="AS 4100">AS 4100 - Steel Structures (Australia)</option>
-                                        <option value="NZS 3404">NZS 3404 - Steel Structures (NZ)</option>
-                                        <option value="SBC">SBC - Saudi Building Code</option>
-                                        <option value="UAE Fire Code">UAE Fire & Life Safety Code</option>
+                                    <optgroup label="Africa">
+                                        <option value="South Africa">South Africa</option>
+                                        <option value="Nigeria">Nigeria</option>
+                                        <option value="Kenya">Kenya</option>
+                                        <option value="Egypt">Egypt</option>
+                                        <option value="Ghana">Ghana</option>
+                                        <option value="Tanzania">Tanzania</option>
+                                        <option value="Ethiopia">Ethiopia</option>
+                                        <option value="Morocco">Morocco</option>
+                                        <option value="Algeria">Algeria</option>
+                                        <option value="North Africa - Other">North Africa - Other</option>
+                                        <option value="Africa - Other">Africa - Other</option>
                                     </optgroup>
-                                    <optgroup label="Other">
-                                        <option value="SANS 10162">SANS 10162 - Steel (South Africa)</option>
-                                        <option value="NBR 8800">NBR 8800 - Steel (Brazil)</option>
-                                        <option value="Other">Other / Multiple Standards</option>
+                                    <optgroup label="Oceania">
+                                        <option value="Australia">Australia</option>
+                                        <option value="New Zealand">New Zealand</option>
+                                        <option value="Pacific Islands">Pacific Islands</option>
                                     </optgroup>
                                 </select>
-                                <small class="est-field-hint">Select the primary design code for your project region</small>
+                                <small class="est-field-hint">Select your project location for accurate regional cost estimation</small>
                             </div>
                             <div class="form-group">
                                 <label class="form-label est-label">Project Type</label>
@@ -10021,11 +10066,6 @@ function getEstimationToolTemplate() {
                                 </select>
                                 <small class="est-field-hint">Type of construction project</small>
                             </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label est-label">Region / Location</label>
-                            <input type="text" class="form-input premium-input" name="region" placeholder="e.g., California, USA / Dubai, UAE / Mumbai, India" />
-                            <small class="est-field-hint">Helps AI apply regional cost factors & labor rates</small>
                         </div>
                     </div>
                 </div>
