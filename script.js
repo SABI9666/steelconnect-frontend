@@ -2785,6 +2785,10 @@ function renderEstimatesGrid(filteredEstimates = null) {
                 <div class="estimation-card-header">
                     <div class="estimation-title-section">
                         <h3 class="estimation-title">${est.projectTitle}</h3>
+                        <div style="display:flex;flex-wrap:wrap;gap:6px;margin:4px 0;">
+                            ${est.projectType ? `<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:10px;background:#f5f3ff;color:#6d28d9;font-size:11px;font-weight:600;"><i class="fas fa-building" style="font-size:9px;"></i> ${est.projectType}</span>` : ''}
+                            ${est.region ? `<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:10px;background:#eef2ff;color:#4338ca;font-size:11px;font-weight:600;"><i class="fas fa-map-marker-alt" style="font-size:9px;"></i> ${est.region}</span>` : ''}
+                        </div>
                         <p class="estimation-meta">Submitted: ${createdDate}</p>
                     </div>
                     <span class="estimation-status-badge ${est.status}"><i class="fas ${statusConfig.icon}"></i> ${statusConfig.label}</span>
@@ -2887,6 +2891,8 @@ function viewEstimationDetails(estimationId) {
     const content = `
         <div class="modal-header estimation-modal-header"><h3>${estimation.projectTitle}</h3><p class="modal-subtitle">Estimation Request Details</p></div>
         <div class="estimation-details-content">
+            ${estimation.projectType ? `<p><strong>Project Type:</strong> <span style="color:#6d28d9;font-weight:600;">${estimation.projectType}</span></p>` : ''}
+            ${estimation.region ? `<p><strong>Location:</strong> <span style="color:#4338ca;font-weight:600;"><i class="fas fa-map-marker-alt" style="font-size:12px;"></i> ${estimation.region}</span></p>` : ''}
             <p><strong>Status:</strong> <span class="status-${estimation.status}">${statusConfig.label}</span></p>
             <p><strong>Description:</strong> ${estimation.description}</p>
             ${estimation.estimatedAmount ? `<p><strong>Estimated Cost:</strong> $${Number(estimation.estimatedAmount).toLocaleString()}</p>` : ''}
@@ -3047,13 +3053,36 @@ async function downloadWithRetry(apiCall, maxRetries = 3) {
 
 async function viewEstimationResult(estimationId) {
     try {
-        showNotification('Loading result file...', 'info');
+        showNotification('Loading result file(s)...', 'info');
 
         const response = await downloadWithRetry(() =>
              apiCall(`/estimation/${estimationId}/result/download`, 'GET')
         );
 
-        if (response.downloadUrl) {
+        const resultFiles = response.resultFiles || [];
+        if (resultFiles.length > 1) {
+            // Multiple files - show a modal with links
+            const fileListHTML = resultFiles.map((rf, i) => {
+                let url = rf.downloadUrl;
+                if (url && !url.startsWith('http')) url = `${BACKEND_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+                const icon = rf.mimetype && rf.mimetype.includes('pdf') ? 'fa-file-pdf' : rf.mimetype && rf.mimetype.includes('sheet') ? 'fa-file-excel' : 'fa-file';
+                const color = rf.mimetype && rf.mimetype.includes('pdf') ? '#dc2626' : rf.mimetype && rf.mimetype.includes('sheet') ? '#16a34a' : '#6366f1';
+                return `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#f8fafc;border-radius:8px;margin-bottom:6px;border:1px solid #e2e8f0;">
+                    <i class="fas ${icon}" style="color:${color};font-size:20px;"></i>
+                    <div style="flex:1;">
+                        <div style="font-weight:600;font-size:0.9rem;">${rf.filename}</div>
+                        <small style="color:#94a3b8;">${rf.fileSizeMB ? rf.fileSizeMB + ' MB' : ''}</small>
+                    </div>
+                    <a href="${url}" target="_blank" class="btn btn-sm btn-outline" style="text-decoration:none;"><i class="fas fa-eye"></i> View</a>
+                    <button class="btn btn-sm btn-success" onclick="downloadFileDirect('${url}', '${rf.filename}')"><i class="fas fa-download"></i></button>
+                </div>`;
+            }).join('');
+            showGenericModal(`
+                <div class="modal-header"><h3><i class="fas fa-file-alt"></i> Estimation Result Files</h3></div>
+                <div style="padding:16px;">${fileListHTML}</div>
+                <div style="padding:0 16px 16px;text-align:right;"><button class="btn btn-secondary" onclick="closeModal()">Close</button></div>
+            `, 'max-width:600px;');
+        } else if (response.downloadUrl) {
             let downloadUrl = response.downloadUrl;
             if (!downloadUrl.startsWith('http')) {
                 downloadUrl = `${BACKEND_URL}${downloadUrl.startsWith('/') ? '' : '/'}${downloadUrl}`;
@@ -3076,13 +3105,20 @@ async function downloadEstimationResult(estimationId) {
              apiCall(`/estimation/${estimationId}/result/download`, 'GET')
         );
 
-        if (response.downloadUrl) {
-            // Ensure URL is absolute
+        const resultFiles = response.resultFiles || [];
+        if (resultFiles.length > 1) {
+            // Multiple files - download each one
+            resultFiles.forEach((rf, i) => {
+                let url = rf.downloadUrl;
+                if (url && !url.startsWith('http')) url = `${BACKEND_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+                setTimeout(() => downloadFileDirect(url, rf.filename || `result_${i + 1}`), i * 500);
+            });
+            showNotification(`Downloading ${resultFiles.length} result files...`, 'success');
+        } else if (response.downloadUrl) {
             let downloadUrl = response.downloadUrl;
             if (!downloadUrl.startsWith('http')) {
                 downloadUrl = `${BACKEND_URL}${downloadUrl.startsWith('/') ? '' : '/'}${downloadUrl}`;
             }
-
             downloadFileDirect(downloadUrl, response.filename || 'estimation_result.pdf');
         }
     } catch (error) {
