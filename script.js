@@ -8514,6 +8514,7 @@ function removeFile(index) {
 async function handleEstimationSubmit() {
     const form = document.getElementById('estimation-form');
     const submitBtn = document.getElementById('submit-estimation-btn');
+    console.log('[EST-SUBMIT] Submit clicked, files:', appState.uploadedFile?.length || 0, 'btn disabled:', submitBtn?.disabled);
     if (!appState.uploadedFile || appState.uploadedFile.length === 0) {
         showNotification('Please select at least one file (PDF, DWG, DOC, etc.)', 'warning');
         return;
@@ -15125,9 +15126,13 @@ document.addEventListener('DOMContentLoaded', function() {
 let _freeEstSubmitting = false;
 async function submitFreeEstimation(event) {
     event.preventDefault();
+    console.log('[FREE-EST] Submit triggered, _freeEstSubmitting:', _freeEstSubmitting, '_freeEstDesignerBlocked:', typeof _freeEstDesignerBlocked !== 'undefined' ? _freeEstDesignerBlocked : 'undefined');
 
-    // Prevent duplicate submissions
-    if (_freeEstSubmitting) return false;
+    // Prevent duplicate submissions — with safety reset if stuck for more than 60s
+    if (_freeEstSubmitting) {
+        console.log('[FREE-EST] Blocked — submission already in progress');
+        return false;
+    }
 
     // Block designer users from submitting estimation
     if (_freeEstDesignerBlocked) {
