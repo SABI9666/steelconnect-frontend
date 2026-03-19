@@ -2914,35 +2914,97 @@ async function editEstimation(estimationId) {
         const est = appState.myEstimations.find(e => e._id === estimationId);
         if (!est) throw new Error('Estimation not found.');
 
-        const content = `
-            <div class="modal-header premium-modal-header"><h3><i class="fas fa-edit"></i> Edit Estimation Request</h3></div>
-            <form id="edit-estimation-form" class="premium-form">
-                <input type="hidden" name="estimationId" value="${est._id}">
-                <div class="form-group"><label class="form-label"><i class="fas fa-heading"></i> Project Title</label><input type="text" class="form-input" name="projectTitle" value="${est.projectTitle}" required></div>
-                <div class="form-group"><label class="form-label"><i class="fas fa-file-alt"></i> Description</label><textarea class="form-textarea" name="description" required>${est.description}</textarea></div>
-                <div class="form-actions"><button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button><button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Update Request</button></div>
-            </form>`;
-        showGenericModal(content, 'max-width: 600px;');
+        var regions = ['India','China','Japan','South Korea','Singapore','Malaysia','Thailand','Vietnam','Philippines','Indonesia','Bangladesh','Sri Lanka','Pakistan','Southeast Asia - Other','Central Asia','UAE','Saudi Arabia','Qatar','Kuwait','Oman','Bahrain','Iraq','Jordan','Lebanon','Middle East - Other','United Kingdom','Germany','France','Netherlands','Italy','Spain','Poland','Sweden','Norway','Denmark','Finland','Belgium','Switzerland','Austria','Ireland','Czech Republic','Romania','Turkey','Russia','Eastern Europe - Other','Europe - Other','United States','Canada','Mexico','Brazil','Argentina','Chile','Colombia','Peru','Latin America - Other','South Africa','Nigeria','Kenya','Egypt','Ghana','Tanzania','Ethiopia','Morocco','Algeria','North Africa - Other','Africa - Other','Australia','New Zealand','Pacific Islands'];
+        var projectTypes = ['Commercial Building','Residential Building','Mixed-Use Development','High-Rise Tower','Villa / Housing','Industrial / Warehouse','Factory / Manufacturing','Oil & Gas / Petrochemical','Power Plant / Energy','Infrastructure / Bridge','Road & Highway','Water / Wastewater Treatment','Hospital / Healthcare','School / University','Hotel / Hospitality','Retail / Shopping Mall','Airport / Transportation','Stadium / Sports Facility','Government / Public Building','Data Center','Cold Storage / Food Processing','Pre-Engineered Building','Renovation / Retrofit','Marine / Port','Other'];
+
+        var regionOpts = regions.map(function(r) { return '<option value="' + r + '"' + (est.region === r ? ' selected' : '') + '>' + r + '</option>'; }).join('');
+        var typeOpts = projectTypes.map(function(t) { return '<option value="' + t + '"' + (est.projectType === t ? ' selected' : '') + '>' + t + '</option>'; }).join('');
+
+        // Build existing files list
+        var filesListHTML = '';
+        if (est.uploadedFiles && est.uploadedFiles.length > 0) {
+            filesListHTML = est.uploadedFiles.map(function(f, i) {
+                var fname = (f.originalname || f.name || 'File');
+                if (fname.includes('/')) fname = fname.split('/').pop();
+                var fsize = f.size ? (f.size / (1024 * 1024)).toFixed(2) + ' MB' : '';
+                return '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#f8fafc;border-radius:6px;margin-bottom:4px;border:1px solid #e2e8f0;" id="edit-file-' + i + '"><i class="fas fa-file-pdf" style="color:#dc2626;"></i><span style="flex:1;font-size:0.88rem;">' + fname + '</span><small style="color:#94a3b8;">' + fsize + '</small><button type="button" class="btn btn-danger btn-sm" style="padding:2px 8px;font-size:11px;" onclick="removeEstimationFile(\'' + est._id + '\',' + i + ')"><i class="fas fa-trash"></i></button></div>';
+            }).join('');
+        }
+
+        var content = '<div class="modal-header premium-modal-header"><h3><i class="fas fa-edit"></i> Edit Estimation Request</h3></div>';
+        content += '<form id="edit-estimation-form" class="premium-form" style="padding:16px;">';
+        content += '<input type="hidden" name="estimationId" value="' + est._id + '">';
+        content += '<div class="form-group" style="margin-bottom:12px;"><label class="form-label"><i class="fas fa-heading"></i> Project Title</label><input type="text" class="form-input" name="projectTitle" value="' + (est.projectTitle || '').replace(/"/g, '&quot;') + '" required></div>';
+        content += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">';
+        content += '<div class="form-group"><label class="form-label"><i class="fas fa-building"></i> Project Type</label><select class="form-input" name="projectType"><option value="">-- Select Type --</option>' + typeOpts + '</select></div>';
+        content += '<div class="form-group"><label class="form-label"><i class="fas fa-map-marker-alt"></i> Location <span style="color:#ef4444;">*</span></label><select class="form-input" name="region" required><option value="">-- Select Location --</option>' + regionOpts + '</select></div>';
+        content += '</div>';
+        content += '<div class="form-group" style="margin-bottom:12px;"><label class="form-label"><i class="fas fa-file-alt"></i> Scope of Work</label><textarea class="form-textarea" name="description" rows="3" required>' + (est.description || '') + '</textarea></div>';
+        content += '<div style="margin-bottom:12px;"><label class="form-label"><i class="fas fa-paperclip"></i> Uploaded Files</label>';
+        content += '<div id="edit-files-list">' + (filesListHTML || '<p style="color:#94a3b8;font-size:0.88rem;">No files uploaded</p>') + '</div>';
+        content += '<div style="margin-top:8px;"><label class="btn btn-outline btn-sm" style="cursor:pointer;"><i class="fas fa-plus"></i> Add More Files <input type="file" id="edit-add-files" multiple accept=".pdf,.dwg,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" style="display:none;" onchange="addEstimationFiles(\'' + est._id + '\')"></label></div>';
+        content += '</div>';
+        content += '<div class="form-actions" style="display:flex;gap:8px;justify-content:flex-end;padding-top:12px;border-top:1px solid #e2e8f0;"><button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button><button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Changes</button></div>';
+        content += '</form>';
+
+        showGenericModal(content, 'max-width: 650px;');
         document.getElementById('edit-estimation-form').addEventListener('submit', handleEstimationEdit);
     } catch (error) {
         addLocalNotification('Error', 'Failed to load estimation details for editing.', 'error');
     }
 }
 
+async function removeEstimationFile(estimationId, fileIndex) {
+    if (!confirm('Remove this file?')) return;
+    var el = document.getElementById('edit-file-' + fileIndex);
+    if (el) el.style.opacity = '0.5';
+    try {
+        await apiCall('/estimation/' + estimationId + '/files/' + fileIndex, 'DELETE');
+        if (el) el.remove();
+        showNotification('File removed.', 'success');
+        // Update local cache
+        var est = appState.myEstimations.find(function(e) { return e._id === estimationId; });
+        if (est && est.uploadedFiles) est.uploadedFiles.splice(fileIndex, 1);
+    } catch (error) {
+        if (el) el.style.opacity = '1';
+        showNotification('Failed to remove file: ' + (error.message || ''), 'error');
+    }
+}
+
+async function addEstimationFiles(estimationId) {
+    var input = document.getElementById('edit-add-files');
+    if (!input || !input.files.length) return;
+    var files = Array.from(input.files);
+    showNotification('Uploading ' + files.length + ' file(s)...', 'info');
+    var formData = new FormData();
+    files.forEach(function(f) { formData.append('files', f); });
+    try {
+        var resp = await apiCall('/estimation/' + estimationId + '/add-files', 'POST', formData);
+        showNotification(resp.message || 'Files added successfully.', 'success');
+        // Reload and reopen editor
+        await loadUserEstimations();
+        editEstimation(estimationId);
+    } catch (error) {
+        showNotification('Failed to add files: ' + (error.message || ''), 'error');
+    }
+}
+
 async function handleEstimationEdit(event) {
     event.preventDefault();
-    const form = event.target;
-    const submitBtn = form.querySelector('button[type="submit"]');
-    const originalText = submitBtn.innerHTML;
+    var form = event.target;
+    var submitBtn = form.querySelector('button[type="submit"]');
+    var originalText = submitBtn.innerHTML;
     submitBtn.innerHTML = '<div class="btn-spinner"></div> Updating...';
     submitBtn.disabled = true;
     try {
-        const estimationId = form.estimationId.value;
-        const updatedData = {
+        var estimationId = form.estimationId.value;
+        var updatedData = {
             projectTitle: form.projectTitle.value,
-            description: form.description.value,
+            projectType: form.projectType.value,
+            region: form.region.value,
+            description: form.description.value
         };
-        await apiCall(`/estimation/${estimationId}`, 'PUT', updatedData, 'Estimation request updated successfully!');
+        await apiCall('/estimation/' + estimationId, 'PUT', updatedData, 'Estimation updated successfully!');
         addLocalNotification('Updated', 'Your estimation request has been updated.', 'success');
         closeModal();
         fetchAndRenderMyEstimations();
