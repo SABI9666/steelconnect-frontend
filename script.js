@@ -9888,8 +9888,8 @@ function getEstimationToolTemplate() {
             <div class="est-hero-content">
                 <button class="est-back-to-portal-btn" onclick="renderAppSection('dashboard')"><i class="fas fa-arrow-left"></i> Back to Main Portal</button>
                 <div class="est-hero-badge"><i class="fas fa-bolt"></i> AI-Powered</div>
-                <h1 class="est-hero-title">Smart Cost Estimation</h1>
-                <p class="est-hero-subtitle">Upload your project drawings and receive an accurate, AI-generated cost breakdown from our engineering experts</p>
+                <h1 class="est-hero-title">Construction Estimation & BOQ</h1>
+                <p class="est-hero-subtitle">Upload your project drawings and get professional BOQ, cost estimation & material takeoff across all construction trades — Structural, MEP, Civil, Architectural & more</p>
             </div>
         </div>
         <div class="estimation-tool-container premium-estimation-container">
@@ -9915,7 +9915,7 @@ function getEstimationToolTemplate() {
                         <div class="est-card-icon blue"><i class="fas fa-cloud-upload-alt"></i></div>
                         <div>
                             <h3>Upload Project Files <span class="est-mandatory">* Required</span></h3>
-                            <p class="est-card-desc">Upload your PDF drawings, blueprints, or project documents for analysis</p>
+                            <p class="est-card-desc">Upload architectural, structural, MEP, civil or any trade drawings, specifications & project documents</p>
                         </div>
                     </div>
                     <div class="file-upload-section premium-upload-section">
@@ -9946,20 +9946,20 @@ function getEstimationToolTemplate() {
                     <div class="est-card-header">
                         <div class="est-card-icon indigo"><i class="fas fa-clipboard-list"></i></div>
                         <div>
-                            <h3>Project Information <span class="est-mandatory">* Required</span></h3>
-                            <p class="est-card-desc">Provide details about your project to help us deliver an accurate estimate</p>
+                            <h3>Estimation Requirements <span class="est-mandatory">* Required</span></h3>
+                            <p class="est-card-desc">Specify the trades and deliverables you need — BOQ, cost estimation, material takeoff, quantity surveying</p>
                         </div>
                     </div>
                     <div class="est-form-body">
                         <div class="form-group">
                             <label class="form-label est-label">Project Title <span class="est-req-star">*</span></label>
-                            <input type="text" class="form-input premium-input" name="projectTitle" required placeholder="e.g., Commercial Building Steel Framework" />
+                            <input type="text" class="form-input premium-input" name="projectTitle" required placeholder="e.g., 5-Storey Commercial Complex - MEP & Structural" />
                             <small class="est-field-hint">Give your project a clear, descriptive name</small>
                         </div>
                         <div class="form-group">
-                            <label class="form-label est-label">Scope of Estimation <span class="est-req-star">*</span></label>
-                            <textarea class="form-textarea premium-textarea" name="description" required rows="5" placeholder="Specify what you need from the drawings, e.g.:&#10;- Steel Structure BOQ (Bill of Quantities)&#10;- Rebar / Reinforcement BOQ&#10;- Concrete BOQ for foundations &amp; slabs&#10;- Cost estimation for structural steel&#10;- Material takeoff from GA drawings&#10;- Fabrication drawing estimation&#10;- Any special requirements or notes..."></textarea>
-                            <small class="est-field-hint">Clearly describe what deliverables you require — BOQ, cost estimation, material takeoff, etc.</small>
+                            <label class="form-label est-label">Scope of Work & Required Deliverables <span class="est-req-star">*</span></label>
+                            <textarea class="form-textarea premium-textarea" name="description" required rows="6" placeholder="Describe the estimation services you require from the uploaded drawings:&#10;&#10;STRUCTURAL: Steel BOQ, Rebar BOQ, Concrete BOQ, Foundation estimation&#10;MEP - MECHANICAL: HVAC ductwork, piping, equipment schedules, AHU/chiller BOQ&#10;MEP - ELECTRICAL: Cable tray, DB schedules, lighting, LV/HV systems, earthing BOQ&#10;MEP - PLUMBING: Drainage, water supply, sanitary fittings, fire hydrant BOQ&#10;FIRE FIGHTING: Sprinkler layout, fire alarm, suppression system BOQ&#10;CIVIL: Earthwork, road work, paving, retaining wall, drainage BOQ&#10;ARCHITECTURAL: Finishing, facade, flooring, false ceiling, door/window schedules&#10;&#10;Also specify: Material takeoff, Cost estimation, Quantity surveying, or any special notes..."></textarea>
+                            <small class="est-field-hint">Select the trades and clearly mention what deliverables you need — BOQ, cost estimation, material takeoff, quantity surveying, etc.</small>
                         </div>
                         <div class="est-form-row">
                             <div class="form-group">
@@ -10054,15 +10054,39 @@ function getEstimationToolTemplate() {
                                 <label class="form-label est-label">Project Type</label>
                                 <select class="form-input premium-input est-select" name="projectType">
                                     <option value="">-- Select Type --</option>
-                                    <option value="Commercial">Commercial Building</option>
-                                    <option value="Industrial">Industrial / Warehouse</option>
-                                    <option value="Residential">Residential</option>
-                                    <option value="Infrastructure">Infrastructure / Bridge</option>
-                                    <option value="Institutional">Institutional (School, Hospital)</option>
-                                    <option value="Mixed-Use">Mixed-Use Development</option>
-                                    <option value="Renovation">Renovation / Retrofit</option>
-                                    <option value="Heavy Industrial">Heavy Industrial / Plant</option>
-                                    <option value="Other">Other</option>
+                                    <optgroup label="Building Construction">
+                                        <option value="Commercial Building">Commercial Building</option>
+                                        <option value="Residential Building">Residential Building</option>
+                                        <option value="Mixed-Use Development">Mixed-Use Development</option>
+                                        <option value="High-Rise Tower">High-Rise Tower</option>
+                                        <option value="Villa / Housing">Villa / Housing Complex</option>
+                                    </optgroup>
+                                    <optgroup label="Industrial & Infrastructure">
+                                        <option value="Industrial / Warehouse">Industrial / Warehouse</option>
+                                        <option value="Factory / Manufacturing">Factory / Manufacturing Plant</option>
+                                        <option value="Oil & Gas / Petrochemical">Oil & Gas / Petrochemical</option>
+                                        <option value="Power Plant / Energy">Power Plant / Energy</option>
+                                        <option value="Infrastructure / Bridge">Infrastructure / Bridge</option>
+                                        <option value="Road & Highway">Road & Highway</option>
+                                        <option value="Water / Wastewater Treatment">Water / Wastewater Treatment</option>
+                                    </optgroup>
+                                    <optgroup label="Institutional & Public">
+                                        <option value="Hospital / Healthcare">Hospital / Healthcare</option>
+                                        <option value="School / University">School / University</option>
+                                        <option value="Hotel / Hospitality">Hotel / Hospitality</option>
+                                        <option value="Retail / Shopping Mall">Retail / Shopping Mall</option>
+                                        <option value="Airport / Transportation">Airport / Transportation Hub</option>
+                                        <option value="Stadium / Sports Facility">Stadium / Sports Facility</option>
+                                        <option value="Government / Public Building">Government / Public Building</option>
+                                    </optgroup>
+                                    <optgroup label="Specialized">
+                                        <option value="Data Center">Data Center</option>
+                                        <option value="Cold Storage / Food Processing">Cold Storage / Food Processing</option>
+                                        <option value="Pre-Engineered Building">Pre-Engineered Building (PEB)</option>
+                                        <option value="Renovation / Retrofit">Renovation / Retrofit / Fit-Out</option>
+                                        <option value="Marine / Port">Marine / Port Facility</option>
+                                        <option value="Other">Other</option>
+                                    </optgroup>
                                 </select>
                                 <small class="est-field-hint">Type of construction project</small>
                             </div>
@@ -10073,7 +10097,7 @@ function getEstimationToolTemplate() {
                 <div class="est-info-banner">
                     <div class="est-info-icon"><i class="fas fa-robot"></i></div>
                     <div>
-                        <strong>AI-Powered:</strong> Your files will be securely uploaded and an <b>instant AI cost estimate</b> will be generated automatically. Our engineering team will review and send you the final report.
+                        <strong>AI-Powered Multi-Trade Estimation:</strong> Your drawings will be securely analyzed across all trades — Structural, MEP, Civil, Architectural & more. An <b>instant AI-generated BOQ & cost estimate</b> will be prepared. Our professional estimation team will review and deliver the final report.
                     </div>
                 </div>
 
