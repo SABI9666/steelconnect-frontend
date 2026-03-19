@@ -1018,25 +1018,42 @@
                                 </div>
                                 <div class="free-est-field">
                                     <label><i class="fas fa-heading"></i> Project Title <span style="color:#ef4444;">*</span></label>
-                                    <input type="text" id="freeEstTitle" placeholder="e.g. Commercial Office Building" required>
+                                    <input type="text" id="freeEstTitle" placeholder="e.g. 5-Storey Commercial Complex - MEP & Structural" required>
                                 </div>
                                 <div class="free-est-field">
-                                    <label><i class="fas fa-clipboard-list"></i> Scope of Estimation <span style="color:#ef4444;">*</span></label>
-                                    <textarea id="freeEstDescription" rows="3" placeholder="e.g. Structural Steel BOQ, Rebar BOQ for foundations, Concrete BOQ for slabs..." required></textarea>
+                                    <label><i class="fas fa-clipboard-list"></i> Scope of Work & Required Deliverables <span style="color:#ef4444;">*</span></label>
+                                    <textarea id="freeEstDescription" rows="4" placeholder="Specify what you need from the drawings:&#10;e.g. Structural Steel BOQ, MEP (HVAC/Electrical/Plumbing) BOQ, Civil earthwork estimation, Architectural finishing takeoff, Fire fighting system BOQ, Cost estimation, Quantity surveying..." required></textarea>
                                 </div>
                                 <div class="free-est-row">
                                     <div class="free-est-field">
                                         <label><i class="fas fa-building"></i> Project Type</label>
                                         <select id="freeEstProjectType">
                                             <option value="">Select type...</option>
-                                            <option value="Industrial / Warehouse">Industrial / Warehouse</option>
-                                            <option value="Commercial Office">Commercial Office</option>
-                                            <option value="Residential">Residential</option>
-                                            <option value="Retail / Shopping">Retail / Shopping</option>
-                                            <option value="Pre-Engineered Building">Pre-Engineered Building</option>
-                                            <option value="Healthcare">Healthcare</option>
-                                            <option value="Educational">Educational</option>
-                                            <option value="Mixed-Use">Mixed-Use</option>
+                                            <optgroup label="Building">
+                                                <option value="Commercial Building">Commercial Building</option>
+                                                <option value="Residential Building">Residential Building</option>
+                                                <option value="Mixed-Use Development">Mixed-Use Development</option>
+                                                <option value="High-Rise Tower">High-Rise Tower</option>
+                                                <option value="Villa / Housing">Villa / Housing Complex</option>
+                                            </optgroup>
+                                            <optgroup label="Industrial & Infra">
+                                                <option value="Industrial / Warehouse">Industrial / Warehouse</option>
+                                                <option value="Factory / Manufacturing">Factory / Manufacturing</option>
+                                                <option value="Oil & Gas / Petrochemical">Oil & Gas / Petrochemical</option>
+                                                <option value="Infrastructure / Bridge">Infrastructure / Bridge</option>
+                                            </optgroup>
+                                            <optgroup label="Institutional">
+                                                <option value="Hospital / Healthcare">Hospital / Healthcare</option>
+                                                <option value="School / University">School / University</option>
+                                                <option value="Hotel / Hospitality">Hotel / Hospitality</option>
+                                                <option value="Retail / Shopping Mall">Retail / Shopping Mall</option>
+                                            </optgroup>
+                                            <optgroup label="Specialized">
+                                                <option value="Data Center">Data Center</option>
+                                                <option value="Pre-Engineered Building">Pre-Engineered Building (PEB)</option>
+                                                <option value="Renovation / Retrofit">Renovation / Retrofit / Fit-Out</option>
+                                                <option value="Other">Other</option>
+                                            </optgroup>
                                         </select>
                                     </div>
                                     <div class="free-est-field">
