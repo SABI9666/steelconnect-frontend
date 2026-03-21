@@ -1359,6 +1359,9 @@ async function handleLogin(event) {
          email: form.loginEmail.value,
          password: form.loginPassword.value
      };
+    // Attach referral code if present (friend clicked referral link then logged in)
+    const _refCodeLogin = sessionStorage.getItem('steelconnect_referral_code');
+    if (_refCodeLogin) authData.referralCode = _refCodeLogin;
 
     try {
         const controller = new AbortController();
@@ -1420,7 +1423,8 @@ function completeLogin(data) {
     if (data.isNewUser) {
         appState.isNewGoogleUser = true;
     }
-    // Clear the force-contractor flag after login completes
+    // Clear referral code and force-contractor flag after login completes
+    sessionStorage.removeItem('steelconnect_referral_code');
     sessionStorage.removeItem('forceContractorRole');
     localStorage.setItem('currentUser', JSON.stringify(data.user));
     localStorage.setItem('jwtToken', data.token);
@@ -1540,7 +1544,7 @@ async function handleOTPVerify(event) {
         const response = await fetch(BACKEND_URL + '/auth/verify-otp', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, otp: otpCode, loginType }),
+            body: JSON.stringify({ email, otp: otpCode, loginType, referralCode: sessionStorage.getItem('steelconnect_referral_code') || undefined }),
             signal: controller.signal
         });
 
