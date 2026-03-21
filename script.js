@@ -1101,7 +1101,22 @@ async function handleRegister(event) {
         userData.referralCode = savedRefCode;
     }
     try {
-        await apiCall('/auth/register', 'POST', userData, 'Registration successful! Please sign in.');
+        const regResult = await apiCall('/auth/register', 'POST', userData, 'Registration successful! Please sign in.');
+        // Also directly call record-signup endpoint as backup for referral tracking
+        if (savedRefCode) {
+            fetch(BACKEND_URL + '/referrals/record-signup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    referralCode: savedRefCode,
+                    newUserId: regResult?.userId || '',
+                    newUserName: userData.name,
+                    newUserEmail: userData.email
+                })
+            }).then(r => r.json()).then(d => {
+                console.log('[REFERRAL] record-signup result:', d);
+            }).catch(e => console.warn('[REFERRAL] record-signup failed:', e.message));
+        }
         // Clear referral code after successful registration
         sessionStorage.removeItem('steelconnect_referral_code');
         renderAuthForm('login');
@@ -1326,6 +1341,23 @@ async function handleGoogleRoleSubmit(event) {
 
         if (!res.ok) {
             throw new Error(data.message || 'Google registration failed');
+        }
+
+        // Backup: directly call record-signup for referral tracking
+        const _gRefCode = sessionStorage.getItem('steelconnect_referral_code');
+        if (_gRefCode && data.user) {
+            fetch(BACKEND_URL + '/referrals/record-signup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    referralCode: _gRefCode,
+                    newUserId: data.user.id || '',
+                    newUserName: data.user.name || '',
+                    newUserEmail: data.user.email || ''
+                })
+            }).then(r => r.json()).then(d => {
+                console.log('[REFERRAL] Google record-signup result:', d);
+            }).catch(e => console.warn('[REFERRAL] Google record-signup failed:', e.message));
         }
 
         pendingGoogleCredential = null;
@@ -1554,6 +1586,23 @@ async function handleOTPVerify(event) {
 
         if (!response.ok) {
             throw new Error(data.message || 'Verification failed');
+        }
+
+        // OTP verified - backup referral tracking
+        const _otpRefCode = sessionStorage.getItem('steelconnect_referral_code');
+        if (_otpRefCode && data.user) {
+            fetch(BACKEND_URL + '/referrals/record-signup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    referralCode: _otpRefCode,
+                    newUserId: data.user.id || '',
+                    newUserName: data.user.name || '',
+                    newUserEmail: data.user.email || email || ''
+                })
+            }).then(r => r.json()).then(d => {
+                console.log('[REFERRAL] OTP record-signup result:', d);
+            }).catch(e => console.warn('[REFERRAL] OTP record-signup failed:', e.message));
         }
 
         // OTP verified - complete login
