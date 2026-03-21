@@ -15897,7 +15897,7 @@ async function shareReferralVia(platform) {
         const result = await response.json();
 
         if (!result.success) {
-            showToast('Failed to generate share content', 'error');
+            showNotification('Failed to generate share content', 'error');
             return;
         }
 
@@ -15921,19 +15921,19 @@ async function shareReferralVia(platform) {
             body: JSON.stringify({ platform })
         });
 
-        showToast(`Opened ${platform === 'whatsapp' ? 'WhatsApp' : 'Gmail'} to share!`, 'success');
+        showNotification(`Opened ${platform === 'whatsapp' ? 'WhatsApp' : 'Gmail'} to share!`, 'success');
 
         // Refresh stats
         setTimeout(() => loadReferralStatus(), 1000);
     } catch (error) {
         console.error('Error sharing:', error);
-        showToast('Failed to share. Please try again.', 'error');
+        showNotification('Failed to share. Please try again.', 'error');
     }
 }
 
 function copyReferralCode(code) {
     navigator.clipboard.writeText(code).then(() => {
-        showToast('Referral code copied to clipboard!', 'success');
+        showNotification('Referral code copied to clipboard!', 'success');
     }).catch(() => {
         // Fallback
         const textArea = document.createElement('textarea');
@@ -15942,7 +15942,7 @@ function copyReferralCode(code) {
         textArea.select();
         document.execCommand('copy');
         document.body.removeChild(textArea);
-        showToast('Referral code copied!', 'success');
+        showNotification('Referral code copied!', 'success');
     });
 }
 
@@ -15965,14 +15965,14 @@ async function useReferralReward() {
         const result = await response.json();
 
         if (result.success) {
-            showToast(`${rewardLabel} reward applied! Use it on your next ${userType === 'contractor' ? 'estimation' : 'quote'}.`, 'success');
+            showNotification(`${rewardLabel} reward applied! Use it on your next ${userType === 'contractor' ? 'estimation' : 'quote'}.`, 'success');
             loadReferralStatus();
         } else {
-            showToast(result.message || 'Failed to use reward', 'error');
+            showNotification(result.message || 'Failed to use reward', 'error');
         }
     } catch (error) {
         console.error('Error using reward:', error);
-        showToast('Failed to use reward. Please try again.', 'error');
+        showNotification('Failed to use reward. Please try again.', 'error');
     }
 }
 
