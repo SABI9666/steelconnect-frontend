@@ -496,6 +496,19 @@ function initializePerformanceImprovements() {
 function initializeApp() {
     console.log("SteelConnect App Initializing...");
 
+    // Capture referral code from URL (?ref=XXXX-YYYYYY)
+    try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const refCode = urlParams.get('ref');
+        if (refCode) {
+            sessionStorage.setItem('steelconnect_referral_code', refCode.trim().toUpperCase());
+            console.log('Referral code captured:', refCode);
+            // Clean URL without reload
+            const cleanUrl = window.location.origin + window.location.pathname;
+            window.history.replaceState({}, document.title, cleanUrl);
+        }
+    } catch (e) { /* ignore */ }
+
     // Global click listener to close pop-ups
     window.addEventListener('click', (event) => {
         // Close user dropdown if click is outside
@@ -1081,8 +1094,15 @@ async function handleRegister(event) {
         type: form.regRole.value,
         termsAccepted: true,
     };
+    // Attach referral code if present
+    const savedRefCode = sessionStorage.getItem('steelconnect_referral_code');
+    if (savedRefCode) {
+        userData.referralCode = savedRefCode;
+    }
     try {
         await apiCall('/auth/register', 'POST', userData, 'Registration successful! Please sign in.');
+        // Clear referral code after successful registration
+        sessionStorage.removeItem('steelconnect_referral_code');
         renderAuthForm('login');
     } catch (error) {
         const errorMsg = error.message || 'Registration failed. Please try again.';
@@ -1200,6 +1220,9 @@ async function handleGoogleCallback(response, context) {
         const payload = { credential };
         if (type) payload.type = type;
         if (termsAccepted) payload.termsAccepted = termsAccepted;
+        // Attach referral code if present
+        const _refCode1 = sessionStorage.getItem('steelconnect_referral_code');
+        if (_refCode1) payload.referralCode = _refCode1;
 
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 15000);
@@ -1291,7 +1314,8 @@ async function handleGoogleRoleSubmit(event) {
             body: JSON.stringify({
                 credential: pendingGoogleCredential,
                 type: type,
-                termsAccepted: true
+                termsAccepted: true,
+                referralCode: sessionStorage.getItem('steelconnect_referral_code') || undefined
             }),
             signal: controller.signal
         });
@@ -15632,7 +15656,7 @@ async function renderReferralRewardsPage() {
                 </div>
                 <div>
                     <h1 class="referral-title">Referral Rewards Program</h1>
-                    <p class="referral-subtitle">Share SteelConnect with colleagues and earn free ${isContractor ? 'estimations & analyses' : 'quotes'}!</p>
+                    <p class="referral-subtitle">Share SteelConnect with 3 colleagues who sign up and earn ${isContractor ? 'a free estimation/analysis' : 'a free quote'}!</p>
                 </div>
             </div>
         </div>
@@ -15644,21 +15668,28 @@ async function renderReferralRewardsPage() {
                     <div class="referral-step-number">1</div>
                     <div class="referral-step-icon"><i class="fas fa-share-alt"></i></div>
                     <h3>Share</h3>
-                    <p>Share your personalized referral via WhatsApp or Gmail with friends and colleagues</p>
+                    <p>Share your referral link via WhatsApp or Gmail with friends & colleagues</p>
                 </div>
                 <div class="referral-step-arrow"><i class="fas fa-chevron-right"></i></div>
                 <div class="referral-step">
                     <div class="referral-step-number">2</div>
                     <div class="referral-step-icon"><i class="fas fa-user-plus"></i></div>
-                    <h3>They Join</h3>
-                    <p>When 3 of your referred contacts sign up on SteelConnect</p>
+                    <h3>3 Friends Sign Up</h3>
+                    <p>When 3 of your referred contacts register &amp; login on SteelConnect</p>
                 </div>
                 <div class="referral-step-arrow"><i class="fas fa-chevron-right"></i></div>
                 <div class="referral-step">
                     <div class="referral-step-number">3</div>
+                    <div class="referral-step-icon"><i class="fas fa-check-circle"></i></div>
+                    <h3>Admin Approves</h3>
+                    <p>Admin verifies and approves your reward</p>
+                </div>
+                <div class="referral-step-arrow"><i class="fas fa-chevron-right"></i></div>
+                <div class="referral-step">
+                    <div class="referral-step-number">4</div>
                     <div class="referral-step-icon"><i class="fas ${rewardIcon}"></i></div>
-                    <h3>Earn Reward</h3>
-                    <p>You get <strong>1 ${rewardLabel}</strong> completely free!</p>
+                    <h3>Use Reward</h3>
+                    <p>Get <strong>1 ${rewardLabel}</strong> completely free!</p>
                 </div>
             </div>
         </div>
@@ -15671,7 +15702,7 @@ async function renderReferralRewardsPage() {
 
         <div class="referral-share-section">
             <h2 class="referral-section-title"><i class="fas fa-paper-plane"></i> Share Now</h2>
-            <p class="referral-share-desc">Choose how you'd like to share. Professional content is automatically generated with your details!</p>
+            <p class="referral-share-desc">Professional content with your details &amp; website link is automatically generated. Your referral code is embedded in the link!</p>
             <div class="referral-share-buttons">
                 <button class="referral-share-btn referral-share-whatsapp" onclick="shareReferralVia('whatsapp')">
                     <i class="fab fa-whatsapp"></i>
@@ -15706,12 +15737,8 @@ async function renderReferralRewardsPage() {
                 </div>
             </div>
         </div>
-
-        <div class="referral-rewards-history" id="referral-rewards-history">
-        </div>
     </div>`;
 
-    // Load referral status and preview
     loadReferralStatus();
     previewReferralContent('whatsapp', document.querySelector('.referral-preview-tab.active'));
 }
@@ -15730,8 +15757,44 @@ async function loadReferralStatus() {
 
         const data = result.data;
         const userType = appState.currentUser?.type || 'contractor';
-        const isContractor = userType === 'contractor';
-        const progressPercent = ((data.currentProgress / 3) * 100).toFixed(0);
+        const progressPercent = Math.min(((data.currentProgress / 3) * 100), 100).toFixed(0);
+
+        // Build invited users table
+        const invitedUsers = data.invitedUsers || [];
+        const sentUsers = invitedUsers.filter(u => u.status === 'sent');
+        const registeredUsers = invitedUsers.filter(u => u.status === 'registered');
+
+        let invitedUsersHtml = '';
+        if (invitedUsers.length > 0) {
+            invitedUsersHtml = `
+            <div class="referral-invited-section">
+                <h3 class="referral-progress-title"><i class="fas fa-users"></i> Your Referrals (${registeredUsers.length} signed up / ${sentUsers.length} sent)</h3>
+                <div class="referral-invited-list">
+                    ${invitedUsers.map(u => {
+                        const isSent = u.status === 'sent';
+                        const statusColor = isSent ? '#f59e0b' : '#10b981';
+                        const statusBg = isSent ? '#fffbeb' : '#ecfdf5';
+                        const statusIcon = isSent ? 'fa-clock' : 'fa-check-circle';
+                        const statusText = isSent ? 'Sent — Not yet signed up' : 'Signed Up';
+                        const dateStr = u.registeredAt ? new Date(u.registeredAt).toLocaleDateString() : (u.sentAt ? new Date(u.sentAt).toLocaleDateString() : '');
+                        return `
+                        <div class="referral-invited-item">
+                            <div class="referral-invited-avatar" style="background:${statusBg};color:${statusColor};">
+                                <i class="fas ${statusIcon}"></i>
+                            </div>
+                            <div class="referral-invited-info">
+                                <strong>${u.name || 'Friend'}</strong>
+                                <span>${u.email || ''} ${u.platform ? '• via ' + u.platform : ''}</span>
+                            </div>
+                            <div class="referral-invited-status">
+                                <span style="background:${statusBg};color:${statusColor};padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;">${statusText}</span>
+                                ${dateStr ? `<span style="font-size:11px;color:#94a3b8;margin-top:4px;display:block;">${dateStr}</span>` : ''}
+                            </div>
+                        </div>`;
+                    }).join('')}
+                </div>
+            </div>`;
+        }
 
         container.innerHTML = `
         <div class="referral-stats-grid">
@@ -15742,19 +15805,19 @@ async function loadReferralStatus() {
                 ${data.rewardsAvailable > 0 ? `<button class="referral-use-reward-btn" onclick="useReferralReward()"><i class="fas fa-check-circle"></i> Use Reward</button>` : ''}
             </div>
             <div class="referral-stat-card">
-                <div class="referral-stat-icon"><i class="fas fa-share-alt"></i></div>
-                <div class="referral-stat-value">${data.totalShares}</div>
-                <div class="referral-stat-label">Total Shares</div>
+                <div class="referral-stat-icon"><i class="fas fa-paper-plane"></i></div>
+                <div class="referral-stat-value">${sentUsers.length}</div>
+                <div class="referral-stat-label">Sent (Pending)</div>
             </div>
             <div class="referral-stat-card">
                 <div class="referral-stat-icon"><i class="fas fa-user-check"></i></div>
-                <div class="referral-stat-value">${data.successfulReferrals}</div>
-                <div class="referral-stat-label">Successful Referrals</div>
+                <div class="referral-stat-value">${registeredUsers.length}</div>
+                <div class="referral-stat-label">Signed Up</div>
             </div>
             <div class="referral-stat-card">
                 <div class="referral-stat-icon"><i class="fas fa-trophy"></i></div>
                 <div class="referral-stat-value">${data.rewardsEarned}</div>
-                <div class="referral-stat-label">Total Rewards Earned</div>
+                <div class="referral-stat-label">Rewards Earned</div>
             </div>
         </div>
 
@@ -15766,9 +15829,14 @@ async function loadReferralStatus() {
                 <div class="referral-progress-bar" style="width: ${progressPercent}%"></div>
             </div>
             <div class="referral-progress-info">
-                <span><strong>${data.currentProgress}</strong> of <strong>3</strong> referrals</span>
-                <span>${data.sharesUntilReward} more ${data.sharesUntilReward === 1 ? 'referral' : 'referrals'} to earn ${data.rewardType}</span>
+                <span><strong>${registeredUsers.length}</strong> of <strong>3</strong> friends signed up</span>
+                <span>${data.eligibleForApproval
+                    ? '<strong style="color:#10b981;">Eligible! Waiting for admin approval</strong>'
+                    : data.sharesUntilReward > 0
+                        ? data.sharesUntilReward + ' more sign-up' + (data.sharesUntilReward > 1 ? 's' : '') + ' needed'
+                        : 'Reward pending admin approval'}</span>
             </div>
+            ${data.pendingApproval ? `<div style="margin-top:12px;padding:12px 16px;background:#fffbeb;border:1px solid #fde047;border-radius:10px;font-size:13px;color:#92400e;"><i class="fas fa-clock" style="margin-right:6px;"></i>Your reward is pending admin approval. You'll be notified once approved!</div>` : ''}
         </div>
 
         <div class="referral-code-section">
@@ -15779,7 +15847,10 @@ async function loadReferralStatus() {
                     <i class="fas fa-copy"></i> Copy
                 </button>
             </div>
+            <p style="margin:10px 0 0;font-size:12px;color:#94a3b8;">Friends must use your referral link or enter this code when registering</p>
         </div>
+
+        ${invitedUsersHtml}
 
         ${data.rewardHistory && data.rewardHistory.length > 0 ? `
         <div class="referral-history-section">
@@ -15792,7 +15863,7 @@ async function loadReferralStatus() {
                         </div>
                         <div class="referral-history-info">
                             <strong>${r.type === 'free_estimation' ? 'Free Estimation/Analysis' : 'Free Quote'}</strong>
-                            <span>Earned on ${new Date(r.earnedAt).toLocaleDateString()}</span>
+                            <span>Earned on ${new Date(r.earnedAt).toLocaleDateString()}${r.approvedByName ? ' • Approved by ' + r.approvedByName : ''}</span>
                         </div>
                         <span class="referral-history-badge ${r.status}">${r.status === 'available' ? 'Available' : 'Used'}</span>
                     </div>
@@ -15809,28 +15880,26 @@ async function loadReferralStatus() {
                 <div class="referral-stat-label">Rewards Available</div>
             </div>
             <div class="referral-stat-card">
-                <div class="referral-stat-icon"><i class="fas fa-share-alt"></i></div>
+                <div class="referral-stat-icon"><i class="fas fa-paper-plane"></i></div>
                 <div class="referral-stat-value">0</div>
-                <div class="referral-stat-label">Total Shares</div>
+                <div class="referral-stat-label">Sent (Pending)</div>
             </div>
             <div class="referral-stat-card">
                 <div class="referral-stat-icon"><i class="fas fa-user-check"></i></div>
                 <div class="referral-stat-value">0</div>
-                <div class="referral-stat-label">Successful Referrals</div>
+                <div class="referral-stat-label">Signed Up</div>
             </div>
             <div class="referral-stat-card">
                 <div class="referral-stat-icon"><i class="fas fa-trophy"></i></div>
                 <div class="referral-stat-value">0</div>
-                <div class="referral-stat-label">Total Rewards Earned</div>
+                <div class="referral-stat-label">Rewards Earned</div>
             </div>
         </div>
         <div class="referral-progress-section">
             <h3 class="referral-progress-title"><i class="fas fa-tasks"></i> Progress to Next Reward</h3>
-            <div class="referral-progress-bar-container">
-                <div class="referral-progress-bar" style="width: 0%"></div>
-            </div>
+            <div class="referral-progress-bar-container"><div class="referral-progress-bar" style="width:0%"></div></div>
             <div class="referral-progress-info">
-                <span><strong>0</strong> of <strong>3</strong> referrals</span>
+                <span><strong>0</strong> of <strong>3</strong> friends signed up</span>
                 <span>Share with 3 friends to earn your first reward!</span>
             </div>
         </div>`;
@@ -15838,7 +15907,6 @@ async function loadReferralStatus() {
 }
 
 async function previewReferralContent(platform, tabEl) {
-    // Update active tab
     document.querySelectorAll('.referral-preview-tab').forEach(t => t.classList.remove('active'));
     if (tabEl) tabEl.classList.add('active');
 
@@ -15852,27 +15920,19 @@ async function previewReferralContent(platform, tabEl) {
             headers: { 'Authorization': `Bearer ${appState.jwtToken}` }
         });
         const result = await response.json();
-
         if (!result.success) throw new Error(result.message);
-
         const content = result.data;
 
         if (platform === 'whatsapp') {
             previewBox.innerHTML = `
             <div class="referral-preview-whatsapp">
-                <div class="referral-preview-header">
-                    <i class="fab fa-whatsapp" style="color:#25D366;font-size:20px;"></i>
-                    <span>WhatsApp Message Preview</span>
-                </div>
+                <div class="referral-preview-header"><i class="fab fa-whatsapp" style="color:#25D366;font-size:20px;"></i><span>WhatsApp Message Preview</span></div>
                 <div class="referral-preview-message">${escapeHtml(content.text).replace(/\n/g, '<br>')}</div>
             </div>`;
         } else {
             previewBox.innerHTML = `
             <div class="referral-preview-email">
-                <div class="referral-preview-header">
-                    <i class="fas fa-envelope" style="color:#EA4335;font-size:20px;"></i>
-                    <span>Gmail Email Preview</span>
-                </div>
+                <div class="referral-preview-header"><i class="fas fa-envelope" style="color:#EA4335;font-size:20px;"></i><span>Gmail Email Preview</span></div>
                 <div class="referral-preview-subject"><strong>Subject:</strong> ${escapeHtml(content.subject)}</div>
                 <div class="referral-preview-body">${escapeHtml(content.body).replace(/\n/g, '<br>')}</div>
             </div>`;
@@ -15904,27 +15964,23 @@ async function shareReferralVia(platform) {
         const content = result.data;
 
         if (platform === 'whatsapp') {
-            const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(content.text)}`;
-            window.open(whatsappUrl, '_blank');
+            window.open(`https://wa.me/?text=${encodeURIComponent(content.text)}`, '_blank');
         } else {
-            const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent(content.subject)}&body=${encodeURIComponent(content.body)}`;
-            window.open(gmailUrl, '_blank');
+            window.open(`https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent(content.subject)}&body=${encodeURIComponent(content.body)}`, '_blank');
         }
 
         // Track the share
-        await fetch(`${BACKEND_URL}/referrals/track-share`, {
+        fetch(`${BACKEND_URL}/referrals/track-share`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${appState.jwtToken}`
             },
             body: JSON.stringify({ platform })
-        });
+        }).catch(() => {});
 
-        showNotification(`Opened ${platform === 'whatsapp' ? 'WhatsApp' : 'Gmail'} to share!`, 'success');
-
-        // Refresh stats
-        setTimeout(() => loadReferralStatus(), 1000);
+        showNotification(`Opened ${platform === 'whatsapp' ? 'WhatsApp' : 'Gmail'} to share! Your referral code is included in the message.`, 'success');
+        setTimeout(() => loadReferralStatus(), 1500);
     } catch (error) {
         console.error('Error sharing:', error);
         showNotification('Failed to share. Please try again.', 'error');
@@ -15935,7 +15991,6 @@ function copyReferralCode(code) {
     navigator.clipboard.writeText(code).then(() => {
         showNotification('Referral code copied to clipboard!', 'success');
     }).catch(() => {
-        // Fallback
         const textArea = document.createElement('textarea');
         textArea.value = code;
         document.body.appendChild(textArea);
@@ -15951,7 +16006,7 @@ async function useReferralReward() {
     const rewardType = userType === 'contractor' ? 'free_estimation' : 'free_quote';
     const rewardLabel = userType === 'contractor' ? 'Free Estimation/Analysis' : 'Free Quote';
 
-    if (!confirm(`Are you sure you want to use your ${rewardLabel} reward? This will be applied to your next ${userType === 'contractor' ? 'estimation or analysis' : 'quote'}.`)) return;
+    if (!confirm(`Use your ${rewardLabel} reward? It will be applied to your next ${userType === 'contractor' ? 'estimation or analysis' : 'quote'}.`)) return;
 
     try {
         const response = await fetch(`${BACKEND_URL}/referrals/use-reward`, {
@@ -15965,7 +16020,7 @@ async function useReferralReward() {
         const result = await response.json();
 
         if (result.success) {
-            showNotification(`${rewardLabel} reward applied! Use it on your next ${userType === 'contractor' ? 'estimation' : 'quote'}.`, 'success');
+            showNotification(`${rewardLabel} reward activated! Use it on your next ${userType === 'contractor' ? 'estimation' : 'quote'}.`, 'success');
             loadReferralStatus();
         } else {
             showNotification(result.message || 'Failed to use reward', 'error');
