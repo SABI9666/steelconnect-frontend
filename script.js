@@ -14796,6 +14796,9 @@ async function renderSubscriptionPage() {
     }
 }
 
+// Track selected billing cycle globally
+let selectedBillingCycle = 'monthly';
+
 function renderSubscriptionContent(plans, currentSub, invoices = []) {
     const contentEl = document.getElementById('subscription-content');
     if (!contentEl) return;
@@ -14821,6 +14824,16 @@ function renderSubscriptionContent(plans, currentSub, invoices = []) {
         `;
     }
 
+    // Billing cycle toggle HTML
+    const billingToggleHtml = `
+        <div class="sc-billing-toggle">
+            <span class="sc-billing-toggle-label ${selectedBillingCycle === 'monthly' ? 'active' : ''}" onclick="toggleBillingCycle('monthly')">Monthly</span>
+            <div class="sc-billing-toggle-switch ${selectedBillingCycle === 'yearly' ? 'yearly' : ''}" onclick="toggleBillingCycle(selectedBillingCycle === 'monthly' ? 'yearly' : 'monthly')"></div>
+            <span class="sc-billing-toggle-label ${selectedBillingCycle === 'yearly' ? 'active' : ''}" onclick="toggleBillingCycle('yearly')">Yearly</span>
+            <span class="sc-billing-save-badge">Save 10%</span>
+        </div>
+    `;
+
     // Designer plans
     const designerPlans = [
         { id: 'designer_free', ...plans.designer_free },
@@ -14841,6 +14854,9 @@ function renderSubscriptionContent(plans, currentSub, invoices = []) {
     contentEl.innerHTML = `
         ${currentSubHtml}
 
+        <!-- Billing Cycle Toggle -->
+        ${billingToggleHtml}
+
         ${!isContractor ? `
         <div class="sc-plans-section">
             <h3 class="sc-plans-title"><i class="fas fa-palette"></i> Designer Portal Plans</h3>
@@ -14848,13 +14864,22 @@ function renderSubscriptionContent(plans, currentSub, invoices = []) {
                 ${designerPlans.map((plan, i) => {
                     const color = planColors[i];
                     const isCurrent = currentSub && currentSub.plan === plan.id;
-                    const priceDisplay = plan.price === 0 ? 'Free' : `$${plan.price}<span style="font-size:14px; font-weight:400;">/mo</span>`;
+                    const isYearly = selectedBillingCycle === 'yearly' && plan.supportsYearly;
+                    const yearlyTotal = plan.yearlyPrice || 0;
+                    const monthlyEquiv = isYearly ? (yearlyTotal / 12).toFixed(2) : plan.price;
+                    const priceDisplay = plan.price === 0
+                        ? 'Free'
+                        : isYearly
+                            ? `$${monthlyEquiv}<span style="font-size:14px; font-weight:400;">/mo</span>`
+                            : `$${plan.price}<span style="font-size:14px; font-weight:400;">/mo</span>`;
+                    const yearlySubtext = isYearly ? `<div style="font-size:12px; color:rgba(255,255,255,0.85); margin-top:2px;"><span class="sc-plan-original-price">$${plan.price * 12}/yr</span> $${yearlyTotal}/yr</div>` : '';
                     const isPremium = plan.id === 'designer_30';
                     return `
                         <div class="sc-plan-card ${isCurrent ? 'sc-plan-current' : ''}" ${isPremium ? 'style="border-color:#dc2626; box-shadow:0 0 0 2px rgba(220,38,38,0.2);"' : ''}>
                             ${isPremium ? '<div class="sc-plan-popular">Best Value</div>' : ''}
                             <div class="sc-plan-header" style="background:${color.gradient};">
                                 <div class="sc-plan-price">${priceDisplay}</div>
+                                ${yearlySubtext}
                                 <div class="sc-plan-label">${plan.label}</div>
                             </div>
                             <div class="sc-plan-body">
@@ -14948,11 +14973,22 @@ function renderEstimationPlans(plans, currentSub) {
         if (!plan) return '';
         const isCurrent = currentSub && currentSub.plan === id;
         const isPayPerUse = plan.isPayPerUse;
-        const priceDisplay = plan.price === 0
-            ? 'Free'
-            : isPayPerUse
-                ? `$${plan.price}<span style="font-size:14px; font-weight:400;"> / estimate</span>`
-                : `$${plan.price}<span style="font-size:14px; font-weight:400;"> / month</span>`;
+        const isYearly = selectedBillingCycle === 'yearly' && plan.supportsYearly;
+        const yearlyTotal = plan.yearlyPrice || 0;
+        const monthlyEquiv = isYearly ? (yearlyTotal / 12).toFixed(2) : plan.price;
+
+        let priceDisplay;
+        if (plan.price === 0) {
+            priceDisplay = 'Free';
+        } else if (isPayPerUse) {
+            priceDisplay = `$${plan.price}<span style="font-size:14px; font-weight:400;"> / estimate</span>`;
+        } else if (isYearly) {
+            priceDisplay = `$${monthlyEquiv}<span style="font-size:14px; font-weight:400;"> / month</span>`;
+        } else {
+            priceDisplay = `$${plan.price}<span style="font-size:14px; font-weight:400;"> / month</span>`;
+        }
+
+        const yearlySubtext = isYearly ? `<div style="font-size:12px; color:rgba(255,255,255,0.85); margin-top:2px;"><span class="sc-plan-original-price">$${plan.price * 12}/yr</span> $${yearlyTotal}/yr</div>` : '';
         const bestFor = plan.bestFor ? `<div class="sc-plan-best-for"><i class="fas fa-star" style="color:${color.check};"></i> ${plan.bestFor}</div>` : '';
 
         return `
@@ -14961,6 +14997,7 @@ function renderEstimationPlans(plans, currentSub) {
                 <div class="sc-plan-header" style="background:${color.gradient};">
                     <div style="font-size:20px; margin-bottom:4px;"><i class="fas ${icon}"></i></div>
                     <div class="sc-plan-price">${priceDisplay}</div>
+                    ${yearlySubtext}
                     <div class="sc-plan-label">${plan.label}</div>
                 </div>
                 <div class="sc-plan-body">
@@ -14998,11 +15035,22 @@ function renderDataAnalysisPlans(plans, currentSub) {
         const isCurrent = currentSub && currentSub.plan === id;
         const isPayPerUse = plan.isPayPerUse;
         const isMonthly = plan.billingCycle === 'monthly';
-        const priceDisplay = plan.price === 0
-            ? 'Free'
-            : isMonthly
-                ? `$${plan.price}<span style="font-size:14px; font-weight:400;"> / month</span>`
-                : `$${plan.price}`;
+        const isYearly = selectedBillingCycle === 'yearly' && plan.supportsYearly;
+        const yearlyTotal = plan.yearlyPrice || 0;
+        const monthlyEquiv = isYearly ? (yearlyTotal / 12).toFixed(2) : plan.price;
+
+        let priceDisplay;
+        if (plan.price === 0) {
+            priceDisplay = 'Free';
+        } else if (isYearly) {
+            priceDisplay = `$${monthlyEquiv}<span style="font-size:14px; font-weight:400;"> / month</span>`;
+        } else if (isMonthly) {
+            priceDisplay = `$${plan.price}<span style="font-size:14px; font-weight:400;"> / month</span>`;
+        } else {
+            priceDisplay = `$${plan.price}`;
+        }
+
+        const yearlySubtext = isYearly ? `<div style="font-size:12px; color:rgba(255,255,255,0.85); margin-top:2px;"><span class="sc-plan-original-price">$${plan.price * 12}/yr</span> $${yearlyTotal}/yr</div>` : '';
         const bestFor = plan.bestFor ? `<div class="sc-plan-best-for"><i class="fas fa-info-circle" style="color:${color.check};"></i> ${plan.bestFor}</div>` : '';
 
         return `
@@ -15011,6 +15059,7 @@ function renderDataAnalysisPlans(plans, currentSub) {
                 <div class="sc-plan-header" style="background:${color.gradient};">
                     <div style="font-size:20px; margin-bottom:4px;"><i class="fas ${icon}"></i></div>
                     <div class="sc-plan-price">${priceDisplay}</div>
+                    ${yearlySubtext}
                     <div class="sc-plan-label">${plan.label}</div>
                 </div>
                 <div class="sc-plan-body">
@@ -15033,11 +15082,21 @@ function renderDataAnalysisPlans(plans, currentSub) {
     }).join('');
 }
 
+function toggleBillingCycle(cycle) {
+    selectedBillingCycle = cycle;
+    // Re-render the subscription page with new billing cycle
+    const contentEl = document.getElementById('subscription-content');
+    if (contentEl) {
+        // Re-fetch and re-render
+        renderSubscriptionPage();
+    }
+}
+
 async function handleSubscribe(planId) {
     try {
         showNotification('Processing subscription...', 'info');
 
-        const response = await apiCall('/subscriptions/create-checkout', 'POST', { planId });
+        const response = await apiCall('/subscriptions/create-checkout', 'POST', { planId, billingCycle: selectedBillingCycle });
 
         if (response.checkoutUrl) {
             // Redirect to Stripe checkout
