@@ -14954,7 +14954,7 @@ function renderSubscriptionContent(plans, currentSub, invoices = []) {
 
         <div class="sc-stripe-info">
             <i class="fas fa-lock"></i>
-            <span>Payments are securely processed via Stripe. Your card details are never stored on our servers.</span>
+            <span>Payments are securely processed via Stripe (International) and Razorpay (India). Your card details are never stored on our servers.</span>
         </div>
     `;
 }
@@ -15084,42 +15084,205 @@ function renderDataAnalysisPlans(plans, currentSub) {
 
 function toggleBillingCycle(cycle) {
     selectedBillingCycle = cycle;
-    // Re-render the subscription page with new billing cycle
-    const contentEl = document.getElementById('subscription-content');
-    if (contentEl) {
-        // Re-fetch and re-render
-        renderSubscriptionPage();
-    }
+    renderSubscriptionPage();
 }
 
-async function handleSubscribe(planId) {
+// ============================================================
+// PAYMENT GATEWAY HANDLING (Stripe + Razorpay)
+// ============================================================
+
+// Cache payment config
+let _paymentConfig = null;
+
+async function getPaymentConfig() {
+    if (_paymentConfig) return _paymentConfig;
+    try {
+        const resp = await fetch(BACKEND_URL + '/subscriptions/payment-config');
+        const data = await resp.json();
+        if (data.success) {
+            _paymentConfig = data;
+            return _paymentConfig;
+        }
+    } catch (e) {
+        console.error('Error fetching payment config:', e);
+    }
+    return { stripe: { enabled: false }, razorpay: { enabled: false }, defaultGateway: null };
+}
+
+// Load Razorpay SDK dynamically when needed
+function loadRazorpaySDK() {
+    return new Promise((resolve, reject) => {
+        if (window.Razorpay) return resolve();
+        const script = document.createElement('script');
+        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+        script.onload = resolve;
+        script.onerror = () => reject(new Error('Failed to load Razorpay SDK'));
+        document.head.appendChild(script);
+    });
+}
+
+// Open Razorpay inline checkout
+async function openRazorpayCheckout(razorpayData, subscriptionId) {
+    await loadRazorpaySDK();
+
+    return new Promise((resolve, reject) => {
+        const options = {
+            key: razorpayData.keyId,
+            amount: razorpayData.amount,
+            currency: razorpayData.currency,
+            name: 'SteelConnect',
+            description: razorpayData.description,
+            order_id: razorpayData.orderId,
+            prefill: razorpayData.prefill || {},
+            notes: razorpayData.notes || {},
+            theme: {
+                color: '#6366f1',
+            },
+            handler: function (response) {
+                // Payment successful — verify on backend
+                resolve({
+                    razorpay_order_id: response.razorpay_order_id,
+                    razorpay_payment_id: response.razorpay_payment_id,
+                    razorpay_signature: response.razorpay_signature,
+                    subscriptionId: subscriptionId,
+                });
+            },
+            modal: {
+                ondismiss: function () {
+                    reject(new Error('Payment cancelled by user'));
+                },
+            },
+        };
+
+        const rzp = new window.Razorpay(options);
+        rzp.on('payment.failed', function (response) {
+            reject(new Error(response.error?.description || 'Payment failed'));
+        });
+        rzp.open();
+    });
+}
+
+async function handleSubscribe(planId, preferredGateway) {
     try {
         showNotification('Processing subscription...', 'info');
 
-        const response = await apiCall('/subscriptions/create-checkout', 'POST', { planId, billingCycle: selectedBillingCycle });
+        // Determine gateway to use
+        const config = await getPaymentConfig();
+        let gateway = preferredGateway || null;
 
-        if (response.checkoutUrl) {
-            // Redirect to Stripe checkout
+        // If both gateways enabled and no preference, show selection
+        if (!gateway && config.stripe?.enabled && config.razorpay?.enabled) {
+            gateway = await showGatewaySelectionPopup();
+            if (!gateway) return; // User cancelled
+        } else if (!gateway) {
+            gateway = config.defaultGateway;
+        }
+
+        const response = await apiCall('/subscriptions/create-checkout', 'POST', {
+            planId,
+            billingCycle: selectedBillingCycle,
+            gateway: gateway,
+        });
+
+        // ── STRIPE: Redirect to Stripe Checkout ──
+        if (response.gateway === 'stripe' && response.checkoutUrl) {
             window.location.href = response.checkoutUrl;
-        } else if (response.subscription && response.subscription.status === 'active') {
-            showNotification('Plan activated successfully! Redirecting to AI Estimation...', 'success');
-            // If estimation plan, redirect to estimation tool
+            return;
+        }
+
+        // ── RAZORPAY: Open inline checkout ──
+        if (response.gateway === 'razorpay' && response.razorpay) {
+            try {
+                const paymentResult = await openRazorpayCheckout(
+                    response.razorpay,
+                    response.subscription._id
+                );
+
+                // Verify payment on backend
+                showNotification('Verifying payment...', 'info');
+                const verifyResp = await apiCall('/subscriptions/razorpay-verify', 'POST', paymentResult);
+
+                if (verifyResp.success) {
+                    showNotification('Payment successful! Plan activated.', 'success');
+                    if (planId && planId.startsWith('estimation_')) {
+                        setTimeout(() => renderAppSection('estimation-tool'), 1000);
+                    } else {
+                        renderSubscriptionPage();
+                    }
+                } else {
+                    showNotification('Payment verification failed. Contact support.', 'error');
+                }
+            } catch (rzpErr) {
+                if (rzpErr.message === 'Payment cancelled by user') {
+                    showNotification('Payment cancelled.', 'info');
+                } else {
+                    showNotification('Payment failed: ' + rzpErr.message, 'error');
+                }
+            }
+            return;
+        }
+
+        // ── FREE PLAN: Activated directly ──
+        if (response.subscription && response.subscription.status === 'active') {
+            showNotification('Plan activated successfully!', 'success');
             if (planId && planId.startsWith('estimation_')) {
                 setTimeout(() => renderAppSection('estimation-tool'), 1000);
             } else {
                 renderSubscriptionPage();
             }
+            return;
+        }
+
+        // ── NO GATEWAY CONFIGURED: Pending state ──
+        showNotification(response.message || 'Subscription created. Payment processing will be available soon.', 'info');
+        if (planId && planId.startsWith('estimation_')) {
+            setTimeout(() => renderAppSection('estimation-tool'), 1000);
         } else {
-            showNotification(response.message || 'Subscription created. Payment will be processed when Stripe is configured.', 'info');
-            if (planId && planId.startsWith('estimation_')) {
-                setTimeout(() => renderAppSection('estimation-tool'), 1000);
-            } else {
-                renderSubscriptionPage();
-            }
+            renderSubscriptionPage();
         }
     } catch (error) {
         showNotification('Error: ' + error.message, 'error');
     }
+}
+
+// Show gateway selection popup when both Stripe and Razorpay are available
+function showGatewaySelectionPopup() {
+    return new Promise((resolve) => {
+        const existing = document.getElementById('gateway-selection-popup');
+        if (existing) existing.remove();
+
+        const popup = document.createElement('div');
+        popup.id = 'gateway-selection-popup';
+        popup.innerHTML = `
+            <div onclick="document.getElementById('gateway-selection-popup')?.remove(); window._resolveGateway?.(null);" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center;animation:fadeIn 0.2s ease;">
+                <div onclick="event.stopPropagation()" style="background:#fff;border-radius:16px;padding:28px 24px;max-width:380px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.2);">
+                    <div style="text-align:center;margin-bottom:20px;">
+                        <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#dbeafe,#c7d2fe);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;">
+                            <i class="fas fa-credit-card" style="font-size:20px;color:#4f46e5;"></i>
+                        </div>
+                        <h3 style="font-size:17px;font-weight:700;color:#1e293b;margin:0 0 4px;">Choose Payment Method</h3>
+                        <p style="font-size:13px;color:#64748b;margin:0;">Select your preferred payment gateway</p>
+                    </div>
+
+                    <button onclick="document.getElementById('gateway-selection-popup')?.remove(); window._resolveGateway?.('stripe');" style="width:100%;padding:14px;background:#635bff;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:10px;transition:opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.591-7.305z"/></svg>
+                        Pay with Stripe (International)
+                    </button>
+
+                    <button onclick="document.getElementById('gateway-selection-popup')?.remove(); window._resolveGateway?.('razorpay');" style="width:100%;padding:14px;background:#0a2540;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M22.436 0l-11.91 7.083-1.604 4.819L22.436 0zM14.303 10.618L7.164 24l3.752-10.378 3.387-3.004zM7.164 24L22.436 0H14.94L5.58 20.146 7.164 24z"/></svg>
+                        Pay with Razorpay (India)
+                    </button>
+
+                    <button onclick="document.getElementById('gateway-selection-popup')?.remove(); window._resolveGateway?.(null);" style="width:100%;padding:10px;background:transparent;color:#6b7280;border:none;font-size:13px;cursor:pointer;margin-top:8px;">
+                        Cancel
+                    </button>
+                </div>
+            </div>`;
+
+        window._resolveGateway = resolve;
+        document.body.appendChild(popup);
+    });
 }
 
 // ================================================================
@@ -15261,7 +15424,7 @@ function renderEstimationBlockedPlans(plans) {
             <div style="display:flex;align-items:center;justify-content:center;gap:14px;padding-top:8px;">
                 <span style="font-size:11px;color:#94a3b8;display:flex;align-items:center;gap:4px;"><i class="fas fa-lock" style="font-size:9px;"></i> Secure</span>
                 <span style="font-size:11px;color:#94a3b8;display:flex;align-items:center;gap:4px;"><i class="fas fa-shield-alt" style="font-size:9px;"></i> Cancel anytime</span>
-                <span style="font-size:11px;color:#94a3b8;display:flex;align-items:center;gap:4px;"><i class="fab fa-stripe" style="font-size:11px;"></i> Stripe</span>
+                <span style="font-size:11px;color:#94a3b8;display:flex;align-items:center;gap:4px;"><i class="fas fa-credit-card" style="font-size:9px;"></i> Stripe / Razorpay</span>
             </div>
         </div>`;
 }
